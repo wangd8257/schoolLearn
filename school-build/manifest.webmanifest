@@ -1,0 +1,12 @@
+{
+  "name": "成长小桌 · 幼小衔接工作台",
+  "short_name": "成长小桌",
+  "description": "免费的 iPad 幼小衔接试卷、阅读与学习游戏工作台",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#fff8ec",
+  "theme_color": "#ff795f",
+  "orientation": "any",
+  "icons": [{"src":"assets/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}

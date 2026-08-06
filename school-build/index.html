@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#ff795f">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="成长小桌">
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/icon.svg">
+  <link rel="stylesheet" href="styles.css">
+  <script>
+    if (location.protocol !== 'file:') {
+      const manifest = document.createElement('link');
+      manifest.rel = 'manifest';
+      manifest.href = 'manifest.webmanifest';
+      document.head.appendChild(manifest);
+    }
+  </script>
+  <title>成长小桌 · 幼小衔接工作台</title>
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <header class="mobile-header">
+      <button id="menuButton" class="icon-button" aria-label="打开导航">☰</button>
+      <span class="mobile-brand">成长小桌</span>
+      <button class="icon-button" data-action="quick-create" aria-label="新建">＋</button>
+    </header>
+
+    <aside id="sidebar" class="sidebar">
+      <div class="brand">
+        <div class="brand-mascot">✦</div>
+        <div><strong>成长小桌</strong><small>每天进步一点点</small></div>
+      </div>
+      <nav id="mainNav" class="main-nav" aria-label="主导航">
+        <button class="nav-item active" data-route="home"><span>🏠</span>首页</button>
+        <button class="nav-item" data-route="papers"><span>📝</span>试卷目录</button>
+        <button class="nav-item" data-route="generator"><span>🪄</span>生成试卷</button>
+        <button class="nav-item" data-route="reading"><span>📚</span>阅读资料</button>
+        <button class="nav-item" data-route="games"><span>🎮</span>学习游戏</button>
+        <button class="nav-item" data-route="templates"><span>🧩</span>配置模板</button>
+      </nav>
+      <div class="sidebar-note">
+        <span>☁️</span>
+        <p><strong>数据只在本机</strong><br>请勿清除 Safari 网站数据</p>
+      </div>
+    </aside>
+
+    <main id="mainContent" class="main-content" tabindex="-1"></main>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="modalRoot"></div>
+  <script>
+    const appScript = document.createElement('script');
+    if (location.protocol === 'file:') {
+      appScript.src = 'dist/app.bundle.js';
+    } else {
+      appScript.type = 'module';
+      appScript.src = 'src/app.js';
+    }
+    document.body.appendChild(appScript);
+  </script>
+</body>
+</html>
