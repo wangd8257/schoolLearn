@@ -1,0 +1,75 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]: ✦
+        - generic [ref=e6]:
+          - strong [ref=e7]: 成长小桌
+          - text: 每天进步一点点
+      - navigation "主导航" [ref=e8]:
+        - button "🏠 首页" [ref=e9] [cursor=pointer]:
+          - generic [ref=e10]: 🏠
+          - text: 首页
+        - button "📝 试卷目录" [ref=e11] [cursor=pointer]:
+          - generic [ref=e12]: 📝
+          - text: 试卷目录
+        - button "🪄 生成试卷" [ref=e13] [cursor=pointer]:
+          - generic [ref=e14]: 🪄
+          - text: 生成试卷
+        - button "📚 阅读资料" [ref=e15] [cursor=pointer]:
+          - generic [ref=e16]: 📚
+          - text: 阅读资料
+        - button "🎮 学习游戏" [ref=e17] [cursor=pointer]:
+          - generic [ref=e18]: 🎮
+          - text: 学习游戏
+        - button "🧩 配置模板" [ref=e19] [cursor=pointer]:
+          - generic [ref=e20]: 🧩
+          - text: 配置模板
+      - generic [ref=e21]:
+        - generic [ref=e22]: ☁️
+        - paragraph [ref=e23]:
+          - strong [ref=e24]: 数据只在本机
+          - text: 请勿清除 Safari 网站数据
+    - main [active] [ref=e25]:
+      - generic [ref=e26]:
+        - generic [ref=e27]:
+          - heading "你好，准备开始学习吧" [level=1] [ref=e28]
+          - paragraph [ref=e29]: 试卷、阅读和小游戏都保存在这台 iPad 上
+        - button "＋ 生成试卷" [ref=e31] [cursor=pointer]
+      - generic [ref=e32]:
+        - generic [ref=e33]:
+          - generic [ref=e34]: 8月6日星期四
+          - heading "把每一次练习，变成看得见的成长" [level=2] [ref=e35]
+          - paragraph [ref=e36]: 家长按需要生成试卷，孩子用 Apple Pencil 黑笔作答，提交后再用红笔批改。阅读与游戏也可以随时开始。
+        - text: ✎ A 1+2 读
+      - generic [ref=e37]:
+        - generic [ref=e38]:
+          - strong [ref=e39]: "0"
+          - text: 全部试卷
+        - generic [ref=e40]:
+          - strong [ref=e41]: "0"
+          - text: 待批改
+        - generic [ref=e42]:
+          - strong [ref=e43]: "23"
+          - text: 阅读资料
+        - generic [ref=e44]:
+          - strong [ref=e45]: "0"
+          - text: 游戏记录
+      - generic [ref=e46]:
+        - button [ref=e47] [cursor=pointer]:
+          - text: 📝
+          - heading "打开试卷目录" [level=3] [ref=e48]
+          - paragraph [ref=e49]: 按状态和生成时间管理全部试卷。
+        - button [ref=e50] [cursor=pointer]:
+          - text: 🪄
+          - heading "配置生成试卷" [level=3] [ref=e51]
+          - paragraph [ref=e52]: 数学、拼音、汉字和英语模板自由配置。
+        - button [ref=e53] [cursor=pointer]:
+          - text: 📚
+          - heading "阅读与跟读" [level=3] [ref=e54]
+          - paragraph [ref=e55]: 按段点读，中文逐字、英文逐词高亮。
+        - button [ref=e56] [cursor=pointer]:
+          - text: 🎮
+          - heading "学习游戏" [level=3] [ref=e57]
+          - paragraph [ref=e58]: 汉字连线消消乐和英语实物配对。
+  - status

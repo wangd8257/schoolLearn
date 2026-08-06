@@ -98,7 +98,7 @@ button { cursor: pointer; }
 .check-item { display: flex; align-items: center; gap: 8px; padding: 9px; background: #f8f7f2; border-radius: 7px; font-size: 13px; }
 
 .worksheet-wrap { overflow: auto; padding: 14px; background: #e8e5de; border-radius: 8px; }
-.worksheet-pages { position: relative; display: grid; gap: 18px; width: max-content; max-width: 100%; margin: 0 auto; }
+.worksheet-pages { position: relative; display: grid; justify-items: center; gap: 18px; width: 100%; margin: 0 auto; }
 .worksheet { position: relative; margin: 0 auto; background: white; color: #1d2429; box-shadow: 0 6px 25px rgba(0,0,0,.12); overflow: hidden; }
 .worksheet.portrait { width: min(100%, 794px); aspect-ratio: 210 / 297; }
 .worksheet.landscape { width: min(100%, 1123px); aspect-ratio: 297 / 210; }
@@ -107,7 +107,7 @@ button { cursor: pointer; }
 .worksheet-meta-line { flex: 0 0 auto; }
 .worksheet-lines { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: repeat(var(--columns, 4), minmax(0, 1fr)); gap: 22px 34px; align-content: start; font: 18px "Times New Roman", serif; overflow: hidden; }
 .problem { min-width: 0; min-height: 34px; display: flex; align-items: center; gap: 5px; word-break: keep-all; overflow-wrap: normal; }
-.math-inline { white-space: normal; flex-wrap: wrap; line-height: 1.45; }
+.math-inline { white-space: nowrap; flex-wrap: nowrap; line-height: 1.45; }
 .answer-box { display: inline-block; min-width: 42px; height: 30px; border: 1.5px solid #555; vertical-align: middle; }
 .process-diagram { grid-column: span 2; border: 1px solid #d3d3d3; padding: 10px; }
 .process-boxes { display: flex; justify-content: center; gap: 9px; margin-top: 10px; }

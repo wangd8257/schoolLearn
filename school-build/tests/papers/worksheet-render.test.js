@@ -47,11 +47,12 @@ test('列式计算和应用题按整行排版，填写框撑满剩余宽度', ()
   assert.match(stylesheet, /\.word-answer-line \.answer-box\s*\{[^}]*flex:\s*1\s+1\s+auto/s);
 });
 
-test('超长数学横式允许在题目内部换行，避免被纸张裁掉', () => {
+test('普通数学题保持单行排版，不在题目内部换行', () => {
   const stylesheet = readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
 
-  assert.match(stylesheet, /\.math-inline\s*\{[^}]*white-space:\s*normal/s);
-  assert.match(stylesheet, /\.math-inline\s*\{[^}]*flex-wrap:\s*wrap/s);
+  assert.match(stylesheet, /\.math-inline\s*\{[^}]*white-space:\s*nowrap/s);
+  assert.match(stylesheet, /\.math-inline\s*\{[^}]*flex-wrap:\s*nowrap/s);
+  assert.match(stylesheet, /\.worksheet-pages\s*\{[^}]*width:\s*100%/s);
 });
 
 test('竖式题数字按位补齐并把运算符放在最左一格', () => {
