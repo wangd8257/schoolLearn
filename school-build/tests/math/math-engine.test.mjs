@@ -163,9 +163,11 @@ test('整除模式的余数为零', () => {
 test('凑十、破十、进位和退位模板满足各自算法条件', () => {
   const makeTen = seededProblem('make-ten', { limit: 20 });
   assert.equal(makeTen.processBoxes[0].result, 10);
+  assert.equal(makeTen.operands.some((value) => value > 10), true);
 
   const breakTen = seededProblem('break-ten', { limit: 20 });
   assert.equal(breakTen.operands[0] >= 10, true);
+  assert.equal(breakTen.operands.some((value) => value > 10), true);
   assert.equal(breakTen.processBoxes[0].result, 10);
 
   const carrying = seededProblem('carrying-addition', { limit: 50 });
@@ -174,6 +176,18 @@ test('凑十、破十、进位和退位模板满足各自算法条件', () => {
   const borrowing = seededProblem('borrowing-subtraction', { limit: 50 });
   assert.ok(borrowing.operands[0] % 10 < borrowing.operands[1] % 10);
   assert.ok(borrowing.answer >= 0);
+});
+
+test('普通计算题随机数字覆盖中高区间，避免集中生成一位数', () => {
+  const random = createSeededRandom(20260806);
+  const generated = Array.from({ length: 40 }, () => generateProblem('horizontal', {
+    limit: 100,
+    operation: 'addition',
+    random,
+  }));
+  const largeOperandCount = generated.flatMap((problem) => problem.operands).filter((value) => value >= 10).length;
+
+  assert.ok(largeOperandCount >= generated.length);
 });
 
 test('凑十法和破十法支持指定两个参与计算的数字', () => {

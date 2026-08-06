@@ -206,13 +206,23 @@
   function operationSymbol(operation) {
     return operation === "addition" ? "+" : "-";
   }
+  function randomBalancedInteger(random, minimum, maximum) {
+    if (maximum <= minimum) {
+      return minimum;
+    }
+    const floor = maximum >= 20 ? Math.max(minimum, Math.floor(maximum * 0.25)) : minimum;
+    return randomInteger(random, floor, maximum);
+  }
   function createBinaryCalculation(operation, limit, random) {
     if (operation === "addition") {
-      const left2 = randomInteger(random, 0, limit);
-      const right2 = randomInteger(random, 0, limit - left2);
+      const result = randomBalancedInteger(random, 0, limit);
+      const minimumPart = result >= 20 ? Math.max(1, Math.floor(result * 0.2)) : 0;
+      const maximumPart = Math.max(minimumPart, result - minimumPart);
+      const left2 = randomInteger(random, minimumPart, maximumPart);
+      const right2 = result - left2;
       return { left: left2, right: right2, result: left2 + right2, symbol: "+" };
     }
-    const left = randomInteger(random, 0, limit);
+    const left = randomBalancedInteger(random, 0, limit);
     const right = randomInteger(random, 0, left);
     return { left, right, result: left - right, symbol: "-" };
   }
@@ -264,8 +274,8 @@
     }, options.limit);
   }
   function generateComparison(options) {
-    const left = randomInteger(options.random, 0, options.limit);
-    const right = randomInteger(options.random, 0, options.limit);
+    const left = randomBalancedInteger(options.random, 0, options.limit);
+    const right = randomBalancedInteger(options.random, 0, options.limit);
     const answer = left === right ? "=" : left > right ? ">" : "<";
     return createProblem(TEMPLATE_TYPES.COMPARISON, {
       prompt: `${left} \u25CB ${right}`,
@@ -363,10 +373,11 @@
     }
     const complement = 10 - left;
     const maximumRight = options.limit - left;
-    if (maximumRight < complement) {
+    const minimumRight = options.rightNumber === void 0 ? Math.max(11, complement) : complement;
+    if (maximumRight < minimumRight) {
       return null;
     }
-    const right = options.rightNumber ?? randomInteger(options.random, complement, maximumRight);
+    const right = options.rightNumber ?? randomInteger(options.random, minimumRight, maximumRight);
     if (right < complement || right > maximumRight) {
       return null;
     }
@@ -390,7 +401,10 @@
     if (options.limit < 10) {
       return null;
     }
-    const left = options.leftNumber ?? randomInteger(options.random, 10, Math.min(options.limit, 19));
+    if (options.leftNumber === void 0 && options.limit < 11) {
+      return null;
+    }
+    const left = options.leftNumber ?? randomInteger(options.random, 11, Math.min(options.limit, 19));
     if (left < 10 || left > Math.min(options.limit, 19)) {
       return null;
     }
@@ -420,8 +434,8 @@
     }, options.limit);
   }
   function generateCarryingAddition(options) {
-    const left = randomInteger(options.random, 0, options.limit);
-    const right = randomInteger(options.random, 0, options.limit);
+    const left = randomBalancedInteger(options.random, 0, options.limit);
+    const right = randomBalancedInteger(options.random, 0, options.limit);
     const result = left + right;
     if (result > options.limit || left % 10 + right % 10 < 10) {
       return null;
@@ -438,7 +452,7 @@
   }
   function generateBorrowingSubtraction(options) {
     const left = randomInteger(options.random, 10, Math.max(10, options.limit));
-    const right = randomInteger(options.random, 0, options.limit);
+    const right = randomBalancedInteger(options.random, 0, options.limit);
     if (left > options.limit || right > left || left % 10 >= right % 10) {
       return null;
     }
@@ -454,9 +468,10 @@
     }, options.limit);
   }
   function generateMultiplication(options) {
-    const left = randomInteger(options.random, 0, options.limit);
-    const maximumRight = left === 0 ? options.limit : Math.floor(options.limit / left);
-    const right = randomInteger(options.random, 0, maximumRight);
+    const maximumFactor = Math.min(12, options.limit);
+    const right = maximumFactor >= 2 ? randomInteger(options.random, 2, maximumFactor) : randomInteger(options.random, 0, options.limit);
+    const maximumLeft = right === 0 ? options.limit : Math.floor(options.limit / right);
+    const left = maximumLeft >= 2 ? randomBalancedInteger(options.random, 2, maximumLeft) : randomInteger(options.random, 0, maximumLeft);
     const result = left * right;
     return createProblem(TEMPLATE_TYPES.MULTIPLICATION, {
       prompt: `${left} \xD7 ${right} = \u25A1`,
@@ -2552,11 +2567,11 @@
   }
   function renderMakeTenDiagram(problem) {
     const [left = "", right = ""] = problem.operands || [];
-    return `<div class="problem ten-diagram make-ten-diagram"><div class="ten-formula"><span>${escapeHtml(left)}</span><span>+</span><span>${escapeHtml(right)}</span><span>=</span><span class="answer-box ten-answer-box"></span></div><div class="ten-tree"><div class="ten-tree-spacer"></div><div class="ten-branch-line ten-left-branch">/</div><div class="ten-branch-line ten-right-branch">\\</div><span class="answer-box ten-small-box ten-split-left"></span><span class="answer-box ten-small-box ten-split-right"></span><strong>10</strong></div></div>`;
+    return `<div class="problem ten-diagram make-ten-diagram"><div class="ten-formula"><span>${escapeHtml(left)}</span><span>+</span><span class="ten-target-number">${escapeHtml(right)}</span><span>=</span><span class="answer-box ten-answer-box"></span></div><div class="ten-tree"><div class="ten-branch-line ten-left-branch">/</div><div class="ten-branch-line ten-right-branch">\\</div><span class="answer-box ten-small-box ten-split-left"></span><span class="answer-box ten-small-box ten-split-right"></span></div></div>`;
   }
   function renderBreakTenDiagram(problem) {
     const [left = "", right = ""] = problem.operands || [];
-    return `<div class="problem ten-diagram break-ten-diagram"><div class="ten-formula"><span>${escapeHtml(left)}</span><span>-</span><span>${escapeHtml(right)}</span><span>=</span><span class="answer-box ten-answer-box"></span></div><div class="ten-tree break-ten-tree"><div class="ten-tree-spacer"></div><div class="ten-branch-line ten-left-branch">/</div><div class="ten-branch-line ten-right-branch">\\</div><span class="answer-box ten-small-box ten-split-left"></span><span class="answer-box ten-small-box ten-split-right"></span><span class="ten-followup">-</span><span class="answer-box ten-small-box ten-final-box"></span></div></div>`;
+    return `<div class="problem ten-diagram break-ten-diagram"><div class="ten-formula"><span>${escapeHtml(left)}</span><span>-</span><span class="ten-target-number">${escapeHtml(right)}</span><span>=</span><span class="answer-box ten-answer-box"></span></div><div class="ten-tree break-ten-tree"><div class="ten-branch-line ten-left-branch">/</div><div class="ten-branch-line ten-right-branch">\\</div><span class="answer-box ten-small-box ten-split-left"></span><span class="answer-box ten-small-box ten-split-right"></span></div></div>`;
   }
   function renderVerticalCalculation(problem) {
     const [left = "", right = ""] = problem.operands || [];
@@ -2579,9 +2594,15 @@
     const text = String(problem.prompt || "").trim();
     const character = Array.from(text).find((item) => item.trim()) || "";
     const steps = Array.isArray(problem.strokeSteps) ? problem.strokeSteps : [];
+    const strokePaths = Array.isArray(problem.strokePaths) ? problem.strokePaths : [];
     const progress = Array.isArray(problem.strokeProgress) && problem.strokeProgress.length ? problem.strokeProgress : [character];
-    const sampleCells = progress.slice(0, 12).map((sample, index) => `<span class="mizi-cell mizi-sample-cell stroke-progress-cell"><span>${escapeHtml(sample)}</span><i>${index + 1}</i></span>`).join("");
-    const cells = `${sampleCells}${Array.from({ length: Math.max(0, 12 - progress.length) }, () => '<span class="mizi-cell"></span>').join("")}`;
+    const progressCount = Math.min(12, strokePaths.length || progress.length);
+    const sampleCells = Array.from({ length: progressCount }, (_, index) => {
+      const sample = progress[index] || character;
+      const content = strokePaths.length ? `<svg class="stroke-progress-svg" viewBox="0 0 100 100" aria-label="${escapeHtml(character)}\u7B2C${index + 1}\u7B14">${strokePaths.slice(0, index + 1).map((path) => `<path d="${escapeHtml(path)}"></path>`).join("")}</svg>` : `<span>${escapeHtml(sample)}</span>`;
+      return `<span class="mizi-cell mizi-sample-cell stroke-progress-cell">${content}<i>${index + 1}</i></span>`;
+    }).join("");
+    const cells = `${sampleCells}${Array.from({ length: Math.max(0, 12 - progressCount) }, () => '<span class="mizi-cell"></span>').join("")}`;
     const strokeHint = steps.length ? `<div class="stroke-order-row">${steps.map((step, index) => `<span>${index + 1}. ${escapeHtml(step)}</span>`).join("")}</div>` : "";
     return `<div class="problem writing-practice hanzi-writing hanzi-stroke-writing"><div class="practice-label">${escapeHtml(text)}</div>${strokeHint}<div class="mizi-row">${cells}</div></div>`;
   }
@@ -2596,7 +2617,7 @@
       return kind === "make-ten" ? renderMakeTenDiagram(problem) : renderBreakTenDiagram(problem);
     }
     if (kind === "compare") {
-      return `<div class="problem">${number}${escapeHtml(problem.prompt || "").replace("\u25CB", '<span class="comparison-circle">\u25CB</span>')}</div>`;
+      return `<div class="problem math-inline">${number}${escapeHtml(problem.prompt || "").replace("\u25CB", '<span class="comparison-circle">\u25CB</span>')}</div>`;
     }
     if (kind === "vertical") {
       return renderVerticalCalculation(problem);
@@ -2607,7 +2628,7 @@
     }
     if (kind === "word-problem") {
       const steps = Math.max(1, Number(problem.meta?.steps || problem.meta?.stepCount || problem.steps?.length || 1));
-      return `<div class="problem word-problem" style="grid-column:1/-1;display:block"><p>${number}${escapeHtml(problem.prompt || "")}</p>${Array.from({ length: steps }, (_, step) => `<div>\u7B2C ${step + 1} \u6B65\u5217\u5F0F\uFF1A<span class="answer-box equation-box"></span></div>`).join("")}<div>\u7B54\uFF1A<span class="answer-box equation-answer-box"></span></div></div>`;
+      return `<div class="problem word-problem"><p>${number}${escapeHtml(problem.prompt || "")}</p>${Array.from({ length: steps }, (_, step) => `<div class="word-answer-line">\u7B2C ${step + 1} \u6B65\u5217\u5F0F\uFF1A<span class="answer-box equation-box"></span></div>`).join("")}<div class="word-answer-line">\u7B54\uFF1A<span class="answer-box equation-answer-box"></span></div></div>`;
     }
     if (kind === "hanzi-stroke") {
       return renderHanziStrokePractice(problem);
@@ -2796,8 +2817,9 @@
     const layout = worksheetLayoutClass(paper);
     if (layout.includes("vertical")) return 9;
     if (layout.includes("make-ten") || layout.includes("break-ten")) return 6;
+    if (layout.includes("word-problem")) return 3;
+    if (layout.includes("equation")) return 6;
     if (layout.includes("hanzi-practice") || layout.includes("english-practice")) return 5;
-    if (layout.includes("equation") || layout.includes("word-problem")) return 8;
     return paper.orientation === "landscape" ? 20 : 16;
   }
   function paginateProblems(problems, size) {
@@ -2833,6 +2855,35 @@
     const text = String(value ?? "").trim();
     return text === "" ? void 0 : Number(text);
   }
+  function buildStrokeProgress(steps, finalCharacter) {
+    const strokeGlyphs = {
+      \u6A2A: "\u4E00",
+      \u7AD6: "\u4E28",
+      \u6487: "\u4E3F",
+      \u637A: "\u31CF",
+      \u70B9: "\u4E36",
+      \u63D0: "\u31C0",
+      \u6A2A\u6487: "\u4E5B",
+      \u6A2A\u94A9: "\u4E5B",
+      \u6A2A\u6298: "\u{200CD}",
+      \u6A2A\u6298\u94A9: "\u{200CC}",
+      \u6A2A\u6298\u63D0: "\u31CA",
+      \u7AD6\u94A9: "\u4E85",
+      \u7AD6\u5F2F: "\u31C4",
+      \u7AD6\u5F2F\u94A9: "\u4E5A",
+      \u7AD6\u6298: "\u{200CD}",
+      \u7AD6\u6298\u6298\u94A9: "\u{2010E}",
+      \u6487\u70B9: "\u3111",
+      \u5F2F\u94A9: "\u31C1",
+      \u659C\u94A9: "\u31C2"
+    };
+    if (!Array.isArray(steps) || !steps.length) return [finalCharacter];
+    let current = "";
+    return steps.map((step, index) => {
+      current += strokeGlyphs[step] || String(step).trim().slice(0, 1) || finalCharacter;
+      return index === steps.length - 1 ? finalCharacter : current;
+    });
+  }
   var HANZI_STROKE_PRESETS = {
     basic: [
       { text: "\u4E00", steps: ["\u6A2A"], strokeProgress: ["\u4E00"] },
@@ -2860,7 +2911,40 @@
     \u597D: { text: "\u597D", steps: ["\u6487\u70B9", "\u6487", "\u6A2A", "\u6A2A\u6487", "\u7AD6\u94A9", "\u6A2A"], strokeProgress: ["\u304F", "\u5973", "\u5973", "\u5B50", "\u597D", "\u597D"] },
     \u65E0: { text: "\u65E0", steps: ["\u6A2A", "\u6A2A", "\u6487", "\u7AD6\u5F2F\u94A9"], strokeProgress: ["\u4E00", "\u4E8C", "\u5C22", "\u65E0"] },
     \u4E0E: { text: "\u4E0E", steps: ["\u6A2A", "\u7AD6\u6298\u6298\u94A9", "\u6A2A"], strokeProgress: ["\u4E00", "\u4E0E", "\u4E0E"] },
-    \u5B50: { text: "\u5B50", steps: ["\u6A2A\u6487", "\u5F2F\u94A9", "\u6A2A"], strokeProgress: ["\u4E86", "\u4E86", "\u5B50"] }
+    \u5B50: { text: "\u5B50", steps: ["\u6A2A\u6487", "\u5F2F\u94A9", "\u6A2A"], strokeProgress: ["\u4E86", "\u4E86", "\u5B50"] },
+    \u5E38: {
+      text: "\u5E38",
+      steps: ["\u7AD6", "\u70B9", "\u6487", "\u70B9", "\u6A2A\u94A9", "\u7AD6", "\u6A2A\u6298", "\u6A2A", "\u7AD6", "\u6A2A\u6298\u94A9", "\u7AD6"],
+      strokeProgress: buildStrokeProgress(["\u7AD6", "\u70B9", "\u6487", "\u70B9", "\u6A2A\u94A9", "\u7AD6", "\u6A2A\u6298", "\u6A2A", "\u7AD6", "\u6A2A\u6298\u94A9", "\u7AD6"], "\u5E38"),
+      strokePaths: [
+        "M50 8 L50 24",
+        "M33 13 L27 23",
+        "M67 13 L73 23",
+        "M49 26 L45 34",
+        "M22 34 H78 L73 43",
+        "M34 45 V62",
+        "M34 45 H66 V62",
+        "M34 62 H66",
+        "M28 70 V88",
+        "M28 70 H72 V88",
+        "M50 68 V93"
+      ]
+    },
+    \u59D4: {
+      text: "\u59D4",
+      steps: ["\u6487", "\u6A2A", "\u7AD6", "\u6487", "\u637A", "\u6487\u70B9", "\u6487", "\u6A2A"],
+      strokeProgress: buildStrokeProgress(["\u6487", "\u6A2A", "\u7AD6", "\u6487", "\u637A", "\u6487\u70B9", "\u6487", "\u6A2A"], "\u59D4"),
+      strokePaths: [
+        "M52 8 L29 18",
+        "M27 25 H74",
+        "M50 21 V52",
+        "M50 34 L26 55",
+        "M50 34 L74 55",
+        "M36 60 L55 74 L34 91",
+        "M69 62 L43 91",
+        "M24 82 H78"
+      ]
+    }
   });
   function createStrokePracticeProblems(values, lines) {
     const preset = HANZI_STROKE_PRESETS[values.strokePreset] || HANZI_STROKE_PRESETS.basic;
@@ -2872,7 +2956,8 @@
       answer: "",
       boxes: 0,
       strokeSteps: item.steps,
-      strokeProgress: item.strokeProgress
+      strokeProgress: item.strokeProgress || buildStrokeProgress(item.steps, item.text),
+      strokePaths: item.strokePaths
     }));
   }
   async function createProblemsFromForm(values) {

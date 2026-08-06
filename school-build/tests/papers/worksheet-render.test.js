@@ -46,7 +46,9 @@ test('凑十破十和练字题使用图片样式需要的专属格线', () => {
   const english = renderProblemHtml({ kind:'english-word', prompt:'apple' }, 3);
 
   assert.equal((makeTen.match(/ten-small-box/g) || []).length, 2);
-  assert.equal((breakTen.match(/ten-small-box/g) || []).length, 3);
+  assert.equal((breakTen.match(/ten-small-box/g) || []).length, 2);
+  assert.doesNotMatch(makeTen, /<strong>10<\/strong>/);
+  assert.doesNotMatch(breakTen, /ten-final-box/);
   assert.equal((hanzi.match(/mizi-row/g) || []).length, 1);
   assert.equal((hanzi.match(/mizi-sample-cell/g) || []).length, 2);
   assert.match(english, /english-copybook-line/);
@@ -59,6 +61,19 @@ test('汉字按笔画练字渲染笔顺提示和逐笔进度格', () => {
   assert.match(html, /1\. 横/);
   assert.match(html, /2\. 竖/);
   assert.equal((html.match(/stroke-progress-cell/g) || []).length, 2);
+});
+
+test('汉字按笔画练字支持逐笔路径累积展示', () => {
+  const html = renderProblemHtml({
+    kind:'hanzi-stroke',
+    prompt:'常',
+    strokeSteps:['竖', '点'],
+    strokeProgress:['丨', '丨丶'],
+    strokePaths:['M50 8 L50 24', 'M33 13 L27 23'],
+  }, 0);
+
+  assert.match(html, /stroke-progress-svg/);
+  assert.equal((html.match(/<path /g) || []).length, 3);
 });
 
 test('真实试卷页面复用已验证的题目渲染器', () => {
