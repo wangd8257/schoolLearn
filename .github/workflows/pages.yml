@@ -7,9 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: pages-${{ github.ref }}
@@ -18,19 +16,17 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Prepare static site
+      - name: Prepare site
         run: |
-          mkdir -p pages-artifact
-          cp -R school-build pages-artifact/school-build
-          touch pages-artifact/.nojekyll
-          cat > pages-artifact/index.html <<'HTML'
+          rm -rf site
+          mkdir -p site/school-build
+          cp -R school-build/. site/school-build/
+          touch site/.nojekyll
+          cat > site/index.html <<'HTML'
           <!doctype html>
           <html lang="zh-CN">
             <head>
@@ -44,14 +40,12 @@ jobs:
           </html>
           HTML
 
-      - name: Configure Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Publish gh-pages
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          path: pages-artifact
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./site
+          force_orphan: true
+          user_name: github-actions[bot]
+          user_email: github-actions[bot]@users.noreply.github.com
