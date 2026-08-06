@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { renderProblemHtml } from '../../src/worksheet-render.js';
+import { renderProblemHtml, worksheetColumns } from '../../src/worksheet-render.js';
 
 test('横式与缺项题只渲染一个可填写空格', () => {
   const horizontal = renderProblemHtml({ kind:'horizontal', prompt:'3 + 5 = □' }, 0);
@@ -11,6 +11,14 @@ test('横式与缺项题只渲染一个可填写空格', () => {
   assert.equal((missing.match(/answer-box/g) || []).length, 1);
   assert.equal(horizontal.includes('□'), false);
   assert.equal(missing.includes('□'), false);
+});
+
+test('数学普通题降低每行列数，避免横向题目过于紧凑', () => {
+  assert.equal(worksheetColumns({ orientation:'portrait', config:{ template:'mixed' } }), 3);
+  assert.equal(worksheetColumns({ orientation:'portrait', config:{ template:'horizontal' } }), 3);
+  assert.equal(worksheetColumns({ orientation:'landscape', config:{ template:'horizontal' } }), 4);
+  assert.equal(worksheetColumns({ orientation:'portrait', config:{ template:'multiply' } }), 4);
+  assert.equal(worksheetColumns({ orientation:'portrait', config:{ template:'divide' } }), 4);
 });
 
 test('比较、竖式、列式和应用题使用各自专属版式', () => {
@@ -25,7 +33,25 @@ test('比较、竖式、列式和应用题使用各自专属版式', () => {
   assert.match(vertical, /<span class="vertical-operator-cell">\+<\/span>/);
   assert.equal((vertical.match(/vertical-digit-box/g) || []).length, 2);
   assert.match(equation, /列式/);
+  assert.match(equation, /answer-label/);
   assert.equal((wordProblem.match(/列式/g) || []).length, 2);
+  assert.match(wordProblem, /answer-label/);
+});
+
+test('列式计算和应用题按整行排版，填写框撑满剩余宽度', () => {
+  const stylesheet = readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
+
+  assert.equal(worksheetColumns({ orientation:'portrait', config:{ template:'equation' } }), 1);
+  assert.equal(worksheetColumns({ orientation:'portrait', config:{ template:'word-problem' } }), 1);
+  assert.match(stylesheet, /\.equation-calculation\s*\{[^}]*grid-column:\s*1\s*\/\s*-1/s);
+  assert.match(stylesheet, /\.word-answer-line \.answer-box\s*\{[^}]*flex:\s*1\s+1\s+auto/s);
+});
+
+test('超长数学横式允许在题目内部换行，避免被纸张裁掉', () => {
+  const stylesheet = readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
+
+  assert.match(stylesheet, /\.math-inline\s*\{[^}]*white-space:\s*normal/s);
+  assert.match(stylesheet, /\.math-inline\s*\{[^}]*flex-wrap:\s*wrap/s);
 });
 
 test('竖式题数字按位补齐并把运算符放在最左一格', () => {
@@ -94,6 +120,9 @@ test('生成器明确区分列式计算和应用题且不暴露无效参数', ()
   assert.match(appSource, /equation:'equation'/);
   assert.match(appSource, /previewWorksheetButton/);
   assert.doesNotMatch(appSource, /name="min"/);
+  assert.doesNotMatch(appSource, /name="showTranslation"/);
+  assert.match(appSource, /operationTemplates\s*=\s*\['horizontal', 'missing', 'vertical', 'equation'\]/);
+  assert.match(appSource, /chainTemplates\s*=\s*\['chain-add', 'chain-sub', 'mixed'\]/);
 });
 
 test('离线缓存包含真实试卷渲染模块', () => {

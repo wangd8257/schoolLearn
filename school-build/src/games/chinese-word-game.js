@@ -49,7 +49,7 @@ function findLengthPlan(total, lengths, random) {
 }
 
 /**
- * 生成覆盖 9×9 棋盘的连续蛇形索引。
+ * 生成覆盖 9×9 棋盘的基础蛇形索引。
  * @returns {number[]} 依次上下左右相邻的 81 个格子索引。
  */
 function createSnakePath() {
@@ -60,6 +60,110 @@ function createSnakePath() {
     for (const column of columns) path.push(row * BOARD_SIDE + column);
   }
   return path;
+}
+
+/**
+ * 获取指定格子的上下左右候选邻居。
+ * @param {number} cellIndex 当前格子索引。
+ * @returns {number[]} 位于棋盘范围内的四方向邻居索引。
+ */
+function getOrthogonalNeighbors(cellIndex) {
+  const row = Math.floor(cellIndex / BOARD_SIDE);
+  const column = cellIndex % BOARD_SIDE;
+  const neighbors = [];
+  if (row > 0) neighbors.push(cellIndex - BOARD_SIDE);
+  if (row < BOARD_SIDE - 1) neighbors.push(cellIndex + BOARD_SIDE);
+  if (column > 0) neighbors.push(cellIndex - 1);
+  if (column < BOARD_SIDE - 1) neighbors.push(cellIndex + 1);
+  return neighbors;
+}
+
+/**
+ * 检查剩余空格是否存在被孤立的单格。
+ * @param {boolean[]} occupied 当前已占用格子标记。
+ * @returns {boolean} 是否存在无法继续组成 2～4 字词的孤立空格。
+ */
+function hasIsolatedEmptyCell(occupied) {
+  return occupied.some((used, cellIndex) => (
+    !used && getOrthogonalNeighbors(cellIndex).every((neighbor) => occupied[neighbor])
+  ));
+}
+
+/**
+ * 枚举指定长度的随机四方向空格路径。
+ * @param {boolean[]} occupied 当前已占用格子标记。
+ * @param {number} length 需要生成的路径长度。
+ * @param {() => number} random 随机数生成函数。
+ * @returns {number[][]} 可用于放置单词的候选路径集合。
+ */
+function createPathCandidates(occupied, length, random) {
+  const candidates = [];
+  const starts = shuffle(Array.from({ length: BOARD_SIZE }, (_, index) => index), random);
+
+  /**
+   * 从当前路径末端继续搜索未占用的四方向格子。
+   * @param {number[]} path 当前候选路径。
+   * @returns {void}
+   */
+  function search(path) {
+    if (path.length === length) {
+      candidates.push(path);
+      return;
+    }
+    const current = path[path.length - 1];
+    const neighbors = shuffle(getOrthogonalNeighbors(current), random);
+    for (const neighbor of neighbors) {
+      if (occupied[neighbor] || path.includes(neighbor)) continue;
+      search([...path, neighbor]);
+    }
+  }
+
+  for (const start of starts) {
+    if (!occupied[start]) search([start]);
+  }
+  return shuffle(candidates, random);
+}
+
+/**
+ * 为每个词生成分散的四方向路径，避免整张棋盘呈现连续蛇形。
+ * @param {{word:string,source:string}[]} solutionWords 需要预埋的词条。
+ * @param {() => number} random 随机数生成函数。
+ * @returns {number[][]} 与词条顺序一一对应的棋盘路径。
+ */
+function createScatteredSolutionPaths(solutionWords, random) {
+  const orderedWords = solutionWords
+    .map((solution, index) => ({ index, length: [...solution.word].length }))
+    .sort((left, right) => right.length - left.length || left.index - right.index);
+
+  // 多次随机尝试能让短路径自然分散，同时保留失败时的明确错误。
+  for (let attempt = 0; attempt < 200; attempt += 1) {
+    const occupied = Array(BOARD_SIZE).fill(false);
+    const paths = Array(solutionWords.length);
+    let failed = false;
+
+    for (const { index, length } of orderedWords) {
+      const candidates = createPathCandidates(occupied, length, random);
+      const path = candidates.find((candidate) => {
+        for (const cellIndex of candidate) occupied[cellIndex] = true;
+        const usable = !hasIsolatedEmptyCell(occupied);
+        for (const cellIndex of candidate) occupied[cellIndex] = false;
+        return usable;
+      });
+
+      if (!path) {
+        failed = true;
+        break;
+      }
+
+      // 将每个词固定在独立局部路径上，降低相邻词首尾继续连成一整条线的概率。
+      for (const cellIndex of path) occupied[cellIndex] = true;
+      paths[index] = path;
+    }
+
+    if (!failed && occupied.every(Boolean)) return paths;
+  }
+
+  throw new RangeError('无法为当前词库生成分散的四方向消除路径');
 }
 
 /**
@@ -168,18 +272,17 @@ export function createChineseWordGame(options = {}) {
     .filter((word) => !customWords.includes(word));
   const dictionary = [...customWords, ...builtInWords];
   const solutionWords = createSolutionWords(customWords, builtInWords, allowedWordLengths, random);
-  const snakePath = createSnakePath();
+  const scatteredPaths = createScatteredSolutionPaths(solutionWords, random);
   const board = Array(BOARD_SIZE).fill(null);
   const solutionPaths = [];
-  let cursor = 0;
 
-  // 每个词沿同一条连续蛇形路径切段预埋，所有分段互不重叠且完整覆盖 81 格。
-  for (const solution of solutionWords) {
+  // 每个词独立预埋在随机局部路径里，保证上下左右可连且整体不再呈现整板蛇形。
+  for (let solutionIndex = 0; solutionIndex < solutionWords.length; solutionIndex += 1) {
+    const solution = solutionWords[solutionIndex];
     const characters = [...solution.word];
-    const path = snakePath.slice(cursor, cursor + characters.length);
+    const path = scatteredPaths[solutionIndex];
     path.forEach((cellIndex, index) => { board[cellIndex] = characters[index]; });
     solutionPaths.push({ ...solution, path });
-    cursor += characters.length;
   }
 
   return {

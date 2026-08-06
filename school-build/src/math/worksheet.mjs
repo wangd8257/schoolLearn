@@ -14,6 +14,25 @@ function snapshotOptions(options) {
 }
 
 /**
+ * 生成题目的稳定去重签名，避免同一试卷里重复出题。
+ * @param {Record<string, unknown>} problem 单题对象。
+ * @returns {string} 可比较的题目签名。
+ */
+function problemSignature(problem) {
+  return JSON.stringify({
+    type: problem.type,
+    prompt: problem.prompt,
+    answer: problem.answer,
+    operands: problem.operands,
+    operators: problem.operators,
+    intermediateResults: problem.intermediateResults,
+    meta: problem.meta,
+    displayLines: problem.displayLines,
+    processBoxes: problem.processBoxes,
+  });
+}
+
+/**
  * 生成一份独立数学试卷快照。
  * @param {{title?: string, template: string, count: number, orientation?: string, options?: Record<string, unknown>, random?: () => number, createdAt?: string}} config 试卷配置。
  * @returns {Record<string, unknown>} 包含稳定题号和完整题目的试卷快照。
@@ -32,10 +51,25 @@ export function generateWorksheet(config) {
 
   const options = config.options ?? {};
   const random = config.random ?? options.random ?? Math.random;
-  const problems = Array.from({ length: config.count }, (_, index) => ({
-    id: `q-${index + 1}`,
-    ...generateProblem(config.template, { ...options, random }),
-  }));
+  const seen = new Set();
+  const problems = Array.from({ length: config.count }, (_, index) => {
+    let problem = null;
+    for (let attempt = 1; attempt <= 200; attempt += 1) {
+      const candidate = generateProblem(config.template, { ...options, random });
+      const signature = problemSignature(candidate);
+      if (seen.has(signature)) continue;
+      seen.add(signature);
+      problem = candidate;
+      break;
+    }
+    if (!problem) {
+      throw new RangeError(`试卷题目去重失败：${config.template} 无法在当前参数下生成足够多的不同题目`);
+    }
+    return {
+      id: `q-${index + 1}`,
+      ...problem,
+    };
+  });
 
   return {
     schemaVersion: 1,

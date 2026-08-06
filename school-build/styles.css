@@ -105,9 +105,9 @@ button { cursor: pointer; }
 .worksheet-content { position: absolute; inset: 0; display: flex; flex-direction: column; padding: 4.8%; z-index: 1; overflow: hidden; }
 .worksheet-title { text-align: center; margin: 0 0 12px; font-size: 22px; }
 .worksheet-meta-line { flex: 0 0 auto; }
-.worksheet-lines { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: repeat(var(--columns, 4), minmax(0, 1fr)); gap: 18px 14px; align-content: start; font: 18px "Times New Roman", serif; overflow: hidden; }
+.worksheet-lines { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: repeat(var(--columns, 4), minmax(0, 1fr)); gap: 22px 34px; align-content: start; font: 18px "Times New Roman", serif; overflow: hidden; }
 .problem { min-width: 0; min-height: 34px; display: flex; align-items: center; gap: 5px; word-break: keep-all; overflow-wrap: normal; }
-.math-inline { white-space: nowrap; flex-wrap: nowrap; }
+.math-inline { white-space: normal; flex-wrap: wrap; line-height: 1.45; }
 .answer-box { display: inline-block; min-width: 42px; height: 30px; border: 1.5px solid #555; vertical-align: middle; }
 .process-diagram { grid-column: span 2; border: 1px solid #d3d3d3; padding: 10px; }
 .process-boxes { display: flex; justify-content: center; gap: 9px; margin-top: 10px; }
@@ -126,22 +126,22 @@ button { cursor: pointer; }
 .ten-formula { display: grid; grid-template-columns: auto auto minmax(44px, auto) auto auto; gap: 6px; align-items: center; white-space: nowrap; }
 .ten-target-number { min-width: 44px; text-align: center; }
 .ten-answer-box { width: 34px; min-width: 34px; height: 28px; }
-.ten-tree { display: grid; grid-template-columns: 30px 30px; grid-template-rows: 12px 24px; column-gap: 4px; align-items: center; text-align: center; margin-top: -2px; margin-left: calc(100% - 108px); }
+.ten-tree { display: grid; grid-template-columns: 30px 30px; grid-template-rows: 12px 24px; column-gap: 4px; align-items: center; text-align: center; margin-top: -2px; justify-self: end; }
 .ten-branch-line { color: #1d2429; font-size: 18px; line-height: 1; }
 .ten-left-branch { grid-column: 1; grid-row: 1; align-self: end; justify-self: center; transform: translateX(6px); }
 .ten-right-branch { grid-column: 2; grid-row: 1; align-self: end; justify-self: center; transform: translateX(-6px); }
 .ten-split-left { grid-column: 1; grid-row: 2; }
 .ten-split-right { grid-column: 2; grid-row: 2; }
 .ten-small-box { width: 30px; min-width: 30px; height: 22px; }
-.equation-calculation { grid-column: span 1; display: block; min-height: 112px; font-family: "KaiTi", "STKaiti", serif; line-height: 1.5; }
-.equation-calculation p { margin: 0 0 8px; white-space: normal; }
-.equation-answer-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
-.equation-box { min-width: 72px; height: 34px; }
-.equation-answer-box { min-width: 72px; height: 34px; }
+.equation-calculation { grid-column: 1 / -1; display: block; min-height: 154px; font-family: "KaiTi", "STKaiti", serif; line-height: 1.8; }
+.equation-calculation p { margin: 0 0 10px; white-space: normal; overflow-wrap: anywhere; }
+.equation-box, .equation-answer-box { min-width: 0; height: 34px; }
 .word-problem { grid-column: 1 / -1; display: block; min-height: 170px; padding-top: 2px; line-height: 1.8; }
 .word-problem p { margin: 0 0 10px; white-space: normal; overflow-wrap: anywhere; }
 .word-answer-line { display: flex; align-items: center; gap: 10px; flex-wrap: nowrap; margin-top: 10px; }
-.word-problem .equation-box, .word-problem .equation-answer-box { min-width: 94px; height: 34px; }
+.answer-label { flex: 0 0 auto; }
+.word-answer-line .answer-box { flex: 1 1 auto; min-width: 0; }
+.word-problem .equation-box, .word-problem .equation-answer-box { min-width: 0; height: 34px; }
 .writing-practice { display: block; min-height: auto; }
 .practice-label { margin: 0 0 8px; font: 700 16px "KaiTi", "STKaiti", serif; }
 .mizi-row { display: grid; grid-template-columns: repeat(12, 1fr); gap: 0; margin-bottom: 12px; }

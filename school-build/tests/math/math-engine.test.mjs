@@ -162,7 +162,7 @@ test('整除模式的余数为零', () => {
 
 test('凑十、破十、进位和退位模板满足各自算法条件', () => {
   const makeTen = seededProblem('make-ten', { limit: 20 });
-  assert.equal(makeTen.processBoxes[0].result, 10);
+  assert.equal(makeTen.processBoxes[0].result % 10, 0);
   assert.equal(makeTen.operands.some((value) => value > 10), true);
 
   const breakTen = seededProblem('break-ten', { limit: 20 });
@@ -193,18 +193,29 @@ test('普通计算题随机数字覆盖中高区间，避免集中生成一位�
 test('凑十法和破十法支持指定两个参与计算的数字', () => {
   const makeTen = seededProblem('make-ten', { limit: 20, leftNumber: 8, rightNumber: 5 });
   const breakTen = seededProblem('break-ten', { limit: 20, leftNumber: 13, rightNumber: 5 });
+  const makeRoundTen = seededProblem('make-ten', { limit: 100, leftNumber: 50, rightNumber: 50 });
+  const [makeLeft, makeRight] = makeTen.operands;
+  const [roundLeft, roundRight] = makeRoundTen.operands;
+  const [breakLeft, breakRight] = breakTen.operands;
 
-  assert.deepEqual(makeTen.operands, [8, 5]);
-  assert.deepEqual(makeTen.meta.split, [2, 3]);
-  assert.equal(makeTen.answer, 13);
-  assert.deepEqual(breakTen.operands, [13, 5]);
-  assert.deepEqual(breakTen.meta.split, [3, 2]);
-  assert.equal(breakTen.answer, 8);
+  assert.ok(Math.abs(makeLeft - 8) <= 20);
+  assert.ok(Math.abs(makeRight - 5) <= 20);
+  assert.equal(makeTen.meta.split[0], 10 - (makeLeft % 10));
+  assert.equal(makeTen.meta.split[0] + makeTen.meta.split[1], makeRight);
+  assert.equal(makeTen.answer, makeLeft + makeRight);
+  assert.ok(Math.abs(roundLeft - 50) <= 20);
+  assert.ok(Math.abs(roundRight - 50) <= 20);
+  assert.equal(makeRoundTen.processBoxes[0].result % 10, 0);
+  assert.equal(makeRoundTen.answer, roundLeft + roundRight);
+  assert.ok(Math.abs(breakLeft - 13) <= 20);
+  assert.ok(Math.abs(breakRight - 5) <= 20);
+  assert.deepEqual(breakTen.meta.split, [breakLeft - 10, breakRight - (breakLeft - 10)]);
+  assert.equal(breakTen.answer, breakLeft - breakRight);
 });
 
-test('凑十法和破十法拒绝不符合算法条件的指定数字', () => {
-  assert.throws(() => seededProblem('make-ten', { limit: 20, leftNumber: 10, rightNumber: 3 }), /无法生成 make-ten/);
-  assert.throws(() => seededProblem('break-ten', { limit: 20, leftNumber: 9, rightNumber: 3 }), /无法生成 break-ten/);
+test('凑十法和破十法在参考窗口没有合法解时明确失败', () => {
+  assert.throws(() => seededProblem('make-ten', { limit: 9, leftNumber: 10, rightNumber: 3 }), /无法生成 make-ten|limit/);
+  assert.throws(() => seededProblem('break-ten', { limit: 9, leftNumber: 9, rightNumber: 3 }), /无法生成 break-ten|limit/);
 });
 
 test('人民币题的换算关系准确', () => {
@@ -287,4 +298,18 @@ test('试卷生成固定题量、稳定编号和独立快照元数据', () => {
     () => generateWorksheet({ template: 'horizontal', count: 1, orientation: 'square' }),
     /orientation/,
   );
+});
+
+test('同一份试卷内不会重复生成完全相同的题目', () => {
+  const worksheet = generateWorksheet({
+    title: '不重复试卷',
+    template: 'horizontal',
+    count: 12,
+    orientation: 'portrait',
+    options: { limit: 20, operation: 'addition' },
+    random: createSeededRandom(42),
+  });
+  const signatures = new Set(worksheet.problems.map((problem) => JSON.stringify([problem.type, problem.prompt, problem.answer, problem.operands, problem.operators])));
+
+  assert.equal(signatures.size, worksheet.problems.length);
 });

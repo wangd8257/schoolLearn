@@ -7,25 +7,25 @@ export const DEFAULT_TEMPLATES = [
     id: 'default-template-math-horizontal-v1',
     title: '20以内加减法',
     subject: '数学',
-    config: { subject: '数学', template: 'horizontal', title: '', orientation: 'portrait', count: '20', max: '20', operandCount: '3', operation: 'add' },
+    config: { subject: '数学', template: 'horizontal', title: '', orientation: 'portrait', count: '20', max: '20', operation: 'add' },
   },
   {
     id: 'default-template-math-missing-v1',
     title: '20以内缺项填数',
     subject: '数学',
-    config: { subject: '数学', template: 'missing', title: '', orientation: 'portrait', count: '20', max: '20', operandCount: '3', operation: 'mixed' },
+    config: { subject: '数学', template: 'missing', title: '', orientation: 'portrait', count: '20', max: '20', operation: 'mixed' },
   },
   {
     id: 'default-template-chinese-trace-v1',
     title: '汉字描红',
     subject: '语文',
-    config: { subject: '语文', template: 'hanzi-trace', title: '', orientation: 'portrait', customContent: '天\n地\n人\n你\n我', showTranslation: 'no' },
+    config: { subject: '语文', template: 'hanzi-trace', title: '', orientation: 'portrait', customContent: '天\n地\n人\n你\n我' },
   },
   {
     id: 'default-template-english-words-v1',
     title: '英语单词描红',
     subject: '英语',
-    config: { subject: '英语', template: 'english-word', title: '', orientation: 'portrait', customContent: 'apple\nbook\ncat\ndog\neye', showTranslation: 'yes' },
+    config: { subject: '英语', template: 'english-word', title: '', orientation: 'portrait', customContent: 'apple\nbook\ncat\ndog\neye' },
   },
 ];
 

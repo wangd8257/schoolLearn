@@ -213,6 +213,16 @@
     const floor = maximum >= 20 ? Math.max(minimum, Math.floor(maximum * 0.25)) : minimum;
     return randomInteger(random, floor, maximum);
   }
+  function randomWithinWindow(random, anchor, minimum, maximum, window2 = 20) {
+    const lower = Math.max(minimum, anchor - window2);
+    const upper = Math.min(maximum, anchor + window2);
+    if (upper < lower) return null;
+    return randomInteger(random, lower, upper);
+  }
+  function complementToNextTen(value) {
+    const remainder = value % 10;
+    return remainder === 0 ? 10 : 10 - remainder;
+  }
   function createBinaryCalculation(operation, limit, random) {
     if (operation === "addition") {
       const result = randomBalancedInteger(random, 0, limit);
@@ -367,32 +377,33 @@
     if (options.limit < 10) {
       return null;
     }
-    const left = options.leftNumber ?? randomInteger(options.random, 1, 9);
-    if (left < 1 || left > 9) {
+    const left = options.leftNumber === void 0 ? randomBalancedInteger(options.random, 1, options.limit - 1) : randomWithinWindow(options.random, options.leftNumber, 1, options.limit - 1);
+    if (left < 1 || left >= options.limit) {
       return null;
     }
-    const complement = 10 - left;
+    const complement = complementToNextTen(left);
     const maximumRight = options.limit - left;
     const minimumRight = options.rightNumber === void 0 ? Math.max(11, complement) : complement;
     if (maximumRight < minimumRight) {
       return null;
     }
-    const right = options.rightNumber ?? randomInteger(options.random, minimumRight, maximumRight);
+    const right = options.rightNumber === void 0 ? randomInteger(options.random, minimumRight, maximumRight) : randomWithinWindow(options.random, options.rightNumber, minimumRight, maximumRight);
     if (right < complement || right > maximumRight) {
       return null;
     }
     const rest = right - complement;
     const result = left + right;
+    const roundedTen = left + complement;
     return createProblem(TEMPLATE_TYPES.MAKE_TEN, {
       prompt: `${left} + ${right} = \u25A1\uFF08\u7528\u51D1\u5341\u6CD5\uFF09`,
       answer: result,
       operands: [left, right],
       operators: ["+"],
-      intermediateResults: [10, result],
+      intermediateResults: [roundedTen, result],
       expression: `${left} + ${right}`,
       processBoxes: [
-        { kind: "make-ten", expression: `${left} + ${complement}`, result: 10 },
-        { kind: "remaining-addition", expression: `10 + ${rest}`, result }
+        { kind: "make-ten", expression: `${left} + ${complement}`, result: roundedTen },
+        { kind: "remaining-addition", expression: `${roundedTen} + ${rest}`, result }
       ],
       meta: { split: [complement, rest] }
     }, options.limit);
@@ -404,7 +415,7 @@
     if (options.leftNumber === void 0 && options.limit < 11) {
       return null;
     }
-    const left = options.leftNumber ?? randomInteger(options.random, 11, Math.min(options.limit, 19));
+    const left = options.leftNumber === void 0 ? randomInteger(options.random, 11, Math.min(options.limit, 19)) : randomWithinWindow(options.random, options.leftNumber, 11, Math.min(options.limit, 19));
     if (left < 10 || left > Math.min(options.limit, 19)) {
       return null;
     }
@@ -413,7 +424,7 @@
     if (minimumRight > left) {
       return null;
     }
-    const right = options.rightNumber ?? randomInteger(options.random, minimumRight, left);
+    const right = options.rightNumber === void 0 ? randomInteger(options.random, minimumRight, left) : randomWithinWindow(options.random, options.rightNumber, minimumRight, left);
     if (right < minimumRight || right > left) {
       return null;
     }
@@ -750,8 +761,8 @@
         errors.push("\u8FDE\u7EED\u8FD0\u7B97\u9879\u6570\u5FC5\u987B\u4E3A 3\uFF5E10");
       }
     }
-    if (problem.type === TEMPLATE_TYPES.MAKE_TEN && problem.processBoxes?.[0]?.result !== 10) {
-      errors.push("\u51D1\u5341\u6CD5\u8FC7\u7A0B\u672A\u5148\u5F97\u5230 10");
+    if (problem.type === TEMPLATE_TYPES.MAKE_TEN && problem.processBoxes?.[0]?.result % 10 !== 0) {
+      errors.push("\u51D1\u5341\u6CD5\u8FC7\u7A0B\u672A\u5148\u5F97\u5230\u6574\u5341\u6570");
     }
     if (problem.type === TEMPLATE_TYPES.BREAK_TEN && problem.processBoxes?.[0]?.result !== 10) {
       errors.push("\u7834\u5341\u6CD5\u8FC7\u7A0B\u672A\u5148\u62C6\u5230 10");
@@ -802,6 +813,19 @@
   function snapshotOptions(options) {
     return JSON.parse(JSON.stringify(options, (key, value) => typeof value === "function" || value === void 0 ? void 0 : value));
   }
+  function problemSignature(problem) {
+    return JSON.stringify({
+      type: problem.type,
+      prompt: problem.prompt,
+      answer: problem.answer,
+      operands: problem.operands,
+      operators: problem.operators,
+      intermediateResults: problem.intermediateResults,
+      meta: problem.meta,
+      displayLines: problem.displayLines,
+      processBoxes: problem.processBoxes
+    });
+  }
   function generateWorksheet(config) {
     if (!config || typeof config !== "object") {
       throw new TypeError("\u8BD5\u5377\u914D\u7F6E\u4E0D\u80FD\u4E3A\u7A7A");
@@ -815,10 +839,25 @@
     }
     const options = config.options ?? {};
     const random = config.random ?? options.random ?? Math.random;
-    const problems = Array.from({ length: config.count }, (_, index) => ({
-      id: `q-${index + 1}`,
-      ...generateProblem(config.template, { ...options, random })
-    }));
+    const seen = /* @__PURE__ */ new Set();
+    const problems = Array.from({ length: config.count }, (_, index) => {
+      let problem = null;
+      for (let attempt = 1; attempt <= 200; attempt += 1) {
+        const candidate = generateProblem(config.template, { ...options, random });
+        const signature = problemSignature(candidate);
+        if (seen.has(signature)) continue;
+        seen.add(signature);
+        problem = candidate;
+        break;
+      }
+      if (!problem) {
+        throw new RangeError(`\u8BD5\u5377\u9898\u76EE\u53BB\u91CD\u5931\u8D25\uFF1A${config.template} \u65E0\u6CD5\u5728\u5F53\u524D\u53C2\u6570\u4E0B\u751F\u6210\u8DB3\u591F\u591A\u7684\u4E0D\u540C\u9898\u76EE`);
+      }
+      return {
+        id: `q-${index + 1}`,
+        ...problem
+      };
+    });
     return {
       schemaVersion: 1,
       title: config.title ?? `${config.template} \u7EC3\u4E60`,
@@ -886,15 +925,17 @@
     const metadata = CATEGORY_DATA[category];
     if (!metadata) throw new RangeError(`\u672A\u77E5\u82F1\u8BED\u8BCD\u5E93\u5206\u7C7B\uFF1A${category}`);
     const hash = hashText(`${category}:${word}`);
+    const emoji = WORD_EMOJI[word] ?? metadata.emoji;
+    const hasExactEmoji = Object.hasOwn(WORD_EMOJI, word);
     const swatchColor = COLOR_SWATCHES[word] ?? null;
     const symbol = NUMBER_SYMBOLS[word] ?? null;
     const [defaultBackground, defaultAccent] = CARD_COLORS[hash % CARD_COLORS.length];
-    const displayMode = swatchColor ? "color-swatch" : symbol ? "number" : "pictogram";
+    const displayMode = swatchColor ? "color-swatch" : symbol ? "number" : hasExactEmoji ? "emoji" : "pictogram";
     const backgroundColor = swatchColor ?? defaultBackground;
     const accentColor = swatchColor ?? defaultAccent;
     return Object.freeze({
       displayMode,
-      emoji: WORD_EMOJI[word] ?? metadata.emoji,
+      emoji,
       symbol,
       swatchColor,
       backgroundColor,
@@ -1520,6 +1561,64 @@
     }
     return path;
   }
+  function getOrthogonalNeighbors(cellIndex) {
+    const row = Math.floor(cellIndex / BOARD_SIDE);
+    const column = cellIndex % BOARD_SIDE;
+    const neighbors = [];
+    if (row > 0) neighbors.push(cellIndex - BOARD_SIDE);
+    if (row < BOARD_SIDE - 1) neighbors.push(cellIndex + BOARD_SIDE);
+    if (column > 0) neighbors.push(cellIndex - 1);
+    if (column < BOARD_SIDE - 1) neighbors.push(cellIndex + 1);
+    return neighbors;
+  }
+  function hasIsolatedEmptyCell(occupied) {
+    return occupied.some((used, cellIndex) => !used && getOrthogonalNeighbors(cellIndex).every((neighbor) => occupied[neighbor]));
+  }
+  function createPathCandidates(occupied, length, random) {
+    const candidates = [];
+    const starts = shuffle(Array.from({ length: BOARD_SIZE }, (_, index) => index), random);
+    function search(path) {
+      if (path.length === length) {
+        candidates.push(path);
+        return;
+      }
+      const current = path[path.length - 1];
+      const neighbors = shuffle(getOrthogonalNeighbors(current), random);
+      for (const neighbor of neighbors) {
+        if (occupied[neighbor] || path.includes(neighbor)) continue;
+        search([...path, neighbor]);
+      }
+    }
+    for (const start of starts) {
+      if (!occupied[start]) search([start]);
+    }
+    return shuffle(candidates, random);
+  }
+  function createScatteredSolutionPaths(solutionWords, random) {
+    const orderedWords = solutionWords.map((solution, index) => ({ index, length: [...solution.word].length })).sort((left, right) => right.length - left.length || left.index - right.index);
+    for (let attempt = 0; attempt < 200; attempt += 1) {
+      const occupied = Array(BOARD_SIZE).fill(false);
+      const paths = Array(solutionWords.length);
+      let failed = false;
+      for (const { index, length } of orderedWords) {
+        const candidates = createPathCandidates(occupied, length, random);
+        const path = candidates.find((candidate) => {
+          for (const cellIndex of candidate) occupied[cellIndex] = true;
+          const usable = !hasIsolatedEmptyCell(occupied);
+          for (const cellIndex of candidate) occupied[cellIndex] = false;
+          return usable;
+        });
+        if (!path) {
+          failed = true;
+          break;
+        }
+        for (const cellIndex of path) occupied[cellIndex] = true;
+        paths[index] = path;
+      }
+      if (!failed && occupied.every(Boolean)) return paths;
+    }
+    throw new RangeError("\u65E0\u6CD5\u4E3A\u5F53\u524D\u8BCD\u5E93\u751F\u6210\u5206\u6563\u7684\u56DB\u65B9\u5411\u6D88\u9664\u8DEF\u5F84");
+  }
   function normalizeWords(words, allowedWordLengths) {
     return [...new Set(words.map((word) => String(word).trim()).filter(Boolean))].filter((word) => allowedWordLengths.includes([...word].length));
   }
@@ -1582,18 +1681,17 @@
     const builtInWords = normalizeWords(CHINESE_WORDS, allowedWordLengths).filter((word) => !customWords.includes(word));
     const dictionary = [...customWords, ...builtInWords];
     const solutionWords = createSolutionWords(customWords, builtInWords, allowedWordLengths, random);
-    const snakePath = createSnakePath();
+    const scatteredPaths = createScatteredSolutionPaths(solutionWords, random);
     const board = Array(BOARD_SIZE).fill(null);
     const solutionPaths = [];
-    let cursor = 0;
-    for (const solution of solutionWords) {
+    for (let solutionIndex = 0; solutionIndex < solutionWords.length; solutionIndex += 1) {
+      const solution = solutionWords[solutionIndex];
       const characters = [...solution.word];
-      const path = snakePath.slice(cursor, cursor + characters.length);
+      const path = scatteredPaths[solutionIndex];
       path.forEach((cellIndex, index) => {
         board[cellIndex] = characters[index];
       });
       solutionPaths.push({ ...solution, path });
-      cursor += characters.length;
     }
     return {
       type: "chinese-word",
@@ -2438,25 +2536,25 @@
       id: "default-template-math-horizontal-v1",
       title: "20\u4EE5\u5185\u52A0\u51CF\u6CD5",
       subject: "\u6570\u5B66",
-      config: { subject: "\u6570\u5B66", template: "horizontal", title: "", orientation: "portrait", count: "20", max: "20", operandCount: "3", operation: "add" }
+      config: { subject: "\u6570\u5B66", template: "horizontal", title: "", orientation: "portrait", count: "20", max: "20", operation: "add" }
     },
     {
       id: "default-template-math-missing-v1",
       title: "20\u4EE5\u5185\u7F3A\u9879\u586B\u6570",
       subject: "\u6570\u5B66",
-      config: { subject: "\u6570\u5B66", template: "missing", title: "", orientation: "portrait", count: "20", max: "20", operandCount: "3", operation: "mixed" }
+      config: { subject: "\u6570\u5B66", template: "missing", title: "", orientation: "portrait", count: "20", max: "20", operation: "mixed" }
     },
     {
       id: "default-template-chinese-trace-v1",
       title: "\u6C49\u5B57\u63CF\u7EA2",
       subject: "\u8BED\u6587",
-      config: { subject: "\u8BED\u6587", template: "hanzi-trace", title: "", orientation: "portrait", customContent: "\u5929\n\u5730\n\u4EBA\n\u4F60\n\u6211", showTranslation: "no" }
+      config: { subject: "\u8BED\u6587", template: "hanzi-trace", title: "", orientation: "portrait", customContent: "\u5929\n\u5730\n\u4EBA\n\u4F60\n\u6211" }
     },
     {
       id: "default-template-english-words-v1",
       title: "\u82F1\u8BED\u5355\u8BCD\u63CF\u7EA2",
       subject: "\u82F1\u8BED",
-      config: { subject: "\u82F1\u8BED", template: "english-word", title: "", orientation: "portrait", customContent: "apple\nbook\ncat\ndog\neye", showTranslation: "yes" }
+      config: { subject: "\u82F1\u8BED", template: "english-word", title: "", orientation: "portrait", customContent: "apple\nbook\ncat\ndog\neye" }
     }
   ];
   function createTemplateSnapshot(config, options) {
@@ -2552,11 +2650,11 @@
   function worksheetColumns(paper = {}) {
     const layout = worksheetLayoutClass(paper);
     if (layout.includes("make-ten") || layout.includes("break-ten") || layout.includes("vertical")) return 3;
-    if (layout.includes("equation") || layout.includes("word-problem")) return 2;
-    if (layout.includes("multiply") || layout.includes("divide")) return 5;
+    if (layout.includes("equation") || layout.includes("word-problem")) return 1;
+    if (layout.includes("multiply") || layout.includes("divide")) return 4;
     if (layout.includes("currency") || layout.includes("unit")) return 2;
     if (layout.includes("hanzi-practice") || layout.includes("english-practice")) return 1;
-    return paper.orientation === "landscape" ? 5 : 4;
+    return paper.orientation === "landscape" ? 4 : 3;
   }
   function renderWorksheetMetaHtml(paper = {}) {
     const layout = worksheetLayoutClass(paper);
@@ -2567,11 +2665,11 @@
   }
   function renderMakeTenDiagram(problem) {
     const [left = "", right = ""] = problem.operands || [];
-    return `<div class="problem ten-diagram make-ten-diagram"><div class="ten-formula"><span>${escapeHtml(left)}</span><span>+</span><span class="ten-target-number">${escapeHtml(right)}</span><span>=</span><span class="answer-box ten-answer-box"></span></div><div class="ten-tree"><div class="ten-branch-line ten-left-branch">/</div><div class="ten-branch-line ten-right-branch">\\</div><span class="answer-box ten-small-box ten-split-left"></span><span class="answer-box ten-small-box ten-split-right"></span></div></div>`;
+    return `<div class="problem ten-diagram make-ten-diagram"><div class="ten-formula"><span>${escapeHtml(left)}</span><span>+</span><span class="ten-target-number">${escapeHtml(right)}</span><span>=</span><span class="answer-box ten-answer-box"></span></div><div class="ten-tree"><div class="ten-branch-line ten-left-branch"></div><div class="ten-branch-line ten-right-branch"></div><span class="answer-box ten-small-box ten-split-left"></span><span class="answer-box ten-small-box ten-split-right"></span></div></div>`;
   }
   function renderBreakTenDiagram(problem) {
     const [left = "", right = ""] = problem.operands || [];
-    return `<div class="problem ten-diagram break-ten-diagram"><div class="ten-formula"><span>${escapeHtml(left)}</span><span>-</span><span class="ten-target-number">${escapeHtml(right)}</span><span>=</span><span class="answer-box ten-answer-box"></span></div><div class="ten-tree break-ten-tree"><div class="ten-branch-line ten-left-branch">/</div><div class="ten-branch-line ten-right-branch">\\</div><span class="answer-box ten-small-box ten-split-left"></span><span class="answer-box ten-small-box ten-split-right"></span></div></div>`;
+    return `<div class="problem ten-diagram break-ten-diagram"><div class="ten-formula"><span>${escapeHtml(left)}</span><span>-</span><span class="ten-target-number">${escapeHtml(right)}</span><span>=</span><span class="answer-box ten-answer-box"></span></div><div class="ten-tree break-ten-tree"><div class="ten-branch-line ten-left-branch"></div><div class="ten-branch-line ten-right-branch"></div><span class="answer-box ten-small-box ten-split-left"></span><span class="answer-box ten-small-box ten-split-right"></span></div></div>`;
   }
   function renderVerticalCalculation(problem) {
     const [left = "", right = ""] = problem.operands || [];
@@ -2624,11 +2722,11 @@
     }
     if (kind === "equation") {
       const boxes = Math.max(1, problem.processBoxes?.length || 1);
-      return `<div class="problem equation-calculation">${number}<p>${escapeHtml(problem.prompt || "")}</p><div class="equation-answer-row">${Array.from({ length: boxes }, () => '<span>\u5217\u5F0F\uFF1A<span class="answer-box equation-box"></span></span>').join("")}<span>\u7B54\uFF1A<span class="answer-box equation-answer-box"></span></span></div></div>`;
+      return `<div class="problem equation-calculation"><p>${number}${escapeHtml(problem.prompt || "")}</p>${Array.from({ length: boxes }, (_, step) => `<div class="word-answer-line"><span class="answer-label">${boxes > 1 ? `\u7B2C ${step + 1} \u6B65\u5217\u5F0F\uFF1A` : "\u5217\u5F0F\uFF1A"}</span><span class="answer-box equation-box"></span></div>`).join("")}<div class="word-answer-line"><span class="answer-label">\u7B54\uFF1A</span><span class="answer-box equation-answer-box"></span></div></div>`;
     }
     if (kind === "word-problem") {
       const steps = Math.max(1, Number(problem.meta?.steps || problem.meta?.stepCount || problem.steps?.length || 1));
-      return `<div class="problem word-problem"><p>${number}${escapeHtml(problem.prompt || "")}</p>${Array.from({ length: steps }, (_, step) => `<div class="word-answer-line">\u7B2C ${step + 1} \u6B65\u5217\u5F0F\uFF1A<span class="answer-box equation-box"></span></div>`).join("")}<div class="word-answer-line">\u7B54\uFF1A<span class="answer-box equation-answer-box"></span></div></div>`;
+      return `<div class="problem word-problem"><p>${number}${escapeHtml(problem.prompt || "")}</p>${Array.from({ length: steps }, (_, step) => `<div class="word-answer-line"><span class="answer-label">\u7B2C ${step + 1} \u6B65\u5217\u5F0F\uFF1A</span><span class="answer-box equation-box"></span></div>`).join("")}<div class="word-answer-line"><span class="answer-label">\u7B54\uFF1A</span><span class="answer-box equation-answer-box"></span></div></div>`;
     }
     if (kind === "hanzi-stroke") {
       return renderHanziStrokePractice(problem);
@@ -2753,14 +2851,17 @@
       const strokeFields = template === "hanzi-stroke" ? '<div class="field"><label>\u6309\u7B14\u753B\u751F\u6210\u5B57</label><select name="strokePreset"><option value="basic">\u57FA\u7840\u7B14\u753B\u5B57</option><option value="numbers">\u6570\u5B57\u6C49\u5B57</option><option value="simple">\u7B80\u5355\u5E38\u7528\u5B57</option></select></div>' : "";
       return `
     <div class="field"><label>\u7EC3\u4E60\u5185\u5BB9\uFF08\u6BCF\u884C\u4E00\u9879\uFF09</label><textarea name="customContent" placeholder="\u4E00\u884C\u53EF\u8F93\u5165\u591A\u4E2A\u5B57\uFF0C\u4F8B\u5982\uFF1A\u4F60\u597D"></textarea></div>
-    ${strokeFields}
-    <div class="field"><label>\u662F\u5426\u663E\u793A\u4E2D\u6587\u91CA\u4E49</label><select name="showTranslation"><option value="yes">\u663E\u793A</option><option value="no">\u9690\u85CF</option></select></div>`;
+    ${strokeFields}`;
     }
+    const operationTemplates = ["horizontal", "missing", "vertical", "equation"];
+    const chainTemplates = ["chain-add", "chain-sub", "mixed"];
+    const showOperation = operationTemplates.includes(template);
+    const showOperandCount = chainTemplates.includes(template);
     const tenFields = template === "make-ten" || template === "break-ten" ? `<div class="field-row"><div class="field"><label>${template === "make-ten" ? "\u7B2C\u4E00\u4E2A\u6570\u5B57" : "\u88AB\u51CF\u6570"}</label><input name="leftNumber" type="number" min="0" max="100" placeholder="\u7559\u7A7A\u968F\u673A"></div><div class="field"><label>${template === "make-ten" ? "\u7B2C\u4E8C\u4E2A\u6570\u5B57" : "\u51CF\u6570"}</label><input name="rightNumber" type="number" min="0" max="100" placeholder="\u7559\u7A7A\u968F\u673A"></div></div>` : "";
     return `
     <div class="field-row"><div class="field"><label>\u9898\u76EE\u6570\u91CF</label><input name="count" type="number" min="1" max="100" value="30"></div><div class="field"><label>\u6570\u503C\u4E0A\u9650</label><input name="max" type="number" min="5" max="10000" value="20"></div></div>
-    <div class="field"><label>\u6570\u5B57\u4E2A\u6570</label><input name="operandCount" type="number" min="3" max="10" value="3"></div>
-    <div class="field"><label>\u8FD0\u7B97\u7C7B\u578B</label><select name="operation"><option value="add">\u7EAF\u52A0</option><option value="subtract">\u7EAF\u51CF</option><option value="mixed">\u6DF7\u5408\u52A0\u51CF</option></select></div>
+    ${showOperandCount ? '<div class="field"><label>\u8FDE\u7EED\u9879\u6570</label><input name="operandCount" type="number" min="3" max="10" value="3"></div>' : ""}
+    ${showOperation ? '<div class="field"><label>\u8FD0\u7B97\u7C7B\u578B</label><select name="operation"><option value="add">\u7EAF\u52A0</option><option value="subtract">\u7EAF\u51CF</option><option value="mixed">\u6DF7\u5408\u52A0\u51CF</option></select></div>' : ""}
     ${tenFields}
     ${template === "divide" ? '<div class="field"><label>\u9664\u6CD5\u7C7B\u578B</label><select name="divisionMode"><option value="exact">\u65E0\u4F59\u6570</option><option value="remainder">\u6709\u4F59\u6570</option><option value="mixed">\u6DF7\u5408</option></select></div>' : ""}
     ${template === "unit" ? '<div class="field"><label>\u5355\u4F4D\u4F53\u7CFB</label><select name="unitType"><option value="time">\u65F6\u95F4</option><option value="length">\u957F\u5EA6</option><option value="mass">\u8D28\u91CF</option><option value="area">\u9762\u79EF</option><option value="capacity">\u5BB9\u91CF</option></select></div>' : ""}
@@ -2815,12 +2916,12 @@
   }
   function worksheetProblemsPerPage(paper) {
     const layout = worksheetLayoutClass(paper);
-    if (layout.includes("vertical")) return 9;
-    if (layout.includes("make-ten") || layout.includes("break-ten")) return 6;
-    if (layout.includes("word-problem")) return 3;
-    if (layout.includes("equation")) return 6;
-    if (layout.includes("hanzi-practice") || layout.includes("english-practice")) return 5;
-    return paper.orientation === "landscape" ? 20 : 16;
+    if (layout.includes("vertical")) return 6;
+    if (layout.includes("make-ten") || layout.includes("break-ten")) return 4;
+    if (layout.includes("word-problem")) return 2;
+    if (layout.includes("equation")) return 3;
+    if (layout.includes("hanzi-practice") || layout.includes("english-practice")) return 4;
+    return paper.orientation === "landscape" ? 16 : 12;
   }
   function paginateProblems(problems, size) {
     const pages = [];

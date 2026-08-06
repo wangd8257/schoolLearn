@@ -105,8 +105,8 @@ export function validateProblem(problem, options = {}) {
     }
   }
 
-  if (problem.type === TEMPLATE_TYPES.MAKE_TEN && problem.processBoxes?.[0]?.result !== 10) {
-    errors.push('凑十法过程未先得到 10');
+  if (problem.type === TEMPLATE_TYPES.MAKE_TEN && problem.processBoxes?.[0]?.result % 10 !== 0) {
+    errors.push('凑十法过程未先得到整十数');
   }
   if (problem.type === TEMPLATE_TYPES.BREAK_TEN && problem.processBoxes?.[0]?.result !== 10) {
     errors.push('破十法过程未先拆到 10');
@@ -156,4 +156,3 @@ export function validateProblem(problem, options = {}) {
 
   return { valid: errors.length === 0, errors };
 }
-

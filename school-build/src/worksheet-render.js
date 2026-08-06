@@ -37,11 +37,11 @@ export function worksheetLayoutClass(paper = {}) {
 export function worksheetColumns(paper = {}) {
   const layout = worksheetLayoutClass(paper);
   if (layout.includes('make-ten') || layout.includes('break-ten') || layout.includes('vertical')) return 3;
-  if (layout.includes('equation') || layout.includes('word-problem')) return 2;
-  if (layout.includes('multiply') || layout.includes('divide')) return 5;
+  if (layout.includes('equation') || layout.includes('word-problem')) return 1;
+  if (layout.includes('multiply') || layout.includes('divide')) return 4;
   if (layout.includes('currency') || layout.includes('unit')) return 2;
   if (layout.includes('hanzi-practice') || layout.includes('english-practice')) return 1;
-  return paper.orientation === 'landscape' ? 5 : 4;
+  return paper.orientation === 'landscape' ? 4 : 3;
 }
 
 /** 按图片样式渲染姓名、日期、用时填写线。 */
@@ -56,13 +56,13 @@ export function renderWorksheetMetaHtml(paper = {}) {
 /** 渲染凑十法过程图，保留两个拆分数字供孩子填写。 */
 function renderMakeTenDiagram(problem) {
   const [left = '', right = ''] = problem.operands || [];
-  return `<div class="problem ten-diagram make-ten-diagram"><div class="ten-formula"><span>${escapeHtml(left)}</span><span>+</span><span class="ten-target-number">${escapeHtml(right)}</span><span>=</span><span class="answer-box ten-answer-box"></span></div><div class="ten-tree"><div class="ten-branch-line ten-left-branch">/</div><div class="ten-branch-line ten-right-branch">\\</div><span class="answer-box ten-small-box ten-split-left"></span><span class="answer-box ten-small-box ten-split-right"></span></div></div>`;
+  return `<div class="problem ten-diagram make-ten-diagram"><div class="ten-formula"><span>${escapeHtml(left)}</span><span>+</span><span class="ten-target-number">${escapeHtml(right)}</span><span>=</span><span class="answer-box ten-answer-box"></span></div><div class="ten-tree"><div class="ten-branch-line ten-left-branch"></div><div class="ten-branch-line ten-right-branch"></div><span class="answer-box ten-small-box ten-split-left"></span><span class="answer-box ten-small-box ten-split-right"></span></div></div>`;
 }
 
 /** 渲染破十法过程图，左侧拆成 10 与余数，右侧继续相减。 */
 function renderBreakTenDiagram(problem) {
   const [left = '', right = ''] = problem.operands || [];
-  return `<div class="problem ten-diagram break-ten-diagram"><div class="ten-formula"><span>${escapeHtml(left)}</span><span>-</span><span class="ten-target-number">${escapeHtml(right)}</span><span>=</span><span class="answer-box ten-answer-box"></span></div><div class="ten-tree break-ten-tree"><div class="ten-branch-line ten-left-branch">/</div><div class="ten-branch-line ten-right-branch">\\</div><span class="answer-box ten-small-box ten-split-left"></span><span class="answer-box ten-small-box ten-split-right"></span></div></div>`;
+  return `<div class="problem ten-diagram break-ten-diagram"><div class="ten-formula"><span>${escapeHtml(left)}</span><span>-</span><span class="ten-target-number">${escapeHtml(right)}</span><span>=</span><span class="answer-box ten-answer-box"></span></div><div class="ten-tree break-ten-tree"><div class="ten-branch-line ten-left-branch"></div><div class="ten-branch-line ten-right-branch"></div><span class="answer-box ten-small-box ten-split-left"></span><span class="answer-box ten-small-box ten-split-right"></span></div></div>`;
 }
 
 /** 渲染竖式对齐格：数字右对齐，运算符固定在最左边一格。 */
@@ -137,11 +137,11 @@ export function renderProblemHtml(problem, index) {
   }
   if (kind === 'equation') {
     const boxes = Math.max(1, problem.processBoxes?.length || 1);
-    return `<div class="problem equation-calculation">${number}<p>${escapeHtml(problem.prompt || '')}</p><div class="equation-answer-row">${Array.from({ length:boxes }, () => '<span>列式：<span class="answer-box equation-box"></span></span>').join('')}<span>答：<span class="answer-box equation-answer-box"></span></span></div></div>`;
+    return `<div class="problem equation-calculation"><p>${number}${escapeHtml(problem.prompt || '')}</p>${Array.from({ length:boxes }, (_, step) => `<div class="word-answer-line"><span class="answer-label">${boxes > 1 ? `第 ${step + 1} 步列式：` : '列式：'}</span><span class="answer-box equation-box"></span></div>`).join('')}<div class="word-answer-line"><span class="answer-label">答：</span><span class="answer-box equation-answer-box"></span></div></div>`;
   }
   if (kind === 'word-problem') {
     const steps = Math.max(1, Number(problem.meta?.steps || problem.meta?.stepCount || problem.steps?.length || 1));
-    return `<div class="problem word-problem"><p>${number}${escapeHtml(problem.prompt || '')}</p>${Array.from({ length:steps }, (_, step) => `<div class="word-answer-line">第 ${step + 1} 步列式：<span class="answer-box equation-box"></span></div>`).join('')}<div class="word-answer-line">答：<span class="answer-box equation-answer-box"></span></div></div>`;
+    return `<div class="problem word-problem"><p>${number}${escapeHtml(problem.prompt || '')}</p>${Array.from({ length:steps }, (_, step) => `<div class="word-answer-line"><span class="answer-label">第 ${step + 1} 步列式：</span><span class="answer-box equation-box"></span></div>`).join('')}<div class="word-answer-line"><span class="answer-label">答：</span><span class="answer-box equation-answer-box"></span></div></div>`;
   }
   if (kind === 'hanzi-stroke') {
     return renderHanziStrokePractice(problem);

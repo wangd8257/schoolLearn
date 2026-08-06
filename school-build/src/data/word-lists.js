@@ -164,15 +164,17 @@ export function createCardVisual(word, category) {
   const metadata = CATEGORY_DATA[category];
   if (!metadata) throw new RangeError(`未知英语词库分类：${category}`);
   const hash = hashText(`${category}:${word}`);
+  const emoji = WORD_EMOJI[word] ?? metadata.emoji;
+  const hasExactEmoji = Object.hasOwn(WORD_EMOJI, word);
   const swatchColor = COLOR_SWATCHES[word] ?? null;
   const symbol = NUMBER_SYMBOLS[word] ?? null;
   const [defaultBackground, defaultAccent] = CARD_COLORS[hash % CARD_COLORS.length];
-  const displayMode = swatchColor ? 'color-swatch' : symbol ? 'number' : 'pictogram';
+  const displayMode = swatchColor ? 'color-swatch' : symbol ? 'number' : hasExactEmoji ? 'emoji' : 'pictogram';
   const backgroundColor = swatchColor ?? defaultBackground;
   const accentColor = swatchColor ?? defaultAccent;
   return Object.freeze({
     displayMode,
-    emoji: WORD_EMOJI[word] ?? metadata.emoji,
+    emoji,
     symbol,
     swatchColor,
     backgroundColor,

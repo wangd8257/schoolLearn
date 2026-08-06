@@ -139,6 +139,32 @@ function randomBalancedInteger(random, minimum, maximum) {
 }
 
 /**
+ * 在参考值附近按窗口随机选取整数，并限制在合法范围内。
+ * @param {() => number} random 随机函数。
+ * @param {number} anchor 参考值。
+ * @param {number} minimum 最小值。
+ * @param {number} maximum 最大值。
+ * @param {number} window 允许浮动的窗口。
+ * @returns {number|null} 符合窗口和边界的整数；无法取值时返回 null。
+ */
+function randomWithinWindow(random, anchor, minimum, maximum, window = 20) {
+  const lower = Math.max(minimum, anchor - window);
+  const upper = Math.min(maximum, anchor + window);
+  if (upper < lower) return null;
+  return randomInteger(random, lower, upper);
+}
+
+/**
+ * 计算当前数字要补到下一个整十数所需的数量。
+ * @param {number} value 需要凑整十的数字。
+ * @returns {number} 从另一个加数中拆出的补数。
+ */
+function complementToNextTen(value) {
+  const remainder = value % 10;
+  return remainder === 0 ? 10 : 10 - remainder;
+}
+
+/**
  * 生成满足 N 以内约束的二元加减法数据。
  * @param {string} operation 运算名称。
  * @param {number} limit 数值上限。
@@ -375,33 +401,38 @@ function generateMakeTen(options) {
     return null;
   }
 
-  const left = options.leftNumber ?? randomInteger(options.random, 1, 9);
-  if (left < 1 || left > 9) {
+  const left = options.leftNumber === undefined
+    ? randomBalancedInteger(options.random, 1, options.limit - 1)
+    : randomWithinWindow(options.random, options.leftNumber, 1, options.limit - 1);
+  if (left < 1 || left >= options.limit) {
     return null;
   }
-  const complement = 10 - left;
+  const complement = complementToNextTen(left);
   const maximumRight = options.limit - left;
   const minimumRight = options.rightNumber === undefined ? Math.max(11, complement) : complement;
   if (maximumRight < minimumRight) {
     return null;
   }
-  const right = options.rightNumber ?? randomInteger(options.random, minimumRight, maximumRight);
+  const right = options.rightNumber === undefined
+    ? randomInteger(options.random, minimumRight, maximumRight)
+    : randomWithinWindow(options.random, options.rightNumber, minimumRight, maximumRight);
   if (right < complement || right > maximumRight) {
     return null;
   }
   const rest = right - complement;
   const result = left + right;
+  const roundedTen = left + complement;
 
   return createProblem(TEMPLATE_TYPES.MAKE_TEN, {
     prompt: `${left} + ${right} = □（用凑十法）`,
     answer: result,
     operands: [left, right],
     operators: ['+'],
-    intermediateResults: [10, result],
+    intermediateResults: [roundedTen, result],
     expression: `${left} + ${right}`,
     processBoxes: [
-      { kind: 'make-ten', expression: `${left} + ${complement}`, result: 10 },
-      { kind: 'remaining-addition', expression: `10 + ${rest}`, result },
+      { kind: 'make-ten', expression: `${left} + ${complement}`, result: roundedTen },
+      { kind: 'remaining-addition', expression: `${roundedTen} + ${rest}`, result },
     ],
     meta: { split: [complement, rest] },
   }, options.limit);
@@ -420,7 +451,9 @@ function generateBreakTen(options) {
   if (options.leftNumber === undefined && options.limit < 11) {
     return null;
   }
-  const left = options.leftNumber ?? randomInteger(options.random, 11, Math.min(options.limit, 19));
+  const left = options.leftNumber === undefined
+    ? randomInteger(options.random, 11, Math.min(options.limit, 19))
+    : randomWithinWindow(options.random, options.leftNumber, 11, Math.min(options.limit, 19));
   if (left < 10 || left > Math.min(options.limit, 19)) {
     return null;
   }
@@ -429,7 +462,9 @@ function generateBreakTen(options) {
   if (minimumRight > left) {
     return null;
   }
-  const right = options.rightNumber ?? randomInteger(options.random, minimumRight, left);
+  const right = options.rightNumber === undefined
+    ? randomInteger(options.random, minimumRight, left)
+    : randomWithinWindow(options.random, options.rightNumber, minimumRight, left);
   if (right < minimumRight || right > left) {
     return null;
   }

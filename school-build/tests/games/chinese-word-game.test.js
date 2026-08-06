@@ -14,6 +14,20 @@ function sequenceNow(...values) {
   return () => values[Math.min(index++, values.length - 1)];
 }
 
+/**
+ * 生成旧版整板蛇形顺序，用于回归验证新棋盘不再按该顺序预埋。
+ * @returns {number[]} 旧版蛇形路径索引。
+ */
+function createSnakePath() {
+  const path = [];
+  for (let row = 0; row < 9; row += 1) {
+    const columns = Array.from({ length: 9 }, (_, column) => column);
+    if (row % 2 === 1) columns.reverse();
+    for (const column of columns) path.push(row * 9 + column);
+  }
+  return path;
+}
+
 test('9×9 棋盘预埋路径可不重不漏地完整消除', () => {
   const game = createChineseWordGame({ seed: 20260805 });
   const covered = game.solutionPaths.flatMap(({ path }) => path);
@@ -31,6 +45,27 @@ test('9×9 棋盘预埋路径可不重不漏地完整消除', () => {
 
   assert.ok(game.board.every((cell) => cell === null));
   assert.equal(game.session.status, 'completed');
+});
+
+test('汉字预埋路径打散分布，不再按整板蛇形连续切段', () => {
+  const game = createChineseWordGame({ seed: 20260805 });
+  const covered = game.solutionPaths.flatMap(({ path }) => path);
+  let adjacentBoundaries = 0;
+
+  assert.notDeepEqual(covered, createSnakePath());
+  for (let index = 1; index < game.solutionPaths.length; index += 1) {
+    const previousPath = game.solutionPaths[index - 1].path;
+    const currentPath = game.solutionPaths[index].path;
+    const previousTail = previousPath[previousPath.length - 1];
+    const currentHead = currentPath[0];
+    const tailRow = Math.floor(previousTail / 9);
+    const headRow = Math.floor(currentHead / 9);
+    const tailColumn = previousTail % 9;
+    const headColumn = currentHead % 9;
+
+    if (Math.abs(tailRow - headRow) + Math.abs(tailColumn - headColumn) === 1) adjacentBoundaries += 1;
+  }
+  assert.ok(adjacentBoundaries < game.solutionPaths.length / 3);
 });
 
 test('路径允许上下左右转弯，拒绝斜连、跳格和重复格', () => {

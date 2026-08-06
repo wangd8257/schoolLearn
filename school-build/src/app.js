@@ -149,16 +149,19 @@ function generatorFields(subject, template) {
       : '';
     return `
     <div class="field"><label>练习内容（每行一项）</label><textarea name="customContent" placeholder="一行可输入多个字，例如：你好"></textarea></div>
-    ${strokeFields}
-    <div class="field"><label>是否显示中文释义</label><select name="showTranslation"><option value="yes">显示</option><option value="no">隐藏</option></select></div>`;
+    ${strokeFields}`;
   }
+  const operationTemplates = ['horizontal', 'missing', 'vertical', 'equation'];
+  const chainTemplates = ['chain-add', 'chain-sub', 'mixed'];
+  const showOperation = operationTemplates.includes(template);
+  const showOperandCount = chainTemplates.includes(template);
   const tenFields = template === 'make-ten' || template === 'break-ten'
     ? `<div class="field-row"><div class="field"><label>${template === 'make-ten' ? '第一个数字' : '被减数'}</label><input name="leftNumber" type="number" min="0" max="100" placeholder="留空随机"></div><div class="field"><label>${template === 'make-ten' ? '第二个数字' : '减数'}</label><input name="rightNumber" type="number" min="0" max="100" placeholder="留空随机"></div></div>`
     : '';
   return `
     <div class="field-row"><div class="field"><label>题目数量</label><input name="count" type="number" min="1" max="100" value="30"></div><div class="field"><label>数值上限</label><input name="max" type="number" min="5" max="10000" value="20"></div></div>
-    <div class="field"><label>数字个数</label><input name="operandCount" type="number" min="3" max="10" value="3"></div>
-    <div class="field"><label>运算类型</label><select name="operation"><option value="add">纯加</option><option value="subtract">纯减</option><option value="mixed">混合加减</option></select></div>
+    ${showOperandCount ? '<div class="field"><label>连续项数</label><input name="operandCount" type="number" min="3" max="10" value="3"></div>' : ''}
+    ${showOperation ? '<div class="field"><label>运算类型</label><select name="operation"><option value="add">纯加</option><option value="subtract">纯减</option><option value="mixed">混合加减</option></select></div>' : ''}
     ${tenFields}
     ${template === 'divide' ? '<div class="field"><label>除法类型</label><select name="divisionMode"><option value="exact">无余数</option><option value="remainder">有余数</option><option value="mixed">混合</option></select></div>' : ''}
     ${template === 'unit' ? '<div class="field"><label>单位体系</label><select name="unitType"><option value="time">时间</option><option value="length">长度</option><option value="mass">质量</option><option value="area">面积</option><option value="capacity">容量</option></select></div>' : ''}
@@ -244,12 +247,12 @@ function renderStaticPreview(subject, template) {
  */
 function worksheetProblemsPerPage(paper) {
   const layout = worksheetLayoutClass(paper);
-  if (layout.includes('vertical')) return 9;
-  if (layout.includes('make-ten') || layout.includes('break-ten')) return 6;
-  if (layout.includes('word-problem')) return 3;
-  if (layout.includes('equation')) return 6;
-  if (layout.includes('hanzi-practice') || layout.includes('english-practice')) return 5;
-  return paper.orientation === 'landscape' ? 20 : 16;
+  if (layout.includes('vertical')) return 6;
+  if (layout.includes('make-ten') || layout.includes('break-ten')) return 4;
+  if (layout.includes('word-problem')) return 2;
+  if (layout.includes('equation')) return 3;
+  if (layout.includes('hanzi-practice') || layout.includes('english-practice')) return 4;
+  return paper.orientation === 'landscape' ? 16 : 12;
 }
 
 /**
