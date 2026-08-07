@@ -1,0 +1,36 @@
+- generic [ref=f1e1]:
+  - main [active] [ref=f1e25]:
+    - generic [ref=f1e122]:
+      - generic [ref=f1e123]:
+        - button "退出" [ref=f1e124] [cursor=pointer]
+        - generic [ref=f1e125]:
+          - button "缩小试卷" [ref=f1e126] [cursor=pointer]: −
+          - generic [ref=f1e127]: 100%
+          - button "放大试卷" [ref=f1e128] [cursor=pointer]: ＋
+          - button "复位" [ref=f1e129] [cursor=pointer]
+          - button "移动试卷" [ref=f1e130] [cursor=pointer]
+        - button "⚫ 黑笔作答" [ref=f1e131] [cursor=pointer]
+        - button "↑ 上移" [ref=f1e132] [cursor=pointer]
+        - button "↓ 下移" [ref=f1e133] [cursor=pointer]
+        - button "⌫ 擦除当前笔迹" [ref=f1e134] [cursor=pointer]
+        - button "↶ 撤销" [ref=f1e135] [cursor=pointer]
+      - generic [ref=f1e137]:
+        - article [ref=f1e138]:
+          - generic [ref=f1e139]:
+            - heading "数学·横式计算·4题" [level=2] [ref=f1e140]
+            - generic [ref=f1e141]:
+              - generic [ref=f1e142]:
+                - generic [ref=f1e143]: "1."
+                - text: 16 + 2 =
+              - generic [ref=f1e145]:
+                - generic [ref=f1e146]: "2."
+                - text: 10 + 4 =
+              - generic [ref=f1e148]:
+                - generic [ref=f1e149]: "3."
+                - text: 3 + 8 =
+              - generic [ref=f1e151]:
+                - generic [ref=f1e152]: "4."
+                - text: 1 + 8 =
+        - generic "黑笔书写层" [ref=f1e154]
+        - generic "红笔书写层"
+  - status: 试卷已生成并保存

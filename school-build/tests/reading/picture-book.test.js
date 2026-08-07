@@ -3,11 +3,25 @@ import assert from 'node:assert/strict';
 import {
   addPictureBookTextBox,
   createPictureBookReading,
+  createHuibenBookReading,
   movePictureBookPage,
   removePictureBookPage,
   removePictureBookTextBox,
   updatePictureBookTextBox,
 } from '../../src/reading.js';
+import { getEmbeddedHuibenBooks } from '../../src/data/huiben-manifest.mjs';
+
+test('本地内置 huiben 书目不依赖 fetch，并为每本书生成可访问路径', () => {
+  const entries = getEmbeddedHuibenBooks();
+  assert.equal(entries.length, 17);
+  assert.ok(entries.every((entry) => entry.fileName && entry.url.startsWith('./huiben/')));
+
+  const book = createHuibenBookReading(entries[0], { now: 100 });
+  assert.equal(book.type, 'file-book');
+  assert.equal(book.source, 'huiben');
+  assert.equal(book.fileKind, 'pdf');
+  assert.equal(book.sourceUrl, entries[0].url);
+});
 
 test('多张上传图片按顺序创建独立绘本页面', () => {
   const book = createPictureBookReading(

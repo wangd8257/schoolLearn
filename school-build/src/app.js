@@ -32,8 +32,9 @@ import {
   renameTemplateSnapshot,
 } from './templates.js';
 import { renderProblemHtml, renderWorksheetMetaHtml, worksheetColumns, worksheetLayoutClass } from './worksheet-render.js';
+import './vendor/epub-reader/epub-reader.js';
 
-const state = { route: 'home', paperFilter: 'all', activeReadingId: null, activePaperId: null, pictureBookDraft: null };
+const state = { route: 'home', paperFilter: 'all', activeReadingId: null, activePaperId: null, pictureBookDraft: null, paperTransform: null, paperStatus: null };
 const main = document.querySelector('#mainContent');
 const toast = document.querySelector('#toast');
 const modalRoot = document.querySelector('#modalRoot');
@@ -73,8 +74,12 @@ function pageHeader(title, subtitle, actions = '') {
 /** 切换工作区并同步侧栏状态。 */
 export async function navigate(route, detail = null) {
   stopSpeaking();
+  const nextPaperId = detail?.paperId || null;
+  if (route === 'paper' && state.activePaperId !== nextPaperId) {
+    state.paperTransform = { paperId: nextPaperId, scale: 1, x: 0, y: 0, panMode: false };
+  }
   state.route = route;
-  state.activePaperId = detail?.paperId || null;
+  state.activePaperId = nextPaperId;
   if (route === 'reading' && !detail?.readingId) state.activeReadingId = null;
   document.querySelectorAll('.nav-item').forEach((item) => item.classList.toggle('active', item.dataset.route === route));
   document.querySelector('#sidebar').classList.remove('open');
@@ -111,7 +116,7 @@ async function renderHome() {
     </section>
     <section class="entry-grid">
       <button class="entry-card" data-route="papers"><span class="emoji">📝</span><h3>打开试卷目录</h3><p>按状态和生成时间管理全部试卷。</p></button>
-      <button class="entry-card" data-route="generator"><span class="emoji">🪄</span><h3>配置生成试卷</h3><p>数学、拼音、汉字和英语模板自由配置。</p></button>
+      <button class="entry-card" data-route="generator"><span class="emoji">🪄</span><h3>配置生成试卷</h3><p>数学、汉字和英语模板自由配置。</p></button>
       <button class="entry-card" data-route="reading"><span class="emoji">📚</span><h3>阅读与跟读</h3><p>按段点读，中文逐字、英文逐词高亮。</p></button>
       <button class="entry-card" data-route="games"><span class="emoji">🎮</span><h3>学习游戏</h3><p>汉字连线消消乐和英语实物配对。</p></button>
     </section>`;
@@ -140,26 +145,32 @@ const TEMPLATE_GROUPS = {
   数学: [
     ['horizontal','横式计算'],['missing','缺项填数'],['vertical','竖式计算'],['compare','比较大小'],['equation','列式计算'],['word-problem','应用题'],
     ['chain-add','连加'],['chain-sub','连减'],['mixed','连续加减'],['make-ten','凑十法'],['break-ten','破十法'],
-    ['carry-add','进位加法'],['borrow-sub','退位减法'],['multiply','乘法'],['divide','除法'],['currency','人民币换算'],['unit','单位换算']
+    ['carry-add','进位加法'],['borrow-sub','退位减法'],['multiply','乘法'],['divide','除法'],['currency','人民币换算'],['unit','单位换算'],['clock','钟表认知']
   ],
-  语文: [['hanzi-trace','汉字描红'],['hanzi-stroke','按笔画练字'],['pinyin-trace','拼音四线三格'],['control','控笔训练'],['composition','田字格/作文纸']],
+  语文: [['hanzi-trace','汉字描红'],['hanzi-stroke','按笔画练字'],['control','控笔训练'],['composition','田字格/作业纸']],
   英语: [['english-word','单词描红'],['english-sentence','短句描红'],['english-lines','英语四线三格']]
 };
 
 function generatorFields(subject, template) {
   if (subject !== '数学') {
+    const isBlankPractice = ['composition', 'english-lines'].includes(template);
+    const countField = isBlankPractice
+      ? `<div class="field"><label>练习行数</label><input name="count" type="number" min="1" max="100" value="${template === 'composition' ? '12' : '10'}"></div>`
+      : '';
     const strokeFields = template === 'hanzi-stroke'
       ? '<div class="field"><label>按笔画生成字</label><select name="strokePreset"><option value="basic">基础笔画字</option><option value="numbers">数字汉字</option><option value="simple">简单常用字</option></select></div>'
       : '';
     const hanziFontFields = template === 'hanzi-trace'
       ? '<div class="field"><label>描红字体</label><select name="hanziFont"><option value="kaiti">楷体</option><option value="songti">宋体</option><option value="heiti">黑体</option><option value="fangsong">仿宋</option></select></div>'
       : '';
-    const englishFontFields = subject === '英语'
+    const englishFontFields = subject === '英语' && ['english-word', 'english-sentence'].includes(template)
       ? '<div class="field"><label>英语描红字体</label><select name="englishFont"><option value="comic">儿童手写体</option><option value="print">印刷体</option><option value="serif">衬线体</option><option value="cursive">连写体</option></select></div>'
       : '';
+    const contentField = isBlankPractice
+      ? ''
+      : '<div class="field"><label>练习内容（每行一项）</label><textarea name="customContent" placeholder="一行可输入多个字，例如：你好"></textarea></div>';
     return `
-    <div class="field"><label>练习内容（每行一项）</label><textarea name="customContent" placeholder="一行可输入多个字，例如：你好"></textarea></div>
-    ${hanziFontFields}${englishFontFields}${strokeFields}`;
+    ${countField}${contentField}${hanziFontFields}${englishFontFields}${strokeFields}`;
   }
   const operationTemplates = ['horizontal', 'missing', 'vertical', 'equation'];
   const chainTemplates = ['chain-add', 'chain-sub', 'mixed'];
@@ -257,24 +268,19 @@ function renderStaticPreview(subject, template) {
  */
 function worksheetProblemsPerPage(paper) {
   const layout = worksheetLayoutClass(paper);
-  const compactViewport = typeof window !== 'undefined' && window.matchMedia?.('(max-width: 760px)').matches;
-  if (compactViewport) {
-    if (layout.includes('vertical')) return 2;
-    if (layout.includes('make-ten') || layout.includes('break-ten')) return 2;
-    if (layout.includes('word-problem')) return 1;
-    if (layout.includes('equation')) return 2;
-    if (layout.includes('hanzi-practice') || layout.includes('english-practice')) return 3;
-    return 8;
-  }
-  if (layout.includes('vertical')) return 6;
+  const template = paper.config?.template || paper.problems?.[0]?.kind || paper.problems?.[0]?.type || '';
+  if (template === 'composition') return paper.orientation === 'landscape' ? 8 : 12;
+  if (template === 'english-lines') return paper.orientation === 'landscape' ? 8 : 10;
+  if (layout.includes('vertical')) return 12;
   if (layout.includes('make-ten') || layout.includes('break-ten')) return 8;
+  if (layout.includes('clock')) return 8;
   if (layout.includes('word-problem')) return 2;
   if (layout.includes('equation')) return 3;
   if (layout.includes('hanzi-practice') || layout.includes('english-practice')) return 8;
   if (layout.includes('multiply') || layout.includes('divide')) return 24;
-  if (layout.includes('currency') || layout.includes('unit')) return 16;
-  if (layout.includes('chain-add') || layout.includes('chain-sub') || layout.includes('mixed')) return 18;
-  return paper.orientation === 'landscape' ? 24 : 24;
+  if (layout.includes('currency') || layout.includes('unit')) return 20;
+  if (layout.includes('chain-add') || layout.includes('chain-sub') || layout.includes('mixed')) return 30;
+  return paper.orientation === 'landscape' ? 36 : 36;
 }
 
 /**
@@ -327,7 +333,7 @@ function renderWorksheetPagesHtml(paper) {
 }
 
 function normalizeProblem(problem, index) {
-  const typeMap = { 'missing-term':'missing','comparison':'compare','chain-addition':'chain-add','chain-subtraction':'chain-sub','mixed-operations':'mixed','carrying-addition':'carry-add','borrowing-subtraction':'borrow-sub','multiplication':'multiply','division':'divide','unit-conversion':'unit' };
+  const typeMap = { 'missing-term':'missing','comparison':'compare','chain-addition':'chain-add','chain-subtraction':'chain-sub','mixed-operations':'mixed','carrying-addition':'carry-add','borrowing-subtraction':'borrow-sub','multiplication':'multiply','division':'divide','currency':'currency','unit-conversion':'unit','clock-reading':'clock' };
   return {
     ...structuredClone(problem),
     id: problem.id || `problem-${index + 1}`,
@@ -482,14 +488,37 @@ async function createStrokePracticeProblems(values, lines) {
   }));
 }
 
+/**
+ * 将空白练习模板的题量限制在表单允许范围内。
+ * @param {unknown} value 表单中的题量原始值。
+ * @param {number} fallback 未填写时使用的默认题量。
+ * @returns {number} 至少为 1 且不超过 100 的整数题量。
+ */
+function boundedPracticeCount(value, fallback) {
+  const count = Number(value);
+  if (!Number.isFinite(count)) return fallback;
+  return Math.max(1, Math.min(100, Math.floor(count)));
+}
+
 async function createProblemsFromForm(values) {
   if (values.subject !== '数学') {
     const lines = String(values.customContent || '').split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
     if (values.template === 'hanzi-stroke') return createStrokePracticeProblems(values, lines);
+    if (['composition', 'english-lines'].includes(values.template)) {
+      const count = boundedPracticeCount(values.count, values.template === 'composition' ? 12 : 10);
+      return Array.from({ length: count }, (_, index) => ({
+        id: `problem-${index + 1}`,
+        kind: values.template,
+        prompt: '',
+        answer: '',
+        boxes: 0,
+        meta: values.subject === '英语' ? { font: values.englishFont || 'comic' } : {},
+      }));
+    }
     const meta = {};
     if (values.template === 'hanzi-trace') meta.font = values.hanziFont || 'kaiti';
     if (values.subject === '英语') meta.font = values.englishFont || 'comic';
-    return (lines.length ? lines : ['请在此描写']).map((line,index) => ({ id:`problem-${index+1}`, kind:values.template, prompt:line, answer:'', boxes:0, meta }));
+    return (lines.length ? lines : ['请在此描写']).map((line,index) => ({ id:`problem-${index+1}`, kind:values.template, prompt:line, answer:'', boxes:0, meta: { ...meta } }));
   }
   const module = await import('./math/index.mjs');
   const templateMap = {
@@ -497,7 +526,7 @@ async function createProblemsFromForm(values) {
     equation:'equation', 'word-problem':'word-problem', 'chain-add':'chain-addition', 'chain-sub':'chain-subtraction',
     mixed:'mixed-operations', 'make-ten':'make-ten', 'break-ten':'break-ten',
     'carry-add':'carrying-addition', 'borrow-sub':'borrowing-subtraction', multiply:'multiplication',
-    divide:'division', currency:'currency', unit:'unit-conversion'
+    divide:'division', currency:'currency', unit:'unit-conversion', clock:'clock-reading'
   };
   const operationMap = { add:'addition', subtract:'subtraction' };
   const remainderMap = { exact:'none', remainder:'required', mixed:'optional' };
@@ -530,9 +559,86 @@ async function handlePaperStrokeChange(paper, layer, strokes) {
   }
 }
 
+/**
+ * 将当前试卷的缩放和平移状态应用到纸张舞台。
+ * @param {{paperId:string,scale:number,x:number,y:number,panMode:boolean}} transform 纸张变换状态。
+ * @returns {void}
+ */
+function applyPaperTransform(transform) {
+  const worksheet = document.querySelector('#activeWorksheet');
+  const wrap = worksheet?.parentElement;
+  if (!transform || !worksheet || !wrap) return;
+
+  const scale = Math.max(0.6, Math.min(2.4, Number(transform.scale) || 1));
+  const viewportWidth = Math.max(1, wrap.clientWidth - 24);
+  const viewportHeight = Math.max(1, wrap.clientHeight - 24);
+  const scaledWidth = worksheet.offsetWidth * scale;
+  const scaledHeight = worksheet.offsetHeight * scale;
+  const minX = Math.min(0, viewportWidth - scaledWidth);
+  const maxX = Math.max(0, (viewportWidth - scaledWidth) / 2);
+  const minY = Math.min(0, viewportHeight - scaledHeight);
+  const maxY = Math.max(0, (viewportHeight - scaledHeight) / 2);
+
+  transform.scale = scale;
+  transform.x = Math.max(minX, Math.min(maxX, Number(transform.x) || 0));
+  transform.y = Math.max(minY, Math.min(maxY, Number(transform.y) || 0));
+  worksheet.style.transformOrigin = 'top left';
+  worksheet.style.transform = `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`;
+  wrap.classList.toggle('paper-pan-enabled', Boolean(transform.panMode));
+
+  const zoomLabel = document.querySelector('[data-paper-zoom-value]');
+  if (zoomLabel) zoomLabel.textContent = `${Math.round(transform.scale * 100)}%`;
+  const panButton = document.querySelector('[data-paper-pan-toggle]');
+  if (panButton) {
+    panButton.textContent = transform.panMode ? '结束移动' : '移动试卷';
+    panButton.classList.toggle('active', Boolean(transform.panMode));
+  }
+
+  // 移动模式下禁用所有笔迹层，避免拖拽试卷误记录为书写。
+  state.drawing?.black?.setEnabled(!transform.panMode && ['unstarted', 'writing'].includes(state.paperStatus));
+  state.drawing?.red?.setEnabled(!transform.panMode && state.paperStatus === 'review');
+}
+
+/**
+ * 为试卷外层绑定移动模式的拖拽。
+ * @param {{paperId:string,scale:number,x:number,y:number,panMode:boolean}} transform 纸张变换状态。
+ * @returns {void}
+ */
+function bindPaperPanGesture(transform) {
+  const wrap = document.querySelector('.paper-view .worksheet-wrap');
+  if (!wrap || wrap.dataset.panBound === 'true') return;
+  wrap.dataset.panBound = 'true';
+  let gesture = null;
+
+  wrap.addEventListener('pointerdown', (event) => {
+    if (!transform.panMode || event.target.closest('.paper-floating-toolbar')) return;
+    gesture = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, startX: transform.x, startY: transform.y };
+    wrap.setPointerCapture(event.pointerId);
+    event.preventDefault();
+  });
+  wrap.addEventListener('pointermove', (event) => {
+    if (!gesture || gesture.pointerId !== event.pointerId) return;
+    transform.x = gesture.startX + event.clientX - gesture.x;
+    transform.y = gesture.startY + event.clientY - gesture.y;
+    applyPaperTransform(transform);
+    event.preventDefault();
+  });
+  const finish = (event) => {
+    if (!gesture || gesture.pointerId !== event.pointerId) return;
+    gesture = null;
+    if (wrap.hasPointerCapture(event.pointerId)) wrap.releasePointerCapture(event.pointerId);
+  };
+  wrap.addEventListener('pointerup', finish);
+  wrap.addEventListener('pointercancel', finish);
+  wrap.addEventListener('lostpointercapture', finish);
+}
+
 async function renderPaper() {
   const paper = await get('papers', state.activePaperId);
   if (!paper) return navigate('papers');
+  state.paperTransform ||= { paperId: paper.id, scale: 1, x: 0, y: 0, panMode: false, focusMode: false };
+  if (state.paperTransform.paperId !== paper.id) state.paperTransform = { paperId: paper.id, scale: 1, x: 0, y: 0, panMode: false, focusMode: false };
+  state.paperStatus = paper.status;
   const mode = paper.status === 'review' || paper.status === 'done' ? 'red' : 'black';
   const editable = paper.status !== 'done';
   const wrongIds = new Set(paper.wrongProblemIds || []);
@@ -542,18 +648,29 @@ async function renderPaper() {
     <div class="header-actions"><button class="secondary" data-batch-wrong>按题号批量标记</button>${wrongIds.size ? '<button class="secondary" data-retry-wrong="original">原题重做</button><button class="primary" data-retry-wrong="similar">生成同类新题</button>' : ''}</div>
   </section>` : '';
   const focusWriting = mode === 'black' && editable;
-  document.body.classList.toggle('paper-focus-active', focusWriting);
+  if (focusWriting && !state.paperTransform.focusMode) {
+    // 首次进入黑笔作答时固定纸张舞台；提交后继续复用该舞台，避免笔迹坐标映射到另一套尺寸。
+    state.paperTransform.scale = 1;
+    state.paperTransform.x = 0;
+    state.paperTransform.y = 0;
+    state.paperTransform.panMode = false;
+    state.paperTransform.focusMode = true;
+  }
+  const focusView = focusWriting || state.paperTransform.focusMode === true;
+  document.body.classList.toggle('paper-focus-active', focusView);
   const scrollButtons = '<button class="secondary" data-paper-scroll="-1">↑ 上移</button><button class="secondary" data-paper-scroll="1">↓ 下移</button>';
-  const headerHtml = focusWriting ? '' : pageHeader(escapeHtml(paper.title),`${PAPER_STATUS[paper.status]} · ${paper.subject}`,`<button class="secondary" data-route="papers">返回目录</button>`);
-  main.innerHTML = `${headerHtml}<section class="paper-view ${focusWriting ? 'paper-writing-view' : ''}">
-    <div class="paper-toolbar no-print ${focusWriting ? 'paper-floating-toolbar' : ''}">
-      ${focusWriting ? '<button class="secondary" data-route="papers">退出</button>' : ''}
+  const zoomControls = '<span class="paper-zoom-controls"><button class="secondary" data-paper-zoom="-1" aria-label="缩小试卷">−</button><span data-paper-zoom-value>100%</span><button class="secondary" data-paper-zoom="1" aria-label="放大试卷">＋</button><button class="secondary" data-paper-zoom-reset>复位</button><button class="secondary" data-paper-pan-toggle>移动试卷</button></span>';
+  const headerHtml = focusView ? '' : pageHeader(escapeHtml(paper.title),`${PAPER_STATUS[paper.status]} · ${paper.subject}`,`<button class="secondary" data-route="papers">返回目录</button>`);
+  main.innerHTML = `${headerHtml}<section class="paper-view ${focusView ? 'paper-writing-view' : ''}">
+    <div class="paper-toolbar no-print ${focusView ? 'paper-floating-toolbar' : ''}">
+      ${focusView ? '<button class="secondary" data-route="papers">退出</button>' : ''}
+      ${zoomControls}
       ${editable ? `<button class="toolbar-button active ${mode}" data-ink-mode="pen">${mode === 'red' ? '🔴 红笔批改' : '⚫ 黑笔作答'}</button>${scrollButtons}
       <button class="toolbar-button" data-ink-mode="eraser">⌫ 擦除当前笔迹</button><button class="toolbar-button" data-ink-action="undo">↶ 撤销</button>` : ''}
       ${paper.status === 'writing' ? '<button class="primary" data-paper-submit>提交作答</button>' : ''}
       ${paper.status === 'review' ? '<button class="primary" data-paper-reviewed>完成批改</button>' : ''}
       ${paper.status === 'done' ? '<button class="secondary" data-reopen-review>修改批改</button>' : ''}
-      ${focusWriting ? '' : '<select id="printVersion" class="toolbar-button"><option value="blank">打印空白版</option><option value="answer">打印黑笔作答版</option><option value="final">打印红笔最终版</option></select><button class="secondary" data-print-paper>打印</button>'}
+      ${focusView ? '' : '<select id="printVersion" class="toolbar-button"><option value="blank">打印空白版</option><option value="answer">打印黑笔作答版</option><option value="final">打印红笔最终版</option></select><button class="secondary" data-print-paper>打印</button>'}
     </div>
     ${wrongTools}
     <div class="worksheet-wrap"><div id="activeWorksheet" class="worksheet-pages">${renderWorksheetPagesHtml(paper)}</div></div></section>`;
@@ -561,6 +678,8 @@ async function renderPaper() {
   const blackLayer = createDrawingLayer(worksheet, { color:'#1e252b', enabled:['unstarted','writing'].includes(paper.status), strokes:paper.blackStrokes, onChange:(strokes)=>handlePaperStrokeChange(paper,'black',strokes) });
   const redLayer = createDrawingLayer(worksheet, { color:'#d93636', enabled:paper.status === 'review', strokes:paper.redStrokes, onChange:(strokes)=>handlePaperStrokeChange(paper,'red',strokes) });
   state.drawing = { black: blackLayer, red: redLayer, active: mode };
+  bindPaperPanGesture(state.paperTransform);
+  applyPaperTransform(state.paperTransform);
 }
 
 async function renderReading() {
@@ -568,6 +687,9 @@ async function renderReading() {
   const active = readings.find((item)=>item.id === state.activeReadingId);
   if (active) {
     main.innerHTML = renderReader(active);
+    if (active.type === 'file-book' && ['epub', 'equb'].includes(active.fileKind)) {
+      void mountEpubReader(active);
+    }
     return;
   }
   const categories = [...new Set(readings.map((item)=>item.category || '绘本'))];
@@ -594,13 +716,47 @@ function renderReader(item) {
 }
 
 function renderFileBookReader(item) {
-  const sourceUrl = escapeHtml(item.sourceUrl || '');
+  const source = String(item.sourceUrl || '').trim();
+  const sourceUrl = escapeHtml(source);
   const title = escapeHtml(item.title);
   const kind = String(item.fileKind || 'file').toUpperCase();
-  const body = item.fileKind === 'pdf'
-    ? `<iframe class="book-file-frame" src="${sourceUrl}#toolbar=0&navpanes=0" title="${title}" loading="eager"></iframe>`
-    : `<div class="book-file-fallback"><h2>${title}</h2><p>${kind} 文件已载入。当前浏览器如果不能直接预览，请用系统阅读器打开。</p><a class="primary" href="${sourceUrl}" target="_blank" rel="noopener">打开书籍</a></div>`;
-  return `<article class="reader fullscreen-reader file-book-reader"><div class="reader-floating-toolbar"><strong>${title}</strong><span>${kind}</span><button class="primary" data-exit-reader>退出阅读</button></div>${body}</article>`;
+  const isEpub = ['EPUB', 'EQUB'].includes(kind);
+  const openLink = source && !isEpub
+    ? `<a class="secondary book-open-link" href="${sourceUrl}" target="_blank" rel="noopener">在新窗口打开</a>`
+    : '';
+  const fallback = source
+    ? `<div class="book-file-fallback"><h2>${title}</h2><p>${kind === 'PDF' ? 'PDF 文件已载入。若内置查看器没有显示，请点击“打开原文件”。' : `${kind} 文件已载入。浏览器不保证直接排版显示此格式，请使用系统阅读器打开。`}</p><a class="primary" href="${sourceUrl}" target="_blank" rel="noopener">打开原文件</a></div>`
+    : `<div class="book-file-fallback"><h2>${title}</h2><p>没有找到书籍文件地址，请重新导入或检查 huiben/manifest.json。</p></div>`;
+  const body = isEpub
+    ? '<epub-reader class="epub-reader-frame" data-epub-reader aria-label="EPUB 绘本阅读器"></epub-reader>'
+    : item.fileKind === 'pdf' && source
+    ? `<object class="book-file-frame" data="${sourceUrl}" type="application/pdf" aria-label="${title}">${fallback}</object>`
+    : fallback;
+  return `<article class="reader fullscreen-reader file-book-reader"><div class="reader-floating-toolbar"><strong>${title}</strong><span>${kind}</span>${openLink}<button class="primary" data-exit-reader>退出阅读</button></div>${body}</article>`;
+}
+
+/**
+ * 打开当前 EPUB/EQUB 书籍的本地阅读组件。
+ * @param {Record<string, unknown>} item 书架中的 EPUB/EQUB 书籍记录。
+ * @returns {Promise<void>} 组件加载完成或显示错误提示。
+ */
+async function mountEpubReader(item) {
+  const reader = document.querySelector('[data-epub-reader]');
+  if (!reader || !item.sourceUrl) return;
+  const fallback = (message) => {
+    if (!reader.isConnected) return;
+    reader.outerHTML = `<div class="book-file-fallback"><h2>${escapeHtml(item.title)}</h2><p>当前文件无法被浏览器直接读取，请在此页选择 EPUB/EQUB 文件继续阅读。${message ? ` ${escapeHtml(message)}` : ''}</p><label class="primary file-button">选择文件阅读<input type="file" accept=".epub,.equb,application/epub+zip" data-local-book-picker></label></div>`;
+    showToast('绘本加载失败，请在当前页面选择文件');
+  };
+  reader.addEventListener('epub-error', (event) => {
+    const detail = event.detail?.error;
+    fallback(detail?.message || '');
+  }, { once: true });
+  try {
+    await reader.open(item.sourceUrl);
+  } catch (error) {
+    fallback(error?.message || '');
+  }
 }
 function tokenHtml(text, language) {
   return tokenizeForReading(text, language).map((token,index)=>`<span class="reading-token" data-token-index="${index}">${escapeHtml(token)}</span>`).join('');
@@ -621,7 +777,7 @@ async function handleGeneratorSubmit(form) {
   const values = Object.fromEntries(new FormData(form));
   const problems = await createProblemsFromForm(values);
   const templateLabel = TEMPLATE_GROUPS[values.subject].find(([key])=>key === values.template)?.[1] || values.template;
-  const title = values.title.trim() || `${values.subject}·${templateLabel}·${problems.length}题·${new Date().toLocaleString('zh-CN',{hour12:false})}`;
+  const title = values.title.trim() || `${values.subject}·${templateLabel}·${problems.length}题`;
   const paper = createPaperSnapshot({ title, subject:values.subject, orientation:values.orientation, config:values, problems });
   await put('papers', paper);
   showToast('试卷已生成并保存');
@@ -799,7 +955,55 @@ async function handleGlobalClick(event) {
     const paper=await get('papers',state.activePaperId);
     try { return await createWrongRetryPaper(paper,event.target.closest('[data-retry-wrong]').dataset.retryWrong); } catch(error) { showToast(error.message); return; }
   }
-  if (event.target.closest('[data-ink-mode]')) { const erase=event.target.closest('[data-ink-mode]').dataset.inkMode === 'eraser'; state.drawing?.[state.drawing.active]?.setErase(erase); document.querySelectorAll('[data-ink-mode]').forEach((button)=>button.classList.toggle('active',button.dataset.inkMode === (erase?'eraser':'pen'))); return; }
+  if (event.target.closest('[data-paper-zoom]')) {
+    const button = event.target.closest('[data-paper-zoom]');
+    const delta = Number(button.dataset.paperZoom || 0) * 0.1;
+    const transform = state.paperTransform;
+    if (!transform) return;
+
+    // 缩放时以纸张中心附近为基准，减少放大后内容突然跳到左上角的感觉。
+    const previousScale = transform.scale;
+    const nextScale = Math.max(0.6, Math.min(2.4, previousScale + delta));
+    const worksheet = document.querySelector('#activeWorksheet');
+    if (worksheet && previousScale !== nextScale) {
+      const centerX = worksheet.offsetWidth / 2;
+      const centerY = worksheet.offsetHeight / 2;
+      transform.x += centerX * (previousScale - nextScale);
+      transform.y += centerY * (previousScale - nextScale);
+    }
+    transform.scale = nextScale;
+    transform.panMode = false;
+    applyPaperTransform(transform);
+    return;
+  }
+  if (event.target.closest('[data-paper-zoom-reset]')) {
+    const transform = state.paperTransform;
+    if (!transform) return;
+    transform.scale = 1;
+    transform.x = 0;
+    transform.y = 0;
+    transform.panMode = false;
+    applyPaperTransform(transform);
+    return;
+  }
+  if (event.target.closest('[data-paper-pan-toggle]')) {
+    const transform = state.paperTransform;
+    if (!transform) return;
+    transform.panMode = !transform.panMode;
+    state.drawing?.black?.setErase(false);
+    state.drawing?.red?.setErase(false);
+    applyPaperTransform(transform);
+    return;
+  }
+  if (event.target.closest('[data-ink-mode]')) {
+    const button = event.target.closest('[data-ink-mode]');
+    const erase = button.dataset.inkMode === 'eraser';
+    state.paperTransform && (state.paperTransform.panMode = false);
+    applyPaperTransform(state.paperTransform);
+    state.drawing?.[state.drawing.active]?.setErase(erase);
+    document.querySelectorAll('[data-ink-mode]').forEach((item) => item.classList.toggle('active', item === button || item.dataset.inkMode === (erase ? 'eraser' : 'pen')));
+    return;
+  }
   if (event.target.closest('[data-ink-action="undo"]')) return state.drawing?.[state.drawing.active]?.undo();
   if (event.target.closest('[data-print-paper]')) {
     const version=document.querySelector('#printVersion').value; const black=document.querySelectorAll('.ink-layer')[0]; const red=document.querySelectorAll('.ink-layer')[1];
@@ -866,6 +1070,12 @@ let paperScrollTimer = null;
 function scrollActiveWorksheet(direction) {
   const wrap = document.querySelector('.paper-writing-view .worksheet-wrap, .paper-view .worksheet-wrap');
   if (!wrap) return;
+  if (document.body.classList.contains('paper-focus-active') && state.paperTransform) {
+    // 全屏作答时外层禁止自然滚动，使用受边界约束的纸张平移保持笔迹坐标一致。
+    state.paperTransform.y += Number(direction) * 90;
+    applyPaperTransform(state.paperTransform);
+    return;
+  }
   wrap.scrollBy({ top: Number(direction) * 90, behavior: 'auto' });
 }
 
@@ -912,6 +1122,26 @@ document.addEventListener('submit', async (event) => {
   }
 });
 document.addEventListener('change', async (event) => {
+  if (event.target.matches('[data-local-book-picker]')) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      const current = await get('readings', state.activeReadingId);
+      if (!current) throw new Error('当前绘本记录不存在，请返回书架后重试');
+      const imported = createFileBookReading(
+        { title: current.title, category: current.category, language: current.language },
+        { name: file.name, type: file.type, size: file.size, dataUrl },
+        { id: current.id },
+      );
+      await put('readings', imported);
+      showToast('已载入绘本，正在打开');
+      return renderReading();
+    } catch (error) {
+      showToast(error.message || '绘本载入失败');
+    }
+    return;
+  }
   if (event.target.id === 'subjectSelect') { state.generatorConfig=null; state.generatorSubject=event.target.value; state.generatorTemplate=TEMPLATE_GROUPS[event.target.value][0][0]; return renderGenerator(); }
   if (event.target.id === 'templateSelect') { state.generatorConfig=null; state.generatorTemplate=event.target.value; return renderGenerator(); }
   if (event.target.id === 'traceMode') { const mode=event.target.value; document.querySelectorAll('.paragraph-wrap').forEach((wrap)=>{ const p=wrap.querySelector('.reading-paragraph'); p.classList.toggle('trace-text',mode==='overlay'); wrap.querySelector('.trace-extra').innerHTML=mode==='practice'?`<div class="trace-row">${p.innerHTML}</div><div class="practice-row"></div>`:''; }); }

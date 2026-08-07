@@ -1,6 +1,9 @@
 (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropNames = Object.getOwnPropertyNames;
+  var __typeError = (msg) => {
+    throw TypeError(msg);
+  };
   var __esm = (fn, res, err) => function __init() {
     if (err) throw err[0];
     try {
@@ -13,6 +16,19 @@
     for (var name in all)
       __defProp(target, name, { get: all[name], enumerable: true });
   };
+  var __accessCheck = (obj, member, msg) => member.has(obj) || __typeError("Cannot " + msg);
+  var __privateGet = (obj, member, getter) => (__accessCheck(obj, member, "read from private field"), getter ? getter.call(obj) : member.get(obj));
+  var __privateAdd = (obj, member, value) => member.has(obj) ? __typeError("Cannot add the same private member more than once") : member instanceof WeakSet ? member.add(obj) : member.set(obj, value);
+  var __privateSet = (obj, member, value, setter) => (__accessCheck(obj, member, "write to private field"), setter ? setter.call(obj, value) : member.set(obj, value), value);
+  var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "access private method"), method);
+  var __privateWrapper = (obj, member, setter, getter) => ({
+    set _(value) {
+      __privateSet(obj, member, value, setter);
+    },
+    get _() {
+      return __privateGet(obj, member, getter);
+    }
+  });
 
   // src/db.js
   function openDatabase() {
@@ -95,6 +111,7 @@
         DIVISION: "division",
         CURRENCY: "currency",
         UNIT_CONVERSION: "unit-conversion",
+        CLOCK_READING: "clock-reading",
         WORD_PROBLEM: "word-problem"
       });
       UNIT_CATEGORIES = Object.freeze({
@@ -566,6 +583,19 @@
       meta: { ...conversion, sourceValue }
     }, options.limit);
   }
+  function generateClockReading(options) {
+    const hour = randomInteger(options.random, 1, 12);
+    const minute = randomInteger(options.random, 0, 11) * 5;
+    const minuteText = String(minute).padStart(2, "0");
+    return createProblem(TEMPLATE_TYPES.CLOCK_READING, {
+      prompt: "\u8BF7\u5199\u51FA\u949F\u9762\u8868\u793A\u7684\u65F6\u95F4",
+      answer: `${hour}:${minuteText}`,
+      operands: [hour, minute],
+      intermediateResults: [],
+      layout: "clock",
+      meta: { hour, minute }
+    }, options.limit);
+  }
   function generateWordProblem(options) {
     const start = randomInteger(options.random, 0, options.limit);
     const operands = [start];
@@ -670,6 +700,7 @@
         [TEMPLATE_TYPES.DIVISION]: generateDivision,
         [TEMPLATE_TYPES.CURRENCY]: generateCurrency,
         [TEMPLATE_TYPES.UNIT_CONVERSION]: generateUnitConversion,
+        [TEMPLATE_TYPES.CLOCK_READING]: generateClockReading,
         [TEMPLATE_TYPES.WORD_PROBLEM]: generateWordProblem
       });
     }
@@ -709,7 +740,11 @@
       if (typeof problem.answer === "number") {
         values.push(problem.answer);
       }
-      const enforceUpperBound = ![TEMPLATE_TYPES.CURRENCY, TEMPLATE_TYPES.UNIT_CONVERSION].includes(problem.type);
+      const enforceUpperBound = ![
+        TEMPLATE_TYPES.CURRENCY,
+        TEMPLATE_TYPES.UNIT_CONVERSION,
+        TEMPLATE_TYPES.CLOCK_READING
+      ].includes(problem.type);
       if (values.some((value) => !Number.isFinite(value) || value < 0 || enforceUpperBound && value > limit)) {
         errors.push("\u5B58\u5728\u8D85\u51FA 0\uFF5EN \u7684\u6570\u503C");
       }
@@ -789,6 +824,19 @@
     if ([TEMPLATE_TYPES.CURRENCY, TEMPLATE_TYPES.UNIT_CONVERSION].includes(problem.type)) {
       if (problem.answer !== problem.meta?.sourceValue * problem.meta?.factor) {
         errors.push("\u5355\u4F4D\u6362\u7B97\u7ED3\u679C\u4E0D\u6B63\u786E");
+      }
+    }
+    if (problem.type === TEMPLATE_TYPES.CLOCK_READING) {
+      const [hour, minute] = problem.operands;
+      const expectedAnswer = `${hour}:${String(minute).padStart(2, "0")}`;
+      if (!Number.isInteger(hour) || hour < 1 || hour > 12) {
+        errors.push("\u949F\u8868\u5C0F\u65F6\u5FC5\u987B\u662F 1\uFF5E12");
+      }
+      if (!Number.isInteger(minute) || minute < 0 || minute > 59 || minute % 5 !== 0) {
+        errors.push("\u949F\u8868\u5206\u949F\u5FC5\u987B\u662F 0\uFF5E55 \u4E14\u4E3A 5 \u7684\u500D\u6570");
+      }
+      if (problem.answer !== expectedAnswer || problem.meta?.hour !== hour || problem.meta?.minute !== minute) {
+        errors.push("\u949F\u8868\u9898\u7B54\u6848\u4E0E\u9898\u9762\u65F6\u95F4\u4E0D\u4E00\u81F4");
       }
     }
     if (problem.type === TEMPLATE_TYPES.WORD_PROBLEM) {
@@ -2510,12 +2558,13 @@
     let eraseMode = false;
     let frame;
     function resize() {
-      const rect = host.getBoundingClientRect();
+      const width = Math.max(1, host.offsetWidth);
+      const height = Math.max(1, host.offsetHeight);
       const ratio = Math.min(window.devicePixelRatio || 1, 2);
-      canvas.width = Math.max(1, Math.round(rect.width * ratio));
-      canvas.height = Math.max(1, Math.round(rect.height * ratio));
-      canvas.style.width = `${rect.width}px`;
-      canvas.style.height = `${rect.height}px`;
+      canvas.width = Math.round(width * ratio);
+      canvas.height = Math.round(height * ratio);
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
       context.setTransform(ratio, 0, 0, ratio, 0, 0);
       redraw();
     }
@@ -2761,6 +2810,43 @@
 
   // src/reading.js
   init_db();
+
+  // src/data/huiben-manifest.mjs
+  var FILE_NAMES = Object.freeze([
+    "\u4E0D\u4E00\u6837\u7684\u5361\u6885\u62C9\u52A8\u6F2B\u7ED8\u672C \u6211\u4E0B\u4E86\u4E2A\u91D1\u9E21\u86CB (\uFF08\u6CD5\uFF09\u7EA6\u91CC\u6CE2\u74E6\u6587, \u636E[\u6CD5]\u514B\u5229\u65AF\u63D0\u6602\xB7\u7EA6\u91CC\u6CE2\u74E6\u540C\u540D\u7ED8\u672C\u52A8\u753B\u7247\u6539\u7F16 , \u90D1\u8FEA\u851A \u7F16\u8BD1 etc.) (z-library.sk, 1lib.sk, z-lib.sk).pdf",
+    "\u4E0D\u4E00\u6837\u7684\u5361\u6885\u62C9\u52A8\u6F2B\u7ED8\u672C \u6211\u662F\u4FA0\u76D7\u7F57\u5BBE\u6C49 (\uFF08\u6CD5\uFF09\u514B\u5229\u65AF\u63D0\u6602\xB7\u7EA6\u91CC\u6CE2\u74E6\u6539\u7F16\uFF1B\u90D1\u8FEA\u851A\u7F16\u8BD1 etc.) (z-library.sk, 1lib.sk, z-lib.sk).pdf",
+    "\u4E0D\u4E00\u6837\u7684\u5361\u6885\u62C9\u52A8\u6F2B\u7ED8\u672C \u6211\u662F\u5927\u660E\u661F (\uFF08\u6CD5\uFF09\u7EA6\u91CC\u6CE2\u74E6\u6587\uFF1B\u90D1\u8FEA\u851A\u7F16\u8BD1, \u636E[\u6CD5]\u514B\u5229\u65AF\u63D0\u6602\xB7\u7EA6\u91CC\u6CE2\u74E6\u540C\u540D\u7ED8\u672C\u52A8\u753B\u7247\u6539\u7F16 etc.) (z-library.sk, 1lib.sk, z-lib.sk).pdf",
+    "\u4E0D\u4E00\u6837\u7684\u5361\u6885\u62C9\u52A8\u6F2B\u7ED8\u672C \u6211\u7684\u80C6\u5B50\u53D8\u5927\u4E86 (\uFF08\u6CD5\uFF09\u514B\u5229\u65AF\u63D0\u6602\xB7\u7EA6\u91CC\u6CE2\u74E6\u6539\u7F16\uFF1B\u90D1\u8FEA\u851A\u7F16\u8BD1 etc.) (z-library.sk, 1lib.sk, z-lib.sk).pdf",
+    "\u4E0D\u4E00\u6837\u7684\u5361\u6885\u62C9\u52A8\u6F2B\u7ED8\u672C \u6211\u8BB8\u4E0B\u4E09\u4E2A\u613F\u671B (\uFF08\u6CD5\uFF09\u7EA6\u91CC\u6CE2\u74E6\u6587, \u636E[\u6CD5]\u514B\u5229\u65AF\u63D0\u6602\xB7\u7EA6\u91CC\u6CE2\u74E6\u540C\u540D\u7ED8\u672C\u52A8\u753B\u7247\u6539\u7F16 , \u90D1\u8FEA\u851A \u7F16\u8BD1 etc.) (z-library.sk, 1lib.sk, z-lib.sk).pdf",
+    "\u4E2D\u56FD\u7ECF\u5178\u53E4\u8BD7\u6587\u5F69\u7ED8\u8BFB\u672C \u4F4E\u5E74\u7EA7 (\u9648\u96EA\u6885\u4E3B\u7F16, \u9648\u96EA\u6885\u4E3B\u7F16, \u9648\u96EA\u6885) (z-library.sk, 1lib.sk, z-lib.sk).pdf",
+    "\u4F69\u987F\u7684\u7406\u60F3\u5BA0\u7269\uFF1A\u300A\u7231\u7684\u4E94\u79CD\u8BED\u8A00\u300B\u513F\u7AE5\u7ED8\u672C (\u76D6\u745E\xB7\u67E5\u666E\u66FC  \u745E\u514B\xB7\u5965\u65AF\u672C) (z-library.sk, 1lib.sk, z-lib.sk).epub",
+    "\u513F\u7AE5\u884C\u4E3A\u4E60\u60EF\u57F9\u517B\u7ED8\u672C\uFF1A\u5C0F\u5154\u5B50\u8D77\u5E8A\u55BD-\u5B69\u5B50\u8D2A\u7761\uFF0C\u600E\u4E48\u529E\uFF1F (\u9648\u4E66\u97F5\u3001\u7FC1\u6DD1\u60E0) (z-library.sk, 1lib.sk, z-lib.sk).epub",
+    "\u5341\u4E8C\u751F\u8096\u7684\u6545\u4E8B\u3010\u513F\u7AE5\u7ED8\u672C\u3011 (Si-Jia Gu) (z-library.sk, 1lib.sk, z-lib.sk).epub",
+    "\u53D1\u73B0\u4E0E\u57F9\u517B\u513F\u7AE5\u804C\u4E1A\u542F\u8499\u7ED8\u672C \u7B2C6\u8F91 \u6211\u8981\u5F53\u6C7D\u8F66\u5DE5\u7A0B\u5E08 (\u5218\u9999\u82F1\u8457\uFF1B\u5E78\u798F\u732B\u513F\u7AE5\u6587\u5B66\u5DE5\u4F5C\u5BA4\u7ED8) (z-library.sk, 1lib.sk, z-lib.sk).pdf",
+    "\u5947\u602A\u7684\u751F\u7269\u56FE\u9274\u3010\u98CE\u9761\u65E5\u97E9\uFF0C\u65E5\u6587\u7248\u4E0A\u5E02\u4EC51\u4E2A\u6708\u52A0\u53704\u6B21\uFF01\u9500\u91CF\u7A81\u7834100000\u518C\u65E5\u672C\u4E9A\u9A6C\u900A\u9AD8\u5206\u8BC4\u4EF7\uFF0C\u65E5\u97E9\u8BDD\u9898\u6027\u79D1\u666E\u7ED8\u672C\uFF0C40\u79CD\u751F\u7269\uFF0C\u4E0A\u767E\u4E2A\u51B7\u77E5\u8BC6\uFF1A\u6CA1... (z-library.sk, 1lib.sk, z-lib.sk).epub",
+    "\u5C0F\u5DDD\u672A\u660E\u7AE5\u8BDD\u7ED8\u672C\uFF085\u518C\u5957\u88C5\uFF09 (\uFF08\u65E5\uFF09\u5C0F\u5DDD\u672A\u660E) (z-library.sk, 1lib.sk, z-lib.sk).pdf",
+    "\u5C0F\u738B\u5B50\u4E09\u90E8\u66F2(\u4E00\u76F4\u4EE5\u6765,\u6211\u4EEC\u53EA\u8BFB\u4E86\u300A\u5C0F\u738B\u5B50\u300B\u7684\u4E09\u5206\u4E4B\u4E00\u300A\u5C0F\u738B\u5B50\u300B\u53EA\u662F\u4E09\u90E8\u66F2\u7684\u7EC8\u7BC7,\u5B83\u7684\u524D\u4F20\u300A\u98CE\u6C99\u661F\u8FB0\u300B\u300A\u591C\u95F4\u98DE\u884C\u300B\u57CB\u85CF\u7740\u300A\u5C0F\u738B\u5B50\u300B\u771F\u6B63... (z-library.sk, 1lib.sk, z-lib.sk).epub",
+    "\u6210\u957F\u6587\u5E93 \u4E16\u754C\u5C11\u5E74\u6587\u5B66\u7CBE\u9009(\u62FC\u97F3\u7248\u7F8E\u7ED8\u672C)\xB7\u6D0B\u8471\u5934\u5386\u9669\u8BB0 (\u6210\u957F\u6587\u5E93\u2022\u4E16\u754C\u513F\u7AE5\u6587\u5B66\u7ECF\u5178\u62FC\u97F3\u7F8E\u7ED8\u672C) (\u7F57\u5927\u91CC) (z-library.sk, 1lib.sk, z-lib.sk).epub",
+    "\u6210\u957F\u6587\u5E93\uFF1A\u4E16\u754C\u513F\u7AE5\u6587\u5B66\u7ECF\u5178\uFF08\u62FC\u97F3\u7F8E\u7ED8\u672C\uFF09\u5047\u8BDD\u56FD\u5386\u9669\u8BB0 (\u6210\u957F\u6587\u5E93.\u4E16\u754C\u513F\u7AE5\u6587\u5B66\u7ECF\u5178\u62FC\u97F3\u7F8E\u7ED8\u672C) (\u7F57\u5927\u91CC [\u7F57\u5927\u91CC]) (z-library.sk, 1lib.sk, z-lib.sk).epub",
+    "\u6C64\u6C64\u5947\u5E7B\u7AE5\u5E74\u6545\u4E8B\u672C\uFF08\u5957\u88C56\u518C\uFF09\uFF08\u7B2C\u5341\u5C4A\u5168\u56FD\u4F18\u79C0\u513F\u7AE5\u6587\u5B66\u5956\u83B7\u5956\u4F5C\u54C1\uFF0C\u4E00\u6BB5\u7470\u4E3D\u4E30\u5BCC\u7684\u7AE5\u5E74\u5F80\u4E8B\uFF0C\u4E00\u9619\u60A0\u626C\u6F2B\u957F\u7684\u7530\u56ED\u7267\u6B4C\uFF1B\u4F5C\u5BB6\u6C64\u6C64\u643A\u5168\u65B0\u5947\u5E7B... (z-library.sk, 1lib.sk, z-lib.sk).epub",
+    "\u7ED8\u672C\u91CC\u7684\u4E16\u754C\uFF08\u5957\u88C5\u5171\u4E5D\u518C\uFF09\u3010\u56FD\u9645\u513F\u7AE5\u8BFB\u7269\u8054\u76DF\uFF08IBBY\uFF09\u4E3B\u5E2D\u5F20\u660E\u821F\u3001\u524D\u4E3B\u5E2D\u9093\u80AF\u3001\u5317\u4EAC\u4F5C\u534F\u526F\u4E3B\u5E2D\u66F9\u6587\u8F69\u3001\u513F\u7AE5\u6587\u5B66\u4F5C\u5BB6\u9AD8\u6D2A\u6CE2\u7B49\u8054\u8882\u63A8\u8350\uFF01\u51DD\u96C6... (z-library.sk, 1lib.sk, z-lib.sk).epub"
+  ]);
+  function getEmbeddedHuibenBooks() {
+    return FILE_NAMES.map((fileName, index) => {
+      const fileKind = fileName.toLowerCase().endsWith(".pdf") ? "pdf" : "epub";
+      const title = fileName.replace(/\s+\(z-library\.sk, 1lib\.sk, z-lib\.sk\)\.(pdf|epub)$/iu, "");
+      return {
+        id: `huiben-local-${index + 1}`,
+        title,
+        fileName,
+        fileKind,
+        url: `./huiben/${encodeURIComponent(fileName)}`,
+        category: "\u7ED8\u672C"
+      };
+    });
+  }
+
+  // src/reading.js
   var speechRun = 0;
   async function ensureReadingSeeds() {
     const existing = await getAll("readings");
@@ -2768,22 +2854,26 @@
     if (builtinItems.length) await Promise.all(builtinItems.map((item) => remove("readings", item.id)));
     const keptItems = existing.filter((item) => !item.builtin);
     const knownIds = new Set(keptItems.map((item) => item.id));
+    const knownHuibenFiles = new Set(keptItems.filter((item) => item.source === "huiben").map((item) => item.fileName));
     const localBooks = await loadHuibenBooks();
-    const newBooks = localBooks.filter((book) => !knownIds.has(book.id));
+    const newBooks = localBooks.filter((book) => !knownIds.has(book.id) && !knownHuibenFiles.has(book.fileName));
     if (newBooks.length) await Promise.all(newBooks.map((book) => put("readings", book)));
     return getAll("readings");
   }
   async function loadHuibenBooks() {
-    if (typeof fetch !== "function") return [];
+    const embeddedBooks = () => getEmbeddedHuibenBooks().map((entry) => createHuibenBookReading(entry));
+    if (typeof fetch !== "function" || globalThis.location?.protocol === "file:") {
+      return embeddedBooks();
+    }
     try {
       const response = await fetch("./huiben/manifest.json", { cache: "no-store" });
-      if (!response.ok) return [];
+      if (!response.ok) return embeddedBooks();
       const manifest = await response.json();
       const books = Array.isArray(manifest.books) ? manifest.books : [];
-      return books.map((entry) => createHuibenBookReading(entry));
+      return books.length ? books.map((entry) => createHuibenBookReading(entry)) : embeddedBooks();
     } catch (error) {
       console.warn("huiben \u6E05\u5355\u8BFB\u53D6\u5931\u8D25", error);
-      return [];
+      return embeddedBooks();
     }
   }
   function stableBookId(text) {
@@ -2942,7 +3032,7 @@
     const next = structuredClone(book);
     const page = next.pages?.find((item) => item.id === pageId);
     if (!page) throw new Error("\u9875\u9762\u4E0D\u5B58\u5728");
-    page.textBoxes ||= [];
+    page.textBoxes || (page.textBoxes = []);
     page.textBoxes.push({ id: options.id || uid("text"), text: String(text || "").trim() || "\u8BF7\u8F93\u5165\u6587\u5B57", x: 8, y: 72, width: 84 });
     next.updatedAt = options.now ?? Date.now();
     return next;
@@ -3097,6 +3187,8 @@
       divide: "divide",
       currency: "currency",
       unit: "unit",
+      clock: "clock",
+      "clock-reading": "clock",
       "hanzi-trace": "hanzi-practice",
       "hanzi-stroke": "hanzi-practice",
       composition: "hanzi-practice",
@@ -3115,6 +3207,7 @@
     if (layout.includes("equation") || layout.includes("word-problem")) return 1;
     if (layout.includes("multiply") || layout.includes("divide")) return 4;
     if (layout.includes("currency") || layout.includes("unit")) return 2;
+    if (layout.includes("clock")) return 2;
     if (layout.includes("hanzi-practice") || layout.includes("english-practice")) return 1;
     return paper.orientation === "landscape" ? 4 : 3;
   }
@@ -3128,7 +3221,7 @@
     if (diagramClass === "make-ten-diagram") {
       return `<div class="problem ten-diagram make-ten-diagram">${expression}<div class="ten-process make-ten-process"><div class="ten-anchor"><span class="ten-anchor-line"></span><span class="ten-target-number">10</span></div><div class="ten-split"><div class="ten-slashes"><span>/</span><span>\\</span></div><div class="ten-split-boxes"><span class="answer-box ten-small-box"></span><span class="answer-box ten-small-box"></span></div></div></div></div>`;
     }
-    return `<div class="problem ten-diagram break-ten-diagram">${expression}<div class="ten-process break-ten-process"><div class="ten-split"><div class="ten-slashes"><span>/</span><span>\\</span></div><div class="ten-split-boxes"><span class="answer-box ten-small-box"></span><span class="answer-box ten-small-box"></span></div></div><div class="ten-result-tree"><span class="ten-result-operator">-</span><span class="ten-result-box-wrap"><span class="answer-box ten-result-box"></span></span></div></div></div>`;
+    return `<div class="problem ten-diagram break-ten-diagram">${expression}<div class="ten-process break-ten-process"><div class="ten-split"><div class="ten-slashes"><span>/</span><span>\\</span></div><div class="ten-split-boxes"><span class="answer-box ten-small-box"></span><span class="answer-box ten-small-box"></span></div></div><div class="ten-result-tree"><span class="ten-result-box-wrap"><span class="answer-box ten-result-box"></span></span></div></div></div>`;
   }
   function renderMakeTenDiagram(problem) {
     return renderTenDiagram(problem, "+", "make-ten-diagram");
@@ -3147,7 +3240,8 @@
     const text = String(problem.prompt || "").trim();
     const characters = Array.from(text).filter((character) => character.trim());
     const source = characters.length ? characters : [""];
-    const samples = source.length > 1 ? source : Array(3).fill(source[0]);
+    const isBlankComposition = (problem.kind || problem.type) === "composition";
+    const samples = isBlankComposition ? [] : source.length > 1 ? source : Array(3).fill(source[0]);
     const sampleCells = samples.map((character) => `<span class="mizi-cell mizi-sample-cell">${escapeHtml(character)}</span>`).join("");
     const cells = `${sampleCells}${Array.from({ length: Math.max(0, 12 - samples.length) }, () => '<span class="mizi-cell"></span>').join("")}`;
     const strokeHint = Array.isArray(problem.strokeSteps) && problem.strokeSteps.length ? `<div class="stroke-order-row">${problem.strokeSteps.map((step, index) => `<span>${index + 1}. ${escapeHtml(step)}</span>`).join("")}</div>` : "";
@@ -3176,8 +3270,43 @@
     return `<div class="problem writing-practice hanzi-writing hanzi-stroke-writing ${hanziFontClass(problem)}">${strokeHint}${rowHtml.join("")}</div>`;
   }
   function renderEnglishPractice(problem) {
+    const kind = problem.kind || problem.type;
     const text = escapeHtml(problem.prompt || "");
-    return `<div class="problem writing-practice english-writing ${englishFontClass(problem)}"><div class="english-copybook-line"><span class="english-sample">${text}</span><span class="english-ghost">${text}</span><span class="english-ghost">${text}</span><span class="english-ghost">${text}</span></div></div>`;
+    if (kind === "english-lines") {
+      return `<div class="problem writing-practice english-writing english-blank-writing ${englishFontClass(problem)}"><div class="english-copybook-line" aria-label="\u7A7A\u767D\u56DB\u7EBF\u4E09\u683C"></div></div>`;
+    }
+    const sampleCount = kind === "english-word" ? 5 : 1;
+    const samples = Array.from({ length: sampleCount }, () => `<span class="english-sample english-ghost">${text}</span>`).join("");
+    return `<div class="problem writing-practice english-writing ${kind === "english-word" ? "english-word-writing" : "english-sentence-writing"} ${englishFontClass(problem)}"><div class="english-copybook-line"><div class="english-copy-row">${samples}</div></div></div>`;
+  }
+  function renderClockProblem(problem, index) {
+    const number = `<span class="problem-number">${index + 1}.</span>`;
+    const numbers = Array.from({ length: 12 }, (_, numberIndex) => {
+      const value = numberIndex + 1;
+      const angle = (value * 30 - 90) * Math.PI / 180;
+      const x = 80 + Math.cos(angle) * 56;
+      const y = 80 + Math.sin(angle) * 56 + 5;
+      return `<text x="${x.toFixed(2)}" y="${y.toFixed(2)}">${value}</text>`;
+    }).join("");
+    const ticks = Array.from({ length: 12 }, (_, tickIndex) => {
+      const angle = tickIndex * 30 * Math.PI / 180;
+      const startX = 80 + Math.cos(angle) * 66;
+      const startY = 80 + Math.sin(angle) * 66;
+      const endX = 80 + Math.cos(angle) * 72;
+      const endY = 80 + Math.sin(angle) * 72;
+      return `<line x1="${startX.toFixed(2)}" y1="${startY.toFixed(2)}" x2="${endX.toFixed(2)}" y2="${endY.toFixed(2)}"></line>`;
+    }).join("");
+    const hour = Number(problem.meta?.hour || 1);
+    const minute = Number(problem.meta?.minute || 0);
+    const prompt2 = problem.prompt || "\u8BF7\u5199\u51FA\u949F\u9762\u8868\u793A\u7684\u65F6\u95F4";
+    const handPoint = (angle, length) => ({
+      x: 80 + Math.cos(angle * Math.PI / 180) * length,
+      y: 80 + Math.sin(angle * Math.PI / 180) * length
+    });
+    const hourPoint = handPoint((hour % 12 + minute / 60) * 30 - 90, 38);
+    const minutePoint = handPoint(minute * 6 - 90, 53);
+    const hands = `<line class="clock-hour-hand" x1="80" y1="80" x2="${hourPoint.x.toFixed(2)}" y2="${hourPoint.y.toFixed(2)}"></line><line class="clock-minute-hand" x1="80" y1="80" x2="${minutePoint.x.toFixed(2)}" y2="${minutePoint.y.toFixed(2)}"></line>`;
+    return `<div class="problem clock-problem"><div class="clock-heading">${number}${escapeHtml(prompt2)}</div><svg class="clock-face-svg" viewBox="0 0 160 160" role="img" aria-label="\u5E26\u65F6\u9488\u548C\u5206\u9488\u7684\u949F\u9762">${ticks}<circle cx="80" cy="80" r="70"></circle>${numbers}${hands}<circle class="clock-center" cx="80" cy="80" r="3"></circle></svg><div class="clock-answer-line"><span>\u65F6\u95F4\uFF1A</span><span class="answer-box clock-answer-box"></span><span>\u65F6</span><span class="answer-box clock-answer-box"></span><span>\u5206</span></div></div>`;
   }
   function renderProblemHtml(problem, index) {
     const number = `<span class="problem-number">${index + 1}.</span>`;
@@ -3186,7 +3315,7 @@
       return kind === "make-ten" ? renderMakeTenDiagram(problem) : renderBreakTenDiagram(problem);
     }
     if (kind === "compare") {
-      return `<div class="problem math-inline">${number}${escapeHtml(problem.prompt || "").replace("\u25CB", '<span class="comparison-circle">\u25CB</span>')}</div>`;
+      return `<div class="problem math-inline">${number}${escapeHtml(problem.prompt || "").replace("\u25CB", '<span class="comparison-circle" aria-label="\u6BD4\u8F83\u7B26\u53F7"></span>')}</div>`;
     }
     if (kind === "vertical") {
       return renderVerticalCalculation(problem);
@@ -3198,6 +3327,9 @@
     if (kind === "word-problem") {
       const steps = Math.max(1, Number(problem.meta?.steps || problem.meta?.stepCount || problem.steps?.length || 1));
       return `<div class="problem word-problem"><p>${number}${escapeHtml(problem.prompt || "")}</p>${Array.from({ length: steps }, (_, step) => `<div class="word-answer-line"><span class="answer-label">\u7B2C ${step + 1} \u6B65\u5217\u5F0F\uFF1A</span><span class="answer-box equation-box"></span></div>`).join("")}<div class="word-answer-line"><span class="answer-label">\u7B54\uFF1A</span><span class="answer-box equation-answer-box"></span></div></div>`;
+    }
+    if (kind === "clock") {
+      return renderClockProblem(problem, index);
     }
     if (kind === "hanzi-stroke") {
       return renderHanziStrokePractice(problem);
@@ -3211,8 +3343,3960 @@
     return `<div class="problem math-inline">${number}${replaceSingleBlank(problem.prompt || "")}</div>`;
   }
 
+  // src/vendor/epub-reader/zip.js
+  var SIG_CDH = 33639248;
+  var SIG_LFH = 67324752;
+  var MAX_COMMENT = 65535;
+  var EOCD_MIN = 22;
+  var _bytes, _view, _entries, _ZipArchive_instances, findEOCD_fn, parseCentralDirectory_fn, entryData_fn;
+  var _ZipArchive = class _ZipArchive {
+    /** @param {ArrayBuffer} arrayBuffer */
+    constructor(arrayBuffer) {
+      __privateAdd(this, _ZipArchive_instances);
+      /** @type {Uint8Array} */
+      __privateAdd(this, _bytes);
+      /** @type {DataView} */
+      __privateAdd(this, _view);
+      /** @type {Map<string, ZipEntry>} */
+      __privateAdd(this, _entries);
+      __privateSet(this, _bytes, new Uint8Array(arrayBuffer));
+      __privateSet(this, _view, new DataView(arrayBuffer));
+      __privateSet(this, _entries, /* @__PURE__ */ new Map());
+    }
+    /**
+     * Parse a ZIP archive from any binary source.
+     * @param {ArrayBuffer | ArrayBufferView | Blob} source
+     * @returns {Promise<ZipArchive>}
+     */
+    static async from(source) {
+      var _a;
+      let buf;
+      if (source instanceof ArrayBuffer) {
+        buf = source;
+      } else if (ArrayBuffer.isView(source)) {
+        buf = /** @type {ArrayBuffer} */
+        source.buffer.slice(source.byteOffset, source.byteOffset + source.byteLength);
+      } else if (source instanceof Blob) {
+        buf = await source.arrayBuffer();
+      } else {
+        throw new TypeError("ZipArchive.from expects ArrayBuffer, TypedArray, or Blob");
+      }
+      const zip = new _ZipArchive(buf);
+      __privateMethod(_a = zip, _ZipArchive_instances, parseCentralDirectory_fn).call(_a);
+      return zip;
+    }
+    /** @returns {string[]} All entry names in the archive. */
+    get names() {
+      return [...__privateGet(this, _entries).keys()];
+    }
+    /**
+     * @param {string} name
+     * @returns {boolean}
+     */
+    has(name) {
+      return __privateGet(this, _entries).has(name);
+    }
+    /**
+     * Read and decompress an entry as raw bytes.
+     * @param {string} name
+     * @returns {Promise<Uint8Array>}
+     */
+    async read(name) {
+      const entry = __privateGet(this, _entries).get(name);
+      if (!entry) throw new Error(`ZIP entry not found: ${name}`);
+      const raw = __privateMethod(this, _ZipArchive_instances, entryData_fn).call(this, entry);
+      if (entry.method === 0) {
+        return new Uint8Array(raw);
+      }
+      if (entry.method === 8) {
+        return await inflateRaw(raw);
+      }
+      throw new Error(`Unsupported ZIP compression method ${entry.method} for ${name}`);
+    }
+    /**
+     * Read an entry and decode it as text.
+     * @param {string} name
+     * @param {string} [encoding='utf-8']
+     * @returns {Promise<string>}
+     */
+    async readText(name, encoding = "utf-8") {
+      const bytes = await this.read(name);
+      return new TextDecoder(encoding).decode(bytes);
+    }
+    /**
+     * Read an entry and wrap it in a Blob with the given MIME type.
+     * @param {string} name
+     * @param {string} [type='application/octet-stream']
+     * @returns {Promise<Blob>}
+     */
+    async blob(name, type = "application/octet-stream") {
+      const bytes = await this.read(name);
+      return new Blob([
+        /** @type {BlobPart} */
+        bytes
+      ], { type });
+    }
+  };
+  _bytes = new WeakMap();
+  _view = new WeakMap();
+  _entries = new WeakMap();
+  _ZipArchive_instances = new WeakSet();
+  findEOCD_fn = function() {
+    const bytes = __privateGet(this, _bytes);
+    const end = bytes.length;
+    const minStart = Math.max(0, end - EOCD_MIN - MAX_COMMENT);
+    for (let i = end - EOCD_MIN; i >= minStart; i--) {
+      if (bytes[i] === 80 && bytes[i + 1] === 75 && bytes[i + 2] === 5 && bytes[i + 3] === 6) {
+        return i;
+      }
+    }
+    throw new Error("Not a ZIP archive: End of Central Directory record not found");
+  };
+  parseCentralDirectory_fn = function() {
+    const view = __privateGet(this, _view);
+    const bytes = __privateGet(this, _bytes);
+    const eocd = __privateMethod(this, _ZipArchive_instances, findEOCD_fn).call(this);
+    const totalEntries = view.getUint16(eocd + 10, true);
+    const cdSize = view.getUint32(eocd + 12, true);
+    const cdOffset = view.getUint32(eocd + 16, true);
+    if (cdOffset === 4294967295 || cdSize === 4294967295 || totalEntries === 65535) {
+      throw new Error("ZIP64 archives are not supported");
+    }
+    let p = cdOffset;
+    const cdEnd = cdOffset + cdSize;
+    for (let i = 0; i < totalEntries && p < cdEnd; i++) {
+      const sig = view.getUint32(p, true);
+      if (sig !== SIG_CDH) {
+        throw new Error(`Invalid central directory header at ${p}`);
+      }
+      const flags = view.getUint16(p + 8, true);
+      const method = view.getUint16(p + 10, true);
+      const crc32 = view.getUint32(p + 16, true);
+      const compressedSize = view.getUint32(p + 20, true);
+      const uncompressedSize = view.getUint32(p + 24, true);
+      const nameLen = view.getUint16(p + 28, true);
+      const extraLen = view.getUint16(p + 30, true);
+      const commentLen = view.getUint16(p + 32, true);
+      const localHeader = view.getUint32(p + 42, true);
+      const nameBytes = bytes.subarray(p + 46, p + 46 + nameLen);
+      const name = decodeName(nameBytes, flags);
+      __privateGet(this, _entries).set(name, {
+        name,
+        method,
+        crc32,
+        compressedSize,
+        uncompressedSize,
+        localHeader
+      });
+      p += 46 + nameLen + extraLen + commentLen;
+    }
+  };
+  /** @param {ZipEntry} entry */
+  entryData_fn = function(entry) {
+    const view = __privateGet(this, _view);
+    const bytes = __privateGet(this, _bytes);
+    const p = entry.localHeader;
+    if (view.getUint32(p, true) !== SIG_LFH) {
+      throw new Error(`Invalid local file header for ${entry.name}`);
+    }
+    const nameLen = view.getUint16(p + 26, true);
+    const extraLen = view.getUint16(p + 28, true);
+    const dataStart = p + 30 + nameLen + extraLen;
+    return bytes.subarray(dataStart, dataStart + entry.compressedSize);
+  };
+  var ZipArchive = _ZipArchive;
+  function decodeName(bytes, flags) {
+    const utf8 = (flags & 2048) !== 0;
+    try {
+      return new TextDecoder(utf8 ? "utf-8" : "utf-8", { fatal: !utf8 }).decode(bytes);
+    } catch {
+      return new TextDecoder("iso-8859-1").decode(bytes);
+    }
+  }
+  async function inflateRaw(bytes) {
+    if (typeof DecompressionStream === "undefined") {
+      throw new Error("DecompressionStream is not available in this environment");
+    }
+    const ds = new DecompressionStream("deflate-raw");
+    const stream = new Blob([
+      /** @type {BlobPart} */
+      bytes
+    ]).stream().pipeThrough(ds);
+    const out = await new Response(stream).arrayBuffer();
+    return new Uint8Array(out);
+  }
+
+  // src/vendor/epub-reader/epub.js
+  var CONTAINER_PATH = "META-INF/container.xml";
+  var NS = {
+    container: "urn:oasis:names:tc:opendocument:xmlns:container",
+    opf: "http://www.idpf.org/2007/opf",
+    dc: "http://purl.org/dc/elements/1.1/",
+    xhtml: "http://www.w3.org/1999/xhtml",
+    ncx: "http://www.daisy.org/z3986/2005/ncx/",
+    epub: "http://www.idpf.org/2007/ops",
+    xlink: "http://www.w3.org/1999/xlink"
+  };
+  var REWRITE_ATTRS = /* @__PURE__ */ new Set([
+    "src",
+    "href",
+    "poster",
+    "data"
+  ]);
+  async function openEpub(source) {
+    let blob;
+    if (typeof source === "string") {
+      const res = await fetch(source);
+      if (!res.ok) throw new Error(`Failed to fetch EPUB (${res.status}): ${source}`);
+      blob = await res.blob();
+    } else if (source instanceof Blob) {
+      blob = source;
+    } else if (source instanceof ArrayBuffer || ArrayBuffer.isView(source)) {
+      blob = new Blob([
+        /** @type {BlobPart} */
+        source
+      ]);
+    } else {
+      throw new TypeError("openEpub expects a URL string, Blob/File, or ArrayBuffer");
+    }
+    const zip = await ZipArchive.from(blob);
+    const book = new EpubBook(zip, blob);
+    await book.load();
+    return book;
+  }
+  var _zip, _opfPath, _opfDir, _manifest, _spine, _toc, _metadata, _coverId, _navId, _blobUrls, _pending, _source, _cachedBookId, _EpubBook_instances, parseMetadata_fn, parseManifest_fn, parseSpine_fn, parseNav_fn, manifestByPath_fn, processHtml_fn, rewriteElement_fn, rewriteSrcset_fn, processCss_fn, rewriteCss_fn;
+  var EpubBook = class {
+    /**
+     * @param {ZipArchive} zip
+     * @param {Blob | null} [source]  Original EPUB blob — kept for SHA-256
+     *                                fallback when dc:identifier is empty.
+     */
+    constructor(zip, source = null) {
+      __privateAdd(this, _EpubBook_instances);
+      /** @type {ZipArchive} */
+      __privateAdd(this, _zip);
+      /** @type {string} */
+      __privateAdd(this, _opfPath, "");
+      /** @type {string} */
+      __privateAdd(this, _opfDir, "");
+      /** @type {Map<string, ManifestItem>} */
+      __privateAdd(this, _manifest, /* @__PURE__ */ new Map());
+      /** @type {SpineItem[]} */
+      __privateAdd(this, _spine, []);
+      /** @type {TocEntry[]} */
+      __privateAdd(this, _toc, []);
+      /** @type {EpubMetadata} */
+      __privateAdd(this, _metadata, blankMetadata());
+      /** @type {string | null} */
+      __privateAdd(this, _coverId, null);
+      /** @type {string | null} */
+      __privateAdd(this, _navId, null);
+      /** @type {Map<string, string>} */
+      __privateAdd(this, _blobUrls, /* @__PURE__ */ new Map());
+      /** @type {Map<string, Promise<string>>} */
+      __privateAdd(this, _pending, /* @__PURE__ */ new Map());
+      /** @type {Blob | null} */
+      __privateAdd(this, _source, null);
+      /** @type {string | null} */
+      __privateAdd(this, _cachedBookId, null);
+      __privateSet(this, _zip, zip);
+      __privateSet(this, _source, source);
+    }
+    /**
+     * Stable per-book identifier for persistence keys. Prefers
+     * `dc:identifier` from the OPF; falls back to the SHA-256 of the
+     * source blob (cached after the first call). Throws only if neither
+     * is available.
+     *
+     * @returns {Promise<string>}
+     */
+    async bookId() {
+      if (__privateGet(this, _cachedBookId)) return __privateGet(this, _cachedBookId);
+      const id = (__privateGet(this, _metadata).identifier || "").trim();
+      if (id) return __privateSet(this, _cachedBookId, `id:${id}`);
+      if (!__privateGet(this, _source)) throw new Error("bookId: no dc:identifier and no source blob to hash");
+      const buf = await __privateGet(this, _source).arrayBuffer();
+      const digest = await crypto.subtle.digest("SHA-256", buf);
+      const hex = Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
+      return __privateSet(this, _cachedBookId, `sha:${hex}`);
+    }
+    async load() {
+      if (!__privateGet(this, _zip).has(CONTAINER_PATH)) {
+        throw new Error("Not a valid EPUB: missing META-INF/container.xml");
+      }
+      const containerXml = await __privateGet(this, _zip).readText(CONTAINER_PATH);
+      const containerDoc = parseXml(containerXml, "application/xml");
+      const rootfile = containerDoc.getElementsByTagName("rootfile")[0];
+      if (!rootfile) throw new Error("container.xml: no <rootfile> element");
+      const fullPath = rootfile.getAttribute("full-path");
+      if (!fullPath) throw new Error("container.xml: rootfile missing full-path");
+      __privateSet(this, _opfPath, fullPath);
+      __privateSet(this, _opfDir, dirname(__privateGet(this, _opfPath)));
+      const opfXml = await __privateGet(this, _zip).readText(__privateGet(this, _opfPath));
+      const opfDoc = parseXml(opfXml, "application/xml");
+      __privateMethod(this, _EpubBook_instances, parseMetadata_fn).call(this, opfDoc);
+      __privateMethod(this, _EpubBook_instances, parseManifest_fn).call(this, opfDoc);
+      __privateMethod(this, _EpubBook_instances, parseSpine_fn).call(this, opfDoc);
+      await __privateMethod(this, _EpubBook_instances, parseNav_fn).call(this);
+    }
+    /** @returns {EpubMetadata} */
+    get metadata() {
+      return { ...__privateGet(this, _metadata) };
+    }
+    /** @returns {SpineItem[]} */
+    get spine() {
+      return __privateGet(this, _spine).map((x) => ({ ...x }));
+    }
+    /** @returns {TocEntry[]} */
+    get toc() {
+      return __privateGet(this, _toc);
+    }
+    /** @returns {ManifestItem[]} */
+    get manifest() {
+      return [...__privateGet(this, _manifest).values()].map((x) => ({ ...x }));
+    }
+    // ------- resource URLs -------
+    /**
+     * Blob URL for the cover image, or null if the OPF declares none.
+     * @returns {Promise<string | null>}
+     */
+    async coverUrl() {
+      if (!__privateGet(this, _coverId)) return null;
+      const item = __privateGet(this, _manifest).get(__privateGet(this, _coverId));
+      if (!item) return null;
+      return await this.resourceUrl(item.path);
+    }
+    /**
+     * Raw Blob for the cover image, suitable for IndexedDB storage. Null
+     * if the OPF doesn't declare a cover or the entry is missing.
+     * @returns {Promise<Blob | null>}
+     */
+    async coverBlob() {
+      if (!__privateGet(this, _coverId)) return null;
+      const item = __privateGet(this, _manifest).get(__privateGet(this, _coverId));
+      if (!item) return null;
+      try {
+        const bytes = await __privateGet(this, _zip).read(item.path);
+        return new Blob(
+          [
+            /** @type {BlobPart} */
+            bytes
+          ],
+          { type: item.mediaType || "application/octet-stream" }
+        );
+      } catch {
+        return null;
+      }
+    }
+    /**
+     * Source EPUB Blob (the bytes the reader was opened with). Used for
+     * library persistence so we can re-open a stored book without going
+     * back to disk. Null if the EpubBook was constructed without one.
+     * @returns {Blob | null}
+     */
+    sourceBlob() {
+      return __privateGet(this, _source);
+    }
+    /**
+     * Lazily build a blob: URL for an archive resource. HTML/CSS resources
+     * are processed to rewrite internal references.
+     * @param {string} path
+     * @returns {Promise<string>}
+     */
+    async resourceUrl(path) {
+      const cached = __privateGet(this, _blobUrls).get(path);
+      if (cached) return cached;
+      const inflight = __privateGet(this, _pending).get(path);
+      if (inflight) return inflight;
+      const p = (async () => {
+        const item = __privateMethod(this, _EpubBook_instances, manifestByPath_fn).call(this, path);
+        const mediaType = item?.mediaType || guessMime(path);
+        let blob;
+        if (isHtmlType(mediaType)) {
+          blob = await __privateMethod(this, _EpubBook_instances, processHtml_fn).call(this, path, mediaType);
+        } else if (isCssType(mediaType)) {
+          blob = await __privateMethod(this, _EpubBook_instances, processCss_fn).call(this, path);
+        } else {
+          const bytes = await __privateGet(this, _zip).read(path);
+          blob = new Blob([
+            /** @type {BlobPart} */
+            bytes
+          ], { type: mediaType });
+        }
+        const url = URL.createObjectURL(blob);
+        __privateGet(this, _blobUrls).set(path, url);
+        return url;
+      })();
+      __privateGet(this, _pending).set(path, p);
+      try {
+        return await p;
+      } finally {
+        __privateGet(this, _pending).delete(path);
+      }
+    }
+    /**
+     * Spine-item URL and metadata.
+     * @param {number} index
+     * @returns {Promise<Chapter>}
+     */
+    async chapter(index) {
+      const item = __privateGet(this, _spine)[index];
+      if (!item) throw new RangeError(`Spine index out of range: ${index}`);
+      const url = await this.resourceUrl(item.path);
+      return { url, path: item.path, index, linear: item.linear };
+    }
+    /**
+     * Map a manifest path back to a spine index. Returns -1 if not in spine.
+     * @param {string} path
+     * @returns {number}
+     */
+    spineIndexOf(path) {
+      for (let i = 0; i < __privateGet(this, _spine).length; i++) {
+        if (__privateGet(this, _spine)[i].path === path) return i;
+      }
+      return -1;
+    }
+    /** Revoke all generated blob URLs. Call when the reader unloads a book. */
+    destroy() {
+      for (const url of __privateGet(this, _blobUrls).values()) URL.revokeObjectURL(url);
+      __privateGet(this, _blobUrls).clear();
+    }
+  };
+  _zip = new WeakMap();
+  _opfPath = new WeakMap();
+  _opfDir = new WeakMap();
+  _manifest = new WeakMap();
+  _spine = new WeakMap();
+  _toc = new WeakMap();
+  _metadata = new WeakMap();
+  _coverId = new WeakMap();
+  _navId = new WeakMap();
+  _blobUrls = new WeakMap();
+  _pending = new WeakMap();
+  _source = new WeakMap();
+  _cachedBookId = new WeakMap();
+  _EpubBook_instances = new WeakSet();
+  parseMetadata_fn = function(doc) {
+    const metadata = doc.getElementsByTagNameNS(NS.opf, "metadata")[0] || doc.getElementsByTagName("metadata")[0];
+    if (!metadata) return;
+    const pick = (name) => {
+      const el = metadata.getElementsByTagNameNS(NS.dc, name)[0] || metadata.getElementsByTagName("dc:" + name)[0];
+      return el ? el.textContent.trim() : "";
+    };
+    __privateSet(this, _metadata, {
+      title: pick("title"),
+      creator: pick("creator"),
+      language: pick("language"),
+      identifier: pick("identifier"),
+      publisher: pick("publisher"),
+      description: pick("description"),
+      date: pick("date"),
+      rights: pick("rights")
+    });
+    for (const m of childrenByLocalName(metadata, "meta")) {
+      if (m.getAttribute("name") === "cover") {
+        __privateSet(this, _coverId, m.getAttribute("content"));
+      }
+    }
+  };
+  parseManifest_fn = function(doc) {
+    const manifest = doc.getElementsByTagNameNS(NS.opf, "manifest")[0] || doc.getElementsByTagName("manifest")[0];
+    if (!manifest) throw new Error("OPF: missing <manifest>");
+    for (const item of childrenByLocalName(manifest, "item")) {
+      const id = item.getAttribute("id");
+      const href = item.getAttribute("href");
+      const mediaType = item.getAttribute("media-type") || "";
+      const properties = item.getAttribute("properties") || "";
+      if (!id || !href) continue;
+      const resolved = resolveRelative(__privateGet(this, _opfPath), href);
+      if (!resolved) continue;
+      const entry = { id, href, path: resolved.path, mediaType, properties };
+      __privateGet(this, _manifest).set(id, entry);
+      if (properties.split(/\s+/).includes("nav")) __privateSet(this, _navId, id);
+      if (properties.split(/\s+/).includes("cover-image")) __privateSet(this, _coverId, id);
+    }
+  };
+  parseSpine_fn = function(doc) {
+    const spine = doc.getElementsByTagNameNS(NS.opf, "spine")[0] || doc.getElementsByTagName("spine")[0];
+    if (!spine) throw new Error("OPF: missing <spine>");
+    const pkg = doc.documentElement;
+    let bookLayout = "reflowable";
+    const layoutAttr = pkg.getAttribute("rendition:layout");
+    if (layoutAttr === "pre-paginated") bookLayout = "pre-paginated";
+    for (const m of pkg.getElementsByTagNameNS("*", "meta")) {
+      if (m.getAttribute("property") === "rendition:layout") {
+        const v = m.textContent?.trim();
+        if (v === "pre-paginated") bookLayout = "pre-paginated";
+      }
+    }
+    let i = 0;
+    for (const ref of childrenByLocalName(spine, "itemref")) {
+      const idref = ref.getAttribute("idref");
+      if (!idref) continue;
+      const item = __privateGet(this, _manifest).get(idref);
+      if (!item) continue;
+      const linear = (ref.getAttribute("linear") || "yes") !== "no";
+      const refProps = (ref.getAttribute("properties") || "").split(/\s+/);
+      let layout = bookLayout;
+      if (refProps.includes("rendition:layout-pre-paginated")) layout = "pre-paginated";
+      else if (refProps.includes("rendition:layout-reflowable")) layout = "reflowable";
+      __privateGet(this, _spine).push({
+        id: item.id,
+        href: item.href,
+        path: item.path,
+        mediaType: item.mediaType,
+        properties: item.properties,
+        linear,
+        layout,
+        index: i++
+      });
+    }
+    if (!__privateGet(this, _spine).length) throw new Error("OPF: empty spine");
+  };
+  parseNav_fn = async function() {
+    if (__privateGet(this, _navId)) {
+      const item = __privateGet(this, _manifest).get(__privateGet(this, _navId));
+      if (item) {
+        try {
+          const text = await __privateGet(this, _zip).readText(item.path);
+          const doc = parseXml(text, "application/xhtml+xml");
+          const toc = findNavToc(doc);
+          if (toc) {
+            __privateSet(this, _toc, collectNavList(toc, item.path));
+            if (__privateGet(this, _toc).length) return;
+          }
+        } catch (err) {
+          console.warn("Failed to parse EPUB3 nav:", err);
+        }
+      }
+    }
+    const ncxItem = [...__privateGet(this, _manifest).values()].find(
+      (x) => x.mediaType === "application/x-dtbncx+xml"
+    );
+    if (ncxItem) {
+      try {
+        const text = await __privateGet(this, _zip).readText(ncxItem.path);
+        const doc = parseXml(text, "application/xml");
+        const navMap = doc.getElementsByTagNameNS(NS.ncx, "navMap")[0] || doc.getElementsByTagName("navMap")[0];
+        if (navMap) {
+          __privateSet(this, _toc, collectNcxPoints(navMap, ncxItem.path));
+          if (__privateGet(this, _toc).length) return;
+        }
+      } catch (err) {
+        console.warn("Failed to parse NCX:", err);
+      }
+    }
+    __privateSet(this, _toc, __privateGet(this, _spine).filter((s) => s.linear).map((s, i) => ({
+      label: `Chapter ${i + 1}`,
+      href: s.href,
+      path: s.path,
+      fragment: "",
+      children: []
+    })));
+  };
+  // ------- internals -------
+  manifestByPath_fn = function(path) {
+    for (const item of __privateGet(this, _manifest).values()) {
+      if (item.path === path) return item;
+    }
+    return null;
+  };
+  processHtml_fn = async function(path, mediaType) {
+    const raw = await __privateGet(this, _zip).readText(path);
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(raw, "text/html");
+    if (!doc || doc.getElementsByTagName("parsererror").length) {
+      return new Blob([raw], { type: mediaType || "text/html" });
+    }
+    const walker = doc.createTreeWalker(doc, NodeFilter.SHOW_ELEMENT);
+    const tasks = [];
+    let node;
+    while (node = walker.nextNode()) {
+      tasks.push(__privateMethod(this, _EpubBook_instances, rewriteElement_fn).call(
+        this,
+        /** @type {Element} */
+        node,
+        path
+      ));
+    }
+    await Promise.all(tasks);
+    for (const style of doc.getElementsByTagName("style")) {
+      style.textContent = await __privateMethod(this, _EpubBook_instances, rewriteCss_fn).call(this, style.textContent || "", path);
+    }
+    const html = "<!DOCTYPE html>\n" + doc.documentElement.outerHTML;
+    return new Blob([html], { type: "text/html; charset=utf-8" });
+  };
+  rewriteElement_fn = async function(el, basePath) {
+    for (const attr of [...el.attributes]) {
+      const name = attr.name.toLowerCase();
+      const localName = name.includes(":") ? name.split(":").pop() : name;
+      if (name === "style") {
+        const rewritten = await __privateMethod(this, _EpubBook_instances, rewriteCss_fn).call(this, attr.value, basePath);
+        if (rewritten !== attr.value) el.setAttribute("style", rewritten);
+        continue;
+      }
+      if (name === "srcset") {
+        el.setAttribute("srcset", await __privateMethod(this, _EpubBook_instances, rewriteSrcset_fn).call(this, attr.value, basePath));
+        continue;
+      }
+      if (!REWRITE_ATTRS.has(name) && localName !== "href") continue;
+      const value = attr.value;
+      if (!value) continue;
+      if (isExternal(value) || value.startsWith("data:") || value.startsWith("blob:")) continue;
+      if (value.startsWith("#")) continue;
+      const resolved = resolveRelative(basePath, value);
+      if (!resolved) continue;
+      if (!__privateGet(this, _zip).has(resolved.path)) continue;
+      const tag = el.tagName.toLowerCase();
+      const isAnchor = tag === "a" || tag === "area";
+      const targetsHtml = isHtmlType(guessMime(resolved.path));
+      if (isAnchor && targetsHtml) {
+        const full = resolved.hash ? `${resolved.path}#${resolved.hash}` : resolved.path;
+        el.setAttribute("data-epub-href", full);
+        el.setAttribute("href", "#");
+      } else {
+        const url = await this.resourceUrl(resolved.path);
+        el.setAttribute(attr.name, resolved.hash ? `${url}#${resolved.hash}` : url);
+      }
+    }
+  };
+  rewriteSrcset_fn = async function(value, basePath) {
+    const parts = value.split(",").map((s) => s.trim()).filter(Boolean);
+    const out = [];
+    for (const part of parts) {
+      const tokens = part.split(/\s+/);
+      const ref = tokens.shift() || "";
+      const resolved = ref && !isExternal(ref) && !ref.startsWith("data:") ? resolveRelative(basePath, ref) : null;
+      if (resolved && __privateGet(this, _zip).has(resolved.path)) {
+        const url = await this.resourceUrl(resolved.path);
+        out.push([url, ...tokens].join(" "));
+      } else {
+        out.push(part);
+      }
+    }
+    return out.join(", ");
+  };
+  processCss_fn = async function(path) {
+    const text = await __privateGet(this, _zip).readText(path);
+    const rewritten = await __privateMethod(this, _EpubBook_instances, rewriteCss_fn).call(this, text, path);
+    return new Blob([rewritten], { type: "text/css; charset=utf-8" });
+  };
+  rewriteCss_fn = async function(cssText, basePath) {
+    const urlRe = /url\(\s*(?:"([^"]*)"|'([^']*)'|([^)\s]+))\s*\)/g;
+    const importRe = /@import\s+(?:url\(\s*(?:"([^"]*)"|'([^']*)'|([^)\s]+))\s*\)|"([^"]*)"|'([^']*)')\s*([^;]*);/g;
+    const replacements = /* @__PURE__ */ new Map();
+    const collect = async (ref) => {
+      if (!ref || isExternal(ref) || ref.startsWith("data:") || ref.startsWith("blob:") || ref.startsWith("#")) return;
+      if (replacements.has(ref)) return;
+      const resolved = resolveRelative(basePath, ref);
+      if (!resolved || !__privateGet(this, _zip).has(resolved.path)) return;
+      const url = await this.resourceUrl(resolved.path);
+      replacements.set(ref, resolved.hash ? `${url}#${resolved.hash}` : url);
+    };
+    const refs = [];
+    cssText.replace(urlRe, (_, a, b, c) => {
+      refs.push(a || b || c);
+      return "";
+    });
+    cssText.replace(importRe, (_, a, b, c, d, e) => {
+      refs.push(a || b || c || d || e);
+      return "";
+    });
+    await Promise.all([...new Set(refs)].map(collect));
+    const rewriteRef = (ref) => replacements.get(ref) || ref;
+    return cssText.replace(urlRe, (_match, a, b, c) => {
+      const ref = a || b || c;
+      const out = rewriteRef(ref);
+      return `url("${out}")`;
+    }).replace(importRe, (match, a, b, c, d, e, media) => {
+      const ref = a || b || c || d || e;
+      const out = rewriteRef(ref);
+      const tail = media ? " " + media.trim() : "";
+      return `@import url("${out}")${tail};`;
+    });
+  };
+  function blankMetadata() {
+    return { title: "", creator: "", language: "", identifier: "", publisher: "", description: "", date: "", rights: "" };
+  }
+  function childrenByLocalName(parent, localName) {
+    return parent.getElementsByTagNameNS("*", localName);
+  }
+  function parseXml(text, mime = "application/xml") {
+    const doc = new DOMParser().parseFromString(text, mime);
+    const err = doc.getElementsByTagName("parsererror")[0];
+    if (err) throw new Error(`XML parse error: ${err.textContent.trim().split("\n")[0]}`);
+    return doc;
+  }
+  function dirname(path) {
+    const i = path.lastIndexOf("/");
+    return i >= 0 ? path.slice(0, i) : "";
+  }
+  function resolveRelative(basePath, ref) {
+    if (!ref) return null;
+    if (isExternal(ref)) return null;
+    const [rawPath, hashRaw] = splitHash(ref);
+    const hash = hashRaw ? decodeURIComponent(hashRaw) : "";
+    if (!rawPath) {
+      return { path: basePath, hash };
+    }
+    const baseDir = dirname(basePath);
+    const baseParts = baseDir ? baseDir.split("/") : [];
+    const parts = [...baseParts];
+    for (const seg of rawPath.split("/")) {
+      if (seg === "" || seg === ".") continue;
+      if (seg === "..") {
+        parts.pop();
+        continue;
+      }
+      parts.push(seg);
+    }
+    const path = parts.join("/");
+    let decoded;
+    try {
+      decoded = decodeURIComponent(path);
+    } catch {
+      decoded = path;
+    }
+    return { path: decoded, hash };
+  }
+  function splitHash(ref) {
+    const i = ref.indexOf("#");
+    return i < 0 ? [ref, ""] : [ref.slice(0, i), ref.slice(i + 1)];
+  }
+  function isExternal(ref) {
+    return /^[a-z][a-z0-9+.-]*:/i.test(ref) && !ref.startsWith("file:");
+  }
+  function isHtmlType(mediaType) {
+    if (!mediaType) return false;
+    const t = mediaType.toLowerCase();
+    return t.startsWith("application/xhtml+xml") || t.startsWith("text/html");
+  }
+  function isCssType(mediaType) {
+    return !!mediaType && mediaType.toLowerCase().startsWith("text/css");
+  }
+  var MIME_BY_EXT = {
+    xhtml: "application/xhtml+xml",
+    html: "text/html",
+    htm: "text/html",
+    css: "text/css",
+    js: "application/javascript",
+    png: "image/png",
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    gif: "image/gif",
+    svg: "image/svg+xml",
+    webp: "image/webp",
+    bmp: "image/bmp",
+    woff: "font/woff",
+    woff2: "font/woff2",
+    ttf: "font/ttf",
+    otf: "font/otf",
+    mp3: "audio/mpeg",
+    mp4: "video/mp4",
+    ogg: "audio/ogg",
+    m4a: "audio/mp4",
+    json: "application/json",
+    xml: "application/xml",
+    ncx: "application/x-dtbncx+xml",
+    opf: "application/oebps-package+xml"
+  };
+  function guessMime(path) {
+    const i = path.lastIndexOf(".");
+    if (i < 0) return "application/octet-stream";
+    return MIME_BY_EXT[path.slice(i + 1).toLowerCase()] || "application/octet-stream";
+  }
+  function findNavToc(doc) {
+    const navs = doc.getElementsByTagName("nav");
+    for (const nav of navs) {
+      const epubType = nav.getAttributeNS(NS.epub, "type") || nav.getAttribute("epub:type") || "";
+      const role = nav.getAttribute("role") || "";
+      if (epubType.split(/\s+/).includes("toc") || role === "doc-toc") return nav;
+    }
+    return navs[0] || null;
+  }
+  function collectNavList(container, navPath) {
+    const list = firstChildTag(container, "ol") || firstChildTag(container, "ul");
+    if (!list) return [];
+    const out = [];
+    for (const li of list.children) {
+      if (li.tagName.toLowerCase() !== "li") continue;
+      const a = li.querySelector(":scope > a, :scope > span");
+      const label = (a?.textContent || "").trim() || "(untitled)";
+      const href = a?.getAttribute?.("href") || "";
+      let path = "", fragment = "";
+      if (href) {
+        const r = resolveRelative(navPath, href);
+        if (r) {
+          path = r.path;
+          fragment = r.hash;
+        }
+      }
+      const nested = firstChildTag(li, "ol") || firstChildTag(li, "ul");
+      out.push({
+        label,
+        href,
+        path,
+        fragment,
+        children: nested ? collectNavList({ children: [nested] }, navPath) : []
+      });
+    }
+    return out;
+  }
+  function firstChildTag(el, tag) {
+    for (const c of el.children || []) if (c.tagName?.toLowerCase() === tag) return c;
+    return null;
+  }
+  function collectNcxPoints(container, ncxPath) {
+    const out = [];
+    for (const np of container.children) {
+      if (np.tagName.toLowerCase() !== "navpoint") continue;
+      const labelEl = np.getElementsByTagName("text")[0] || np.getElementsByTagNameNS(NS.ncx, "text")[0];
+      const label = (labelEl?.textContent || "").trim() || "(untitled)";
+      const content = np.getElementsByTagName("content")[0] || np.getElementsByTagNameNS(NS.ncx, "content")[0];
+      const src = content?.getAttribute("src") || "";
+      let path = "", fragment = "";
+      if (src) {
+        const r = resolveRelative(ncxPath, src);
+        if (r) {
+          path = r.path;
+          fragment = r.hash;
+        }
+      }
+      out.push({
+        label,
+        href: src,
+        path,
+        fragment,
+        children: collectNcxPoints(np, ncxPath)
+      });
+    }
+    return out;
+  }
+
+  // src/vendor/epub-reader/storage.js
+  var DB_NAME2 = "epub-reader";
+  var DB_VERSION2 = 3;
+  var STORES2 = (
+    /** @type {const} */
+    ["positions", "bookmarks", "library", "highlights"]
+  );
+  var dbPromise = null;
+  function openDB() {
+    if (dbPromise) return dbPromise;
+    dbPromise = new Promise((resolve, reject) => {
+      if (typeof indexedDB === "undefined") {
+        reject(new Error("IndexedDB unavailable"));
+        return;
+      }
+      const req = indexedDB.open(DB_NAME2, DB_VERSION2);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        for (const name of STORES2) {
+          if (!db.objectStoreNames.contains(name)) {
+            db.createObjectStore(name, { keyPath: "id" });
+          }
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+    dbPromise.catch(() => {
+      dbPromise = null;
+    });
+    return dbPromise;
+  }
+  async function dbGet(store, key) {
+    try {
+      const db = await openDB();
+      return await new Promise((resolve, reject) => {
+        const tx = db.transaction(store, "readonly");
+        const req = tx.objectStore(store).get(key);
+        req.onsuccess = () => resolve(
+          /** @type {T | null} */
+          req.result || null
+        );
+        req.onerror = () => reject(req.error);
+      });
+    } catch {
+      return null;
+    }
+  }
+  async function dbPut(store, value) {
+    try {
+      const db = await openDB();
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction(store, "readwrite");
+        tx.objectStore(store).put(value);
+        tx.oncomplete = () => resolve(void 0);
+        tx.onerror = () => reject(tx.error);
+      });
+    } catch {
+    }
+  }
+  async function dbDelete(store, key) {
+    try {
+      const db = await openDB();
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction(store, "readwrite");
+        tx.objectStore(store).delete(key);
+        tx.oncomplete = () => resolve(void 0);
+        tx.onerror = () => reject(tx.error);
+      });
+    } catch {
+    }
+  }
+  async function dbGetAll(store) {
+    try {
+      const db = await openDB();
+      return await new Promise((resolve, reject) => {
+        const tx = db.transaction(store, "readonly");
+        const req = tx.objectStore(store).getAll();
+        req.onsuccess = () => resolve(
+          /** @type {T[]} */
+          req.result || []
+        );
+        req.onerror = () => reject(req.error);
+      });
+    } catch {
+      return [];
+    }
+  }
+  async function dbClear(store) {
+    try {
+      const db = await openDB();
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction(store, "readwrite");
+        tx.objectStore(store).clear();
+        tx.oncomplete = () => resolve(void 0);
+        tx.onerror = () => reject(tx.error);
+      });
+    } catch {
+    }
+  }
+
+  // src/vendor/epub-reader/range-utils.js
+  function* textNodes(root) {
+    const walker = root.ownerDocument.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode(n) {
+        const parent = n.parentElement;
+        if (!parent) return NodeFilter.FILTER_REJECT;
+        const tag = parent.tagName;
+        if (tag === "SCRIPT" || tag === "STYLE" || tag === "NOSCRIPT") {
+          return NodeFilter.FILTER_REJECT;
+        }
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    let node = (
+      /** @type {Text | null} */
+      walker.nextNode()
+    );
+    while (node) {
+      yield node;
+      node = /** @type {Text | null} */
+      walker.nextNode();
+    }
+  }
+  function plainText(root) {
+    let s = "";
+    for (const t of textNodes(root)) s += t.data;
+    return s;
+  }
+  function textOffsetOf(root, node, offset) {
+    let acc = 0;
+    if (node.nodeType !== 3) {
+      const limit = node.childNodes[offset] || null;
+      for (const t of textNodes(root)) {
+        if (limit && (t === limit || limit.compareDocumentPosition(t) & Node.DOCUMENT_POSITION_FOLLOWING)) break;
+        acc += t.data.length;
+      }
+      return acc;
+    }
+    for (const t of textNodes(root)) {
+      if (t === node) return acc + Math.min(offset, t.data.length);
+      acc += t.data.length;
+    }
+    return acc;
+  }
+  function nodeAtTextOffset(root, offset) {
+    let acc = 0;
+    let last = null;
+    for (const t of textNodes(root)) {
+      last = t;
+      if (acc + t.data.length >= offset) {
+        return { node: t, offset: Math.max(0, offset - acc) };
+      }
+      acc += t.data.length;
+    }
+    if (last) return { node: last, offset: last.data.length };
+    return null;
+  }
+  function rangeFromOffsets(root, startOffset, endOffset) {
+    if (endOffset <= startOffset) return null;
+    const start = nodeAtTextOffset(root, startOffset);
+    const end = nodeAtTextOffset(root, endOffset);
+    if (!start || !end) return null;
+    const range = root.ownerDocument.createRange();
+    try {
+      range.setStart(start.node, start.offset);
+      range.setEnd(end.node, end.offset);
+    } catch {
+      return null;
+    }
+    return range;
+  }
+  function offsetsFromRange(root, range) {
+    if (!range || range.collapsed) return null;
+    const start = textOffsetOf(root, range.startContainer, range.startOffset);
+    const end = textOffsetOf(root, range.endContainer, range.endOffset);
+    if (end <= start) return null;
+    return { start, end };
+  }
+  function findOffsets(root, query) {
+    if (!query) return [];
+    const text = plainText(root);
+    const lowerHay = text.toLowerCase();
+    const lowerNeedle = query.toLowerCase();
+    const out = [];
+    let i = 0;
+    while (i <= lowerHay.length) {
+      const at = lowerHay.indexOf(lowerNeedle, i);
+      if (at < 0) break;
+      out.push({ start: at, end: at + lowerNeedle.length });
+      i = at + Math.max(1, lowerNeedle.length);
+    }
+    return out;
+  }
+  function wrapRange(range, factory) {
+    const doc = range.startContainer.ownerDocument;
+    if (!doc) return [];
+    const wrappers = [];
+    const pieces = [];
+    const walker = doc.createTreeWalker(range.commonAncestorContainer, NodeFilter.SHOW_TEXT);
+    let n = walker.currentNode;
+    if (range.startContainer === range.endContainer && range.startContainer.nodeType === 3) {
+      pieces.push({
+        node: (
+          /** @type {Text} */
+          range.startContainer
+        ),
+        start: range.startOffset,
+        end: range.endOffset
+      });
+    } else {
+      while (n = walker.nextNode()) {
+        const t = (
+          /** @type {Text} */
+          n
+        );
+        const inRange = range.intersectsNode(t);
+        if (!inRange) continue;
+        const start = t === range.startContainer ? range.startOffset : 0;
+        const end = t === range.endContainer ? range.endOffset : t.data.length;
+        if (end > start) pieces.push({ node: t, start, end });
+      }
+    }
+    for (const p of pieces) {
+      const before = p.node.splitText(p.start);
+      before.splitText(p.end - p.start);
+      const wrapper = factory();
+      before.parentNode?.insertBefore(wrapper, before);
+      wrapper.append(before);
+      wrappers.push(wrapper);
+    }
+    return wrappers;
+  }
+  function unwrapAll(root, selector) {
+    const els = (
+      /** @type {HTMLElement[]} */
+      [...root.querySelectorAll(selector)]
+    );
+    for (const el of els) {
+      const parent = el.parentNode;
+      if (!parent) continue;
+      while (el.firstChild) parent.insertBefore(el.firstChild, el);
+      parent.removeChild(el);
+      parent.normalize?.();
+    }
+  }
+
+  // src/vendor/epub-reader/epub-reader.js
+  var TYPOGRAPHY_KEY = "epub-reader:typography";
+  function defaultTypography() {
+    return {
+      fontFamily: "",
+      fontSize: 100,
+      lineHeight: 0,
+      paragraphSpacing: -1,
+      justify: null,
+      readingWidth: 65,
+      layoutMode: "scroll",
+      userCss: ""
+    };
+  }
+  function sanitiseUserCss(css) {
+    if (!css) return "";
+    return String(css).replace(/[<>]/g, "").replace(/@import\b[^;]*;?/gi, "/* @import blocked */").replace(/\bexpression\s*\(/gi, "/*expression(*/").replace(/\bbehavior\s*:/gi, "/*behavior:*/");
+  }
+  function loadTypography() {
+    try {
+      const raw = globalThis.localStorage?.getItem(TYPOGRAPHY_KEY);
+      if (!raw) return defaultTypography();
+      const parsed = JSON.parse(raw);
+      return { ...defaultTypography(), ...parsed };
+    } catch {
+      return defaultTypography();
+    }
+  }
+  function saveTypography(t) {
+    try {
+      globalThis.localStorage?.setItem(TYPOGRAPHY_KEY, JSON.stringify(t));
+    } catch {
+    }
+  }
+  function buildTypographyCss(t) {
+    const rules = [];
+    if (t.fontSize !== 100) {
+      rules.push(`html, body { font-size: ${t.fontSize}% !important; }`);
+    }
+    if (t.fontFamily) {
+      rules.push(`body, p, li, blockquote, dd, dt, h1, h2, h3, h4, h5, h6 { font-family: ${t.fontFamily} !important; }`);
+      rules.push(`math, math * { font-family: revert !important; }`);
+    }
+    if (t.lineHeight > 0) {
+      rules.push(`body, p, li, blockquote { line-height: ${t.lineHeight / 100} !important; }`);
+    }
+    if (t.paragraphSpacing >= 0) {
+      rules.push(`p, li { margin-block-end: ${t.paragraphSpacing / 10}em !important; }`);
+    }
+    if (t.justify !== null) {
+      rules.push(`body, p { text-align: ${t.justify ? "justify" : "start"} !important; }`);
+    }
+    if (t.readingWidth > 0) {
+      rules.push(`body { max-inline-size: ${t.readingWidth}ch !important; margin-inline: auto !important; padding-inline: clamp(0.75rem, 3vw, 2rem) !important; }`);
+    }
+    const user = sanitiseUserCss(t.userCss);
+    if (user) rules.push(`/* --- user css --- */
+${user}`);
+    return rules.join("\n");
+  }
+  var MARKS_CSS = `
+[data-reader-mark="find"] {
+  background: #fde68a !important;
+  color: inherit !important;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+[data-reader-mark="find"].current {
+  background: #f59e0b !important;
+  outline: 2px solid #f59e0b;
+}
+[data-reader-mark="search"] {
+  background: color-mix(in srgb, #2d6cdf 25%, transparent) !important;
+  color: inherit !important;
+  border-radius: 2px;
+}
+[data-reader-mark="highlight"] {
+  background: var(--reader-hl-color, #fde68a) !important;
+  color: inherit !important;
+  border-radius: 2px;
+  cursor: pointer;
+}
+`;
+  var COMPONENT_CSS = `
+@scope (epub-reader) {
+  :scope {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    block-size: 100%;
+    min-block-size: 20rem;
+    background: var(--color-background, #fbfaf7);
+    color: var(--color-text, #1f1f1f);
+    container-type: inline-size;
+  }
+
+  .reader-chrome {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--size-m, 1rem);
+    padding-inline: max(var(--size-m, 1rem), env(safe-area-inset-left))
+                    max(var(--size-m, 1rem), env(safe-area-inset-right));
+    block-size: var(--_reader-chrome-h, 3.625rem);
+    background: var(--color-surface, #f5f5f5);
+    border-block-end: var(--border-width-thin, 1px) solid var(--color-border, #e4e4e7);
+    position: relative;
+    z-index: 2;
+  }
+  .reader-chrome-copy { min-inline-size: 0; display: flex; flex-direction: column; gap: 0.15rem; }
+  .reader-chrome-kicker {
+    font-size: var(--font-size-2xs, 0.625rem);
+    font-weight: var(--font-weight-semibold, 600);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-text-muted, #888);
+  }
+  .reader-chrome-title {
+    font-size: var(--font-size-xs, 0.75rem);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-muted, #888);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .reader-controls {
+    display: flex; align-items: center;
+    gap: var(--size-s, 0.75rem);
+    min-inline-size: 0; overflow-x: auto; scrollbar-width: none;
+  }
+  .reader-controls::-webkit-scrollbar { display: none; }
+  .reader-control-group {
+    display: inline-flex; align-items: center;
+    gap: var(--size-3xs, 0.125rem);
+    padding: var(--size-3xs, 0.125rem);
+    background: var(--color-surface-raised, rgba(0, 0, 0, 0.04));
+    border: var(--border-width-thin, 1px) solid var(--color-border, #e4e4e7);
+    border-radius: var(--radius-full, 999px);
+    flex: 0 0 auto;
+  }
+  .reader-icon-btn, .reader-seg-btn {
+    border: 0;
+    background: transparent;
+    color: var(--color-text-muted, #667085);
+    cursor: pointer;
+    border-radius: var(--radius-full, 999px);
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-weight: var(--font-weight-semibold, 600);
+    transition: color 140ms ease, background 140ms ease;
+  }
+  .reader-icon-btn {
+    inline-size: 2.1rem; block-size: 2.1rem;
+    display: inline-grid; place-items: center;
+    font-size: var(--font-size-xs, 0.75rem);
+  }
+  .reader-icon-btn:hover:not(:disabled),
+  .reader-seg-btn:hover:not(:disabled) {
+    color: var(--color-text, #222);
+    background: var(--color-surface-raised, rgba(0, 0, 0, 0.06));
+  }
+  .reader-icon-btn:disabled, .reader-seg-btn:disabled { opacity: .28; cursor: default; }
+  .reader-icon-btn[aria-pressed="true"], .reader-seg-btn[data-reader-state="active"] {
+    color: var(--color-interactive-text, #fff);
+    background: var(--color-interactive, #2d6cdf);
+  }
+  .progress {
+    color: var(--color-text-muted, #667085);
+    font-variant-numeric: tabular-nums;
+    font-size: var(--font-size-2xs, 0.7rem);
+    padding-inline: var(--size-2xs, 0.35rem);
+    min-inline-size: 3rem;
+    text-align: center;
+  }
+  .chapter-progress {
+    color: var(--color-text-muted, #888);
+    font-variant-numeric: tabular-nums;
+    font-size: var(--font-size-2xs, 0.65rem);
+    padding-inline: 0.25rem;
+    min-inline-size: 2.5rem;
+    text-align: center;
+    opacity: .8;
+  }
+  .chapter-progress[hidden] { display: none; }
+  .title { /* alias for the chrome title; kept for tests/CSS hooks */ }
+
+  .body {
+    display: grid;
+    grid-template-columns: var(--_sidebar-w, 18rem) 1fr;
+    min-block-size: 0;
+    overflow: hidden;
+  }
+  :scope([hide-toc]) .body, .body.toc-hidden { grid-template-columns: 0 1fr; }
+  :scope([hide-toc]) .sidebar, .body.toc-hidden .sidebar { display: none; }
+
+  .sidebar {
+    overflow: auto;
+    border-inline-end: var(--border-width-thin, 1px) solid var(--color-border, #e4e4e7);
+    padding: var(--size-2xs, 0.5rem);
+    background: var(--color-surface, #fbfaf7);
+  }
+  .sidebar h2 {
+    font-size: var(--font-size-2xs, 0.7rem);
+    text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--color-text-muted, #667085);
+    margin: 0.25rem 0.25rem 0.5rem;
+  }
+  .toc, .toc ol { list-style: none; margin: 0; padding: 0; }
+  .toc ol { padding-inline-start: 0.75rem; border-inline-start: 1px solid var(--color-border, #e4e4e7); margin-block: 0.25rem; }
+  .toc a {
+    display: block; padding: 0.3rem 0.5rem; border-radius: 0.25rem;
+    color: inherit; text-decoration: none; line-height: 1.3;
+    font-size: var(--font-size-s, 0.9rem);
+  }
+  .toc a:hover { background: color-mix(in srgb, var(--color-interactive, #2d6cdf) 10%, transparent); }
+  .toc a.current { background: color-mix(in srgb, var(--color-interactive, #2d6cdf) 16%, transparent); font-weight: 600; }
+  .toc .toc-heading {
+    display: block;
+    padding: 0.4rem 0.5rem 0.2rem;
+    font-size: var(--font-size-2xs, 0.7rem);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-text-muted, #667085);
+    font-weight: var(--font-weight-semibold, 600);
+  }
+
+  .content { position: relative; overflow: hidden; background: var(--color-background, #fff); }
+  iframe {
+    inline-size: 100%; block-size: 100%; border: 0; display: block;
+    background: var(--color-background, #fff);
+  }
+
+  .overlay {
+    position: absolute; inset: 0; display: grid; place-items: center;
+    padding: 2rem; text-align: center; pointer-events: none;
+    color: var(--color-text-muted, #667085);
+  }
+  .overlay[hidden] { display: none; }
+  .overlay .message { max-inline-size: 32rem; }
+  .overlay.error { color: var(--color-danger, #b42318); }
+
+  .settings-panel {
+    position: absolute;
+    inset-block-start: calc(100% + 0.25rem);
+    inset-inline-end: var(--size-s, 0.75rem);
+    z-index: 4;
+    inline-size: min(20rem, calc(100vw - 1rem));
+    background: var(--color-surface, #fbfaf7);
+    color: var(--color-text, #1f1f1f);
+    border: var(--border-width-thin, 1px) solid var(--color-border, #e4e4e7);
+    border-radius: var(--radius-m, 0.5rem);
+    box-shadow: var(--shadow-l, 0 8px 24px rgba(0,0,0,0.12));
+    padding: 0.75rem;
+    display: grid; gap: 0.6rem;
+    font-size: var(--font-size-s, 0.9rem);
+  }
+  .settings-panel[hidden] { display: none; }
+
+  /* Bookmarks panel: same layout idea as settings, but a list-of-items affordance. */
+  .bookmarks-panel {
+    position: absolute;
+    inset-block-start: calc(100% + 0.25rem);
+    inset-inline-end: var(--size-s, 0.75rem);
+    z-index: 4;
+    inline-size: min(22rem, calc(100vw - 1rem));
+    max-block-size: min(70vh, 32rem);
+    overflow: auto;
+    background: var(--color-surface, #fbfaf7);
+    color: var(--color-text, #1f1f1f);
+    border: var(--border-width-thin, 1px) solid var(--color-border, #e4e4e7);
+    border-radius: var(--radius-m, 0.5rem);
+    box-shadow: var(--shadow-l, 0 8px 24px rgba(0, 0, 0, 0.12));
+    padding: 0.75rem;
+    display: grid;
+    gap: 0.5rem;
+    font-size: var(--font-size-s, 0.9rem);
+  }
+  .bookmarks-panel[hidden] { display: none; }
+  .bookmarks-panel h3 {
+    font-size: var(--font-size-2xs, 0.7rem);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-text-muted, #667085);
+    margin: 0;
+  }
+  .bookmarks-panel .row {
+    display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+  }
+  .bookmarks-panel button {
+    font: inherit; color: inherit;
+    background: transparent;
+    border: var(--border-width-thin, 1px) solid var(--color-border, #e4e4e7);
+    border-radius: var(--radius-s, 0.35rem);
+    padding: 0.35rem 0.6rem;
+    cursor: pointer;
+  }
+  .bookmarks-panel button.primary {
+    background: var(--color-interactive, #2d6cdf);
+    color: var(--color-interactive-text, white);
+    border-color: transparent;
+  }
+  .bookmarks-panel .bm-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.25rem; }
+  .bookmarks-panel .bm-list li {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.25rem 0.5rem;
+    align-items: start;
+    padding: 0.35rem 0.5rem;
+    border: var(--border-width-thin, 1px) solid var(--color-border, #e4e4e7);
+    border-radius: var(--radius-s, 0.25rem);
+  }
+  .bookmarks-panel .bm-list li:hover { background: color-mix(in srgb, var(--color-interactive, #2d6cdf) 6%, transparent); }
+  .bookmarks-panel .bm-list .bm-jump {
+    text-align: start; padding: 0; border: 0; background: transparent;
+    cursor: pointer; color: inherit; min-inline-size: 0;
+  }
+  .bookmarks-panel .bm-list .bm-label { font-weight: 600; }
+  .bookmarks-panel .bm-list .bm-meta {
+    color: var(--color-text-muted, #667085);
+    font-size: 0.85em;
+    line-height: 1.3;
+  }
+  .bookmarks-panel .bm-list .bm-snippet {
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+    color: var(--color-text-muted, #667085);
+    font-size: 0.85em;
+    line-height: 1.4;
+  }
+  .bookmarks-panel .bm-list .bm-remove {
+    inline-size: 1.5rem; block-size: 1.5rem;
+    display: inline-grid; place-items: center;
+    border-radius: 999px; padding: 0; font-size: 0.9em;
+  }
+  .bookmarks-panel .bm-empty {
+    color: var(--color-text-muted, #667085);
+    font-size: 0.85em;
+    text-align: center;
+    padding-block: 0.5rem;
+  }
+  .bookmarks-panel:not([data-empty="true"]) .bm-empty { display: none; }
+  .bookmarks-panel[data-empty="true"] .bm-list { display: none; }
+  /* Solid star when bookmark exists at current position. */
+  :scope([data-bookmark-active]) .bookmarks-toggle::before { content: ''; }
+
+  /* Highlight selection popover \u2014 floats above the iframe selection. */
+  .hl-popover {
+    position: absolute;
+    z-index: 6;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.3rem;
+    background: var(--color-surface, #fff);
+    border: var(--border-width-thin, 1px) solid var(--color-border, #e4e4e7);
+    border-radius: var(--radius-full, 999px);
+    box-shadow: var(--shadow-l, 0 8px 24px rgba(0,0,0,0.12));
+    transform: translate(-50%, -100%);
+  }
+  .hl-popover[hidden] { display: none; }
+  .hl-popover .hl-color {
+    inline-size: 1.5rem;
+    block-size: 1.5rem;
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background: var(--c);
+    cursor: pointer;
+    padding: 0;
+  }
+  .hl-popover .hl-color:hover { border-color: var(--color-text, #1f1f1f); }
+  .hl-popover .hl-note {
+    font: inherit;
+    color: inherit;
+    background: transparent;
+    border: var(--border-width-thin, 1px) solid var(--color-border, #e4e4e7);
+    border-radius: 999px;
+    padding: 0.2rem 0.6rem;
+    cursor: pointer;
+    font-size: 0.85em;
+  }
+
+  /* Highlights / notes panel \u2014 same shape as bookmarks. */
+  .highlights-panel {
+    position: absolute;
+    inset-block-start: calc(100% + 0.25rem);
+    inset-inline-end: var(--size-s, 0.75rem);
+    z-index: 4;
+    inline-size: min(22rem, calc(100vw - 1rem));
+    max-block-size: min(70vh, 32rem);
+    overflow: auto;
+    background: var(--color-surface, #fbfaf7);
+    color: var(--color-text, #1f1f1f);
+    border: var(--border-width-thin, 1px) solid var(--color-border, #e4e4e7);
+    border-radius: var(--radius-m, 0.5rem);
+    box-shadow: var(--shadow-l, 0 8px 24px rgba(0, 0, 0, 0.12));
+    padding: 0.75rem;
+    display: grid;
+    gap: 0.5rem;
+    font-size: var(--font-size-s, 0.9rem);
+  }
+  .highlights-panel[hidden] { display: none; }
+  .highlights-panel h3 {
+    font-size: var(--font-size-2xs, 0.7rem);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-text-muted, #667085);
+    margin: 0;
+  }
+  .highlights-panel .hl-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.3rem; }
+  .highlights-panel .hl-list li {
+    display: grid;
+    grid-template-columns: 0.5rem 1fr auto;
+    gap: 0.5rem;
+    align-items: start;
+    border: var(--border-width-thin, 1px) solid var(--color-border, #e4e4e7);
+    border-radius: var(--radius-s, 0.25rem);
+    padding: 0.4rem 0.5rem;
+  }
+  .highlights-panel .hl-swatch {
+    inline-size: 0.5rem;
+    block-size: 100%;
+    min-block-size: 1.5rem;
+    border-radius: 2px;
+    background: var(--c, #fde68a);
+  }
+  .highlights-panel .hl-jump {
+    text-align: start; padding: 0; border: 0; background: transparent;
+    cursor: pointer; color: inherit; min-inline-size: 0;
+    display: grid; gap: 0.15rem;
+  }
+  .highlights-panel .hl-jump .hl-text {
+    line-height: 1.35;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-size: 0.95em;
+  }
+  .highlights-panel .hl-jump .hl-meta {
+    color: var(--color-text-muted, #667085);
+    font-size: 0.8em;
+  }
+  .highlights-panel .hl-jump .hl-note-text {
+    color: var(--color-text-muted, #667085);
+    font-size: 0.85em;
+    font-style: italic;
+  }
+  .highlights-panel .hl-remove {
+    inline-size: 1.5rem; block-size: 1.5rem;
+    display: inline-grid; place-items: center;
+    border-radius: 999px;
+    background: transparent;
+    border: var(--border-width-thin, 1px) solid var(--color-border, #e4e4e7);
+    cursor: pointer;
+    padding: 0; font-size: 0.9em;
+    color: inherit;
+  }
+  .highlights-panel .hl-empty {
+    color: var(--color-text-muted, #667085);
+    font-size: 0.85em;
+    text-align: center;
+    padding-block: 0.5rem;
+  }
+  .highlights-panel:not([data-empty="true"]) .hl-empty { display: none; }
+  .highlights-panel[data-empty="true"] .hl-list { display: none; }
+  .highlights-panel button.primary {
+    background: var(--color-interactive, #2d6cdf);
+    color: var(--color-interactive-text, white);
+    border-color: transparent;
+    border: 0;
+    border-radius: var(--radius-s, 0.35rem);
+    padding: 0.35rem 0.6rem;
+    cursor: pointer;
+    font: inherit;
+  }
+  .highlights-panel .row { display: flex; justify-content: flex-end; }
+
+  /* Search panel: full content-area overlay like the library, but
+     denser since each result is short. */
+  .search-panel {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    background: var(--color-background, #fbfaf7);
+    color: var(--color-text, #1f1f1f);
+    padding: var(--size-m, 1rem);
+    overflow: auto;
+    display: grid;
+    grid-template-rows: auto auto 1fr auto;
+    gap: var(--size-s, 0.75rem);
+  }
+  .search-panel[hidden] { display: none; }
+  .search-panel .srch-header {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.75rem;
+    align-items: center;
+  }
+  .search-panel h3 {
+    margin: 0;
+    font-size: var(--font-size-2xs, 0.7rem);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-text-muted, #667085);
+  }
+  .search-panel .search-input {
+    inline-size: 100%;
+    font: inherit; color: inherit;
+    background: var(--color-surface, #fff);
+    border: var(--border-width-thin, 1px) solid var(--color-border, #e4e4e7);
+    border-radius: var(--radius-s, 0.25rem);
+    padding: 0.4rem 0.6rem;
+  }
+  .search-panel .srch-status {
+    color: var(--color-text-muted, #667085);
+    font-size: var(--font-size-2xs, 0.75rem);
+  }
+  .search-panel .search-results {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    display: grid;
+    gap: 0.4rem;
+  }
+  .search-panel .search-results li {
+    border: var(--border-width-thin, 1px) solid var(--color-border, #e4e4e7);
+    border-radius: var(--radius-s, 0.25rem);
+    background: var(--color-surface, #fff);
+  }
+  .search-panel .search-results .srch-jump {
+    display: grid;
+    gap: 0.2rem;
+    inline-size: 100%;
+    text-align: start;
+    background: transparent;
+    border: 0;
+    color: inherit;
+    cursor: pointer;
+    padding: 0.5rem 0.6rem;
+    font: inherit;
+  }
+  .search-panel .search-results .srch-jump:hover {
+    background: color-mix(in srgb, var(--color-interactive, #2d6cdf) 8%, transparent);
+  }
+  .search-panel .search-results .srch-chap {
+    color: var(--color-text-muted, #667085);
+    font-size: 0.85em;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .search-panel .search-results .srch-snippet {
+    line-height: 1.4;
+    font-size: 0.95em;
+  }
+  .search-panel .search-results .srch-snippet mark {
+    background: color-mix(in srgb, var(--color-interactive, #2d6cdf) 25%, transparent);
+    color: inherit;
+    border-radius: 2px;
+    padding: 0 1px;
+  }
+  .search-panel .row {
+    display: flex; justify-content: flex-end; gap: 0.5rem;
+  }
+  .search-panel button.primary {
+    background: var(--color-interactive, #2d6cdf);
+    color: var(--color-interactive-text, white);
+    border: 0;
+    border-radius: var(--radius-s, 0.35rem);
+    padding: 0.4rem 0.75rem;
+    cursor: pointer;
+    font: inherit;
+  }
+
+  /* Find-in-chapter bar (Ctrl/Cmd+F replacement). */
+  .find-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--size-3xs, 0.25rem);
+    padding: 0.4rem 0.75rem;
+    border-block-end: var(--border-width-thin, 1px) solid var(--color-border, #e4e4e7);
+    background: var(--color-surface, #f5f5f5);
+    position: relative; z-index: 3;
+  }
+  .find-bar[hidden] { display: none; }
+  .find-bar .find-input {
+    flex: 1;
+    font: inherit; color: inherit; background: var(--color-background, #fff);
+    border: var(--border-width-thin, 1px) solid var(--color-border, #e4e4e7);
+    border-radius: var(--radius-s, 0.25rem);
+    padding: 0.3rem 0.5rem;
+    min-inline-size: 0;
+  }
+  .find-bar .find-count {
+    color: var(--color-text-muted, #667085);
+    font-variant-numeric: tabular-nums;
+    font-size: var(--font-size-2xs, 0.75rem);
+    min-inline-size: 4rem;
+    text-align: end;
+  }
+
+  /* CSS for find/highlight marks lives in a stylesheet injected into
+     the chapter iframe \u2014 kept inline below in #findStyles for easy
+     re-application after publisher CSS rewrites. The :scope rules
+     here only affect host chrome. */
+
+  /* Library panel: full-width overlay so cards have room to breathe. */
+  .library-panel {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    background: var(--color-background, #fbfaf7);
+    color: var(--color-text, #1f1f1f);
+    padding: var(--size-m, 1rem);
+    overflow: auto;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: var(--size-s, 0.75rem);
+  }
+  .library-panel[hidden] { display: none; }
+  .library-panel .lib-header {
+    display: flex; justify-content: space-between; align-items: baseline; gap: 1rem;
+  }
+  .library-panel h3 {
+    margin: 0;
+    font-size: var(--font-size-m, 1rem);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-text-muted, #667085);
+  }
+  .library-panel .lib-quota {
+    color: var(--color-text-muted, #667085);
+    font-size: var(--font-size-2xs, 0.7rem);
+    font-variant-numeric: tabular-nums;
+  }
+  .library-panel .lib-quota[data-warn="true"] { color: #b42318; font-weight: 600; }
+  .library-panel .lib-list {
+    list-style: none; margin: 0; padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+    gap: var(--size-s, 0.75rem);
+    align-content: start;
+  }
+  .library-panel .lib-list li {
+    position: relative;
+    border: var(--border-width-thin, 1px) solid var(--color-border, #e4e4e7);
+    border-radius: var(--radius-m, 0.5rem);
+    padding: 0.5rem;
+    background: var(--color-surface, #fff);
+    display: grid; gap: 0.35rem;
+  }
+  .library-panel .lib-list .lib-cover {
+    aspect-ratio: 2/3;
+    inline-size: 100%;
+    border-radius: var(--radius-s, 0.25rem);
+    background: color-mix(in srgb, var(--color-text-muted, #999) 12%, transparent);
+    display: grid; place-items: center;
+    overflow: hidden;
+    font-size: 0.75rem; color: var(--color-text-muted, #667085);
+  }
+  .library-panel .lib-list .lib-cover img {
+    inline-size: 100%; block-size: 100%; object-fit: cover; display: block;
+  }
+  .library-panel .lib-list .lib-title {
+    font-weight: 600;
+    line-height: 1.25;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .library-panel .lib-list .lib-meta {
+    color: var(--color-text-muted, #667085);
+    font-size: 0.85em;
+  }
+  .library-panel .lib-list .lib-open {
+    text-align: start; padding: 0; margin: 0; border: 0;
+    background: transparent; color: inherit; cursor: pointer;
+    display: contents;
+  }
+  .library-panel .lib-list .lib-remove {
+    position: absolute;
+    inset-block-start: 0.25rem;
+    inset-inline-end: 0.25rem;
+    inline-size: 1.6rem; block-size: 1.6rem;
+    display: inline-grid; place-items: center;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-background, #fff) 80%, transparent);
+    border: var(--border-width-thin, 1px) solid var(--color-border, #e4e4e7);
+    color: inherit;
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 0;
+  }
+  .library-panel .lib-empty {
+    color: var(--color-text-muted, #667085);
+    text-align: center;
+    padding: 2rem 1rem;
+  }
+  .library-panel:not([data-empty="true"]) .lib-empty { display: none; }
+  .library-panel[data-empty="true"] .lib-list { display: none; }
+  .library-panel .row {
+    display: flex; justify-content: space-between; gap: 0.5rem;
+  }
+  .library-panel button {
+    font: inherit; color: inherit;
+    background: transparent;
+    border: var(--border-width-thin, 1px) solid var(--color-border, #e4e4e7);
+    border-radius: var(--radius-s, 0.35rem);
+    padding: 0.4rem 0.75rem;
+    cursor: pointer;
+  }
+  .library-panel button.primary {
+    background: var(--color-interactive, #2d6cdf);
+    color: var(--color-interactive-text, white);
+    border-color: transparent;
+  }
+  .settings-panel h3 {
+    font-size: var(--font-size-2xs, 0.7rem);
+    text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--color-text-muted, #667085);
+    margin: 0;
+  }
+  .settings-panel label {
+    display: grid; grid-template-columns: 1fr auto; gap: 0.25rem 0.75rem; align-items: center;
+  }
+  .settings-panel label .value {
+    color: var(--color-text-muted, #667085);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.85em;
+  }
+  .settings-panel select,
+  .settings-panel input[type="range"] {
+    grid-column: 1 / -1;
+    inline-size: 100%;
+    font: inherit; color: inherit; background: transparent;
+    border: var(--border-width-thin, 1px) solid var(--color-border, #e4e4e7);
+    border-radius: var(--radius-s, 0.25rem);
+    padding: 0.25rem 0.35rem;
+  }
+  .settings-panel input[type="range"] { padding: 0; }
+  .settings-panel .row { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+  .settings-panel .row.checkbox label { grid-template-columns: auto 1fr; gap: 0.5rem; }
+  .settings-panel details.user-css summary {
+    font-size: var(--font-size-2xs, 0.7rem);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-text-muted, #667085);
+    cursor: pointer;
+    padding-block: 0.25rem;
+  }
+  .settings-panel textarea {
+    inline-size: 100%;
+    min-block-size: 5rem;
+    font: inherit;
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 0.85em;
+    color: inherit;
+    background: var(--color-background, transparent);
+    border: var(--border-width-thin, 1px) solid var(--color-border, #e4e4e7);
+    border-radius: var(--radius-s, 0.25rem);
+    padding: 0.4rem;
+    resize: vertical;
+    box-sizing: border-box;
+  }
+  .settings-panel button {
+    font: inherit; color: inherit;
+    background: transparent;
+    border: var(--border-width-thin, 1px) solid var(--color-border, #e4e4e7);
+    border-radius: var(--radius-s, 0.35rem);
+    padding: 0.35rem 0.6rem;
+    cursor: pointer;
+  }
+  .settings-panel button.primary {
+    background: var(--color-interactive, #2d6cdf);
+    color: var(--color-interactive-text, white);
+    border-color: transparent;
+  }
+
+  @container (inline-size < 40rem) {
+    .body { grid-template-columns: 1fr; }
+    .sidebar { display: none; position: absolute; inset: 3.625rem 0 0 0; z-index: 1;
+               inline-size: min(20rem, 90%); box-shadow: 0 4px 16px rgba(0,0,0,.1); }
+    .body.toc-open .sidebar { display: block; }
+  }
+}`;
+  var TEMPLATE = `
+<header class="reader-chrome">
+  <div class="reader-chrome-copy">
+    <span class="reader-chrome-kicker">EPUB</span>
+    <span class="reader-chrome-title title"></span>
+  </div>
+  <div class="reader-controls" role="toolbar" aria-label="Reading controls">
+    <div class="reader-control-group">
+      <button class="reader-icon-btn toc-toggle" type="button" aria-label="Toggle table of contents" title="Table of contents">&#9776;</button>
+    </div>
+    <div class="reader-control-group">
+      <button class="reader-icon-btn prev" type="button" aria-label="Previous chapter">&larr;</button>
+      <span class="progress" role="status"></span>
+      <span class="chapter-progress" aria-label="Position in chapter" title="Position in current chapter"></span>
+      <button class="reader-icon-btn next" type="button" aria-label="Next chapter">&rarr;</button>
+    </div>
+    <div class="reader-control-group">
+      <button class="reader-icon-btn font-decrease" type="button" aria-label="Decrease font size">A&minus;</button>
+      <button class="reader-icon-btn font-increase" type="button" aria-label="Increase font size">A+</button>
+      <button class="reader-icon-btn search-toggle" type="button" aria-label="Search book" aria-expanded="false" title="Search whole book">&#128269;</button>
+      <button class="reader-icon-btn highlights-toggle" type="button" aria-label="Highlights" aria-expanded="false" title="Highlights &amp; notes">&#128396;</button>
+      <button class="reader-icon-btn bookmarks-toggle" type="button" aria-label="Bookmarks" aria-expanded="false" aria-pressed="false" title="Bookmarks (b to toggle)">&#9734;</button>
+      <button class="reader-icon-btn library-toggle" type="button" aria-label="Library" aria-expanded="false" title="Library">&#128218;</button>
+      <button class="reader-icon-btn settings-toggle" type="button" aria-label="Reading settings" aria-expanded="false" title="Reading settings">Aa</button>
+    </div>
+  </div>
+</header>
+<div class="find-bar" role="search" aria-label="Find in chapter" hidden>
+  <input class="find-input" type="search" placeholder="Find in chapter\u2026"
+    aria-label="Find in chapter" autocomplete="off" spellcheck="false" />
+  <span class="find-count" aria-live="polite"></span>
+  <button class="reader-icon-btn find-prev" type="button" aria-label="Previous match">&uarr;</button>
+  <button class="reader-icon-btn find-next" type="button" aria-label="Next match">&darr;</button>
+  <button class="reader-icon-btn find-close" type="button" aria-label="Close find">&times;</button>
+</div>
+<div class="body">
+  <aside class="sidebar"><h2>Contents</h2><ol class="toc"></ol></aside>
+  <div class="content">
+    <aside class="settings-panel" role="dialog" aria-label="Reading settings" hidden>
+      <h3>Reading settings</h3>
+      <label>
+        <span>Font</span>
+        <select class="s-font-family">
+          <option value="">Publisher default</option>
+          <option value="system-ui, sans-serif">System sans</option>
+          <option value="Georgia, 'Times New Roman', serif">Serif (Georgia)</option>
+          <option value="'Iowan Old Style', 'Palatino Linotype', Palatino, serif">Serif (Iowan)</option>
+          <option value="'Helvetica Neue', Arial, sans-serif">Helvetica</option>
+          <option value="Verdana, sans-serif">Verdana</option>
+          <option value="'Atkinson Hyperlegible', system-ui, sans-serif">Atkinson Hyperlegible</option>
+          <option value="'OpenDyslexic', system-ui, sans-serif">OpenDyslexic</option>
+          <option value="ui-monospace, 'Fira Code', monospace">Monospace</option>
+        </select>
+      </label>
+      <label>
+        <span>Font size</span><span class="value s-font-size-v"></span>
+        <input class="s-font-size" type="range" min="80" max="200" step="5" />
+      </label>
+      <label>
+        <span>Line height</span><span class="value s-line-height-v"></span>
+        <input class="s-line-height" type="range" min="100" max="220" step="5" />
+      </label>
+      <label>
+        <span>Paragraph spacing</span><span class="value s-paragraph-spacing-v"></span>
+        <input class="s-paragraph-spacing" type="range" min="-1" max="20" step="1" />
+      </label>
+      <label>
+        <span>Reading width</span><span class="value s-reading-width-v"></span>
+        <input class="s-reading-width" type="range" min="0" max="120" step="5" />
+      </label>
+      <div class="row checkbox">
+        <label><input class="s-justify" type="checkbox" /><span>Justify text</span></label>
+      </div>
+      <label>
+        <span>Layout</span>
+        <div class="seg" role="radiogroup" aria-label="Layout mode">
+          <button type="button" class="reader-seg-btn s-layout-scroll" data-mode="scroll" role="radio">Scroll</button>
+          <button type="button" class="reader-seg-btn s-layout-paginated" data-mode="paginated" role="radio">Paginated</button>
+        </div>
+      </label>
+      <details class="user-css">
+        <summary>Custom CSS</summary>
+        <textarea class="s-user-css" rows="4" spellcheck="false"
+          placeholder="body { font-feature-settings: 'onum'; }"></textarea>
+      </details>
+      <div class="row">
+        <button type="button" class="s-reset">Reset</button>
+        <button type="button" class="s-close primary">Done</button>
+      </div>
+    </aside>
+    <aside class="bookmarks-panel" role="dialog" aria-label="Bookmarks" hidden>
+      <h3>Bookmarks</h3>
+      <div class="row">
+        <button type="button" class="bm-add primary">Bookmark this page</button>
+        <button type="button" class="bm-close">Done</button>
+      </div>
+      <ol class="bm-list" aria-live="polite"></ol>
+      <div class="bm-empty">No bookmarks yet \u2014 press <kbd>b</kbd> or use the button above.</div>
+    </aside>
+    <aside class="search-panel" role="dialog" aria-label="Search book" hidden>
+      <header class="srch-header">
+        <h3>Search</h3>
+        <input class="search-input" type="search" placeholder="Search the whole book\u2026"
+          aria-label="Search the whole book" autocomplete="off" spellcheck="false" />
+      </header>
+      <div class="srch-status" aria-live="polite"></div>
+      <ol class="search-results" aria-live="polite"></ol>
+      <div class="row">
+        <button type="button" class="search-close primary">Done</button>
+      </div>
+    </aside>
+    <aside class="library-panel" role="dialog" aria-label="Library" hidden>
+      <header class="lib-header">
+        <h3>Library</h3>
+        <span class="lib-quota" aria-live="polite"></span>
+      </header>
+      <ol class="lib-list" aria-live="polite"></ol>
+      <div class="lib-empty">No books stored yet \u2014 opening a book adds it here automatically.</div>
+      <div class="row">
+        <button type="button" class="lib-clear">Clear all</button>
+        <button type="button" class="lib-close primary">Done</button>
+      </div>
+    </aside>
+    <iframe sandbox="allow-same-origin" title="EPUB content"></iframe>
+    <div class="hl-popover" role="toolbar" aria-label="Highlight" hidden>
+      <button type="button" class="hl-color" data-color="#fde68a" aria-label="Yellow highlight" style="--c:#fde68a"></button>
+      <button type="button" class="hl-color" data-color="#bbf7d0" aria-label="Green highlight" style="--c:#bbf7d0"></button>
+      <button type="button" class="hl-color" data-color="#bfdbfe" aria-label="Blue highlight" style="--c:#bfdbfe"></button>
+      <button type="button" class="hl-color" data-color="#fbcfe8" aria-label="Pink highlight" style="--c:#fbcfe8"></button>
+      <button type="button" class="hl-color" data-color="#fed7aa" aria-label="Orange highlight" style="--c:#fed7aa"></button>
+      <button type="button" class="hl-note" aria-label="Add note">Note&hellip;</button>
+    </div>
+    <aside class="highlights-panel" role="dialog" aria-label="Highlights" hidden>
+      <h3>Highlights &amp; notes</h3>
+      <ol class="hl-list" aria-live="polite"></ol>
+      <div class="hl-empty">No highlights yet \u2014 select text in a chapter and pick a colour.</div>
+      <div class="row">
+        <button type="button" class="hl-close primary">Done</button>
+      </div>
+    </aside>
+    <div class="overlay">
+      <div class="message">Drop an EPUB file here or choose one to begin.</div>
+    </div>
+  </div>
+</div>
+`;
+  var _els, _book, _typography, _currentIndex, _loadToken, _stylesInjected, _EpubReaderElement_static, injectStylesOnce_fn, _EpubReaderElement_instances, updateSandbox_fn, _bookId, _saveTimer, _suppressSave, applyRestoredScroll_fn, schedulePositionSave_fn, savePositionNow_fn, _findQuery, _findIndex, _findTotal, refreshFind_fn, findClearMarks_fn, findStep_fn, findFocusCurrent_fn, _searchIndex, _searchIndexPromise, _searchQuery, buildSearchIndex_fn, toggleSearchPanel_fn, runSearch_fn, goToSearchHit_fn, highlightSearchInChapter_fn, _highlights, loadHighlights_fn, saveHighlights_fn, addHighlightFromSelection_fn, applyHighlightsTo_fn, wireHighlightSelection_fn, updateHighlightPopover_fn, hideHighlightPopover_fn, toggleHighlightsPanel_fn, renderHighlights_fn, _bookmarks, loadBookmarks_fn, saveBookmarks_fn, bookmarkAtCurrent_fn, currentScrollFraction_fn, captureSnippet_fn, renderBookmarks_fn, updateBookmarkButton_fn, toggleBookmarksPanel_fn, emitBookmarksChange_fn, persistLibraryEntry_fn, toggleLibraryPanel_fn, renderLibrary_fn, updateChrome_fn, renderToc_fn, highlightToc_fn, tocLabelForPath_fn, onIframeLoad_fn, scrollToFragment_fn, applyTypographyTo_fn, onKeyDown_fn, toggleToc_fn, stepFontSize_fn, applyChapterThemingTo_fn, applyLayoutTo_fn, applyPaginatedTo_fn, pageInfo_fn, pageNext_fn, pagePrev_fn, wirePagination_fn, updateChapterProgress_fn, _enterFromBack, wireChapterScroll_fn, toggleSettings_fn, wireSettingsControls_fn, syncSettingsControls_fn, setOverlay_fn, hideOverlay_fn;
+  var _EpubReaderElement = class _EpubReaderElement extends HTMLElement {
+    constructor() {
+      var _a;
+      super();
+      __privateAdd(this, _EpubReaderElement_instances);
+      /** @type {ReaderElements} */
+      __privateAdd(this, _els);
+      /** @type {EpubBook | null} */
+      __privateAdd(this, _book, null);
+      /** @type {TypographySettings} */
+      __privateAdd(this, _typography, loadTypography());
+      __privateAdd(this, _currentIndex, -1);
+      __privateAdd(this, _loadToken, 0);
+      /** Most recent book identifier (used as the IndexedDB key for persistence). */
+      /** @type {string | null} */
+      __privateAdd(this, _bookId, null);
+      /** @type {ReturnType<typeof setTimeout> | null} */
+      __privateAdd(this, _saveTimer, null);
+      /** Suppress saves while we're applying a restored position. */
+      __privateAdd(this, _suppressSave, false);
+      // ------- find in chapter (#17) -------
+      /** Current query string in the find bar. */
+      __privateAdd(this, _findQuery, "");
+      /** Index of the focused match within the current chapter. */
+      __privateAdd(this, _findIndex, 0);
+      /** Cached count of matches in the current chapter. */
+      __privateAdd(this, _findTotal, 0);
+      // ------- full-text search (#16) -------
+      /**
+       * Lazy index of all reflowable spine items, built on first search.
+       * Cleared on book close so reopening rebuilds. Pre-paginated chapters
+       * are skipped — they're images, not text.
+       *
+       * @typedef {{spineIndex: number, path: string, title: string, text: string, lower: string}} SearchChapter
+       * @type {SearchChapter[] | null}
+       */
+      __privateAdd(this, _searchIndex, null);
+      /** @type {Promise<SearchChapter[]> | null} */
+      __privateAdd(this, _searchIndexPromise, null);
+      /** Current search query — propagated to chapter highlighting on nav. */
+      __privateAdd(this, _searchQuery, "");
+      // ------- highlights (#15) -------
+      /** @type {Highlight[]} */
+      __privateAdd(this, _highlights, []);
+      // ------- bookmarks -------
+      /**
+       * In-memory cache of the current book's bookmarks. The persisted shape
+       * in IndexedDB is `{ id: bookId, items: Bookmark[] }` — one record per
+       * book, list-of-items inside, so add/remove are simple put-the-record
+       * round-trips and listing for a single book is a single get.
+       *
+       * @type {Bookmark[]}
+       */
+      __privateAdd(this, _bookmarks, []);
+      /** True when the next chapter load should land at the end (back-paging spillover). */
+      __privateAdd(this, _enterFromBack, false);
+      __privateMethod(_a = _EpubReaderElement, _EpubReaderElement_static, injectStylesOnce_fn).call(_a);
+      this.innerHTML = TEMPLATE;
+      const $ = (
+        /** @type {<T extends Element>(sel: string) => T} */
+        ((sel) => (
+          /** @type {any} */
+          this.querySelector(sel)
+        ))
+      );
+      __privateSet(this, _els, {
+        shell: this,
+        title: $(".title"),
+        progress: $(".progress"),
+        chapterProgress: $(".chapter-progress"),
+        prev: $(".prev"),
+        next: $(".next"),
+        toggle: $(".toc-toggle"),
+        settingsToggle: $(".settings-toggle"),
+        fontDecrease: $(".font-decrease"),
+        fontIncrease: $(".font-increase"),
+        sidebar: $(".sidebar"),
+        toc: $(".toc"),
+        iframe: $("iframe"),
+        overlay: $(".overlay"),
+        settingsPanel: $(".settings-panel"),
+        sFontFamily: $(".s-font-family"),
+        sFontSize: $(".s-font-size"),
+        sLineHeight: $(".s-line-height"),
+        sParagraphSpacing: $(".s-paragraph-spacing"),
+        sJustify: $(".s-justify"),
+        sReadingWidth: $(".s-reading-width"),
+        sFontSizeV: $(".s-font-size-v"),
+        sLineHeightV: $(".s-line-height-v"),
+        sParagraphSpacingV: $(".s-paragraph-spacing-v"),
+        sReadingWidthV: $(".s-reading-width-v"),
+        sLayoutScroll: $(".s-layout-scroll"),
+        sLayoutPaginated: $(".s-layout-paginated"),
+        sUserCss: $(".s-user-css"),
+        sReset: $(".s-reset"),
+        sClose: $(".s-close"),
+        bookmarksToggle: $(".bookmarks-toggle"),
+        bookmarksPanel: $(".bookmarks-panel"),
+        bmAdd: $(".bm-add"),
+        bmClose: $(".bm-close"),
+        bmList: $(".bm-list"),
+        libraryToggle: $(".library-toggle"),
+        libraryPanel: $(".library-panel"),
+        libList: $(".lib-list"),
+        libQuota: $(".lib-quota"),
+        libClear: $(".lib-clear"),
+        libClose: $(".lib-close"),
+        findBar: $(".find-bar"),
+        findInput: $(".find-input"),
+        findCount: $(".find-count"),
+        findPrev: $(".find-prev"),
+        findNext: $(".find-next"),
+        findClose: $(".find-close"),
+        searchToggle: $(".search-toggle"),
+        searchPanel: $(".search-panel"),
+        searchInput: $(".search-input"),
+        searchStatus: $(".srch-status"),
+        searchResults: $(".search-results"),
+        searchClose: $(".search-close"),
+        highlightsToggle: $(".highlights-toggle"),
+        highlightsPanel: $(".highlights-panel"),
+        hlList: $(".hl-list"),
+        hlPanelClose: $(".hl-close"),
+        hlPopover: $(".hl-popover")
+      });
+      __privateGet(this, _els).prev.addEventListener("click", () => this.prev());
+      __privateGet(this, _els).next.addEventListener("click", () => this.next());
+      __privateGet(this, _els).toggle.addEventListener("click", () => __privateMethod(this, _EpubReaderElement_instances, toggleToc_fn).call(this));
+      __privateGet(this, _els).settingsToggle.addEventListener("click", () => __privateMethod(this, _EpubReaderElement_instances, toggleSettings_fn).call(this));
+      __privateGet(this, _els).fontDecrease.addEventListener("click", () => __privateMethod(this, _EpubReaderElement_instances, stepFontSize_fn).call(this, -10));
+      __privateGet(this, _els).fontIncrease.addEventListener("click", () => __privateMethod(this, _EpubReaderElement_instances, stepFontSize_fn).call(this, 10));
+      __privateGet(this, _els).bookmarksToggle.addEventListener("click", () => __privateMethod(this, _EpubReaderElement_instances, toggleBookmarksPanel_fn).call(this));
+      __privateGet(this, _els).bmAdd.addEventListener("click", () => this.toggleBookmark());
+      __privateGet(this, _els).bmClose.addEventListener("click", () => __privateMethod(this, _EpubReaderElement_instances, toggleBookmarksPanel_fn).call(this, false));
+      __privateGet(this, _els).libraryToggle.addEventListener("click", () => __privateMethod(this, _EpubReaderElement_instances, toggleLibraryPanel_fn).call(this));
+      __privateGet(this, _els).libClose.addEventListener("click", () => __privateMethod(this, _EpubReaderElement_instances, toggleLibraryPanel_fn).call(this, false));
+      __privateGet(this, _els).libClear.addEventListener("click", async () => {
+        if (!confirm("Remove all books, bookmarks, and reading positions?")) return;
+        await this.clearLibrary();
+        await __privateMethod(this, _EpubReaderElement_instances, renderLibrary_fn).call(this);
+      });
+      __privateGet(this, _els).findInput.addEventListener("input", () => __privateMethod(this, _EpubReaderElement_instances, refreshFind_fn).call(this));
+      __privateGet(this, _els).findInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          if (e.shiftKey) __privateMethod(this, _EpubReaderElement_instances, findStep_fn).call(this, -1);
+          else __privateMethod(this, _EpubReaderElement_instances, findStep_fn).call(this, 1);
+          e.preventDefault();
+        } else if (e.key === "Escape") {
+          this.find(false);
+          e.preventDefault();
+        }
+      });
+      __privateGet(this, _els).findPrev.addEventListener("click", () => __privateMethod(this, _EpubReaderElement_instances, findStep_fn).call(this, -1));
+      __privateGet(this, _els).findNext.addEventListener("click", () => __privateMethod(this, _EpubReaderElement_instances, findStep_fn).call(this, 1));
+      __privateGet(this, _els).findClose.addEventListener("click", () => this.find(false));
+      __privateGet(this, _els).searchToggle.addEventListener("click", () => __privateMethod(this, _EpubReaderElement_instances, toggleSearchPanel_fn).call(this));
+      __privateGet(this, _els).searchClose.addEventListener("click", () => __privateMethod(this, _EpubReaderElement_instances, toggleSearchPanel_fn).call(this, false));
+      let searchTimer = 0;
+      __privateGet(this, _els).searchInput.addEventListener("input", () => {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => __privateMethod(this, _EpubReaderElement_instances, runSearch_fn).call(this, __privateGet(this, _els).searchInput.value), 200);
+      });
+      __privateGet(this, _els).searchInput.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          __privateMethod(this, _EpubReaderElement_instances, toggleSearchPanel_fn).call(this, false);
+          e.preventDefault();
+        }
+      });
+      __privateGet(this, _els).highlightsToggle.addEventListener("click", () => __privateMethod(this, _EpubReaderElement_instances, toggleHighlightsPanel_fn).call(this));
+      __privateGet(this, _els).hlPanelClose.addEventListener("click", () => __privateMethod(this, _EpubReaderElement_instances, toggleHighlightsPanel_fn).call(this, false));
+      __privateGet(this, _els).hlPopover.addEventListener("click", (ev) => {
+        const target = (
+          /** @type {HTMLElement} */
+          ev.target
+        );
+        const colorBtn = target.closest(".hl-color");
+        const noteBtn = target.closest(".hl-note");
+        if (colorBtn) __privateMethod(this, _EpubReaderElement_instances, addHighlightFromSelection_fn).call(this, colorBtn.getAttribute("data-color") || "#fde68a");
+        else if (noteBtn) __privateMethod(this, _EpubReaderElement_instances, addHighlightFromSelection_fn).call(
+          this,
+          "#fde68a",
+          /* withNote */
+          true
+        );
+      });
+      __privateGet(this, _els).iframe.addEventListener("load", () => __privateMethod(this, _EpubReaderElement_instances, onIframeLoad_fn).call(this));
+      this.addEventListener("keydown", (e) => __privateMethod(this, _EpubReaderElement_instances, onKeyDown_fn).call(this, e));
+      __privateMethod(this, _EpubReaderElement_instances, wireSettingsControls_fn).call(this);
+      __privateMethod(this, _EpubReaderElement_instances, syncSettingsControls_fn).call(this);
+      __privateMethod(this, _EpubReaderElement_instances, updateSandbox_fn).call(this);
+      this.tabIndex = 0;
+    }
+    static get observedAttributes() {
+      return ["src", "start", "hide-toc", "allow-scripts"];
+    }
+    connectedCallback() {
+      const src = this.getAttribute("src");
+      if (src) this.open(src);
+    }
+    disconnectedCallback() {
+      this.close();
+    }
+    attributeChangedCallback(name, oldValue, newValue) {
+      if (oldValue === newValue) return;
+      if (name === "src" && this.isConnected && newValue) this.open(newValue);
+      if (name === "allow-scripts") __privateMethod(this, _EpubReaderElement_instances, updateSandbox_fn).call(this);
+    }
+    // ------- public API -------
+    /**
+     * Load an EPUB. Replaces any currently-open book. Fires `epub-loaded`
+     * on success, `epub-error` on failure.
+     * @param {string | Blob | ArrayBuffer | ArrayBufferView} source
+     * @returns {Promise<void>}
+     */
+    async open(source) {
+      const token = ++__privateWrapper(this, _loadToken)._;
+      this.close();
+      __privateMethod(this, _EpubReaderElement_instances, setOverlay_fn).call(this, "Loading\u2026");
+      try {
+        const book = await openEpub(source);
+        if (token !== __privateGet(this, _loadToken)) {
+          book.destroy();
+          return;
+        }
+        __privateSet(this, _book, book);
+        __privateSet(this, _bookId, null);
+        __privateMethod(this, _EpubReaderElement_instances, renderToc_fn).call(this);
+        __privateSet(this, _bookId, await book.bookId().catch(() => null));
+        const stored = __privateGet(this, _bookId) ? await dbGet("positions", __privateGet(this, _bookId)) : null;
+        await __privateMethod(this, _EpubReaderElement_instances, loadBookmarks_fn).call(this);
+        await __privateMethod(this, _EpubReaderElement_instances, loadHighlights_fn).call(this);
+        const startAttr = Number(this.getAttribute("start") || 0) || 0;
+        const startIndex = Math.max(0, Math.min(book.spine.length - 1, startAttr));
+        this.dispatchEvent(new CustomEvent("epub-loaded", {
+          detail: {
+            metadata: book.metadata,
+            spineLength: book.spine.length,
+            toc: book.toc
+          },
+          bubbles: true,
+          composed: true
+        }));
+        const restoreIdx = stored && stored.spineIndex >= 0 && stored.spineIndex < book.spine.length ? stored.spineIndex : -1;
+        if (restoreIdx >= 0) {
+          await this.goToIndex(restoreIdx);
+          __privateMethod(this, _EpubReaderElement_instances, applyRestoredScroll_fn).call(this, stored.scrollFraction);
+          this.dispatchEvent(new CustomEvent("epub-position-restored", {
+            detail: {
+              spineIndex: stored.spineIndex,
+              scrollFraction: stored.scrollFraction,
+              bookId: __privateGet(this, _bookId)
+            },
+            bubbles: true,
+            composed: true
+          }));
+        } else {
+          await this.goToIndex(startIndex);
+        }
+        __privateMethod(this, _EpubReaderElement_instances, hideOverlay_fn).call(this);
+        __privateMethod(this, _EpubReaderElement_instances, persistLibraryEntry_fn).call(this, book).catch(() => {
+        });
+      } catch (err) {
+        if (token !== __privateGet(this, _loadToken)) return;
+        __privateMethod(this, _EpubReaderElement_instances, setOverlay_fn).call(this, String(err?.message || err), true);
+        this.dispatchEvent(new CustomEvent("epub-error", {
+          detail: { error: err },
+          bubbles: true,
+          composed: true
+        }));
+      }
+    }
+    /**
+     * Open or close the find-in-chapter bar. When opening, focuses the
+     * input and seeds it with the current selection (if any).
+     *
+     * @param {boolean} open
+     */
+    find(open) {
+      const bar = __privateGet(this, _els).findBar;
+      if (open) {
+        bar.hidden = false;
+        const sel = __privateGet(this, _els).iframe.contentDocument?.getSelection?.()?.toString();
+        if (sel) {
+          __privateGet(this, _els).findInput.value = sel;
+        }
+        __privateGet(this, _els).findInput.focus();
+        __privateGet(this, _els).findInput.select();
+        __privateMethod(this, _EpubReaderElement_instances, refreshFind_fn).call(this);
+      } else {
+        bar.hidden = true;
+        __privateSet(this, _findQuery, "");
+        __privateSet(this, _findIndex, 0);
+        __privateSet(this, _findTotal, 0);
+        __privateGet(this, _els).findInput.value = "";
+        __privateGet(this, _els).findCount.textContent = "";
+        const doc = __privateGet(this, _els).iframe.contentDocument;
+        if (doc) __privateMethod(this, _EpubReaderElement_instances, findClearMarks_fn).call(this, doc);
+      }
+    }
+    /**
+     * Public search API. Returns hits across the whole book without
+     * touching the panel. Useful for embedders.
+     *
+     * @param {string} query
+     * @param {{ maxHits?: number }} [opts]
+     * @returns {Promise<{spineIndex: number, path: string, title: string,
+     *                    offset: number, contextBefore: string, match: string,
+     *                    contextAfter: string}[]>}
+     */
+    async search(query, opts = {}) {
+      const q = (query || "").trim();
+      if (q.length < 2) return [];
+      const maxHits = opts.maxHits ?? 500;
+      const idx = await __privateMethod(this, _EpubReaderElement_instances, buildSearchIndex_fn).call(this);
+      const lower = q.toLowerCase();
+      const hits = [];
+      for (const ch of idx) {
+        let i = 0;
+        let ordinal = 0;
+        while (i <= ch.lower.length) {
+          const at = ch.lower.indexOf(lower, i);
+          if (at < 0) break;
+          const start = Math.max(0, at - 40);
+          const end = Math.min(ch.text.length, at + lower.length + 40);
+          hits.push({
+            spineIndex: ch.spineIndex,
+            path: ch.path,
+            title: ch.title,
+            offset: at,
+            contextBefore: ch.text.slice(start, at),
+            match: ch.text.slice(at, at + lower.length),
+            contextAfter: ch.text.slice(at + lower.length, end),
+            matchOrdinal: ordinal++
+          });
+          if (hits.length >= maxHits) return hits;
+          i = at + Math.max(1, lower.length);
+        }
+      }
+      return hits;
+    }
+    /** Read-only snapshot of the current book's highlights. */
+    get highlights() {
+      return __privateGet(this, _highlights).map((h) => ({ ...h }));
+    }
+    /**
+     * Public removal API — used by the panel × button.
+     * @param {string} id
+     * @returns {Promise<boolean>}
+     */
+    async removeHighlight(id) {
+      const before = __privateGet(this, _highlights).length;
+      __privateSet(this, _highlights, __privateGet(this, _highlights).filter((h) => h.id !== id));
+      if (__privateGet(this, _highlights).length === before) return false;
+      await __privateMethod(this, _EpubReaderElement_instances, saveHighlights_fn).call(this);
+      const doc = __privateGet(this, _els).iframe.contentDocument;
+      if (doc) __privateMethod(this, _EpubReaderElement_instances, applyHighlightsTo_fn).call(this, doc);
+      __privateMethod(this, _EpubReaderElement_instances, renderHighlights_fn).call(this);
+      this.dispatchEvent(new CustomEvent("epub-highlights-change", {
+        detail: { highlights: this.highlights },
+        bubbles: true,
+        composed: true
+      }));
+      return true;
+    }
+    /**
+     * Jump to a stored highlight (chapter + scroll into the wrapper).
+     * @param {string} id
+     */
+    async goToHighlight(id) {
+      const hl = __privateGet(this, _highlights).find((h) => h.id === id);
+      if (!hl || !__privateGet(this, _book)) return;
+      if (hl.spineIndex < 0 || hl.spineIndex >= __privateGet(this, _book).spine.length) return;
+      if (__privateGet(this, _currentIndex) !== hl.spineIndex) {
+        await this.goToIndex(hl.spineIndex);
+        await new Promise((r) => __privateGet(this, _els).iframe.addEventListener("load", () => r(void 0), { once: true }));
+      }
+      const doc = __privateGet(this, _els).iframe.contentDocument;
+      const target = (
+        /** @type {HTMLElement | null} */
+        doc?.querySelector(`[data-reader-mark="highlight"][data-id="${CSS.escape(id)}"]`)
+      );
+      target?.scrollIntoView({ block: "center" });
+    }
+    /** Read-only snapshot of the current book's bookmarks. */
+    get bookmarks() {
+      return __privateGet(this, _bookmarks).map((b) => ({ ...b }));
+    }
+    /**
+     * Add or remove a bookmark at the current position. Used by both the
+     * panel "Bookmark this page" button and the `b` keyboard shortcut.
+     * @param {string} [label]  Optional label; defaults to the chapter title.
+     * @returns {Promise<Bookmark | null>}
+     *   The newly created bookmark, or null if a bookmark was removed.
+     */
+    async toggleBookmark(label) {
+      if (!__privateGet(this, _book) || !__privateGet(this, _bookId)) return null;
+      const existing = __privateMethod(this, _EpubReaderElement_instances, bookmarkAtCurrent_fn).call(this);
+      if (existing) {
+        __privateSet(this, _bookmarks, __privateGet(this, _bookmarks).filter((b) => b.id !== existing.id));
+        await __privateMethod(this, _EpubReaderElement_instances, saveBookmarks_fn).call(this);
+        __privateMethod(this, _EpubReaderElement_instances, renderBookmarks_fn).call(this);
+        __privateMethod(this, _EpubReaderElement_instances, updateBookmarkButton_fn).call(this);
+        __privateMethod(this, _EpubReaderElement_instances, emitBookmarksChange_fn).call(this);
+        return null;
+      }
+      const bm = {
+        id: "bm_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8),
+        spineIndex: __privateGet(this, _currentIndex),
+        scrollFraction: __privateMethod(this, _EpubReaderElement_instances, currentScrollFraction_fn).call(this),
+        chapterTitle: __privateMethod(this, _EpubReaderElement_instances, tocLabelForPath_fn).call(this, __privateGet(this, _book).spine[__privateGet(this, _currentIndex)]?.path || ""),
+        label: label || "",
+        snippet: __privateMethod(this, _EpubReaderElement_instances, captureSnippet_fn).call(this),
+        createdAt: Date.now()
+      };
+      __privateSet(this, _bookmarks, [...__privateGet(this, _bookmarks), bm].sort((a, b) => a.spineIndex - b.spineIndex || a.scrollFraction - b.scrollFraction));
+      await __privateMethod(this, _EpubReaderElement_instances, saveBookmarks_fn).call(this);
+      __privateMethod(this, _EpubReaderElement_instances, renderBookmarks_fn).call(this);
+      __privateMethod(this, _EpubReaderElement_instances, updateBookmarkButton_fn).call(this);
+      __privateMethod(this, _EpubReaderElement_instances, emitBookmarksChange_fn).call(this);
+      return bm;
+    }
+    /**
+     * Remove a bookmark by id.
+     * @param {string} id
+     * @returns {Promise<boolean>} true if a bookmark was removed.
+     */
+    async removeBookmark(id) {
+      const before = __privateGet(this, _bookmarks).length;
+      __privateSet(this, _bookmarks, __privateGet(this, _bookmarks).filter((b) => b.id !== id));
+      if (__privateGet(this, _bookmarks).length === before) return false;
+      await __privateMethod(this, _EpubReaderElement_instances, saveBookmarks_fn).call(this);
+      __privateMethod(this, _EpubReaderElement_instances, renderBookmarks_fn).call(this);
+      __privateMethod(this, _EpubReaderElement_instances, updateBookmarkButton_fn).call(this);
+      __privateMethod(this, _EpubReaderElement_instances, emitBookmarksChange_fn).call(this);
+      return true;
+    }
+    /**
+     * Jump to a bookmark. Mirrors the position-restore flow so layout
+     * settles before the scrollFraction re-applies.
+     * @param {string} id
+     */
+    async goToBookmark(id) {
+      const bm = __privateGet(this, _bookmarks).find((b) => b.id === id);
+      if (!bm || !__privateGet(this, _book)) return;
+      if (bm.spineIndex < 0 || bm.spineIndex >= __privateGet(this, _book).spine.length) return;
+      await this.goToIndex(bm.spineIndex);
+      __privateMethod(this, _EpubReaderElement_instances, applyRestoredScroll_fn).call(this, bm.scrollFraction);
+    }
+    /**
+     * Read-only snapshot of all books in the library, sorted by most
+     * recently opened. Each entry is a clone — mutations don't leak.
+     *
+     * @returns {Promise<LibraryEntry[]>}
+     */
+    async getLibrary() {
+      const rows = await dbGetAll("library");
+      return rows.sort((a, b) => (b.lastOpenedAt || 0) - (a.lastOpenedAt || 0)).map((r) => ({ ...r }));
+    }
+    /**
+     * Open a previously stored library entry. Convenience wrapper around
+     * `open(blob)` that pulls the saved source from IDB.
+     *
+     * @param {string} id  Library entry id (same shape as bookId()).
+     */
+    async openFromLibrary(id) {
+      const rec = (
+        /** @type {LibraryEntry | null} */
+        await dbGet("library", id)
+      );
+      if (!rec?.blob) return;
+      await this.open(rec.blob);
+    }
+    /**
+     * Remove a book from the library (does not touch positions or
+     * bookmarks for that book — they stay until manually cleared).
+     * @param {string} id
+     */
+    async removeFromLibrary(id) {
+      await dbDelete("library", id);
+      this.dispatchEvent(new CustomEvent("epub-library-change", {
+        detail: { reason: "removed", id },
+        bubbles: true,
+        composed: true
+      }));
+    }
+    /** Drop every library entry (and reading positions / bookmarks / highlights). */
+    async clearLibrary() {
+      await dbClear("library");
+      await dbClear("positions");
+      await dbClear("bookmarks");
+      await dbClear("highlights");
+      __privateSet(this, _bookmarks, []);
+      __privateMethod(this, _EpubReaderElement_instances, renderBookmarks_fn).call(this);
+      __privateMethod(this, _EpubReaderElement_instances, updateBookmarkButton_fn).call(this);
+      __privateSet(this, _highlights, []);
+      __privateMethod(this, _EpubReaderElement_instances, renderHighlights_fn).call(this);
+      const doc = __privateGet(this, _els).iframe.contentDocument;
+      if (doc?.body) unwrapAll(doc.body, '[data-reader-mark="highlight"]');
+      this.dispatchEvent(new CustomEvent("epub-library-change", {
+        detail: { reason: "cleared", id: null },
+        bubbles: true,
+        composed: true
+      }));
+    }
+    /**
+     * Best-effort storage estimate (bytes used, bytes available, percent).
+     * Returns null on browsers without navigator.storage.estimate().
+     * @returns {Promise<{usage: number, quota: number, percent: number} | null>}
+     */
+    async getStorageEstimate() {
+      if (!navigator.storage?.estimate) return null;
+      try {
+        const est = await navigator.storage.estimate();
+        const usage = est.usage || 0;
+        const quota = est.quota || 0;
+        const percent = quota > 0 ? Math.round(usage / quota * 100) : 0;
+        return { usage, quota, percent };
+      } catch {
+        return null;
+      }
+    }
+    /** Unload the current book and revoke any blob URLs it created. */
+    close() {
+      __privateSet(this, _currentIndex, -1);
+      if (__privateGet(this, _book)) {
+        __privateGet(this, _book).destroy();
+        __privateSet(this, _book, null);
+      }
+      __privateSet(this, _bookId, null);
+      __privateSet(this, _bookmarks, []);
+      __privateMethod(this, _EpubReaderElement_instances, renderBookmarks_fn).call(this);
+      __privateMethod(this, _EpubReaderElement_instances, updateBookmarkButton_fn).call(this);
+      __privateSet(this, _highlights, []);
+      __privateMethod(this, _EpubReaderElement_instances, renderHighlights_fn).call(this);
+      __privateMethod(this, _EpubReaderElement_instances, hideHighlightPopover_fn).call(this);
+      __privateGet(this, _els).highlightsPanel.hidden = true;
+      __privateGet(this, _els).highlightsToggle.setAttribute("aria-expanded", "false");
+      this.find(false);
+      __privateSet(this, _searchIndex, null);
+      __privateSet(this, _searchIndexPromise, null);
+      __privateSet(this, _searchQuery, "");
+      __privateGet(this, _els).searchInput.value = "";
+      __privateGet(this, _els).searchStatus.textContent = "";
+      __privateGet(this, _els).searchResults.innerHTML = "";
+      __privateGet(this, _els).searchPanel.hidden = true;
+      __privateGet(this, _els).searchToggle.setAttribute("aria-expanded", "false");
+      __privateGet(this, _els).iframe.removeAttribute("src");
+      __privateGet(this, _els).toc.innerHTML = "";
+      __privateGet(this, _els).title.textContent = "";
+      __privateGet(this, _els).progress.textContent = "";
+      __privateGet(this, _els).prev.disabled = __privateGet(this, _els).next.disabled = true;
+      __privateMethod(this, _EpubReaderElement_instances, setOverlay_fn).call(this, "Drop an EPUB file here or choose one to begin.");
+    }
+    /** Advance to the next spine item. No-op if already at the last. */
+    async next() {
+      if (__privateGet(this, _book) && __privateGet(this, _currentIndex) + 1 < __privateGet(this, _book).spine.length) await this.goToIndex(__privateGet(this, _currentIndex) + 1);
+    }
+    /** Move to the previous spine item. No-op if already at the first. */
+    async prev() {
+      if (__privateGet(this, _book) && __privateGet(this, _currentIndex) > 0) await this.goToIndex(__privateGet(this, _currentIndex) - 1);
+    }
+    /**
+     * @param {number} index
+     * @param {string} [fragment='']
+     * @returns {Promise<void>}
+     */
+    async goToIndex(index, fragment = "") {
+      if (!__privateGet(this, _book)) return;
+      const spine = __privateGet(this, _book).spine;
+      if (index < 0 || index >= spine.length) return;
+      __privateSet(this, _currentIndex, index);
+      const chapter = await __privateGet(this, _book).chapter(index);
+      __privateGet(this, _els).iframe.dataset.fragment = fragment;
+      __privateGet(this, _els).iframe.src = chapter.url;
+      __privateMethod(this, _EpubReaderElement_instances, updateChrome_fn).call(this);
+      this.dispatchEvent(new CustomEvent("epub-navigate", {
+        detail: {
+          index,
+          path: chapter.path,
+          title: __privateMethod(this, _EpubReaderElement_instances, tocLabelForPath_fn).call(this, chapter.path)
+        },
+        bubbles: true,
+        composed: true
+      }));
+      __privateMethod(this, _EpubReaderElement_instances, schedulePositionSave_fn).call(this);
+    }
+    /** @param {string} pathOrHref */
+    async goToPath(pathOrHref) {
+      if (!__privateGet(this, _book)) return;
+      const [rawPath, fragmentRaw] = pathOrHref.split("#");
+      const fragment = fragmentRaw ?? "";
+      let path = rawPath;
+      try {
+        path = decodeURIComponent(rawPath);
+      } catch {
+      }
+      let idx = __privateGet(this, _book).spineIndexOf(path);
+      if (idx < 0) {
+        try {
+          const url = await __privateGet(this, _book).resourceUrl(path);
+          __privateGet(this, _els).iframe.dataset.fragment = fragment;
+          __privateGet(this, _els).iframe.src = url;
+        } catch (err) {
+          console.warn("goToPath failed", err);
+        }
+        return;
+      }
+      await this.goToIndex(idx, fragment);
+    }
+    // ------- typography -------
+    /** Current typography overrides. Returns a clone so external mutation can't leak. */
+    get typography() {
+      return { ...__privateGet(this, _typography) };
+    }
+    /**
+     * Replace the current typography overrides. Persists to localStorage,
+     * fires `epub-typography-change`, and re-applies to the current chapter.
+     * @param {Partial<TypographySettings>} value
+     */
+    set typography(value) {
+      __privateSet(this, _typography, { ...defaultTypography(), ...__privateGet(this, _typography), ...value });
+      saveTypography(__privateGet(this, _typography));
+      __privateMethod(this, _EpubReaderElement_instances, syncSettingsControls_fn).call(this);
+      const doc = __privateGet(this, _els).iframe.contentDocument;
+      if (doc) {
+        __privateMethod(this, _EpubReaderElement_instances, applyTypographyTo_fn).call(this, doc);
+        __privateMethod(this, _EpubReaderElement_instances, applyPaginatedTo_fn).call(this, doc);
+        __privateMethod(this, _EpubReaderElement_instances, updateChapterProgress_fn).call(this);
+      }
+      this.dispatchEvent(new CustomEvent("epub-typography-change", {
+        detail: { typography: { ...__privateGet(this, _typography) } },
+        bubbles: true,
+        composed: true
+      }));
+    }
+    /** Reset typography overrides to publisher defaults. */
+    resetTypography() {
+      this.typography = defaultTypography();
+    }
+  };
+  _els = new WeakMap();
+  _book = new WeakMap();
+  _typography = new WeakMap();
+  _currentIndex = new WeakMap();
+  _loadToken = new WeakMap();
+  _stylesInjected = new WeakMap();
+  _EpubReaderElement_static = new WeakSet();
+  injectStylesOnce_fn = function() {
+    if (__privateGet(_EpubReaderElement, _stylesInjected)) return;
+    __privateSet(_EpubReaderElement, _stylesInjected, true);
+    const style = document.createElement("style");
+    style.id = "__epub_reader_component_css";
+    style.textContent = COMPONENT_CSS;
+    document.head.append(style);
+  };
+  _EpubReaderElement_instances = new WeakSet();
+  /**
+   * Build the iframe `sandbox` attribute from the current host attributes.
+   *
+   * Default — `sandbox="allow-same-origin"` — blocks all scripts but lets
+   * us reach into the chapter document from the parent (fragment scroll,
+   * link interception, theme/typography injection). Setting `allow-scripts`
+   * on the host adds `allow-scripts` so interactive EPUBs (quizzes,
+   * bindings, scripted carousels) work.
+   *
+   * NB: `allow-same-origin` + `allow-scripts` together lets sandboxed
+   * scripts escape via the parent — only enable for content you trust.
+   */
+  updateSandbox_fn = function() {
+    const iframe = __privateGet(this, _els)?.iframe;
+    if (!iframe) return;
+    const tokens = ["allow-same-origin"];
+    if (this.hasAttribute("allow-scripts")) tokens.push("allow-scripts");
+    iframe.setAttribute("sandbox", tokens.join(" "));
+  };
+  _bookId = new WeakMap();
+  _saveTimer = new WeakMap();
+  _suppressSave = new WeakMap();
+  /**
+   * Re-apply a stored scroll fraction once the chapter iframe finishes
+   * loading. Skipped in paginated mode (scrollFraction has no meaning
+   * across columns) and for fixed-layout chapters (no scroll).
+   * @param {number} scrollFraction
+   */
+  applyRestoredScroll_fn = function(scrollFraction) {
+    if (!Number.isFinite(scrollFraction) || scrollFraction <= 0) return;
+    if (__privateGet(this, _typography).layoutMode === "paginated") return;
+    const item = __privateGet(this, _book)?.spine[__privateGet(this, _currentIndex)];
+    if (item?.layout === "pre-paginated") return;
+    __privateSet(this, _suppressSave, true);
+    const apply = () => {
+      const doc = __privateGet(this, _els).iframe.contentDocument;
+      const se = doc?.scrollingElement || doc?.documentElement;
+      if (!se) return;
+      const max = se.scrollHeight - se.clientHeight;
+      if (max > 0) se.scrollTop = scrollFraction * max;
+    };
+    requestAnimationFrame(apply);
+    __privateGet(this, _els).iframe.contentWindow?.addEventListener("load", () => {
+      apply();
+      __privateSet(this, _suppressSave, false);
+    }, { once: true });
+    setTimeout(() => {
+      __privateSet(this, _suppressSave, false);
+    }, 1500);
+  };
+  /**
+   * Persist current position. Throttled — caller-side scroll handlers
+   * fire every frame; we batch up to one save per ~500 ms.
+   */
+  schedulePositionSave_fn = function() {
+    if (__privateGet(this, _suppressSave) || !__privateGet(this, _book) || !__privateGet(this, _bookId)) return;
+    if (__privateGet(this, _saveTimer)) clearTimeout(__privateGet(this, _saveTimer));
+    __privateSet(this, _saveTimer, setTimeout(() => __privateMethod(this, _EpubReaderElement_instances, savePositionNow_fn).call(this), 500));
+  };
+  savePositionNow_fn = async function() {
+    __privateSet(this, _saveTimer, null);
+    if (!__privateGet(this, _book) || !__privateGet(this, _bookId)) return;
+    const doc = __privateGet(this, _els).iframe.contentDocument;
+    const se = doc?.scrollingElement || doc?.documentElement;
+    let scrollFraction = 0;
+    if (se && __privateGet(this, _typography).layoutMode === "scroll") {
+      const max = se.scrollHeight - se.clientHeight;
+      if (max > 0) scrollFraction = Math.min(1, Math.max(0, se.scrollTop / max));
+    }
+    const record = {
+      id: __privateGet(this, _bookId),
+      spineIndex: __privateGet(this, _currentIndex),
+      scrollFraction,
+      updatedAt: Date.now()
+    };
+    await dbPut("positions", record);
+  };
+  _findQuery = new WeakMap();
+  _findIndex = new WeakMap();
+  _findTotal = new WeakMap();
+  refreshFind_fn = function() {
+    const doc = __privateGet(this, _els).iframe.contentDocument;
+    if (!doc?.body) return;
+    __privateMethod(this, _EpubReaderElement_instances, findClearMarks_fn).call(this, doc);
+    const q = __privateGet(this, _els).findInput.value;
+    __privateSet(this, _findQuery, q);
+    if (!q || q.length < 2) {
+      __privateSet(this, _findTotal, 0);
+      __privateSet(this, _findIndex, 0);
+      __privateGet(this, _els).findCount.textContent = "";
+      return;
+    }
+    const offsets = findOffsets(doc.body, q);
+    __privateSet(this, _findTotal, offsets.length);
+    __privateSet(this, _findIndex, offsets.length > 0 ? 0 : -1);
+    if (offsets.length === 0) {
+      __privateGet(this, _els).findCount.textContent = "0 / 0";
+      return;
+    }
+    let i = 0;
+    for (const { start, end } of offsets) {
+      const range = rangeFromOffsets(doc.body, start, end);
+      if (!range) continue;
+      const idx = i++;
+      wrapRange(range, () => {
+        const m = doc.createElement("mark");
+        m.setAttribute("data-reader-mark", "find");
+        m.dataset.findIndex = String(idx);
+        return m;
+      });
+    }
+    __privateMethod(this, _EpubReaderElement_instances, findFocusCurrent_fn).call(this);
+  };
+  /** @param {Document} doc */
+  findClearMarks_fn = function(doc) {
+    if (!doc.body) return;
+    unwrapAll(doc.body, '[data-reader-mark="find"]');
+  };
+  /** @param {1 | -1} dir */
+  findStep_fn = function(dir) {
+    if (__privateGet(this, _findTotal) === 0) return;
+    __privateSet(this, _findIndex, (__privateGet(this, _findIndex) + dir + __privateGet(this, _findTotal)) % __privateGet(this, _findTotal));
+    __privateMethod(this, _EpubReaderElement_instances, findFocusCurrent_fn).call(this);
+  };
+  findFocusCurrent_fn = function() {
+    const doc = __privateGet(this, _els).iframe.contentDocument;
+    if (!doc) return;
+    for (
+      const el of
+      /** @type {NodeListOf<HTMLElement>} */
+      doc.querySelectorAll('[data-reader-mark="find"].current')
+    ) {
+      el.classList.remove("current");
+    }
+    const wraps = (
+      /** @type {NodeListOf<HTMLElement>} */
+      doc.querySelectorAll(`[data-reader-mark="find"][data-find-index="${__privateGet(this, _findIndex)}"]`)
+    );
+    let scrolled = false;
+    for (const el of wraps) {
+      el.classList.add("current");
+      if (!scrolled) {
+        el.scrollIntoView({ block: "center" });
+        scrolled = true;
+      }
+    }
+    __privateGet(this, _els).findCount.textContent = `${__privateGet(this, _findIndex) + 1} / ${__privateGet(this, _findTotal)}`;
+  };
+  _searchIndex = new WeakMap();
+  _searchIndexPromise = new WeakMap();
+  _searchQuery = new WeakMap();
+  /**
+   * Build (or return cached) full-text index for the open book. The
+   * index pulls each chapter through a fresh fetch + DOMParser so the
+   * text matches what the user actually sees, with whitespace
+   * normalised to single spaces for predictable offsets.
+   *
+   * @returns {Promise<SearchChapter[]>}
+   */
+  buildSearchIndex_fn = function() {
+    if (__privateGet(this, _searchIndex)) return Promise.resolve(__privateGet(this, _searchIndex));
+    if (__privateGet(this, _searchIndexPromise)) return __privateGet(this, _searchIndexPromise);
+    if (!__privateGet(this, _book)) return Promise.resolve([]);
+    const book = __privateGet(this, _book);
+    const status = __privateGet(this, _els).searchStatus;
+    const out = [];
+    const total = book.spine.length;
+    __privateSet(this, _searchIndexPromise, (async () => {
+      for (let i = 0; i < book.spine.length; i++) {
+        if (__privateGet(this, _book) !== book) return [];
+        if (status) status.textContent = `Indexing\u2026 ${i + 1} / ${total}`;
+        const item = book.spine[i];
+        if (item.layout === "pre-paginated") continue;
+        try {
+          const url = await book.resourceUrl(item.path);
+          const res = await fetch(url);
+          const html = await res.text();
+          const doc = new DOMParser().parseFromString(html, "text/html");
+          const text = (doc.body?.textContent || "").replace(/\s+/g, " ").trim();
+          if (!text) continue;
+          out.push({
+            spineIndex: i,
+            path: item.path,
+            title: __privateMethod(this, _EpubReaderElement_instances, tocLabelForPath_fn).call(this, item.path) || `Chapter ${i + 1}`,
+            text,
+            lower: text.toLowerCase()
+          });
+        } catch {
+        }
+      }
+      __privateSet(this, _searchIndex, out);
+      __privateSet(this, _searchIndexPromise, null);
+      if (status) status.textContent = "";
+      return out;
+    })());
+    return __privateGet(this, _searchIndexPromise);
+  };
+  toggleSearchPanel_fn = async function(force) {
+    const open = typeof force === "boolean" ? force : __privateGet(this, _els).searchPanel.hidden;
+    __privateGet(this, _els).searchPanel.hidden = !open;
+    __privateGet(this, _els).searchToggle.setAttribute("aria-expanded", String(open));
+    if (open) {
+      __privateGet(this, _els).bookmarksPanel.hidden = true;
+      __privateGet(this, _els).bookmarksToggle.setAttribute("aria-expanded", "false");
+      __privateGet(this, _els).libraryPanel.hidden = true;
+      __privateGet(this, _els).libraryToggle.setAttribute("aria-expanded", "false");
+      __privateGet(this, _els).settingsPanel.hidden = true;
+      __privateGet(this, _els).settingsToggle.setAttribute("aria-expanded", "false");
+      __privateGet(this, _els).searchInput.focus();
+      __privateGet(this, _els).searchInput.select();
+    }
+  };
+  runSearch_fn = async function(query) {
+    const q = (query || "").trim();
+    __privateSet(this, _searchQuery, q);
+    const ol = __privateGet(this, _els).searchResults;
+    const status = __privateGet(this, _els).searchStatus;
+    ol.innerHTML = "";
+    if (q.length < 2) {
+      status.textContent = q.length === 0 ? "" : "Type at least 2 characters.";
+      return;
+    }
+    status.textContent = "Searching\u2026";
+    const hits = await this.search(q);
+    if (__privateGet(this, _searchQuery) !== q) return;
+    if (hits.length === 0) {
+      status.textContent = `No results for \u201C${q}\u201D.`;
+      return;
+    }
+    const byChap = /* @__PURE__ */ new Map();
+    for (const h of hits) {
+      const arr = byChap.get(h.spineIndex) || [];
+      arr.push(h);
+      byChap.set(h.spineIndex, arr);
+    }
+    status.textContent = `${hits.length} result${hits.length === 1 ? "" : "s"} in ${byChap.size} chapter${byChap.size === 1 ? "" : "s"}.`;
+    const frag = document.createDocumentFragment();
+    for (const [, group] of byChap) {
+      for (const h of group) {
+        const li = document.createElement("li");
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "srch-jump";
+        const chap = document.createElement("span");
+        chap.className = "srch-chap";
+        chap.textContent = h.title;
+        const snip = document.createElement("span");
+        snip.className = "srch-snippet";
+        snip.append(document.createTextNode(h.contextBefore));
+        const m = document.createElement("mark");
+        m.textContent = h.match;
+        snip.append(m);
+        snip.append(document.createTextNode(h.contextAfter));
+        btn.append(chap, snip);
+        btn.addEventListener("click", () => __privateMethod(this, _EpubReaderElement_instances, goToSearchHit_fn).call(this, h));
+        li.append(btn);
+        frag.append(li);
+      }
+    }
+    ol.append(frag);
+  };
+  goToSearchHit_fn = async function(hit) {
+    await __privateMethod(this, _EpubReaderElement_instances, toggleSearchPanel_fn).call(this, false);
+    const settle = () => {
+      const doc = __privateGet(this, _els).iframe.contentDocument;
+      if (!doc?.body) return;
+      __privateMethod(this, _EpubReaderElement_instances, highlightSearchInChapter_fn).call(this, doc, __privateGet(this, _searchQuery));
+      const marks = (
+        /** @type {NodeListOf<HTMLElement>} */
+        doc.querySelectorAll('[data-reader-mark="search"]')
+      );
+      if (marks.length === 0) return;
+      const target = marks[hit.matchOrdinal] || marks[0];
+      target.scrollIntoView({ block: "center" });
+    };
+    if (__privateGet(this, _currentIndex) === hit.spineIndex) {
+      settle();
+      return;
+    }
+    this.goToIndex(hit.spineIndex);
+    __privateGet(this, _els).iframe.addEventListener("load", settle, { once: true });
+  };
+  /**
+   * Wrap every match for `query` in the chapter doc with a
+   * `[data-reader-mark="search"]`. Idempotent — clears previous
+   * search marks first.
+   *
+   * @param {Document} doc
+   * @param {string} query
+   */
+  highlightSearchInChapter_fn = function(doc, query) {
+    if (!doc.body) return;
+    unwrapAll(doc.body, '[data-reader-mark="search"]');
+    if (!query || query.length < 2) return;
+    const offsets = findOffsets(doc.body, query);
+    let i = 0;
+    for (const { start, end } of offsets) {
+      const range = rangeFromOffsets(doc.body, start, end);
+      if (!range) continue;
+      const idx = i++;
+      wrapRange(range, () => {
+        const m = doc.createElement("mark");
+        m.setAttribute("data-reader-mark", "search");
+        m.dataset.searchIndex = String(idx);
+        return m;
+      });
+    }
+  };
+  _highlights = new WeakMap();
+  loadHighlights_fn = async function() {
+    __privateSet(this, _highlights, []);
+    if (!__privateGet(this, _bookId)) {
+      __privateMethod(this, _EpubReaderElement_instances, renderHighlights_fn).call(this);
+      return;
+    }
+    const rec = await dbGet("highlights", __privateGet(this, _bookId));
+    if (rec && Array.isArray(rec.items)) __privateSet(this, _highlights, rec.items);
+    __privateMethod(this, _EpubReaderElement_instances, renderHighlights_fn).call(this);
+  };
+  saveHighlights_fn = async function() {
+    if (!__privateGet(this, _bookId)) return;
+    await dbPut("highlights", {
+      id: __privateGet(this, _bookId),
+      items: __privateGet(this, _highlights),
+      updatedAt: Date.now()
+    });
+  };
+  addHighlightFromSelection_fn = async function(color, withNote = false) {
+    const doc = __privateGet(this, _els).iframe.contentDocument;
+    const sel = doc?.getSelection?.();
+    if (!doc?.body || !sel || sel.rangeCount === 0 || sel.isCollapsed) {
+      __privateMethod(this, _EpubReaderElement_instances, hideHighlightPopover_fn).call(this);
+      return null;
+    }
+    const range = sel.getRangeAt(0);
+    const offsets = offsetsFromRange(doc.body, range);
+    if (!offsets) {
+      __privateMethod(this, _EpubReaderElement_instances, hideHighlightPopover_fn).call(this);
+      return null;
+    }
+    const text = range.toString().trim().slice(0, 200);
+    let note = "";
+    if (withNote) {
+      const win = this.ownerDocument?.defaultView;
+      note = (win?.prompt("Note for this highlight (optional):", "") || "").trim();
+    }
+    const hl = (
+      /** @type {Highlight} */
+      {
+        id: "hl_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8),
+        spineIndex: __privateGet(this, _currentIndex),
+        startOffset: offsets.start,
+        endOffset: offsets.end,
+        text,
+        color,
+        note,
+        createdAt: Date.now()
+      }
+    );
+    __privateSet(this, _highlights, [...__privateGet(this, _highlights), hl].sort((a, b) => a.spineIndex - b.spineIndex || a.startOffset - b.startOffset));
+    await __privateMethod(this, _EpubReaderElement_instances, saveHighlights_fn).call(this);
+    __privateMethod(this, _EpubReaderElement_instances, applyHighlightsTo_fn).call(this, doc);
+    __privateMethod(this, _EpubReaderElement_instances, renderHighlights_fn).call(this);
+    sel.removeAllRanges();
+    __privateMethod(this, _EpubReaderElement_instances, hideHighlightPopover_fn).call(this);
+    this.dispatchEvent(new CustomEvent("epub-highlights-change", {
+      detail: { highlights: this.highlights },
+      bubbles: true,
+      composed: true
+    }));
+    return hl;
+  };
+  /**
+   * Apply (or refresh) the highlight wrappers in the chapter doc.
+   * Always wraps from the offsets (not the prior wrappers) so DOM
+   * mutations between chapter loads can't drift.
+   * @param {Document} doc
+   */
+  applyHighlightsTo_fn = function(doc) {
+    if (!doc.body) return;
+    unwrapAll(doc.body, '[data-reader-mark="highlight"]');
+    const here = __privateGet(this, _highlights).filter((h) => h.spineIndex === __privateGet(this, _currentIndex));
+    for (const h of here) {
+      const range = rangeFromOffsets(doc.body, h.startOffset, h.endOffset);
+      if (!range) continue;
+      wrapRange(range, () => {
+        const m = doc.createElement("mark");
+        m.setAttribute("data-reader-mark", "highlight");
+        m.dataset.id = h.id;
+        m.style.setProperty("--reader-hl-color", h.color);
+        if (h.note) m.title = h.note;
+        return m;
+      });
+    }
+  };
+  /**
+   * Selection-popover lifecycle. Listens for selection changes inside
+   * the iframe, positions the popover above the selection (translated
+   * from iframe coordinates to host coordinates).
+   * @param {HTMLIFrameElement} iframe
+   */
+  wireHighlightSelection_fn = function(iframe) {
+    const doc = iframe.contentDocument;
+    if (!doc) return;
+    const update = () => __privateMethod(this, _EpubReaderElement_instances, updateHighlightPopover_fn).call(this);
+    doc.addEventListener("mouseup", update);
+    doc.addEventListener("keyup", update);
+    doc.addEventListener("selectionchange", update);
+  };
+  updateHighlightPopover_fn = function() {
+    const iframe = __privateGet(this, _els).iframe;
+    const doc = iframe.contentDocument;
+    const sel = doc?.getSelection?.();
+    if (!doc || !sel || sel.rangeCount === 0 || sel.isCollapsed) {
+      __privateMethod(this, _EpubReaderElement_instances, hideHighlightPopover_fn).call(this);
+      return;
+    }
+    const range = sel.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) {
+      __privateMethod(this, _EpubReaderElement_instances, hideHighlightPopover_fn).call(this);
+      return;
+    }
+    const ifr = iframe.getBoundingClientRect();
+    const host = this.getBoundingClientRect();
+    const popover = __privateGet(this, _els).hlPopover;
+    popover.hidden = false;
+    popover.style.left = ifr.left - host.left + rect.left + rect.width / 2 + "px";
+    popover.style.top = ifr.top - host.top + rect.top - 8 + "px";
+  };
+  hideHighlightPopover_fn = function() {
+    __privateGet(this, _els).hlPopover.hidden = true;
+  };
+  toggleHighlightsPanel_fn = function(force) {
+    const open = typeof force === "boolean" ? force : __privateGet(this, _els).highlightsPanel.hidden;
+    __privateGet(this, _els).highlightsPanel.hidden = !open;
+    __privateGet(this, _els).highlightsToggle.setAttribute("aria-expanded", String(open));
+    if (open) {
+      __privateGet(this, _els).bookmarksPanel.hidden = true;
+      __privateGet(this, _els).bookmarksToggle.setAttribute("aria-expanded", "false");
+      __privateGet(this, _els).libraryPanel.hidden = true;
+      __privateGet(this, _els).libraryToggle.setAttribute("aria-expanded", "false");
+      __privateGet(this, _els).settingsPanel.hidden = true;
+      __privateGet(this, _els).settingsToggle.setAttribute("aria-expanded", "false");
+      __privateGet(this, _els).searchPanel.hidden = true;
+      __privateGet(this, _els).searchToggle.setAttribute("aria-expanded", "false");
+      __privateMethod(this, _EpubReaderElement_instances, renderHighlights_fn).call(this);
+    }
+  };
+  renderHighlights_fn = function() {
+    const ol = __privateGet(this, _els).hlList;
+    const panel = __privateGet(this, _els).highlightsPanel;
+    panel.dataset.empty = String(__privateGet(this, _highlights).length === 0);
+    ol.innerHTML = "";
+    for (const h of __privateGet(this, _highlights)) {
+      const li = document.createElement("li");
+      li.dataset.id = h.id;
+      const swatch = document.createElement("span");
+      swatch.className = "hl-swatch";
+      swatch.style.setProperty("--c", h.color);
+      const jump = document.createElement("button");
+      jump.type = "button";
+      jump.className = "hl-jump";
+      const text = document.createElement("span");
+      text.className = "hl-text";
+      text.textContent = `\u201C${h.text}\u201D`;
+      const meta = document.createElement("span");
+      meta.className = "hl-meta";
+      const chapter = __privateGet(this, _book)?.spine[h.spineIndex];
+      const chapterTitle = chapter ? __privateMethod(this, _EpubReaderElement_instances, tocLabelForPath_fn).call(this, chapter.path) : "";
+      meta.textContent = chapterTitle || `Chapter ${h.spineIndex + 1}`;
+      jump.append(text, meta);
+      if (h.note) {
+        const noteEl = document.createElement("span");
+        noteEl.className = "hl-note-text";
+        noteEl.textContent = h.note;
+        jump.append(noteEl);
+      }
+      jump.addEventListener("click", () => this.goToHighlight(h.id));
+      const remove2 = document.createElement("button");
+      remove2.type = "button";
+      remove2.className = "hl-remove";
+      remove2.setAttribute("aria-label", "Remove highlight");
+      remove2.textContent = "\xD7";
+      remove2.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        this.removeHighlight(h.id);
+      });
+      li.append(swatch, jump, remove2);
+      ol.append(li);
+    }
+  };
+  _bookmarks = new WeakMap();
+  loadBookmarks_fn = async function() {
+    __privateSet(this, _bookmarks, []);
+    if (!__privateGet(this, _bookId)) {
+      __privateMethod(this, _EpubReaderElement_instances, renderBookmarks_fn).call(this);
+      return;
+    }
+    const rec = await dbGet("bookmarks", __privateGet(this, _bookId));
+    if (rec && Array.isArray(rec.items)) __privateSet(this, _bookmarks, rec.items);
+    __privateMethod(this, _EpubReaderElement_instances, renderBookmarks_fn).call(this);
+    __privateMethod(this, _EpubReaderElement_instances, updateBookmarkButton_fn).call(this);
+  };
+  saveBookmarks_fn = async function() {
+    if (!__privateGet(this, _bookId)) return;
+    await dbPut("bookmarks", {
+      id: __privateGet(this, _bookId),
+      items: __privateGet(this, _bookmarks),
+      updatedAt: Date.now()
+    });
+  };
+  /** True if a bookmark exists at (close to) the current position. */
+  bookmarkAtCurrent_fn = function() {
+    return __privateGet(this, _bookmarks).find(
+      (b) => b.spineIndex === __privateGet(this, _currentIndex) && Math.abs(b.scrollFraction - __privateMethod(this, _EpubReaderElement_instances, currentScrollFraction_fn).call(this)) < 0.05
+    ) || null;
+  };
+  /** @returns {number} */
+  currentScrollFraction_fn = function() {
+    if (__privateGet(this, _typography).layoutMode === "paginated") {
+      const info = __privateMethod(this, _EpubReaderElement_instances, pageInfo_fn).call(this);
+      return info ? (info.current - 1) / Math.max(1, info.total) : 0;
+    }
+    const doc = __privateGet(this, _els).iframe.contentDocument;
+    const se = doc?.scrollingElement || doc?.documentElement;
+    if (!se) return 0;
+    const max = se.scrollHeight - se.clientHeight;
+    return max > 0 ? Math.min(1, Math.max(0, se.scrollTop / max)) : 0;
+  };
+  /**
+   * Capture ~120 chars of visible chapter text near the current scroll
+   * position, for the bookmark snippet.
+   * @returns {string}
+   */
+  captureSnippet_fn = function() {
+    const doc = __privateGet(this, _els).iframe.contentDocument;
+    const text = (doc?.body?.textContent || "").trim().replace(/\s+/g, " ");
+    if (!text) return "";
+    const frac = __privateMethod(this, _EpubReaderElement_instances, currentScrollFraction_fn).call(this);
+    const start = Math.max(0, Math.floor(text.length * frac) - 20);
+    return text.slice(start, start + 120).trim();
+  };
+  renderBookmarks_fn = function() {
+    const ol = __privateGet(this, _els).bmList;
+    ol.innerHTML = "";
+    const panel = __privateGet(this, _els).bookmarksPanel;
+    panel.dataset.empty = String(__privateGet(this, _bookmarks).length === 0);
+    for (const bm of __privateGet(this, _bookmarks)) {
+      const li = document.createElement("li");
+      li.dataset.bookmarkId = bm.id;
+      const jump = document.createElement("button");
+      jump.type = "button";
+      jump.className = "bm-jump";
+      const labelEl = document.createElement("span");
+      labelEl.className = "bm-label";
+      labelEl.textContent = bm.label || bm.chapterTitle || "(unnamed)";
+      const meta = document.createElement("span");
+      meta.className = "bm-meta";
+      const pct = Math.round((bm.scrollFraction || 0) * 100);
+      meta.textContent = `${bm.chapterTitle || `Chapter ${bm.spineIndex + 1}`} \xB7 ${pct}%`;
+      const snippet = document.createElement("span");
+      snippet.className = "bm-snippet";
+      snippet.textContent = bm.snippet || "";
+      jump.append(labelEl, document.createElement("br"), meta);
+      if (bm.snippet) jump.append(document.createElement("br"), snippet);
+      jump.addEventListener("click", () => this.goToBookmark(bm.id));
+      const remove2 = document.createElement("button");
+      remove2.type = "button";
+      remove2.className = "bm-remove";
+      remove2.setAttribute("aria-label", "Remove bookmark");
+      remove2.textContent = "\xD7";
+      remove2.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.removeBookmark(bm.id);
+      });
+      li.append(jump, remove2);
+      ol.append(li);
+    }
+  };
+  updateBookmarkButton_fn = function() {
+    const active = !!__privateMethod(this, _EpubReaderElement_instances, bookmarkAtCurrent_fn).call(this);
+    __privateGet(this, _els).bookmarksToggle.setAttribute("aria-pressed", String(active));
+    __privateGet(this, _els).bookmarksToggle.textContent = active ? "\u2605" : "\u2606";
+    this.toggleAttribute("data-bookmark-active", active);
+  };
+  toggleBookmarksPanel_fn = function(force) {
+    const open = typeof force === "boolean" ? force : __privateGet(this, _els).bookmarksPanel.hidden;
+    __privateGet(this, _els).bookmarksPanel.hidden = !open;
+    __privateGet(this, _els).bookmarksToggle.setAttribute("aria-expanded", String(open));
+    if (open) {
+      __privateGet(this, _els).settingsPanel.hidden = true;
+      __privateGet(this, _els).settingsToggle.setAttribute("aria-expanded", "false");
+      __privateGet(this, _els).libraryPanel.hidden = true;
+      __privateGet(this, _els).libraryToggle.setAttribute("aria-expanded", "false");
+    }
+  };
+  emitBookmarksChange_fn = function() {
+    this.dispatchEvent(new CustomEvent("epub-bookmarks-change", {
+      detail: { bookmarks: this.bookmarks },
+      bubbles: true,
+      composed: true
+    }));
+  };
+  persistLibraryEntry_fn = async function(book) {
+    if (!__privateGet(this, _bookId)) return;
+    const source = book.sourceBlob();
+    if (!source) return;
+    const existing = await dbGet("library", __privateGet(this, _bookId));
+    const cover = existing?.cover || await book.coverBlob();
+    const meta = book.metadata;
+    const record = {
+      id: __privateGet(this, _bookId),
+      title: meta.title || "(untitled)",
+      creator: meta.creator || "",
+      identifier: meta.identifier || "",
+      blob: source,
+      cover,
+      size: source.size,
+      addedAt: existing?.addedAt || Date.now(),
+      lastOpenedAt: Date.now()
+    };
+    await dbPut("library", record);
+    this.dispatchEvent(new CustomEvent("epub-library-change", {
+      detail: { reason: "added", id: __privateGet(this, _bookId) },
+      bubbles: true,
+      composed: true
+    }));
+  };
+  toggleLibraryPanel_fn = async function(force) {
+    const wasOpen = !__privateGet(this, _els).libraryPanel.hidden;
+    const open = typeof force === "boolean" ? force : !wasOpen;
+    __privateGet(this, _els).libraryPanel.hidden = !open;
+    __privateGet(this, _els).libraryToggle.setAttribute("aria-expanded", String(open));
+    if (open) {
+      __privateGet(this, _els).bookmarksPanel.hidden = true;
+      __privateGet(this, _els).bookmarksToggle.setAttribute("aria-expanded", "false");
+      __privateGet(this, _els).settingsPanel.hidden = true;
+      __privateGet(this, _els).settingsToggle.setAttribute("aria-expanded", "false");
+      await __privateMethod(this, _EpubReaderElement_instances, renderLibrary_fn).call(this);
+    }
+  };
+  renderLibrary_fn = async function() {
+    const entries = await this.getLibrary();
+    const ol = __privateGet(this, _els).libList;
+    const panel = __privateGet(this, _els).libraryPanel;
+    panel.dataset.empty = String(entries.length === 0);
+    ol.innerHTML = "";
+    const transientUrls = [];
+    for (const entry of entries) {
+      const li = document.createElement("li");
+      li.dataset.bookId = entry.id;
+      const open = document.createElement("button");
+      open.type = "button";
+      open.className = "lib-open";
+      open.setAttribute("aria-label", `Open ${entry.title}`);
+      const cover = document.createElement("div");
+      cover.className = "lib-cover";
+      if (entry.cover) {
+        const url = URL.createObjectURL(entry.cover);
+        transientUrls.push(url);
+        const img = document.createElement("img");
+        img.src = url;
+        img.alt = "";
+        img.loading = "lazy";
+        cover.append(img);
+      } else {
+        cover.textContent = "no cover";
+      }
+      const title = document.createElement("span");
+      title.className = "lib-title";
+      title.textContent = entry.title;
+      const meta = document.createElement("span");
+      meta.className = "lib-meta";
+      const parts = [];
+      if (entry.creator) parts.push(entry.creator);
+      parts.push(formatBytes(entry.size));
+      meta.textContent = parts.join(" \xB7 ");
+      open.append(cover, title, meta);
+      open.addEventListener("click", async () => {
+        await __privateMethod(this, _EpubReaderElement_instances, toggleLibraryPanel_fn).call(this, false);
+        await this.openFromLibrary(entry.id);
+      });
+      const remove2 = document.createElement("button");
+      remove2.type = "button";
+      remove2.className = "lib-remove";
+      remove2.setAttribute("aria-label", `Remove ${entry.title} from library`);
+      remove2.textContent = "\xD7";
+      remove2.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        if (!confirm(`Remove "${entry.title}" from the library?`)) return;
+        await this.removeFromLibrary(entry.id);
+        await __privateMethod(this, _EpubReaderElement_instances, renderLibrary_fn).call(this);
+      });
+      li.append(open, remove2);
+      ol.append(li);
+    }
+    if (transientUrls.length) {
+      setTimeout(() => transientUrls.forEach(URL.revokeObjectURL), 5e3);
+    }
+    const est = await this.getStorageEstimate();
+    if (est && est.quota > 0) {
+      __privateGet(this, _els).libQuota.textContent = `${formatBytes(est.usage)} of ${formatBytes(est.quota)} used (${est.percent}%)`;
+      __privateGet(this, _els).libQuota.dataset.warn = String(est.percent >= 80);
+    } else {
+      __privateGet(this, _els).libQuota.textContent = "";
+      delete __privateGet(this, _els).libQuota.dataset.warn;
+    }
+  };
+  // ------- internals -------
+  updateChrome_fn = function() {
+    if (!__privateGet(this, _book)) return;
+    const meta = __privateGet(this, _book).metadata;
+    __privateGet(this, _els).title.textContent = meta.title || "(untitled)";
+    __privateGet(this, _els).progress.textContent = `${__privateGet(this, _currentIndex) + 1} / ${__privateGet(this, _book).spine.length}`;
+    __privateGet(this, _els).prev.disabled = __privateGet(this, _currentIndex) <= 0;
+    __privateGet(this, _els).next.disabled = __privateGet(this, _currentIndex) >= __privateGet(this, _book).spine.length - 1;
+    __privateMethod(this, _EpubReaderElement_instances, highlightToc_fn).call(this);
+    __privateMethod(this, _EpubReaderElement_instances, updateBookmarkButton_fn).call(this);
+  };
+  renderToc_fn = function() {
+    const ol = __privateGet(this, _els).toc;
+    ol.innerHTML = "";
+    if (!__privateGet(this, _book)) return;
+    const buildList = (items) => {
+      const frag = document.createDocumentFragment();
+      for (const item of items) {
+        const li = document.createElement("li");
+        if (item.path) {
+          const a = document.createElement("a");
+          a.textContent = item.label;
+          a.href = "#";
+          a.dataset.path = item.path;
+          a.dataset.fragment = item.fragment || "";
+          a.addEventListener("click", (e) => {
+            e.preventDefault();
+            if (!__privateGet(this, _book)) return;
+            const idx = __privateGet(this, _book).spineIndexOf(item.path);
+            if (idx >= 0) this.goToIndex(idx, item.fragment);
+            else this.goToPath(item.path + (item.fragment ? "#" + item.fragment : ""));
+          });
+          li.append(a);
+        } else {
+          const heading = document.createElement("strong");
+          heading.className = "toc-heading";
+          heading.textContent = item.label;
+          li.append(heading);
+        }
+        if (item.children && item.children.length) {
+          const sub = document.createElement("ol");
+          sub.append(buildList(item.children));
+          li.append(sub);
+        }
+        frag.append(li);
+      }
+      return frag;
+    };
+    ol.append(buildList(__privateGet(this, _book).toc));
+  };
+  highlightToc_fn = function() {
+    const path = __privateGet(this, _book)?.spine[__privateGet(this, _currentIndex)]?.path;
+    for (const a of __privateGet(this, _els).toc.querySelectorAll("a")) {
+      a.classList.toggle("current", !!path && a.dataset.path === path);
+    }
+  };
+  tocLabelForPath_fn = function(path) {
+    const found = findInToc(__privateGet(this, _book)?.toc || [], path);
+    return found ? found.label : __privateGet(this, _book)?.metadata?.title || "";
+  };
+  onIframeLoad_fn = function() {
+    const iframe = __privateGet(this, _els).iframe;
+    const doc = iframe.contentDocument;
+    if (!doc) return;
+    __privateMethod(this, _EpubReaderElement_instances, applyChapterThemingTo_fn).call(this, doc);
+    __privateMethod(this, _EpubReaderElement_instances, applyTypographyTo_fn).call(this, doc);
+    __privateMethod(this, _EpubReaderElement_instances, applyLayoutTo_fn).call(this, doc);
+    __privateMethod(this, _EpubReaderElement_instances, applyPaginatedTo_fn).call(this, doc);
+    __privateMethod(this, _EpubReaderElement_instances, wireChapterScroll_fn).call(this, iframe);
+    __privateMethod(this, _EpubReaderElement_instances, wirePagination_fn).call(this, iframe);
+    doc.addEventListener("click", (e) => {
+      const target = (
+        /** @type {Element | null} */
+        e.target
+      );
+      const a = target?.closest?.("[data-epub-href]");
+      if (!a) return;
+      e.preventDefault();
+      const href = a.getAttribute("data-epub-href");
+      if (href) this.goToPath(href);
+    });
+    doc.addEventListener("keydown", (e) => {
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === "f" || e.key === "F")) {
+        e.preventDefault();
+        this.find(true);
+      } else if (e.key === "Escape" && !__privateGet(this, _els).findBar.hidden) {
+        e.preventDefault();
+        this.find(false);
+      }
+    });
+    if (!__privateGet(this, _els).findBar.hidden && __privateGet(this, _findQuery)) {
+      __privateMethod(this, _EpubReaderElement_instances, refreshFind_fn).call(this);
+    } else {
+      __privateMethod(this, _EpubReaderElement_instances, findClearMarks_fn).call(this, doc);
+    }
+    if (__privateGet(this, _searchQuery) && doc.body) {
+      __privateMethod(this, _EpubReaderElement_instances, highlightSearchInChapter_fn).call(this, doc, __privateGet(this, _searchQuery));
+    }
+    __privateMethod(this, _EpubReaderElement_instances, applyHighlightsTo_fn).call(this, doc);
+    __privateMethod(this, _EpubReaderElement_instances, wireHighlightSelection_fn).call(this, iframe);
+    const frag = iframe.dataset.fragment;
+    if (frag) {
+      __privateMethod(this, _EpubReaderElement_instances, scrollToFragment_fn).call(this, iframe, frag);
+    } else {
+      doc.documentElement.scrollTop = 0;
+      if (doc.body) doc.body.scrollTop = 0;
+    }
+  };
+  /**
+   * Reliably scroll to a fragment in the chapter iframe, handling the
+   * common race conditions:
+   *   1. The element isn't in the DOM yet when `iframe.load` fires
+   *      (deferred parsing). MutationObserver retries until it appears
+   *      or a budget elapses.
+   *   2. The element is in the DOM but layout hasn't settled because
+   *      images are still loading. After the initial scroll, we wait
+   *      for the iframe window's `load` event and scroll again so the
+   *      final layout lands on the right anchor.
+   *
+   * @param {HTMLIFrameElement} iframe
+   * @param {string} frag    Fragment identifier without leading `#`.
+   */
+  scrollToFragment_fn = function(iframe, frag) {
+    const doc = iframe.contentDocument;
+    const win = iframe.contentWindow;
+    if (!doc || !win) return;
+    const tryScroll = () => {
+      const el = doc.getElementById(frag) || doc.querySelector(`[name="${CSS.escape(frag)}"]`);
+      if (el) el.scrollIntoView({ block: "start" });
+      return !!el;
+    };
+    if (tryScroll()) {
+      const onLoaded = () => {
+        tryScroll();
+        win.removeEventListener("load", onLoaded);
+      };
+      if (doc.readyState === "complete") queueMicrotask(onLoaded);
+      else win.addEventListener("load", onLoaded, { once: true });
+      return;
+    }
+    const observer = new MutationObserver(() => {
+      if (tryScroll()) {
+        observer.disconnect();
+        cleanup();
+      }
+    });
+    observer.observe(doc.documentElement, { childList: true, subtree: true });
+    const timer = setTimeout(() => {
+      observer.disconnect();
+    }, 1500);
+    const cleanup = () => clearTimeout(timer);
+  };
+  /**
+   * Inject (or update) the typography override <style> in a chapter doc.
+   * @param {Document} doc
+   */
+  applyTypographyTo_fn = function(doc) {
+    if (doc.documentElement?.localName === "svg") return;
+    const head = doc.head || doc.documentElement;
+    if (!head) return;
+    const id = "__epub_reader_typography";
+    let style = (
+      /** @type {HTMLStyleElement | null} */
+      doc.getElementById(id)
+    );
+    if (!style) {
+      style = doc.createElement("style");
+      style.id = id;
+      head.append(style);
+    }
+    style.textContent = buildTypographyCss(__privateGet(this, _typography));
+    if (!doc.getElementById("__epub_reader_marks")) {
+      const m = doc.createElement("style");
+      m.id = "__epub_reader_marks";
+      m.textContent = MARKS_CSS;
+      head.append(m);
+    }
+  };
+  onKeyDown_fn = function(e) {
+    if (!__privateGet(this, _book)) return;
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === "f" || e.key === "F")) {
+      this.find(true);
+      e.preventDefault();
+      return;
+    }
+    if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key === "Escape" && !__privateGet(this, _els).findBar.hidden) {
+      this.find(false);
+      e.preventDefault();
+      return;
+    }
+    const paginated = __privateGet(this, _typography).layoutMode === "paginated";
+    if (e.key === "ArrowRight" || e.key === "PageDown" || e.key === " ") {
+      if (paginated) __privateMethod(this, _EpubReaderElement_instances, pageNext_fn).call(this);
+      else this.next();
+      e.preventDefault();
+    } else if (e.key === "ArrowLeft" || e.key === "PageUp") {
+      if (paginated) __privateMethod(this, _EpubReaderElement_instances, pagePrev_fn).call(this);
+      else this.prev();
+      e.preventDefault();
+    } else if (e.key === "b" || e.key === "B") {
+      this.toggleBookmark();
+      e.preventDefault();
+    }
+  };
+  toggleToc_fn = function() {
+    __privateGet(this, _els).shell.classList.toggle("toc-open");
+    __privateGet(this, _els).shell.classList.toggle("toc-hidden");
+  };
+  /** Adjust font size by `delta` percent, clamped to the slider range. */
+  stepFontSize_fn = function(delta) {
+    const next = Math.min(200, Math.max(80, __privateGet(this, _typography).fontSize + delta));
+    if (next !== __privateGet(this, _typography).fontSize) this.typography = { fontSize: next };
+  };
+  // ------- chapter theming -------
+  /**
+   * Inject (or update) a tiny stylesheet in the chapter doc that pulls
+   * Vanilla Breeze tokens off the host's computed style and applies them
+   * to the chapter body. This keeps EPUB content visually coherent with
+   * whatever VB theme the host page has active — no reader-side theme
+   * preset list, no theme picker, no localStorage. The host page owns
+   * theming via VB's own theme switcher.
+   *
+   * @param {Document} doc
+   */
+  applyChapterThemingTo_fn = function(doc) {
+    if (doc.documentElement?.localName === "svg") return;
+    const head = doc.head || doc.documentElement;
+    if (!head) return;
+    const id = "__epub_reader_theme";
+    let style = (
+      /** @type {HTMLStyleElement | null} */
+      doc.getElementById(id)
+    );
+    if (!style) {
+      style = doc.createElement("style");
+      style.id = id;
+      head.insertBefore(style, head.firstChild);
+    }
+    const cs = this.ownerDocument?.defaultView?.getComputedStyle(this);
+    const pick = (name, fallback) => cs?.getPropertyValue(name).trim() || fallback;
+    const bg = pick("--color-background", "#ffffff");
+    const fg = pick("--color-text", "#1f1f1f");
+    const link = pick("--color-interactive", "#2d6cdf");
+    const border = pick("--color-border", "#e4e4e7");
+    style.textContent = [
+      `html, body { background-color: ${bg} !important; color: ${fg} !important; }`,
+      `a, a:link { color: ${link} !important; }`,
+      `a:visited { color: color-mix(in srgb, ${link} 70%, ${fg}) !important; }`,
+      `hr { border-color: ${border} !important; }`
+    ].join("\n");
+  };
+  /**
+   * Inject layout overrides for pre-paginated (image-page) chapters so
+   * the primary image fits the viewport instead of overflowing at native
+   * size. Reflowable chapters get no layout rules (publisher CSS wins).
+   * @param {Document} doc
+   */
+  applyLayoutTo_fn = function(doc) {
+    if (doc.documentElement?.localName === "svg") return;
+    const head = doc.head || doc.documentElement;
+    if (!head) return;
+    const id = "__epub_reader_layout";
+    let style = (
+      /** @type {HTMLStyleElement | null} */
+      doc.getElementById(id)
+    );
+    const item = __privateGet(this, _book)?.spine[__privateGet(this, _currentIndex)];
+    const isFixed = item?.layout === "pre-paginated";
+    if (!isFixed) {
+      style?.remove();
+      return;
+    }
+    if (!style) {
+      style = doc.createElement("style");
+      style.id = id;
+      head.append(style);
+    }
+    style.textContent = [
+      `html, body { margin: 0 !important; padding: 0 !important; height: 100vh !important; width: 100vw !important; overflow: hidden !important; }`,
+      `body { display: flex !important; align-items: center !important; justify-content: center !important; }`,
+      `body img, body svg { max-inline-size: 100vw !important; max-block-size: 100vh !important; inline-size: auto !important; block-size: auto !important; object-fit: contain !important; }`
+    ].join("\n");
+  };
+  /**
+   * Inject (or remove) the paginated-columns stylesheet. Active only
+   * when `typography.layoutMode === 'paginated'` AND the chapter is
+   * reflowable (pre-paginated chapters are already image-page-fitted).
+   * @param {Document} doc
+   */
+  applyPaginatedTo_fn = function(doc) {
+    if (doc.documentElement?.localName === "svg") return;
+    const head = doc.head || doc.documentElement;
+    if (!head) return;
+    const id = "__epub_reader_paginated";
+    let style = (
+      /** @type {HTMLStyleElement | null} */
+      doc.getElementById(id)
+    );
+    const item = __privateGet(this, _book)?.spine[__privateGet(this, _currentIndex)];
+    const reflowable = !item || item.layout !== "pre-paginated";
+    const wantPaginated = __privateGet(this, _typography).layoutMode === "paginated" && reflowable;
+    if (!wantPaginated) {
+      style?.remove();
+      return;
+    }
+    if (!style) {
+      style = doc.createElement("style");
+      style.id = id;
+      head.append(style);
+    }
+    style.textContent = [
+      // Lock the document to the viewport, lay children out as columns
+      // exactly the viewport's width, and let body horizontally scroll
+      // through them. scroll-snap keeps page-turns crisp.
+      `html { height: 100vh !important; overflow: hidden !important; margin: 0 !important; }`,
+      `body { margin: 0 !important; height: 100vh !important; column-width: 100vw !important; column-gap: 0 !important; column-fill: auto !important; overflow-x: auto !important; overflow-y: hidden !important; scroll-snap-type: x mandatory !important; scrollbar-width: none !important; overscroll-behavior-x: contain !important; }`,
+      `body::-webkit-scrollbar { display: none !important; }`,
+      // Most chapter children are paragraphs and headings; snapping at
+      // the body level is enough, but anchors at column starts help RTL.
+      `body > * { scroll-snap-align: start; }`,
+      // Tame oversized media so it never overflows a column.
+      `body img, body svg, body video, body iframe { max-inline-size: 100% !important; max-block-size: 100% !important; block-size: auto !important; }`,
+      // Avoid splitting figures/blockquotes across page boundaries
+      // when possible — readability win.
+      `figure, blockquote, pre, table { break-inside: avoid; }`
+    ].join("\n");
+  };
+  /**
+   * Compute current/total pages of the visible chapter (paginated mode).
+   * Returns null if not in paginated mode or the iframe doc isn't ready.
+   * @returns {{current: number, total: number, atStart: boolean, atEnd: boolean} | null}
+   */
+  pageInfo_fn = function() {
+    if (__privateGet(this, _typography).layoutMode !== "paginated") return null;
+    const doc = __privateGet(this, _els).iframe.contentDocument;
+    if (!doc?.body) return null;
+    const item = __privateGet(this, _book)?.spine[__privateGet(this, _currentIndex)];
+    if (item?.layout === "pre-paginated") return null;
+    const body = doc.body;
+    const pageW = body.clientWidth;
+    if (pageW <= 0) return null;
+    const total = Math.max(1, Math.round(body.scrollWidth / pageW));
+    const cur = Math.round(Math.abs(body.scrollLeft) / pageW);
+    return {
+      current: cur + 1,
+      total,
+      atStart: cur <= 0,
+      atEnd: cur >= total - 1
+    };
+  };
+  pageNext_fn = async function() {
+    const info = __privateMethod(this, _EpubReaderElement_instances, pageInfo_fn).call(this);
+    if (!info) {
+      return this.next();
+    }
+    if (info.atEnd) {
+      __privateSet(this, _enterFromBack, false);
+      return this.next();
+    }
+    const body = __privateGet(this, _els).iframe.contentDocument?.body;
+    if (!body) return;
+    body.scrollBy({ left: body.clientWidth, behavior: "instant" });
+    __privateMethod(this, _EpubReaderElement_instances, updateChapterProgress_fn).call(this);
+  };
+  pagePrev_fn = async function() {
+    const info = __privateMethod(this, _EpubReaderElement_instances, pageInfo_fn).call(this);
+    if (!info) {
+      return this.prev();
+    }
+    if (info.atStart) {
+      __privateSet(this, _enterFromBack, true);
+      return this.prev();
+    }
+    const body = __privateGet(this, _els).iframe.contentDocument?.body;
+    if (!body) return;
+    body.scrollBy({ left: -body.clientWidth, behavior: "instant" });
+    __privateMethod(this, _EpubReaderElement_instances, updateChapterProgress_fn).call(this);
+  };
+  /**
+   * Wire pagination affordances: scroll-to-end on backward chapter
+   * spillover, edge clicks (prev/next page), touch-swipe page-turn.
+   * @param {HTMLIFrameElement} iframe
+   */
+  wirePagination_fn = function(iframe) {
+    const doc = iframe.contentDocument;
+    const body = doc?.body;
+    if (!doc || !body) return;
+    const paginated = __privateGet(this, _typography).layoutMode === "paginated" && __privateGet(this, _book)?.spine[__privateGet(this, _currentIndex)]?.layout !== "pre-paginated";
+    if (!paginated) return;
+    if (__privateGet(this, _enterFromBack)) {
+      const after = () => {
+        const pageW = body.clientWidth;
+        const last = Math.max(0, Math.floor(body.scrollWidth / pageW) - 0) - 1;
+        body.scrollLeft = Math.max(0, last) * pageW;
+        __privateMethod(this, _EpubReaderElement_instances, updateChapterProgress_fn).call(this);
+      };
+      requestAnimationFrame(after);
+      iframe.contentWindow?.addEventListener("load", after, { once: true });
+      __privateSet(this, _enterFromBack, false);
+    }
+    let downX = 0, downY = 0, downT = 0;
+    doc.addEventListener("pointerdown", (ev) => {
+      downX = ev.clientX;
+      downY = ev.clientY;
+      downT = Date.now();
+    });
+    doc.addEventListener("pointerup", (ev) => {
+      const dx = ev.clientX - downX, dy = ev.clientY - downY;
+      const dt = Date.now() - downT;
+      const insideAnchor = (
+        /** @type {Element | null} */
+        ev.target?.closest?.("a, button, [data-epub-href]")
+      );
+      if (insideAnchor) return;
+      if (dt < 600 && Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+        if (dx < 0) __privateMethod(this, _EpubReaderElement_instances, pageNext_fn).call(this);
+        else __privateMethod(this, _EpubReaderElement_instances, pagePrev_fn).call(this);
+        return;
+      }
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) {
+        const w = body.clientWidth;
+        if (ev.clientX < Math.min(120, w * 0.15)) __privateMethod(this, _EpubReaderElement_instances, pagePrev_fn).call(this);
+        else if (ev.clientX > w - Math.min(120, w * 0.15)) __privateMethod(this, _EpubReaderElement_instances, pageNext_fn).call(this);
+      }
+    });
+  };
+  /** Recompute and write the chapter-progress display. */
+  updateChapterProgress_fn = function() {
+    const display = __privateGet(this, _els).chapterProgress;
+    const info = __privateMethod(this, _EpubReaderElement_instances, pageInfo_fn).call(this);
+    if (info) {
+      display.hidden = false;
+      display.textContent = `Page ${info.current} of ${info.total}`;
+      return;
+    }
+  };
+  _enterFromBack = new WeakMap();
+  /**
+   * Track scroll position inside the chapter iframe and update the
+   * `.chapter-progress` span. Reflowable chapters get a percentage,
+   * fixed-layout (image-page) chapters get nothing — there's no scroll.
+   * @param {HTMLIFrameElement} iframe
+   */
+  wireChapterScroll_fn = function(iframe) {
+    const win = iframe.contentWindow;
+    const doc = iframe.contentDocument;
+    if (!win || !doc) return;
+    const item = __privateGet(this, _book)?.spine[__privateGet(this, _currentIndex)];
+    const isFixed = item?.layout === "pre-paginated";
+    const display = __privateGet(this, _els).chapterProgress;
+    if (isFixed) {
+      display.hidden = true;
+      display.textContent = "";
+      return;
+    }
+    const paginated = __privateGet(this, _typography).layoutMode === "paginated";
+    display.hidden = false;
+    const update = () => {
+      if (__privateGet(this, _typography).layoutMode === "paginated") {
+        __privateMethod(this, _EpubReaderElement_instances, updateChapterProgress_fn).call(this);
+        return;
+      }
+      const se = doc.scrollingElement || doc.documentElement;
+      const max = se.scrollHeight - se.clientHeight;
+      const pct = max > 0 ? Math.round(se.scrollTop / max * 100) : 100;
+      display.textContent = `${pct}%`;
+    };
+    update();
+    const onScroll = () => {
+      update();
+      __privateMethod(this, _EpubReaderElement_instances, schedulePositionSave_fn).call(this);
+      __privateMethod(this, _EpubReaderElement_instances, updateBookmarkButton_fn).call(this);
+    };
+    win.addEventListener("scroll", onScroll, { passive: true });
+    doc.body?.addEventListener("scroll", onScroll, { passive: true });
+    win.addEventListener("load", update, { once: true });
+  };
+  toggleSettings_fn = function(force) {
+    const open = typeof force === "boolean" ? force : __privateGet(this, _els).settingsPanel.hidden;
+    __privateGet(this, _els).settingsPanel.hidden = !open;
+    __privateGet(this, _els).settingsToggle.setAttribute("aria-expanded", String(open));
+    if (open) __privateGet(this, _els).sFontFamily.focus();
+  };
+  wireSettingsControls_fn = function() {
+    const e = __privateGet(this, _els);
+    const update = (patch) => {
+      this.typography = patch;
+    };
+    e.sFontFamily.addEventListener("change", () => update({ fontFamily: e.sFontFamily.value }));
+    e.sFontSize.addEventListener("input", () => update({ fontSize: Number(e.sFontSize.value) }));
+    e.sLineHeight.addEventListener("input", () => {
+      const v = Number(e.sLineHeight.value);
+      update({ lineHeight: v <= 100 ? 0 : v });
+    });
+    e.sParagraphSpacing.addEventListener("input", () => {
+      const v = Number(e.sParagraphSpacing.value);
+      update({ paragraphSpacing: v < 0 ? -1 : v });
+    });
+    e.sJustify.addEventListener("change", () => update({ justify: e.sJustify.checked }));
+    e.sReadingWidth.addEventListener("input", () => update({ readingWidth: Number(e.sReadingWidth.value) }));
+    e.sLayoutScroll.addEventListener("click", () => update({ layoutMode: "scroll" }));
+    e.sLayoutPaginated.addEventListener("click", () => update({ layoutMode: "paginated" }));
+    e.sUserCss.addEventListener("input", () => update({ userCss: e.sUserCss.value }));
+    e.sReset.addEventListener("click", () => this.resetTypography());
+    e.sClose.addEventListener("click", () => __privateMethod(this, _EpubReaderElement_instances, toggleSettings_fn).call(this, false));
+    this.addEventListener("pointerdown", (ev) => {
+      const path = ev.composedPath();
+      if (!e.settingsPanel.hidden && !path.includes(e.settingsPanel) && !path.includes(e.settingsToggle)) {
+        __privateMethod(this, _EpubReaderElement_instances, toggleSettings_fn).call(this, false);
+      }
+      if (!e.bookmarksPanel.hidden && !path.includes(e.bookmarksPanel) && !path.includes(e.bookmarksToggle)) {
+        __privateMethod(this, _EpubReaderElement_instances, toggleBookmarksPanel_fn).call(this, false);
+      }
+      if (!e.libraryPanel.hidden && !path.includes(e.libraryPanel) && !path.includes(e.libraryToggle)) {
+        __privateMethod(this, _EpubReaderElement_instances, toggleLibraryPanel_fn).call(this, false);
+      }
+      if (!e.searchPanel.hidden && !path.includes(e.searchPanel) && !path.includes(e.searchToggle)) {
+        __privateMethod(this, _EpubReaderElement_instances, toggleSearchPanel_fn).call(this, false);
+      }
+      if (!e.highlightsPanel.hidden && !path.includes(e.highlightsPanel) && !path.includes(e.highlightsToggle)) {
+        __privateMethod(this, _EpubReaderElement_instances, toggleHighlightsPanel_fn).call(this, false);
+      }
+    });
+  };
+  /** Sync the panel inputs to reflect the current typography + theme state. */
+  syncSettingsControls_fn = function() {
+    const e = __privateGet(this, _els);
+    if (!e?.sFontFamily) return;
+    const t = __privateGet(this, _typography);
+    e.sFontFamily.value = t.fontFamily;
+    e.sFontSize.value = String(t.fontSize);
+    e.sFontSizeV.textContent = `${t.fontSize}%`;
+    e.sLineHeight.value = String(t.lineHeight || 100);
+    e.sLineHeightV.textContent = t.lineHeight ? (t.lineHeight / 100).toFixed(2) : "default";
+    e.sParagraphSpacing.value = String(t.paragraphSpacing);
+    e.sParagraphSpacingV.textContent = t.paragraphSpacing < 0 ? "default" : `${(t.paragraphSpacing / 10).toFixed(1)}em`;
+    e.sJustify.checked = !!t.justify;
+    e.sJustify.indeterminate = t.justify === null;
+    e.sReadingWidth.value = String(t.readingWidth);
+    e.sReadingWidthV.textContent = t.readingWidth === 0 ? "unlimited" : `${t.readingWidth} ch`;
+    const paginated = t.layoutMode === "paginated";
+    e.sLayoutScroll.dataset.readerState = paginated ? "" : "active";
+    e.sLayoutPaginated.dataset.readerState = paginated ? "active" : "";
+    e.sLayoutScroll.setAttribute("aria-checked", String(!paginated));
+    e.sLayoutPaginated.setAttribute("aria-checked", String(paginated));
+    if (e.sUserCss.value !== t.userCss) e.sUserCss.value = t.userCss;
+  };
+  setOverlay_fn = function(message, isError = false) {
+    const ov = __privateGet(this, _els).overlay;
+    ov.classList.toggle("error", isError);
+    const messageEl = ov.querySelector(".message");
+    if (messageEl) messageEl.textContent = message;
+    ov.hidden = false;
+  };
+  hideOverlay_fn = function() {
+    __privateGet(this, _els).overlay.hidden = true;
+  };
+  __privateAdd(_EpubReaderElement, _EpubReaderElement_static);
+  // Component CSS injected once into <head>, scoped via @scope
+  // (epub-reader) so it never leaks. Avoids duplicate <style> blocks
+  // when a page hosts multiple readers.
+  __privateAdd(_EpubReaderElement, _stylesInjected, false);
+  var EpubReaderElement = _EpubReaderElement;
+  function formatBytes(bytes) {
+    if (!bytes || bytes < 1024) return `${bytes || 0} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+  }
+  function findInToc(items, path) {
+    for (const item of items) {
+      if (item.path === path) return item;
+      if (item.children?.length) {
+        const inner = findInToc(item.children, path);
+        if (inner) return inner;
+      }
+    }
+    return null;
+  }
+  if (!customElements.get("epub-reader")) {
+    customElements.define("epub-reader", EpubReaderElement);
+  }
+
   // src/app.js
-  var state = { route: "home", paperFilter: "all", activeReadingId: null, activePaperId: null, pictureBookDraft: null };
+  var state = { route: "home", paperFilter: "all", activeReadingId: null, activePaperId: null, pictureBookDraft: null, paperTransform: null, paperStatus: null };
   var main = document.querySelector("#mainContent");
   var toast = document.querySelector("#toast");
   var modalRoot = document.querySelector("#modalRoot");
@@ -3239,8 +7323,12 @@
   }
   async function navigate(route, detail = null) {
     stopSpeaking();
+    const nextPaperId = detail?.paperId || null;
+    if (route === "paper" && state.activePaperId !== nextPaperId) {
+      state.paperTransform = { paperId: nextPaperId, scale: 1, x: 0, y: 0, panMode: false };
+    }
     state.route = route;
-    state.activePaperId = detail?.paperId || null;
+    state.activePaperId = nextPaperId;
     if (route === "reading" && !detail?.readingId) state.activeReadingId = null;
     document.querySelectorAll(".nav-item").forEach((item) => item.classList.toggle("active", item.dataset.route === route));
     document.querySelector("#sidebar").classList.remove("open");
@@ -3275,7 +7363,7 @@
     </section>
     <section class="entry-grid">
       <button class="entry-card" data-route="papers"><span class="emoji">\u{1F4DD}</span><h3>\u6253\u5F00\u8BD5\u5377\u76EE\u5F55</h3><p>\u6309\u72B6\u6001\u548C\u751F\u6210\u65F6\u95F4\u7BA1\u7406\u5168\u90E8\u8BD5\u5377\u3002</p></button>
-      <button class="entry-card" data-route="generator"><span class="emoji">\u{1FA84}</span><h3>\u914D\u7F6E\u751F\u6210\u8BD5\u5377</h3><p>\u6570\u5B66\u3001\u62FC\u97F3\u3001\u6C49\u5B57\u548C\u82F1\u8BED\u6A21\u677F\u81EA\u7531\u914D\u7F6E\u3002</p></button>
+      <button class="entry-card" data-route="generator"><span class="emoji">\u{1FA84}</span><h3>\u914D\u7F6E\u751F\u6210\u8BD5\u5377</h3><p>\u6570\u5B66\u3001\u6C49\u5B57\u548C\u82F1\u8BED\u6A21\u677F\u81EA\u7531\u914D\u7F6E\u3002</p></button>
       <button class="entry-card" data-route="reading"><span class="emoji">\u{1F4DA}</span><h3>\u9605\u8BFB\u4E0E\u8DDF\u8BFB</h3><p>\u6309\u6BB5\u70B9\u8BFB\uFF0C\u4E2D\u6587\u9010\u5B57\u3001\u82F1\u6587\u9010\u8BCD\u9AD8\u4EAE\u3002</p></button>
       <button class="entry-card" data-route="games"><span class="emoji">\u{1F3AE}</span><h3>\u5B66\u4E60\u6E38\u620F</h3><p>\u6C49\u5B57\u8FDE\u7EBF\u6D88\u6D88\u4E50\u548C\u82F1\u8BED\u5B9E\u7269\u914D\u5BF9\u3002</p></button>
     </section>`;
@@ -3315,19 +7403,22 @@
       ["multiply", "\u4E58\u6CD5"],
       ["divide", "\u9664\u6CD5"],
       ["currency", "\u4EBA\u6C11\u5E01\u6362\u7B97"],
-      ["unit", "\u5355\u4F4D\u6362\u7B97"]
+      ["unit", "\u5355\u4F4D\u6362\u7B97"],
+      ["clock", "\u949F\u8868\u8BA4\u77E5"]
     ],
-    \u8BED\u6587: [["hanzi-trace", "\u6C49\u5B57\u63CF\u7EA2"], ["hanzi-stroke", "\u6309\u7B14\u753B\u7EC3\u5B57"], ["pinyin-trace", "\u62FC\u97F3\u56DB\u7EBF\u4E09\u683C"], ["control", "\u63A7\u7B14\u8BAD\u7EC3"], ["composition", "\u7530\u5B57\u683C/\u4F5C\u6587\u7EB8"]],
+    \u8BED\u6587: [["hanzi-trace", "\u6C49\u5B57\u63CF\u7EA2"], ["hanzi-stroke", "\u6309\u7B14\u753B\u7EC3\u5B57"], ["control", "\u63A7\u7B14\u8BAD\u7EC3"], ["composition", "\u7530\u5B57\u683C/\u4F5C\u4E1A\u7EB8"]],
     \u82F1\u8BED: [["english-word", "\u5355\u8BCD\u63CF\u7EA2"], ["english-sentence", "\u77ED\u53E5\u63CF\u7EA2"], ["english-lines", "\u82F1\u8BED\u56DB\u7EBF\u4E09\u683C"]]
   };
   function generatorFields(subject, template) {
     if (subject !== "\u6570\u5B66") {
+      const isBlankPractice = ["composition", "english-lines"].includes(template);
+      const countField = isBlankPractice ? `<div class="field"><label>\u7EC3\u4E60\u884C\u6570</label><input name="count" type="number" min="1" max="100" value="${template === "composition" ? "12" : "10"}"></div>` : "";
       const strokeFields = template === "hanzi-stroke" ? '<div class="field"><label>\u6309\u7B14\u753B\u751F\u6210\u5B57</label><select name="strokePreset"><option value="basic">\u57FA\u7840\u7B14\u753B\u5B57</option><option value="numbers">\u6570\u5B57\u6C49\u5B57</option><option value="simple">\u7B80\u5355\u5E38\u7528\u5B57</option></select></div>' : "";
       const hanziFontFields = template === "hanzi-trace" ? '<div class="field"><label>\u63CF\u7EA2\u5B57\u4F53</label><select name="hanziFont"><option value="kaiti">\u6977\u4F53</option><option value="songti">\u5B8B\u4F53</option><option value="heiti">\u9ED1\u4F53</option><option value="fangsong">\u4EFF\u5B8B</option></select></div>' : "";
-      const englishFontFields = subject === "\u82F1\u8BED" ? '<div class="field"><label>\u82F1\u8BED\u63CF\u7EA2\u5B57\u4F53</label><select name="englishFont"><option value="comic">\u513F\u7AE5\u624B\u5199\u4F53</option><option value="print">\u5370\u5237\u4F53</option><option value="serif">\u886C\u7EBF\u4F53</option><option value="cursive">\u8FDE\u5199\u4F53</option></select></div>' : "";
+      const englishFontFields = subject === "\u82F1\u8BED" && ["english-word", "english-sentence"].includes(template) ? '<div class="field"><label>\u82F1\u8BED\u63CF\u7EA2\u5B57\u4F53</label><select name="englishFont"><option value="comic">\u513F\u7AE5\u624B\u5199\u4F53</option><option value="print">\u5370\u5237\u4F53</option><option value="serif">\u886C\u7EBF\u4F53</option><option value="cursive">\u8FDE\u5199\u4F53</option></select></div>' : "";
+      const contentField = isBlankPractice ? "" : '<div class="field"><label>\u7EC3\u4E60\u5185\u5BB9\uFF08\u6BCF\u884C\u4E00\u9879\uFF09</label><textarea name="customContent" placeholder="\u4E00\u884C\u53EF\u8F93\u5165\u591A\u4E2A\u5B57\uFF0C\u4F8B\u5982\uFF1A\u4F60\u597D"></textarea></div>';
       return `
-    <div class="field"><label>\u7EC3\u4E60\u5185\u5BB9\uFF08\u6BCF\u884C\u4E00\u9879\uFF09</label><textarea name="customContent" placeholder="\u4E00\u884C\u53EF\u8F93\u5165\u591A\u4E2A\u5B57\uFF0C\u4F8B\u5982\uFF1A\u4F60\u597D"></textarea></div>
-    ${hanziFontFields}${englishFontFields}${strokeFields}`;
+    ${countField}${contentField}${hanziFontFields}${englishFontFields}${strokeFields}`;
     }
     const operationTemplates = ["horizontal", "missing", "vertical", "equation"];
     const chainTemplates = ["chain-add", "chain-sub", "mixed"];
@@ -3392,24 +7483,19 @@
   }
   function worksheetProblemsPerPage(paper) {
     const layout = worksheetLayoutClass(paper);
-    const compactViewport = typeof window !== "undefined" && window.matchMedia?.("(max-width: 760px)").matches;
-    if (compactViewport) {
-      if (layout.includes("vertical")) return 2;
-      if (layout.includes("make-ten") || layout.includes("break-ten")) return 2;
-      if (layout.includes("word-problem")) return 1;
-      if (layout.includes("equation")) return 2;
-      if (layout.includes("hanzi-practice") || layout.includes("english-practice")) return 3;
-      return 8;
-    }
-    if (layout.includes("vertical")) return 6;
+    const template = paper.config?.template || paper.problems?.[0]?.kind || paper.problems?.[0]?.type || "";
+    if (template === "composition") return paper.orientation === "landscape" ? 8 : 12;
+    if (template === "english-lines") return paper.orientation === "landscape" ? 8 : 10;
+    if (layout.includes("vertical")) return 12;
     if (layout.includes("make-ten") || layout.includes("break-ten")) return 8;
+    if (layout.includes("clock")) return 8;
     if (layout.includes("word-problem")) return 2;
     if (layout.includes("equation")) return 3;
     if (layout.includes("hanzi-practice") || layout.includes("english-practice")) return 8;
     if (layout.includes("multiply") || layout.includes("divide")) return 24;
-    if (layout.includes("currency") || layout.includes("unit")) return 16;
-    if (layout.includes("chain-add") || layout.includes("chain-sub") || layout.includes("mixed")) return 18;
-    return paper.orientation === "landscape" ? 24 : 24;
+    if (layout.includes("currency") || layout.includes("unit")) return 20;
+    if (layout.includes("chain-add") || layout.includes("chain-sub") || layout.includes("mixed")) return 30;
+    return paper.orientation === "landscape" ? 36 : 36;
   }
   function paginateProblems(problems, size, layout = "") {
     const pages = [];
@@ -3444,7 +7530,7 @@
     }).join("");
   }
   function normalizeProblem(problem, index) {
-    const typeMap = { "missing-term": "missing", "comparison": "compare", "chain-addition": "chain-add", "chain-subtraction": "chain-sub", "mixed-operations": "mixed", "carrying-addition": "carry-add", "borrowing-subtraction": "borrow-sub", "multiplication": "multiply", "division": "divide", "unit-conversion": "unit" };
+    const typeMap = { "missing-term": "missing", "comparison": "compare", "chain-addition": "chain-add", "chain-subtraction": "chain-sub", "mixed-operations": "mixed", "carrying-addition": "carry-add", "borrowing-subtraction": "borrow-sub", "multiplication": "multiply", "division": "divide", "currency": "currency", "unit-conversion": "unit", "clock-reading": "clock" };
     return {
       ...structuredClone(problem),
       id: problem.id || `problem-${index + 1}`,
@@ -3589,14 +7675,30 @@
       strokeDataSource: item.strokeDataSource || "local-fallback"
     }));
   }
+  function boundedPracticeCount(value, fallback) {
+    const count = Number(value);
+    if (!Number.isFinite(count)) return fallback;
+    return Math.max(1, Math.min(100, Math.floor(count)));
+  }
   async function createProblemsFromForm(values) {
     if (values.subject !== "\u6570\u5B66") {
       const lines = String(values.customContent || "").split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
       if (values.template === "hanzi-stroke") return createStrokePracticeProblems(values, lines);
+      if (["composition", "english-lines"].includes(values.template)) {
+        const count = boundedPracticeCount(values.count, values.template === "composition" ? 12 : 10);
+        return Array.from({ length: count }, (_, index) => ({
+          id: `problem-${index + 1}`,
+          kind: values.template,
+          prompt: "",
+          answer: "",
+          boxes: 0,
+          meta: values.subject === "\u82F1\u8BED" ? { font: values.englishFont || "comic" } : {}
+        }));
+      }
       const meta = {};
       if (values.template === "hanzi-trace") meta.font = values.hanziFont || "kaiti";
       if (values.subject === "\u82F1\u8BED") meta.font = values.englishFont || "comic";
-      return (lines.length ? lines : ["\u8BF7\u5728\u6B64\u63CF\u5199"]).map((line, index) => ({ id: `problem-${index + 1}`, kind: values.template, prompt: line, answer: "", boxes: 0, meta }));
+      return (lines.length ? lines : ["\u8BF7\u5728\u6B64\u63CF\u5199"]).map((line, index) => ({ id: `problem-${index + 1}`, kind: values.template, prompt: line, answer: "", boxes: 0, meta: { ...meta } }));
     }
     const module = await Promise.resolve().then(() => (init_math(), math_exports));
     const templateMap = {
@@ -3616,7 +7718,8 @@
       multiply: "multiplication",
       divide: "division",
       currency: "currency",
-      unit: "unit-conversion"
+      unit: "unit-conversion",
+      clock: "clock-reading"
     };
     const operationMap = { add: "addition", subtract: "subtraction" };
     const remainderMap = { exact: "none", remainder: "required", mixed: "optional" };
@@ -3645,9 +7748,68 @@
       await renderPaper();
     }
   }
+  function applyPaperTransform(transform) {
+    const worksheet = document.querySelector("#activeWorksheet");
+    const wrap = worksheet?.parentElement;
+    if (!transform || !worksheet || !wrap) return;
+    const scale = Math.max(0.6, Math.min(2.4, Number(transform.scale) || 1));
+    const viewportWidth = Math.max(1, wrap.clientWidth - 24);
+    const viewportHeight = Math.max(1, wrap.clientHeight - 24);
+    const scaledWidth = worksheet.offsetWidth * scale;
+    const scaledHeight = worksheet.offsetHeight * scale;
+    const minX = Math.min(0, viewportWidth - scaledWidth);
+    const maxX = Math.max(0, (viewportWidth - scaledWidth) / 2);
+    const minY = Math.min(0, viewportHeight - scaledHeight);
+    const maxY = Math.max(0, (viewportHeight - scaledHeight) / 2);
+    transform.scale = scale;
+    transform.x = Math.max(minX, Math.min(maxX, Number(transform.x) || 0));
+    transform.y = Math.max(minY, Math.min(maxY, Number(transform.y) || 0));
+    worksheet.style.transformOrigin = "top left";
+    worksheet.style.transform = `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`;
+    wrap.classList.toggle("paper-pan-enabled", Boolean(transform.panMode));
+    const zoomLabel = document.querySelector("[data-paper-zoom-value]");
+    if (zoomLabel) zoomLabel.textContent = `${Math.round(transform.scale * 100)}%`;
+    const panButton = document.querySelector("[data-paper-pan-toggle]");
+    if (panButton) {
+      panButton.textContent = transform.panMode ? "\u7ED3\u675F\u79FB\u52A8" : "\u79FB\u52A8\u8BD5\u5377";
+      panButton.classList.toggle("active", Boolean(transform.panMode));
+    }
+    state.drawing?.black?.setEnabled(!transform.panMode && ["unstarted", "writing"].includes(state.paperStatus));
+    state.drawing?.red?.setEnabled(!transform.panMode && state.paperStatus === "review");
+  }
+  function bindPaperPanGesture(transform) {
+    const wrap = document.querySelector(".paper-view .worksheet-wrap");
+    if (!wrap || wrap.dataset.panBound === "true") return;
+    wrap.dataset.panBound = "true";
+    let gesture = null;
+    wrap.addEventListener("pointerdown", (event) => {
+      if (!transform.panMode || event.target.closest(".paper-floating-toolbar")) return;
+      gesture = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, startX: transform.x, startY: transform.y };
+      wrap.setPointerCapture(event.pointerId);
+      event.preventDefault();
+    });
+    wrap.addEventListener("pointermove", (event) => {
+      if (!gesture || gesture.pointerId !== event.pointerId) return;
+      transform.x = gesture.startX + event.clientX - gesture.x;
+      transform.y = gesture.startY + event.clientY - gesture.y;
+      applyPaperTransform(transform);
+      event.preventDefault();
+    });
+    const finish = (event) => {
+      if (!gesture || gesture.pointerId !== event.pointerId) return;
+      gesture = null;
+      if (wrap.hasPointerCapture(event.pointerId)) wrap.releasePointerCapture(event.pointerId);
+    };
+    wrap.addEventListener("pointerup", finish);
+    wrap.addEventListener("pointercancel", finish);
+    wrap.addEventListener("lostpointercapture", finish);
+  }
   async function renderPaper() {
     const paper = await get("papers", state.activePaperId);
     if (!paper) return navigate("papers");
+    state.paperTransform || (state.paperTransform = { paperId: paper.id, scale: 1, x: 0, y: 0, panMode: false, focusMode: false });
+    if (state.paperTransform.paperId !== paper.id) state.paperTransform = { paperId: paper.id, scale: 1, x: 0, y: 0, panMode: false, focusMode: false };
+    state.paperStatus = paper.status;
     const mode = paper.status === "review" || paper.status === "done" ? "red" : "black";
     const editable = paper.status !== "done";
     const wrongIds = new Set(paper.wrongProblemIds || []);
@@ -3657,18 +7819,28 @@
     <div class="header-actions"><button class="secondary" data-batch-wrong>\u6309\u9898\u53F7\u6279\u91CF\u6807\u8BB0</button>${wrongIds.size ? '<button class="secondary" data-retry-wrong="original">\u539F\u9898\u91CD\u505A</button><button class="primary" data-retry-wrong="similar">\u751F\u6210\u540C\u7C7B\u65B0\u9898</button>' : ""}</div>
   </section>` : "";
     const focusWriting = mode === "black" && editable;
-    document.body.classList.toggle("paper-focus-active", focusWriting);
+    if (focusWriting && !state.paperTransform.focusMode) {
+      state.paperTransform.scale = 1;
+      state.paperTransform.x = 0;
+      state.paperTransform.y = 0;
+      state.paperTransform.panMode = false;
+      state.paperTransform.focusMode = true;
+    }
+    const focusView = focusWriting || state.paperTransform.focusMode === true;
+    document.body.classList.toggle("paper-focus-active", focusView);
     const scrollButtons = '<button class="secondary" data-paper-scroll="-1">\u2191 \u4E0A\u79FB</button><button class="secondary" data-paper-scroll="1">\u2193 \u4E0B\u79FB</button>';
-    const headerHtml = focusWriting ? "" : pageHeader(escapeHtml2(paper.title), `${PAPER_STATUS[paper.status]} \xB7 ${paper.subject}`, `<button class="secondary" data-route="papers">\u8FD4\u56DE\u76EE\u5F55</button>`);
-    main.innerHTML = `${headerHtml}<section class="paper-view ${focusWriting ? "paper-writing-view" : ""}">
-    <div class="paper-toolbar no-print ${focusWriting ? "paper-floating-toolbar" : ""}">
-      ${focusWriting ? '<button class="secondary" data-route="papers">\u9000\u51FA</button>' : ""}
+    const zoomControls = '<span class="paper-zoom-controls"><button class="secondary" data-paper-zoom="-1" aria-label="\u7F29\u5C0F\u8BD5\u5377">\u2212</button><span data-paper-zoom-value>100%</span><button class="secondary" data-paper-zoom="1" aria-label="\u653E\u5927\u8BD5\u5377">\uFF0B</button><button class="secondary" data-paper-zoom-reset>\u590D\u4F4D</button><button class="secondary" data-paper-pan-toggle>\u79FB\u52A8\u8BD5\u5377</button></span>';
+    const headerHtml = focusView ? "" : pageHeader(escapeHtml2(paper.title), `${PAPER_STATUS[paper.status]} \xB7 ${paper.subject}`, `<button class="secondary" data-route="papers">\u8FD4\u56DE\u76EE\u5F55</button>`);
+    main.innerHTML = `${headerHtml}<section class="paper-view ${focusView ? "paper-writing-view" : ""}">
+    <div class="paper-toolbar no-print ${focusView ? "paper-floating-toolbar" : ""}">
+      ${focusView ? '<button class="secondary" data-route="papers">\u9000\u51FA</button>' : ""}
+      ${zoomControls}
       ${editable ? `<button class="toolbar-button active ${mode}" data-ink-mode="pen">${mode === "red" ? "\u{1F534} \u7EA2\u7B14\u6279\u6539" : "\u26AB \u9ED1\u7B14\u4F5C\u7B54"}</button>${scrollButtons}
       <button class="toolbar-button" data-ink-mode="eraser">\u232B \u64E6\u9664\u5F53\u524D\u7B14\u8FF9</button><button class="toolbar-button" data-ink-action="undo">\u21B6 \u64A4\u9500</button>` : ""}
       ${paper.status === "writing" ? '<button class="primary" data-paper-submit>\u63D0\u4EA4\u4F5C\u7B54</button>' : ""}
       ${paper.status === "review" ? '<button class="primary" data-paper-reviewed>\u5B8C\u6210\u6279\u6539</button>' : ""}
       ${paper.status === "done" ? '<button class="secondary" data-reopen-review>\u4FEE\u6539\u6279\u6539</button>' : ""}
-      ${focusWriting ? "" : '<select id="printVersion" class="toolbar-button"><option value="blank">\u6253\u5370\u7A7A\u767D\u7248</option><option value="answer">\u6253\u5370\u9ED1\u7B14\u4F5C\u7B54\u7248</option><option value="final">\u6253\u5370\u7EA2\u7B14\u6700\u7EC8\u7248</option></select><button class="secondary" data-print-paper>\u6253\u5370</button>'}
+      ${focusView ? "" : '<select id="printVersion" class="toolbar-button"><option value="blank">\u6253\u5370\u7A7A\u767D\u7248</option><option value="answer">\u6253\u5370\u9ED1\u7B14\u4F5C\u7B54\u7248</option><option value="final">\u6253\u5370\u7EA2\u7B14\u6700\u7EC8\u7248</option></select><button class="secondary" data-print-paper>\u6253\u5370</button>'}
     </div>
     ${wrongTools}
     <div class="worksheet-wrap"><div id="activeWorksheet" class="worksheet-pages">${renderWorksheetPagesHtml(paper)}</div></div></section>`;
@@ -3676,12 +7848,17 @@
     const blackLayer = createDrawingLayer(worksheet, { color: "#1e252b", enabled: ["unstarted", "writing"].includes(paper.status), strokes: paper.blackStrokes, onChange: (strokes) => handlePaperStrokeChange(paper, "black", strokes) });
     const redLayer = createDrawingLayer(worksheet, { color: "#d93636", enabled: paper.status === "review", strokes: paper.redStrokes, onChange: (strokes) => handlePaperStrokeChange(paper, "red", strokes) });
     state.drawing = { black: blackLayer, red: redLayer, active: mode };
+    bindPaperPanGesture(state.paperTransform);
+    applyPaperTransform(state.paperTransform);
   }
   async function renderReading() {
     const readings = (await ensureReadingSeeds()).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
     const active = readings.find((item) => item.id === state.activeReadingId);
     if (active) {
       main.innerHTML = renderReader(active);
+      if (active.type === "file-book" && ["epub", "equb"].includes(active.fileKind)) {
+        void mountEpubReader(active);
+      }
       return;
     }
     const categories = [...new Set(readings.map((item) => item.category || "\u7ED8\u672C"))];
@@ -3705,11 +7882,33 @@
     return `<article class="reader fullscreen-reader text-reader"><div class="reader-floating-toolbar"><button class="primary" data-speak-all>\u25B6 \u8FDE\u7EED\u6717\u8BFB</button><button class="secondary" data-stop-speech>\u25A0 \u505C\u6B62</button><select id="traceMode"><option value="none">\u666E\u901A\u9605\u8BFB</option><option value="overlay">\u8986\u76D6\u539F\u6587\u63CF\u7EA2</option><option value="practice">\u63CF\u7EA2 + \u4EFF\u5199</option></select><button class="primary" data-exit-reader>\u9000\u51FA\u9605\u8BFB</button></div><h2>${escapeHtml2(item.title)}</h2>${paragraphs.map((paragraph, index) => `<div class="paragraph-wrap"><p class="reading-paragraph" data-paragraph-index="${index}" data-text="${escapeHtml2(paragraph)}">${tokenHtml(paragraph, item.language)}</p><div class="trace-extra"></div></div>`).join("")}</article>`;
   }
   function renderFileBookReader(item) {
-    const sourceUrl = escapeHtml2(item.sourceUrl || "");
+    const source = String(item.sourceUrl || "").trim();
+    const sourceUrl = escapeHtml2(source);
     const title = escapeHtml2(item.title);
     const kind = String(item.fileKind || "file").toUpperCase();
-    const body = item.fileKind === "pdf" ? `<iframe class="book-file-frame" src="${sourceUrl}#toolbar=0&navpanes=0" title="${title}" loading="eager"></iframe>` : `<div class="book-file-fallback"><h2>${title}</h2><p>${kind} \u6587\u4EF6\u5DF2\u8F7D\u5165\u3002\u5F53\u524D\u6D4F\u89C8\u5668\u5982\u679C\u4E0D\u80FD\u76F4\u63A5\u9884\u89C8\uFF0C\u8BF7\u7528\u7CFB\u7EDF\u9605\u8BFB\u5668\u6253\u5F00\u3002</p><a class="primary" href="${sourceUrl}" target="_blank" rel="noopener">\u6253\u5F00\u4E66\u7C4D</a></div>`;
-    return `<article class="reader fullscreen-reader file-book-reader"><div class="reader-floating-toolbar"><strong>${title}</strong><span>${kind}</span><button class="primary" data-exit-reader>\u9000\u51FA\u9605\u8BFB</button></div>${body}</article>`;
+    const isEpub = ["EPUB", "EQUB"].includes(kind);
+    const openLink = source && !isEpub ? `<a class="secondary book-open-link" href="${sourceUrl}" target="_blank" rel="noopener">\u5728\u65B0\u7A97\u53E3\u6253\u5F00</a>` : "";
+    const fallback = source ? `<div class="book-file-fallback"><h2>${title}</h2><p>${kind === "PDF" ? "PDF \u6587\u4EF6\u5DF2\u8F7D\u5165\u3002\u82E5\u5185\u7F6E\u67E5\u770B\u5668\u6CA1\u6709\u663E\u793A\uFF0C\u8BF7\u70B9\u51FB\u201C\u6253\u5F00\u539F\u6587\u4EF6\u201D\u3002" : `${kind} \u6587\u4EF6\u5DF2\u8F7D\u5165\u3002\u6D4F\u89C8\u5668\u4E0D\u4FDD\u8BC1\u76F4\u63A5\u6392\u7248\u663E\u793A\u6B64\u683C\u5F0F\uFF0C\u8BF7\u4F7F\u7528\u7CFB\u7EDF\u9605\u8BFB\u5668\u6253\u5F00\u3002`}</p><a class="primary" href="${sourceUrl}" target="_blank" rel="noopener">\u6253\u5F00\u539F\u6587\u4EF6</a></div>` : `<div class="book-file-fallback"><h2>${title}</h2><p>\u6CA1\u6709\u627E\u5230\u4E66\u7C4D\u6587\u4EF6\u5730\u5740\uFF0C\u8BF7\u91CD\u65B0\u5BFC\u5165\u6216\u68C0\u67E5 huiben/manifest.json\u3002</p></div>`;
+    const body = isEpub ? '<epub-reader class="epub-reader-frame" data-epub-reader aria-label="EPUB \u7ED8\u672C\u9605\u8BFB\u5668"></epub-reader>' : item.fileKind === "pdf" && source ? `<object class="book-file-frame" data="${sourceUrl}" type="application/pdf" aria-label="${title}">${fallback}</object>` : fallback;
+    return `<article class="reader fullscreen-reader file-book-reader"><div class="reader-floating-toolbar"><strong>${title}</strong><span>${kind}</span>${openLink}<button class="primary" data-exit-reader>\u9000\u51FA\u9605\u8BFB</button></div>${body}</article>`;
+  }
+  async function mountEpubReader(item) {
+    const reader = document.querySelector("[data-epub-reader]");
+    if (!reader || !item.sourceUrl) return;
+    const fallback = (message) => {
+      if (!reader.isConnected) return;
+      reader.outerHTML = `<div class="book-file-fallback"><h2>${escapeHtml2(item.title)}</h2><p>\u5F53\u524D\u6587\u4EF6\u65E0\u6CD5\u88AB\u6D4F\u89C8\u5668\u76F4\u63A5\u8BFB\u53D6\uFF0C\u8BF7\u5728\u6B64\u9875\u9009\u62E9 EPUB/EQUB \u6587\u4EF6\u7EE7\u7EED\u9605\u8BFB\u3002${message ? ` ${escapeHtml2(message)}` : ""}</p><label class="primary file-button">\u9009\u62E9\u6587\u4EF6\u9605\u8BFB<input type="file" accept=".epub,.equb,application/epub+zip" data-local-book-picker></label></div>`;
+      showToast("\u7ED8\u672C\u52A0\u8F7D\u5931\u8D25\uFF0C\u8BF7\u5728\u5F53\u524D\u9875\u9762\u9009\u62E9\u6587\u4EF6");
+    };
+    reader.addEventListener("epub-error", (event) => {
+      const detail = event.detail?.error;
+      fallback(detail?.message || "");
+    }, { once: true });
+    try {
+      await reader.open(item.sourceUrl);
+    } catch (error) {
+      fallback(error?.message || "");
+    }
   }
   function tokenHtml(text, language) {
     return tokenizeForReading(text, language).map((token, index) => `<span class="reading-token" data-token-index="${index}">${escapeHtml2(token)}</span>`).join("");
@@ -3729,7 +7928,7 @@
     const values = Object.fromEntries(new FormData(form));
     const problems = await createProblemsFromForm(values);
     const templateLabel = TEMPLATE_GROUPS[values.subject].find(([key]) => key === values.template)?.[1] || values.template;
-    const title = values.title.trim() || `${values.subject}\xB7${templateLabel}\xB7${problems.length}\u9898\xB7${(/* @__PURE__ */ new Date()).toLocaleString("zh-CN", { hour12: false })}`;
+    const title = values.title.trim() || `${values.subject}\xB7${templateLabel}\xB7${problems.length}\u9898`;
     const paper = createPaperSnapshot({ title, subject: values.subject, orientation: values.orientation, config: values, problems });
     await put("papers", paper);
     showToast("\u8BD5\u5377\u5DF2\u751F\u6210\u5E76\u4FDD\u5B58");
@@ -3946,10 +8145,51 @@
         return;
       }
     }
+    if (event.target.closest("[data-paper-zoom]")) {
+      const button = event.target.closest("[data-paper-zoom]");
+      const delta = Number(button.dataset.paperZoom || 0) * 0.1;
+      const transform = state.paperTransform;
+      if (!transform) return;
+      const previousScale = transform.scale;
+      const nextScale = Math.max(0.6, Math.min(2.4, previousScale + delta));
+      const worksheet = document.querySelector("#activeWorksheet");
+      if (worksheet && previousScale !== nextScale) {
+        const centerX = worksheet.offsetWidth / 2;
+        const centerY = worksheet.offsetHeight / 2;
+        transform.x += centerX * (previousScale - nextScale);
+        transform.y += centerY * (previousScale - nextScale);
+      }
+      transform.scale = nextScale;
+      transform.panMode = false;
+      applyPaperTransform(transform);
+      return;
+    }
+    if (event.target.closest("[data-paper-zoom-reset]")) {
+      const transform = state.paperTransform;
+      if (!transform) return;
+      transform.scale = 1;
+      transform.x = 0;
+      transform.y = 0;
+      transform.panMode = false;
+      applyPaperTransform(transform);
+      return;
+    }
+    if (event.target.closest("[data-paper-pan-toggle]")) {
+      const transform = state.paperTransform;
+      if (!transform) return;
+      transform.panMode = !transform.panMode;
+      state.drawing?.black?.setErase(false);
+      state.drawing?.red?.setErase(false);
+      applyPaperTransform(transform);
+      return;
+    }
     if (event.target.closest("[data-ink-mode]")) {
-      const erase = event.target.closest("[data-ink-mode]").dataset.inkMode === "eraser";
+      const button = event.target.closest("[data-ink-mode]");
+      const erase = button.dataset.inkMode === "eraser";
+      state.paperTransform && (state.paperTransform.panMode = false);
+      applyPaperTransform(state.paperTransform);
       state.drawing?.[state.drawing.active]?.setErase(erase);
-      document.querySelectorAll("[data-ink-mode]").forEach((button) => button.classList.toggle("active", button.dataset.inkMode === (erase ? "eraser" : "pen")));
+      document.querySelectorAll("[data-ink-mode]").forEach((item) => item.classList.toggle("active", item === button || item.dataset.inkMode === (erase ? "eraser" : "pen")));
       return;
     }
     if (event.target.closest('[data-ink-action="undo"]')) return state.drawing?.[state.drawing.active]?.undo();
@@ -4100,6 +8340,11 @@
   function scrollActiveWorksheet(direction) {
     const wrap = document.querySelector(".paper-writing-view .worksheet-wrap, .paper-view .worksheet-wrap");
     if (!wrap) return;
+    if (document.body.classList.contains("paper-focus-active") && state.paperTransform) {
+      state.paperTransform.y += Number(direction) * 90;
+      applyPaperTransform(state.paperTransform);
+      return;
+    }
     wrap.scrollBy({ top: Number(direction) * 90, behavior: "auto" });
   }
   function stopPaperScrollTimer() {
@@ -4160,6 +8405,26 @@
     }
   });
   document.addEventListener("change", async (event) => {
+    if (event.target.matches("[data-local-book-picker]")) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      try {
+        const dataUrl = await readFileAsDataUrl(file);
+        const current = await get("readings", state.activeReadingId);
+        if (!current) throw new Error("\u5F53\u524D\u7ED8\u672C\u8BB0\u5F55\u4E0D\u5B58\u5728\uFF0C\u8BF7\u8FD4\u56DE\u4E66\u67B6\u540E\u91CD\u8BD5");
+        const imported = createFileBookReading(
+          { title: current.title, category: current.category, language: current.language },
+          { name: file.name, type: file.type, size: file.size, dataUrl },
+          { id: current.id }
+        );
+        await put("readings", imported);
+        showToast("\u5DF2\u8F7D\u5165\u7ED8\u672C\uFF0C\u6B63\u5728\u6253\u5F00");
+        return renderReading();
+      } catch (error) {
+        showToast(error.message || "\u7ED8\u672C\u8F7D\u5165\u5931\u8D25");
+      }
+      return;
+    }
     if (event.target.id === "subjectSelect") {
       state.generatorConfig = null;
       state.generatorSubject = event.target.value;

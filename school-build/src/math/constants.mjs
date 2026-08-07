@@ -16,6 +16,7 @@ export const TEMPLATE_TYPES = Object.freeze({
   DIVISION: 'division',
   CURRENCY: 'currency',
   UNIT_CONVERSION: 'unit-conversion',
+  CLOCK_READING: 'clock-reading',
   WORD_PROBLEM: 'word-problem',
 });
 
@@ -33,4 +34,3 @@ export const ORIENTATIONS = Object.freeze(['portrait', 'landscape']);
 
 /** 支持的二元运算名称。 */
 export const BINARY_OPERATIONS = Object.freeze(['addition', 'subtraction']);
-

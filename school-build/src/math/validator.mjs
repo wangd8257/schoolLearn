@@ -48,7 +48,11 @@ export function validateProblem(problem, options = {}) {
     if (typeof problem.answer === 'number') {
       values.push(problem.answer);
     }
-    const enforceUpperBound = ![TEMPLATE_TYPES.CURRENCY, TEMPLATE_TYPES.UNIT_CONVERSION].includes(problem.type);
+    const enforceUpperBound = ![
+      TEMPLATE_TYPES.CURRENCY,
+      TEMPLATE_TYPES.UNIT_CONVERSION,
+      TEMPLATE_TYPES.CLOCK_READING,
+    ].includes(problem.type);
     if (values.some((value) => !Number.isFinite(value) || value < 0 || (enforceUpperBound && value > limit))) {
       errors.push('存在超出 0～N 的数值');
     }
@@ -140,6 +144,22 @@ export function validateProblem(problem, options = {}) {
   if ([TEMPLATE_TYPES.CURRENCY, TEMPLATE_TYPES.UNIT_CONVERSION].includes(problem.type)) {
     if (problem.answer !== problem.meta?.sourceValue * problem.meta?.factor) {
       errors.push('单位换算结果不正确');
+    }
+  }
+
+  if (problem.type === TEMPLATE_TYPES.CLOCK_READING) {
+    const [hour, minute] = problem.operands;
+    const expectedAnswer = `${hour}:${String(minute).padStart(2, '0')}`;
+    if (!Number.isInteger(hour) || hour < 1 || hour > 12) {
+      errors.push('钟表小时必须是 1～12');
+    }
+    if (!Number.isInteger(minute) || minute < 0 || minute > 59 || minute % 5 !== 0) {
+      errors.push('钟表分钟必须是 0～55 且为 5 的倍数');
+    }
+    if (problem.answer !== expectedAnswer
+      || problem.meta?.hour !== hour
+      || problem.meta?.minute !== minute) {
+      errors.push('钟表题答案与题面时间不一致');
     }
   }
 

@@ -19,6 +19,7 @@ test('数学普通题降低每行列数，避免横向题目过于紧凑', () =>
   assert.equal(worksheetColumns({ orientation:'landscape', config:{ template:'horizontal' } }), 4);
   assert.equal(worksheetColumns({ orientation:'portrait', config:{ template:'multiply' } }), 4);
   assert.equal(worksheetColumns({ orientation:'portrait', config:{ template:'divide' } }), 4);
+  assert.equal(worksheetColumns({ orientation:'portrait', config:{ template:'clock' } }), 2);
 });
 
 test('比较、竖式、列式和应用题使用各自专属版式', () => {
@@ -26,9 +27,11 @@ test('比较、竖式、列式和应用题使用各自专属版式', () => {
   const vertical = renderProblemHtml({ kind:'vertical', operands:[7, 13], operators:['+'], answer:20, expression:'7 + 13' }, 1);
   const equation = renderProblemHtml({ kind:'equation', prompt:'比 3 多 5 的数是多少？', processBoxes:[{kind:'equation'}] }, 2);
   const wordProblem = renderProblemHtml({ kind:'word-problem', prompt:'应用题', meta:{steps:2} }, 3);
+  const clock = renderProblemHtml({ kind:'clock', prompt:'请在钟面上画出 3 时 30 分', meta:{hour:3, minute:30} }, 4);
 
   assert.match(comparison, /comparison-circle/);
   assert.equal((comparison.match(/answer-box/g) || []).length, 0);
+  assert.doesNotMatch(comparison, />○</);
   assert.match(vertical, /vertical-calculation/);
   assert.match(vertical, /<span class="vertical-operator-cell">\+<\/span>/);
   assert.equal((vertical.match(/vertical-digit-box/g) || []).length, 2);
@@ -36,6 +39,18 @@ test('比较、竖式、列式和应用题使用各自专属版式', () => {
   assert.match(equation, /answer-label/);
   assert.equal((wordProblem.match(/列式/g) || []).length, 2);
   assert.match(wordProblem, /answer-label/);
+  assert.match(clock, /clock-face-svg/);
+  assert.equal((clock.match(/clock-answer-box/g) || []).length, 2);
+  assert.match(clock, /clock-hour-hand/);
+  assert.match(clock, /clock-minute-hand/);
+});
+
+test('英语短句描红只展示一遍完整示范文本', () => {
+  const sentence = renderProblemHtml({ kind:'english-sentence', prompt:'Good morning, teacher.' }, 0);
+
+  assert.equal((sentence.match(/english-sample/g) || []).length, 1);
+  assert.equal((sentence.match(/english-ghost/g) || []).length, 1);
+  assert.match(sentence, /Good morning, teacher\./);
 });
 
 test('列式计算和应用题按整行排版，填写框撑满剩余宽度', () => {
@@ -66,16 +81,23 @@ test('小屏作答工具栏不裁剪控制按钮，填写框改为整行且页�
   assert.match(stylesheet, /html,\s*body\s*\{[^}]*overflow-x:\s*hidden/s);
   assert.match(stylesheet, /\.worksheet-wrap\s*\{[^}]*overflow-x:\s*hidden/s);
   assert.match(stylesheet, /\.tabs\s*\{[^}]*flex-wrap:\s*wrap[^}]*overflow-x:\s*hidden/s);
+  assert.match(stylesheet, /\.comparison-circle\s*\{[^}]*width:\s*1\.45em/s);
+  assert.match(stylesheet, /\.english-sentence-writing \.english-sample\s*\{[^}]*overflow:\s*visible/s);
+  assert.match(stylesheet, /\.paper-zoom-controls\s*\{/);
+  assert.match(stylesheet, /@media \(max-width:\s*760px\)[\s\S]*\.worksheet-lines \.ten-diagram\s*\{[^}]*min-height:\s*clamp\(108px,\s*24vw,\s*190px\)[^}]*overflow:\s*visible/s);
+  assert.match(stylesheet, /@media \(max-width:\s*760px\)[\s\S]*\.worksheet-layout-make-ten,\s*\.worksheet-layout-break-ten\s*\{[^}]*grid-template-columns:\s*repeat\(2/s);
+  assert.match(stylesheet, /@media \(max-width:\s*760px\)[\s\S]*\.ten-process\s*\{[^}]*transform:\s*none/s);
 });
 
-test('试卷网格按 A4 页面从上到下紧密排布，预览不再固定只生成 12 题', () => {
+test('试卷网格按 A4 页面高度均匀排布，预览不再固定只生成 12 题', () => {
   const stylesheet = readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
   const appSource = readFileSync(new URL('../../src/app.js', import.meta.url), 'utf8');
 
-  assert.match(stylesheet, /\.worksheet-lines\s*\{[^}]*align-content:\s*start/s);
+  assert.match(stylesheet, /\.worksheet-lines\s*\{[^}]*grid-auto-rows:\s*minmax\(34px,\s*1fr\)/s);
+  assert.match(stylesheet, /\.worksheet-lines\s*\{[^}]*align-content:\s*stretch/s);
   assert.match(appSource, /Math\.min\(Number\(values\.count \|\| 12\),\s*100\)/);
   assert.match(appSource, /if \(layout\.includes\('multiply'\) \|\| layout\.includes\('divide'\)\) return 24/);
-  assert.match(appSource, /return paper\.orientation === 'landscape' \? 24 : 24/);
+  assert.match(appSource, /return paper\.orientation === 'landscape' \? 36 : 36/);
 });
 
 test('竖式题数字按位补齐并把运算符放在最左一格', () => {
@@ -144,6 +166,9 @@ test('生成器明确区分列式计算和应用题且不暴露无效参数', ()
   assert.match(appSource, /\['hanzi-stroke','按笔画练字'\]/);
   assert.match(appSource, /equation:'equation'/);
   assert.match(appSource, /previewWorksheetButton/);
+  assert.doesNotMatch(appSource, /\['pinyin-trace','拼音四线三格'\]/);
+  assert.match(appSource, /values\.template === 'composition'/);
+  assert.match(appSource, /\['composition', 'english-lines'\]\.includes\(values\.template\)/);
   assert.doesNotMatch(appSource, /name="min"/);
   assert.doesNotMatch(appSource, /name="showTranslation"/);
   assert.match(appSource, /operationTemplates\s*=\s*\['horizontal', 'missing', 'vertical', 'equation'\]/);

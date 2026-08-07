@@ -1,5 +1,7 @@
 ﻿import { getAll, put, remove, uid } from './db.js';
 
+import { getEmbeddedHuibenBooks } from './data/huiben-manifest.mjs';
+
 let speechRun = 0;
 
 /** 初始化阅读资料，移除旧内置绘本，并同步 huiben 文件夹清单。 */
@@ -10,24 +12,31 @@ export async function ensureReadingSeeds() {
 
   const keptItems = existing.filter((item) => !item.builtin);
   const knownIds = new Set(keptItems.map((item) => item.id));
+  const knownHuibenFiles = new Set(keptItems.filter((item) => item.source === 'huiben').map((item) => item.fileName));
   const localBooks = await loadHuibenBooks();
-  const newBooks = localBooks.filter((book) => !knownIds.has(book.id));
+  const newBooks = localBooks.filter((book) => !knownIds.has(book.id) && !knownHuibenFiles.has(book.fileName));
   if (newBooks.length) await Promise.all(newBooks.map((book) => put('readings', book)));
   return getAll('readings');
 }
 
-/** 从 huiben/manifest.json 读取静态书籍清单。 */
+/**
+ * 读取 huiben 静态书籍清单。
+ * @returns {Promise<Array<Record<string, unknown>>>} 规范化前的书目条目。
+ */
 async function loadHuibenBooks() {
-  if (typeof fetch !== 'function') return [];
+  const embeddedBooks = () => getEmbeddedHuibenBooks().map((entry) => createHuibenBookReading(entry));
+  if (typeof fetch !== 'function' || globalThis.location?.protocol === 'file:') {
+    return embeddedBooks();
+  }
   try {
     const response = await fetch('./huiben/manifest.json', { cache: 'no-store' });
-    if (!response.ok) return [];
+    if (!response.ok) return embeddedBooks();
     const manifest = await response.json();
     const books = Array.isArray(manifest.books) ? manifest.books : [];
-    return books.map((entry) => createHuibenBookReading(entry));
+    return books.length ? books.map((entry) => createHuibenBookReading(entry)) : embeddedBooks();
   } catch (error) {
     console.warn('huiben 清单读取失败', error);
-    return [];
+    return embeddedBooks();
   }
 }
 

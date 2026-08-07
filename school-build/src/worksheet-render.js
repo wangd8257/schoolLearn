@@ -56,7 +56,8 @@ export function worksheetLayoutClass(paper = {}) {
     missing: 'horizontal', compare: 'horizontal', 'chain-add': 'chain-add', 'chain-sub': 'chain-sub',
     mixed: 'mixed', 'make-ten': 'make-ten', 'break-ten': 'break-ten', vertical: 'vertical',
     'carry-add': 'horizontal', 'borrow-sub': 'horizontal', multiply: 'multiply', divide: 'divide',
-    currency: 'currency', unit: 'unit', 'hanzi-trace': 'hanzi-practice', 'hanzi-stroke': 'hanzi-practice', composition: 'hanzi-practice',
+    currency: 'currency', unit: 'unit', clock: 'clock', 'clock-reading': 'clock',
+    'hanzi-trace': 'hanzi-practice', 'hanzi-stroke': 'hanzi-practice', composition: 'hanzi-practice',
     control: 'hanzi-practice', 'pinyin-trace': 'english-practice', 'english-word': 'english-practice',
     'english-sentence': 'english-practice', 'english-lines': 'english-practice',
   }[template] || template;
@@ -71,6 +72,7 @@ export function worksheetColumns(paper = {}) {
   if (layout.includes('equation') || layout.includes('word-problem')) return 1;
   if (layout.includes('multiply') || layout.includes('divide')) return 4;
   if (layout.includes('currency') || layout.includes('unit')) return 2;
+  if (layout.includes('clock')) return 2;
   if (layout.includes('hanzi-practice') || layout.includes('english-practice')) return 1;
   return paper.orientation === 'landscape' ? 4 : 3;
 }
@@ -94,7 +96,7 @@ function renderTenDiagram(problem, operator, diagramClass) {
   if (diagramClass === 'make-ten-diagram') {
     return `<div class="problem ten-diagram make-ten-diagram">${expression}<div class="ten-process make-ten-process"><div class="ten-anchor"><span class="ten-anchor-line"></span><span class="ten-target-number">10</span></div><div class="ten-split"><div class="ten-slashes"><span>/</span><span>\\</span></div><div class="ten-split-boxes"><span class="answer-box ten-small-box"></span><span class="answer-box ten-small-box"></span></div></div></div></div>`;
   }
-  return `<div class="problem ten-diagram break-ten-diagram">${expression}<div class="ten-process break-ten-process"><div class="ten-split"><div class="ten-slashes"><span>/</span><span>\\</span></div><div class="ten-split-boxes"><span class="answer-box ten-small-box"></span><span class="answer-box ten-small-box"></span></div></div><div class="ten-result-tree"><span class="ten-result-operator">-</span><span class="ten-result-box-wrap"><span class="answer-box ten-result-box"></span></span></div></div></div>`;
+  return `<div class="problem ten-diagram break-ten-diagram">${expression}<div class="ten-process break-ten-process"><div class="ten-split"><div class="ten-slashes"><span>/</span><span>\\</span></div><div class="ten-split-boxes"><span class="answer-box ten-small-box"></span><span class="answer-box ten-small-box"></span></div></div><div class="ten-result-tree"><span class="ten-result-box-wrap"><span class="answer-box ten-result-box"></span></span></div></div></div>`;
 }
 /** 渲染凑十法过程图，拆分框固定对准第二个数字。 */
 function renderMakeTenDiagram(problem) {
@@ -119,7 +121,8 @@ function renderHanziPractice(problem) {
   const text = String(problem.prompt || '').trim();
   const characters = Array.from(text).filter((character) => character.trim());
   const source = characters.length ? characters : [''];
-  const samples = source.length > 1 ? source : Array(3).fill(source[0]);
+  const isBlankComposition = (problem.kind || problem.type) === 'composition';
+  const samples = isBlankComposition ? [] : (source.length > 1 ? source : Array(3).fill(source[0]));
   const sampleCells = samples.map((character) => `<span class="mizi-cell mizi-sample-cell">${escapeHtml(character)}</span>`).join('');
   const cells = `${sampleCells}${Array.from({ length: Math.max(0, 12 - samples.length) }, () => '<span class="mizi-cell"></span>').join('')}`;
   const strokeHint = Array.isArray(problem.strokeSteps) && problem.strokeSteps.length
@@ -161,8 +164,50 @@ function renderHanziStrokePractice(problem) {
 
 /** 渲染英文四线三格练习行。 */
 function renderEnglishPractice(problem) {
+  const kind = problem.kind || problem.type;
   const text = escapeHtml(problem.prompt || '');
-  return `<div class="problem writing-practice english-writing ${englishFontClass(problem)}"><div class="english-copybook-line"><span class="english-sample">${text}</span><span class="english-ghost">${text}</span><span class="english-ghost">${text}</span><span class="english-ghost">${text}</span></div></div>`;
+  if (kind === 'english-lines') {
+    return `<div class="problem writing-practice english-writing english-blank-writing ${englishFontClass(problem)}"><div class="english-copybook-line" aria-label="空白四线三格"></div></div>`;
+  }
+  const sampleCount = kind === 'english-word' ? 5 : 1;
+  const samples = Array.from({ length: sampleCount }, () => `<span class="english-sample english-ghost">${text}</span>`).join('');
+  return `<div class="problem writing-practice english-writing ${kind === 'english-word' ? 'english-word-writing' : 'english-sentence-writing'} ${englishFontClass(problem)}"><div class="english-copybook-line"><div class="english-copy-row">${samples}</div></div></div>`;
+}
+
+/**
+ * 渲染空白钟面和时间填写框。
+ * @param {Record<string, unknown>} problem 当前钟表认知题。
+ * @param {number} index 题号索引，从 0 开始。
+ * @returns {string} 可打印的钟面题 HTML。
+ */
+function renderClockProblem(problem, index) {
+  const number = `<span class="problem-number">${index + 1}.</span>`;
+  const numbers = Array.from({ length: 12 }, (_, numberIndex) => {
+    const value = numberIndex + 1;
+    const angle = (value * 30 - 90) * Math.PI / 180;
+    const x = 80 + Math.cos(angle) * 56;
+    const y = 80 + Math.sin(angle) * 56 + 5;
+    return `<text x="${x.toFixed(2)}" y="${y.toFixed(2)}">${value}</text>`;
+  }).join('');
+  const ticks = Array.from({ length: 12 }, (_, tickIndex) => {
+    const angle = tickIndex * 30 * Math.PI / 180;
+    const startX = 80 + Math.cos(angle) * 66;
+    const startY = 80 + Math.sin(angle) * 66;
+    const endX = 80 + Math.cos(angle) * 72;
+    const endY = 80 + Math.sin(angle) * 72;
+    return `<line x1="${startX.toFixed(2)}" y1="${startY.toFixed(2)}" x2="${endX.toFixed(2)}" y2="${endY.toFixed(2)}"></line>`;
+  }).join('');
+  const hour = Number(problem.meta?.hour || 1);
+  const minute = Number(problem.meta?.minute || 0);
+  const prompt = problem.prompt || '请写出钟面表示的时间';
+  const handPoint = (angle, length) => ({
+    x: 80 + Math.cos(angle * Math.PI / 180) * length,
+    y: 80 + Math.sin(angle * Math.PI / 180) * length,
+  });
+  const hourPoint = handPoint(((hour % 12) + minute / 60) * 30 - 90, 38);
+  const minutePoint = handPoint(minute * 6 - 90, 53);
+  const hands = `<line class="clock-hour-hand" x1="80" y1="80" x2="${hourPoint.x.toFixed(2)}" y2="${hourPoint.y.toFixed(2)}"></line><line class="clock-minute-hand" x1="80" y1="80" x2="${minutePoint.x.toFixed(2)}" y2="${minutePoint.y.toFixed(2)}"></line>`;
+  return `<div class="problem clock-problem"><div class="clock-heading">${number}${escapeHtml(prompt)}</div><svg class="clock-face-svg" viewBox="0 0 160 160" role="img" aria-label="带时针和分针的钟面">${ticks}<circle cx="80" cy="80" r="70"></circle>${numbers}${hands}<circle class="clock-center" cx="80" cy="80" r="3"></circle></svg><div class="clock-answer-line"><span>时间：</span><span class="answer-box clock-answer-box"></span><span>时</span><span class="answer-box clock-answer-box"></span><span>分</span></div></div>`;
 }
 
 /**
@@ -178,7 +223,7 @@ export function renderProblemHtml(problem, index) {
     return kind === 'make-ten' ? renderMakeTenDiagram(problem) : renderBreakTenDiagram(problem);
   }
   if (kind === 'compare') {
-    return `<div class="problem math-inline">${number}${escapeHtml(problem.prompt || '').replace('○', '<span class="comparison-circle">○</span>')}</div>`;
+    return `<div class="problem math-inline">${number}${escapeHtml(problem.prompt || '').replace('○', '<span class="comparison-circle" aria-label="比较符号"></span>')}</div>`;
   }
   if (kind === 'vertical') {
     return renderVerticalCalculation(problem);
@@ -190,6 +235,9 @@ export function renderProblemHtml(problem, index) {
   if (kind === 'word-problem') {
     const steps = Math.max(1, Number(problem.meta?.steps || problem.meta?.stepCount || problem.steps?.length || 1));
     return `<div class="problem word-problem"><p>${number}${escapeHtml(problem.prompt || '')}</p>${Array.from({ length:steps }, (_, step) => `<div class="word-answer-line"><span class="answer-label">第 ${step + 1} 步列式：</span><span class="answer-box equation-box"></span></div>`).join('')}<div class="word-answer-line"><span class="answer-label">答：</span><span class="answer-box equation-answer-box"></span></div></div>`;
+  }
+  if (kind === 'clock') {
+    return renderClockProblem(problem, index);
   }
   if (kind === 'hanzi-stroke') {
     return renderHanziStrokePractice(problem);

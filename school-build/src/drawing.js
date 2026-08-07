@@ -73,12 +73,14 @@ export function createDrawingLayer(host, options) {
   let frame;
 
   function resize() {
-    const rect = host.getBoundingClientRect();
+    // 使用未经过 CSS transform 的布局尺寸，保证缩放或平移后笔迹仍与题目保持同一坐标系。
+    const width = Math.max(1, host.offsetWidth);
+    const height = Math.max(1, host.offsetHeight);
     const ratio = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = Math.max(1, Math.round(rect.width * ratio));
-    canvas.height = Math.max(1, Math.round(rect.height * ratio));
-    canvas.style.width = `${rect.width}px`;
-    canvas.style.height = `${rect.height}px`;
+    canvas.width = Math.round(width * ratio);
+    canvas.height = Math.round(height * ratio);
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
     context.setTransform(ratio, 0, 0, ratio, 0, 0);
     redraw();
   }

@@ -27,6 +27,7 @@ const ALL_TEMPLATE_TYPES = [
   'division',
   'currency',
   'unit-conversion',
+  'clock-reading',
   'word-problem',
 ];
 
@@ -234,6 +235,17 @@ test('时间、长度、质量、面积和容量单位换算均可指定生成',
     assert.equal(problem.meta.category, category);
     assert.equal(problem.answer, problem.meta.sourceValue * problem.meta.factor);
   }
+});
+
+test('钟表认知题生成 1～12 时和 5 分钟刻度，并可校验', () => {
+  const problem = seededProblem('clock-reading', { limit: 20 });
+
+  assert.equal(problem.layout, 'clock');
+  assert.equal(problem.operands[0] >= 1 && problem.operands[0] <= 12, true);
+  assert.equal(problem.operands[1] >= 0 && problem.operands[1] <= 55, true);
+  assert.equal(problem.operands[1] % 5, 0);
+  assert.equal(problem.answer, `${problem.operands[0]}:${String(problem.operands[1]).padStart(2, '0')}`);
+  assert.equal(validateProblem(problem).valid, true);
 });
 
 test('未指定单位分类时只从当前 N 范围可生成的换算中选择', () => {

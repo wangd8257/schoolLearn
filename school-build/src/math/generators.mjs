@@ -657,6 +657,25 @@ function generateUnitConversion(options) {
 }
 
 /**
+ * 生成钟表认知题，题目展示真实时分针并要求学生填写对应时间。
+ * @param {Record<string, unknown>} options 生成参数，使用 random 生成时分。
+ * @returns {Record<string, unknown>} 钟表认知题。
+ */
+function generateClockReading(options) {
+  const hour = randomInteger(options.random, 1, 12);
+  const minute = randomInteger(options.random, 0, 11) * 5;
+  const minuteText = String(minute).padStart(2, '0');
+  return createProblem(TEMPLATE_TYPES.CLOCK_READING, {
+    prompt: '请写出钟面表示的时间',
+    answer: `${hour}:${minuteText}`,
+    operands: [hour, minute],
+    intermediateResults: [],
+    layout: 'clock',
+    meta: { hour, minute },
+  }, options.limit);
+}
+
+/**
  * 生成 1～3 步应用题，每一步均保持结果在 0～N。
  * @param {Record<string, unknown>} options 生成参数。
  * @returns {Record<string, unknown>} 应用题。
@@ -726,6 +745,7 @@ const GENERATORS = Object.freeze({
   [TEMPLATE_TYPES.DIVISION]: generateDivision,
   [TEMPLATE_TYPES.CURRENCY]: generateCurrency,
   [TEMPLATE_TYPES.UNIT_CONVERSION]: generateUnitConversion,
+  [TEMPLATE_TYPES.CLOCK_READING]: generateClockReading,
   [TEMPLATE_TYPES.WORD_PROBLEM]: generateWordProblem,
 });
 
