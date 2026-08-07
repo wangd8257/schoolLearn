@@ -247,6 +247,22 @@ test('未指定单位分类时只从当前 N 范围可生成的换算中选择',
   assert.equal(problem.answer <= 20, true);
 });
 
+
+test('单位换算题量超过 20 时仍能生成不重复题目', () => {
+  const worksheet = generateWorksheet({
+    template: 'unit-conversion',
+    count: 30,
+    orientation: 'portrait',
+    random: createSeededRandom(20260807),
+    options: { limit: 20, category: UNIT_CATEGORIES.TIME },
+  });
+  const prompts = worksheet.problems.map((problem) => problem.prompt);
+
+  assert.equal(worksheet.problems.length, 30);
+  assert.equal(new Set(prompts).size, prompts.length);
+  assert.ok(worksheet.problems.every((problem) => validateProblem(problem).valid));
+});
+
 test('应用题支持 1 到 3 步并为每步提供列式框和最终作答框', () => {
   for (const steps of [1, 2, 3]) {
     const problem = seededProblem('word-problem', { steps });

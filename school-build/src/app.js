@@ -147,9 +147,12 @@ function generatorFields(subject, template) {
     const strokeFields = template === 'hanzi-stroke'
       ? '<div class="field"><label>按笔画生成字</label><select name="strokePreset"><option value="basic">基础笔画字</option><option value="numbers">数字汉字</option><option value="simple">简单常用字</option></select></div>'
       : '';
+    const hanziFontFields = template === 'hanzi-trace'
+      ? '<div class="field"><label>描红字体</label><select name="hanziFont"><option value="kaiti">楷体</option><option value="songti">宋体</option><option value="heiti">黑体</option><option value="fangsong">仿宋</option></select></div>'
+      : '';
     return `
     <div class="field"><label>练习内容（每行一项）</label><textarea name="customContent" placeholder="一行可输入多个字，例如：你好"></textarea></div>
-    ${strokeFields}`;
+    ${hanziFontFields}${strokeFields}`;
   }
   const operationTemplates = ['horizontal', 'missing', 'vertical', 'equation'];
   const chainTemplates = ['chain-add', 'chain-sub', 'mixed'];
@@ -409,7 +412,8 @@ async function createProblemsFromForm(values) {
   if (values.subject !== '数学') {
     const lines = String(values.customContent || '').split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
     if (values.template === 'hanzi-stroke') return createStrokePracticeProblems(values, lines);
-    return (lines.length ? lines : ['请在此描写']).map((line,index) => ({ id:`problem-${index+1}`, kind:values.template, prompt:line, answer:'', boxes:0 }));
+    const meta = values.template === 'hanzi-trace' ? { font: values.hanziFont || 'kaiti' } : {};
+    return (lines.length ? lines : ['请在此描写']).map((line,index) => ({ id:`problem-${index+1}`, kind:values.template, prompt:line, answer:'', boxes:0, meta }));
   }
   const module = await import('./math/index.mjs');
   const templateMap = {

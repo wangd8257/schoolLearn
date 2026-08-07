@@ -130,7 +130,27 @@ function createPathCandidates(occupied, length, random) {
  * @param {() => number} random 随机数生成函数。
  * @returns {number[][]} 与词条顺序一一对应的棋盘路径。
  */
-function createScatteredSolutionPaths(solutionWords, random) {
+
+/**
+ * 生成三字词专用的 3×3 分块保底路径，避免随机铺路在个别种子下失败。
+ * @param {() => number} random 随机数生成函数。
+ * @returns {number[][]} 覆盖全盘且每段上下左右相邻的三格路径。
+ */
+function createThreeCharacterFallbackPaths(random) {
+  const paths = [];
+  for (let blockRow = 0; blockRow < BOARD_SIDE; blockRow += 3) {
+    for (let blockColumn = 0; blockColumn < BOARD_SIDE; blockColumn += 3) {
+      const vertical = random() >= 0.5;
+      for (let offset = 0; offset < 3; offset += 1) {
+        const path = vertical
+          ? [0, 1, 2].map((delta) => (blockRow + delta) * BOARD_SIDE + blockColumn + offset)
+          : [0, 1, 2].map((delta) => (blockRow + offset) * BOARD_SIDE + blockColumn + delta);
+        paths.push(path);
+      }
+    }
+  }
+  return shuffle(paths, random);
+}function createScatteredSolutionPaths(solutionWords, random) {
   const orderedWords = solutionWords
     .map((solution, index) => ({ index, length: [...solution.word].length }))
     .sort((left, right) => right.length - left.length || left.index - right.index);
@@ -163,6 +183,7 @@ function createScatteredSolutionPaths(solutionWords, random) {
     if (!failed && occupied.every(Boolean)) return paths;
   }
 
+  if (solutionWords.every((solution) => [...solution.word].length === 3)) return createThreeCharacterFallbackPaths(random);
   throw new RangeError('无法为当前词库生成分散的四方向消除路径');
 }
 
@@ -214,7 +235,8 @@ function createSolutionWords(customWords, builtInWords, allowedWordLengths, rand
     const pool = pools.get(length);
     if (!pool?.length) throw new RangeError(`内置词库缺少 ${length} 字词，无法填满棋盘`);
     const cursor = cursors.get(length) ?? 0;
-    selected.push({ word: pool[cursor % pool.length], source: 'built-in' });
+    if (cursor >= pool.length) throw new RangeError(`内置词库缺少足够多的不重复 ${length} 字词，无法填满棋盘`);
+    selected.push({ word: pool[cursor], source: 'built-in' });
     cursors.set(length, cursor + 1);
   }
   return selected;

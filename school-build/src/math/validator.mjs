@@ -48,7 +48,8 @@ export function validateProblem(problem, options = {}) {
     if (typeof problem.answer === 'number') {
       values.push(problem.answer);
     }
-    if (values.some((value) => !Number.isFinite(value) || value < 0 || value > limit)) {
+    const enforceUpperBound = ![TEMPLATE_TYPES.CURRENCY, TEMPLATE_TYPES.UNIT_CONVERSION].includes(problem.type);
+    if (values.some((value) => !Number.isFinite(value) || value < 0 || (enforceUpperBound && value > limit))) {
       errors.push('存在超出 0～N 的数值');
     }
   }

@@ -61,6 +61,7 @@ export function eraseStrokesAtPoint(strokes, point, radius = 0.025) {
 export function createDrawingLayer(host, options) {
   const canvas = document.createElement('canvas');
   canvas.className = 'ink-layer';
+  canvas.style.touchAction = 'none';
   canvas.setAttribute('aria-label', `${options.color === '#d93636' ? '红笔' : '黑笔'}书写层`);
   canvas.classList.toggle('disabled', !options.enabled);
   host.appendChild(canvas);

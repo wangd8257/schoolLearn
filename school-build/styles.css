@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   --ink: #24323d;
   --muted: #70808c;
   --paper: #fffdf8;
@@ -109,7 +109,7 @@ button { cursor: pointer; }
 .problem { min-width: 0; min-height: 34px; display: flex; align-items: center; gap: 5px; word-break: keep-all; overflow-wrap: normal; }
 .math-inline { white-space: nowrap; flex-wrap: nowrap; line-height: 1.45; }
 .answer-box { display: inline-block; min-width: 42px; height: 30px; border: 1.5px solid #555; vertical-align: middle; }
-.process-diagram { grid-column: span 2; border: 1px solid #d3d3d3; padding: 10px; }
+.process-diagram { grid-column: 1 / -1; border: 1px solid #d3d3d3; padding: 10px; }
 .process-boxes { display: flex; justify-content: center; gap: 9px; margin-top: 10px; }
 .process-boxes .answer-box { width: 34px; min-width: 34px; }
 .problem-number { flex: 0 0 auto; font: 600 13px var(--font); color: #59636a; }
@@ -122,16 +122,14 @@ button { cursor: pointer; }
 .vertical-result-cells { grid-column: 2 / -1; display: grid; grid-template-columns: repeat(var(--digits, 2), var(--cell)); }
 .vertical-digit-box { min-width: 0; border: 1.5px solid #555; }
 .worksheet-layout-make-ten, .worksheet-layout-break-ten { gap: 18px 22px; align-items: start; }
-.ten-diagram { position: relative; display: grid; gap: 1px; justify-items: start; min-height: 88px; align-items: start; font: 20px "Times New Roman", serif; overflow: visible; }
-.ten-formula { display: grid; grid-template-columns: auto auto minmax(44px, auto) auto auto; gap: 6px; align-items: center; white-space: nowrap; }
-.ten-target-number { min-width: 44px; text-align: center; }
+.ten-diagram { display: grid; grid-template-columns: repeat(5, max-content); column-gap: 7px; row-gap: 2px; justify-content: center; justify-items: center; align-items: start; min-height: 102px; font: 20px "Times New Roman", serif; overflow: visible; }
+.ten-operand, .ten-operator { min-height: 30px; display: grid; place-items: center; line-height: 1; }
+.ten-target-number { min-width: 0; text-align: center; }
 .ten-answer-box { width: 34px; min-width: 34px; height: 28px; }
-.ten-tree { display: grid; grid-template-columns: 30px 30px; grid-template-rows: 12px 24px; column-gap: 4px; align-items: center; text-align: center; margin-top: -2px; justify-self: end; }
-.ten-branch-line { color: #1d2429; font-size: 18px; line-height: 1; }
-.ten-left-branch { grid-column: 1; grid-row: 1; align-self: end; justify-self: center; transform: translateX(6px); }
-.ten-right-branch { grid-column: 2; grid-row: 1; align-self: end; justify-self: center; transform: translateX(-6px); }
-.ten-split-left { grid-column: 1; grid-row: 2; }
-.ten-split-right { grid-column: 2; grid-row: 2; }
+.ten-tree { grid-column: 3; display: grid; grid-template-columns: 30px 30px; grid-template-rows: 10px 24px; column-gap: 5px; row-gap: 1px; align-items: end; justify-items: center; justify-self: center; margin-top: -2px; }
+.ten-branch-line { width: 24px; height: 9px; border-top: 1.5px solid #1d2429; }
+.ten-left-branch { transform: rotate(28deg) translate(3px, 2px); transform-origin: right center; }
+.ten-right-branch { transform: rotate(-28deg) translate(-3px, 2px); transform-origin: left center; }
 .ten-small-box { width: 30px; min-width: 30px; height: 22px; }
 .equation-calculation { grid-column: 1 / -1; display: block; min-height: 154px; font-family: "KaiTi", "STKaiti", serif; line-height: 1.8; }
 .equation-calculation p { margin: 0 0 10px; white-space: normal; overflow-wrap: anywhere; }
@@ -146,6 +144,10 @@ button { cursor: pointer; }
 .practice-label { margin: 0 0 8px; font: 700 16px "KaiTi", "STKaiti", serif; }
 .mizi-row { display: grid; grid-template-columns: repeat(12, 1fr); gap: 0; margin-bottom: 12px; }
 .mizi-cell { position: relative; aspect-ratio: 1; display: grid; place-items: center; border: 1px solid #d2d2d2; margin-left: -1px; font: 42px "KaiTi", "STKaiti", serif; color: #222; }
+.hanzi-font-kaiti .mizi-cell, .hanzi-font-kaiti .practice-label { font-family: "KaiTi", "STKaiti", serif; }
+.hanzi-font-songti .mizi-cell, .hanzi-font-songti .practice-label { font-family: "SimSun", "Songti SC", serif; }
+.hanzi-font-heiti .mizi-cell, .hanzi-font-heiti .practice-label { font-family: "SimHei", "Microsoft YaHei", sans-serif; }
+.hanzi-font-fangsong .mizi-cell, .hanzi-font-fangsong .practice-label { font-family: "FangSong", "STFangsong", serif; }
 .mizi-cell:first-child { margin-left: 0; }
 .mizi-sample-cell { color: #8e8e8e; }
 .stroke-progress-svg { position: relative; z-index: 1; width: 70%; height: 70%; }
@@ -162,7 +164,7 @@ button { cursor: pointer; }
 .english-sample, .english-ghost { display: flex; align-items: center; min-height: 72px; white-space: nowrap; overflow: hidden; }
 .english-sample { color: #222; }
 .english-ghost { color: rgba(40, 40, 40, .18); }
-.ink-layer { position: absolute; inset: 0; z-index: 4; touch-action: auto; }
+.ink-layer { position: absolute; inset: 0; z-index: 4; touch-action: none; }
 .ink-layer.disabled { pointer-events: none; }
 .ink-layer.eraser-mode { cursor: cell; }
 .wrong-book-panel { display: grid; gap: 10px; margin-bottom: 12px; }
@@ -248,8 +250,13 @@ button { cursor: pointer; }
   .metric-grid, .entry-grid, .paper-grid { grid-template-columns: 1fr; }
   .form-layout, .reading-layout, .match-layout { grid-template-columns: 1fr; }
   .worksheet-wrap { margin-inline: -14px; border-radius: 0; }
-  .worksheet { min-width: 680px; }
-  .worksheet.landscape { min-width: 900px; }
+  .worksheet { min-width: 0; width: 100%; }
+  .worksheet.landscape { min-width: 0; width: 100%; }
+  .worksheet-lines { grid-template-columns: 1fr; gap: 16px 0; }
+  .problem { align-items: flex-start; }
+  .math-inline { white-space: normal; }
+  .word-answer-line { flex-wrap: wrap; }
+  .word-answer-line .answer-box { width: 100%; }
   .reading-list { grid-template-columns: repeat(2, minmax(0,1fr)); }
   .picture-editor-pages, .reading-create-options { grid-template-columns: 1fr; }
   .picture-page { min-height: 430px; }

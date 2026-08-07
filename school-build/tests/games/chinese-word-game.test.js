@@ -68,6 +68,15 @@ test('汉字预埋路径打散分布，不再按整板蛇形连续切段', () =>
   assert.ok(adjacentBoundaries < game.solutionPaths.length / 3);
 });
 
+
+test('三字词模式使用不重复答案词', () => {
+  const game = createChineseWordGame({ allowedWordLengths: [3], seed: 1 });
+  const words = game.solutionPaths.map(({ word }) => word);
+
+  assert.equal(words.length, 27);
+  assert.equal(new Set(words).size, words.length);
+});
+
 test('路径允许上下左右转弯，拒绝斜连、跳格和重复格', () => {
   const board = Array.from({ length: 81 }, (_, index) => String(index));
 

@@ -37,11 +37,11 @@ test('英语图卡描述可离线使用且同一单词生成结果稳定', () =>
 test('常见核心词使用可辨认且完全不同的离线视觉', () => {
   const expectedEmoji = {
     apple: '🍎', banana: '🍌', cat: '🐱', dog: '🐶', car: '🚗', bus: '🚌',
-    duck: '🦆', eye: '👁️', hand: '✋', father: '👨', mother: '👩', pencil: '✏️', book: '📖',
+    duck: '🦆', chicken: '🐥', eye: '👁️', hand: '✋', father: '👨', mother: '👩', pencil: '✏️', book: '📖',
   };
   const coreWords = [
     'apple', 'banana', 'cat', 'dog', 'car', 'bus', 'red', 'blue',
-    'duck', 'eye', 'hand', 'one', 'two', 'father', 'mother', 'pencil', 'book',
+    'duck', 'chicken', 'eye', 'hand', 'one', 'two', 'father', 'mother', 'pencil', 'book',
   ];
   const visuals = coreWords.map((word) => ENGLISH_WORDS.find((entry) => entry.word === word).visual);
 

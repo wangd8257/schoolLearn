@@ -19,6 +19,21 @@ function classNames(...values) {
   return values.filter(Boolean).join(' ');
 }
 
+const HANZI_FONT_CLASSES = Object.freeze({
+  kaiti: 'hanzi-font-kaiti',
+  songti: 'hanzi-font-songti',
+  heiti: 'hanzi-font-heiti',
+  fangsong: 'hanzi-font-fangsong',
+});
+
+/**
+ * 根据题目元数据返回安全的汉字练习字体类名。
+ * @param {Record<string, unknown>} problem 当前题目对象。
+ * @returns {string} 已白名单校验的字体类名。
+ */
+function hanziFontClass(problem) {
+  return HANZI_FONT_CLASSES[problem.meta?.font] || HANZI_FONT_CLASSES.kaiti;
+}
 /** 根据模板识别试卷整体版式。 */
 export function worksheetLayoutClass(paper = {}) {
   const template = paper.config?.template || paper.problems?.[0]?.kind || paper.problems?.[0]?.type || 'horizontal';
@@ -53,18 +68,28 @@ export function renderWorksheetMetaHtml(paper = {}) {
   return '<div class="worksheet-meta-line"><span>姓名 <i></i></span><span>日期 <i></i></span><span>用时 <i></i></span></div>';
 }
 
-/** 渲染凑十法过程图，保留两个拆分数字供孩子填写。 */
+/**
+ * 渲染凑十法或破十法过程图。
+ * @param {Record<string, unknown>} problem 当前题目对象。
+ * @param {'+'|'-'} operator 当前运算符。
+ * @param {'make-ten-diagram'|'break-ten-diagram'} diagramClass 题型样式类名。
+ * @returns {string} 对齐后的过程图 HTML。
+ */
+function renderTenDiagram(problem, operator, diagramClass) {
+  const [left = '', right = ''] = problem.operands || [];
+  const treeClass = diagramClass === 'break-ten-diagram' ? 'break-ten-tree' : '';
+  return `<div class="problem ten-diagram ${diagramClass}"><span class="ten-operand ten-left-operand">${escapeHtml(left)}</span><span class="ten-operator">${operator}</span><span class="ten-operand ten-target-number">${escapeHtml(right)}</span><span class="ten-operator">=</span><span class="answer-box ten-answer-box"></span><div class="ten-tree ${treeClass}"><div class="ten-branch-line ten-left-branch"></div><div class="ten-branch-line ten-right-branch"></div><span class="answer-box ten-small-box ten-split-left"></span><span class="answer-box ten-small-box ten-split-right"></span></div></div>`;
+}
+
+/** 渲染凑十法过程图，拆分框固定对准第二个数字。 */
 function renderMakeTenDiagram(problem) {
-  const [left = '', right = ''] = problem.operands || [];
-  return `<div class="problem ten-diagram make-ten-diagram"><div class="ten-formula"><span>${escapeHtml(left)}</span><span>+</span><span class="ten-target-number">${escapeHtml(right)}</span><span>=</span><span class="answer-box ten-answer-box"></span></div><div class="ten-tree"><div class="ten-branch-line ten-left-branch"></div><div class="ten-branch-line ten-right-branch"></div><span class="answer-box ten-small-box ten-split-left"></span><span class="answer-box ten-small-box ten-split-right"></span></div></div>`;
+  return renderTenDiagram(problem, '+', 'make-ten-diagram');
 }
 
-/** 渲染破十法过程图，左侧拆成 10 与余数，右侧继续相减。 */
+/** 渲染破十法过程图，拆分框固定对准第二个数字。 */
 function renderBreakTenDiagram(problem) {
-  const [left = '', right = ''] = problem.operands || [];
-  return `<div class="problem ten-diagram break-ten-diagram"><div class="ten-formula"><span>${escapeHtml(left)}</span><span>-</span><span class="ten-target-number">${escapeHtml(right)}</span><span>=</span><span class="answer-box ten-answer-box"></span></div><div class="ten-tree break-ten-tree"><div class="ten-branch-line ten-left-branch"></div><div class="ten-branch-line ten-right-branch"></div><span class="answer-box ten-small-box ten-split-left"></span><span class="answer-box ten-small-box ten-split-right"></span></div></div>`;
+  return renderTenDiagram(problem, '-', 'break-ten-diagram');
 }
-
 /** 渲染竖式对齐格：数字右对齐，运算符固定在最左边一格。 */
 function renderVerticalCalculation(problem) {
   const [left = '', right = ''] = problem.operands || [];
@@ -85,7 +110,7 @@ function renderHanziPractice(problem) {
   const strokeHint = Array.isArray(problem.strokeSteps) && problem.strokeSteps.length
     ? `<div class="stroke-order-row">${problem.strokeSteps.map((step, index) => `<span>${index + 1}. ${escapeHtml(step)}</span>`).join('')}</div>`
     : '';
-  return `<div class="problem writing-practice hanzi-writing"><div class="practice-label">${escapeHtml(text)}</div>${strokeHint}<div class="mizi-row">${cells}</div></div>`;
+  return `<div class="problem writing-practice hanzi-writing ${hanziFontClass(problem)}"><div class="practice-label">${escapeHtml(text)}</div>${strokeHint}<div class="mizi-row">${cells}</div></div>`;
 }
 
 function renderHanziStrokePractice(problem) {
@@ -108,7 +133,7 @@ function renderHanziStrokePractice(problem) {
   const strokeHint = steps.length
     ? `<div class="stroke-order-row">${steps.map((step, index) => `<span>${index + 1}. ${escapeHtml(step)}</span>`).join('')}</div>`
     : '';
-  return `<div class="problem writing-practice hanzi-writing hanzi-stroke-writing"><div class="practice-label">${escapeHtml(text)}</div>${strokeHint}<div class="mizi-row">${cells}</div></div>`;
+  return `<div class="problem writing-practice hanzi-writing hanzi-stroke-writing ${hanziFontClass(problem)}"><div class="practice-label">${escapeHtml(text)}</div>${strokeHint}<div class="mizi-row">${cells}</div></div>`;
 }
 
 /** 渲染英文四线三格练习行。 */

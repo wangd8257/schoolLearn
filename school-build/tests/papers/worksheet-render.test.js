@@ -53,6 +53,7 @@ test('普通数学题保持单行排版，不在题目内部换行', () => {
   assert.match(stylesheet, /\.math-inline\s*\{[^}]*white-space:\s*nowrap/s);
   assert.match(stylesheet, /\.math-inline\s*\{[^}]*flex-wrap:\s*nowrap/s);
   assert.match(stylesheet, /\.worksheet-pages\s*\{[^}]*width:\s*100%/s);
+  assert.match(stylesheet, /@media \(max-width:\s*760px\)[\s\S]*\.worksheet-lines\s*\{[^}]*grid-template-columns:\s*1fr/s);
 });
 
 test('竖式题数字按位补齐并把运算符放在最左一格', () => {
@@ -69,7 +70,7 @@ test('竖式题数字按位补齐并把运算符放在最左一格', () => {
 test('凑十破十和练字题使用图片样式需要的专属格线', () => {
   const makeTen = renderProblemHtml({ kind:'make-ten', operands:[8, 5] }, 0);
   const breakTen = renderProblemHtml({ kind:'break-ten', operands:[13, 5] }, 1);
-  const hanzi = renderProblemHtml({ kind:'hanzi-trace', prompt:'你好' }, 2);
+  const hanzi = renderProblemHtml({ kind:'hanzi-trace', prompt:'你好', meta:{font:'songti'} }, 2);
   const english = renderProblemHtml({ kind:'english-word', prompt:'apple' }, 3);
 
   assert.equal((makeTen.match(/ten-small-box/g) || []).length, 2);
@@ -78,6 +79,7 @@ test('凑十破十和练字题使用图片样式需要的专属格线', () => {
   assert.doesNotMatch(breakTen, /ten-final-box/);
   assert.equal((hanzi.match(/mizi-row/g) || []).length, 1);
   assert.equal((hanzi.match(/mizi-sample-cell/g) || []).length, 2);
+  assert.match(hanzi, /hanzi-font-songti/);
   assert.match(english, /english-copybook-line/);
 });
 

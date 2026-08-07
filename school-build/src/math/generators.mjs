@@ -409,7 +409,7 @@ function generateMakeTen(options) {
   }
   const complement = complementToNextTen(left);
   const maximumRight = options.limit - left;
-  const minimumRight = options.rightNumber === undefined ? Math.max(11, complement) : complement;
+  const minimumRight = Math.max(11, complement);
   if (maximumRight < minimumRight) {
     return null;
   }
@@ -612,12 +612,11 @@ function generateDivision(options) {
  * @returns {Record<string, unknown>|null} 人民币题或空值。
  */
 function generateCurrency(options) {
-  const available = CURRENCY_CONVERSIONS.filter(({ factor }) => factor <= options.limit);
-  if (available.length === 0) {
-    return null;
-  }
+  const fitting = CURRENCY_CONVERSIONS.filter(({ factor }) => factor <= options.limit);
+  const available = fitting.length ? fitting : CURRENCY_CONVERSIONS;
   const conversion = randomItem(options.random, available);
-  const sourceValue = randomInteger(options.random, 1, Math.floor(options.limit / conversion.factor));
+  const sourceMaximum = Math.max(1, options.limit);
+  const sourceValue = randomInteger(options.random, 1, sourceMaximum);
   const answer = sourceValue * conversion.factor;
   return createProblem(TEMPLATE_TYPES.CURRENCY, {
     prompt: `${sourceValue}${conversion.sourceUnit} = □${conversion.targetUnit}`,
@@ -635,16 +634,18 @@ function generateCurrency(options) {
  */
 function generateUnitConversion(options) {
   const categories = options.category ? [options.category] : Object.values(UNIT_CATEGORIES);
-  const available = categories.flatMap((category) => (
+  const fittingAvailable = categories.flatMap((category) => (
     UNIT_CONVERSIONS[category]
       .filter(({ factor }) => factor <= options.limit)
       .map((conversion) => ({ category, ...conversion }))
   ));
-  if (available.length === 0) {
-    return null;
-  }
+  const fallbackAvailable = categories.flatMap((category) => (
+    UNIT_CONVERSIONS[category].map((conversion) => ({ category, ...conversion }))
+  ));
+  const available = fittingAvailable.length ? fittingAvailable : fallbackAvailable;
   const conversion = randomItem(options.random, available);
-  const sourceValue = randomInteger(options.random, 1, Math.floor(options.limit / conversion.factor));
+  const sourceMaximum = Math.max(1, options.limit);
+  const sourceValue = randomInteger(options.random, 1, sourceMaximum);
   const answer = sourceValue * conversion.factor;
   return createProblem(TEMPLATE_TYPES.UNIT_CONVERSION, {
     prompt: `${sourceValue}${conversion.sourceUnit} = □${conversion.targetUnit}`,
