@@ -1,0 +1,49 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]: ✦
+        - generic [ref=e6]:
+          - strong [ref=e7]: 成长小桌
+          - text: 每天进步一点点
+      - navigation "主导航" [ref=e8]:
+        - button "🏠 首页" [ref=e9] [cursor=pointer]:
+          - generic [ref=e10]: 🏠
+          - text: 首页
+        - button "📝 试卷目录" [ref=e11] [cursor=pointer]:
+          - generic [ref=e12]: 📝
+          - text: 试卷目录
+        - button "🪄 生成试卷" [ref=e13] [cursor=pointer]:
+          - generic [ref=e14]: 🪄
+          - text: 生成试卷
+        - button "📚 阅读资料" [ref=e15] [cursor=pointer]:
+          - generic [ref=e16]: 📚
+          - text: 阅读资料
+        - button "🎮 学习游戏" [ref=e17] [cursor=pointer]:
+          - generic [ref=e18]: 🎮
+          - text: 学习游戏
+        - button "🧩 配置模板" [ref=e19] [cursor=pointer]:
+          - generic [ref=e20]: 🧩
+          - text: 配置模板
+      - generic [ref=e21]:
+        - generic [ref=e22]: ☁️
+        - paragraph [ref=e23]:
+          - strong [ref=e24]: 数据只在本机
+          - text: 请勿清除 Safari 网站数据
+    - main [active] [ref=e25]:
+      - generic [ref=e60]:
+        - heading "学习游戏" [level=1] [ref=e61]
+        - paragraph [ref=e62]: 游戏成绩只保存在当前设备
+      - generic [ref=e63]:
+        - button [ref=e64] [cursor=pointer]:
+          - text: 🀄
+          - heading "汉字组词消消乐" [level=3] [ref=e65]
+          - paragraph [ref=e66]: 9×9 方格，上下左右连线组成 2～4 字词。
+        - button [ref=e67] [cursor=pointer]:
+          - text: 🧸
+          - heading "英语实物配对" [level=3] [ref=e68]
+          - paragraph [ref=e69]: 拖动儿童图卡到对应英文单词区域。
+      - generic [ref=e70]:
+        - heading "最近游戏记录" [level=2] [ref=e71]
+        - paragraph [ref=e72]: 完成一局后会显示开始时间、完成时间、用时和错误次数。
+  - status

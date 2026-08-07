@@ -52,8 +52,30 @@ test('普通数学题保持单行排版，不在题目内部换行', () => {
 
   assert.match(stylesheet, /\.math-inline\s*\{[^}]*white-space:\s*nowrap/s);
   assert.match(stylesheet, /\.math-inline\s*\{[^}]*flex-wrap:\s*nowrap/s);
+  assert.match(stylesheet, /@media \(max-width:\s*760px\)[\s\S]*\.math-inline\s*\{[^}]*white-space:\s*nowrap/s);
   assert.match(stylesheet, /\.worksheet-pages\s*\{[^}]*width:\s*100%/s);
   assert.match(stylesheet, /@media \(max-width:\s*760px\)[\s\S]*\.worksheet-lines\s*\{[^}]*grid-template-columns:\s*1fr/s);
+});
+
+test('小屏作答工具栏不裁剪控制按钮，填写框改为整行且页面不横向滚动', () => {
+  const stylesheet = readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
+
+  assert.match(stylesheet, /@media \(max-width:\s*760px\)[\s\S]*\.paper-floating-toolbar\s*\{[^}]*overflow-x:\s*hidden/s);
+  assert.match(stylesheet, /@media \(max-width:\s*760px\)[\s\S]*\.paper-floating-toolbar\s*\{[^}]*max-height:\s*none/s);
+  assert.match(stylesheet, /@media \(max-width:\s*760px\)[\s\S]*\.word-answer-line\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/s);
+  assert.match(stylesheet, /html,\s*body\s*\{[^}]*overflow-x:\s*hidden/s);
+  assert.match(stylesheet, /\.worksheet-wrap\s*\{[^}]*overflow-x:\s*hidden/s);
+  assert.match(stylesheet, /\.tabs\s*\{[^}]*flex-wrap:\s*wrap[^}]*overflow-x:\s*hidden/s);
+});
+
+test('试卷网格按 A4 页面从上到下紧密排布，预览不再固定只生成 12 题', () => {
+  const stylesheet = readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
+  const appSource = readFileSync(new URL('../../src/app.js', import.meta.url), 'utf8');
+
+  assert.match(stylesheet, /\.worksheet-lines\s*\{[^}]*align-content:\s*start/s);
+  assert.match(appSource, /Math\.min\(Number\(values\.count \|\| 12\),\s*100\)/);
+  assert.match(appSource, /if \(layout\.includes\('multiply'\) \|\| layout\.includes\('divide'\)\) return 24/);
+  assert.match(appSource, /return paper\.orientation === 'landscape' \? 24 : 24/);
 });
 
 test('竖式题数字按位补齐并把运算符放在最左一格', () => {
@@ -110,7 +132,7 @@ test('真实试卷页面复用已验证的题目渲染器', () => {
 
   assert.match(appSource, /import\s+\{[^}]*renderProblemHtml[^}]*\}\s+from '\.\/worksheet-render\.js'/s);
   assert.match(appSource, /renderWorksheetPagesHtml\(paper\)/);
-  assert.match(appSource, /pageProblems\.map\(\(problem,\s*index\)\s*=>\s*renderProblemHtml\(problem,\s*offset\s*\+\s*index\)\)/);
+  assert.match(appSource, /pageProblems\.map\(\(problem,\s*index\)\s*=>\s*renderProblemHtml\(problem,\s*pageOffset\s*\+\s*index\)\)/);
   assert.doesNotMatch(appSource, /function\s+formatProblem/);
 });
 

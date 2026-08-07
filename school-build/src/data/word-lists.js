@@ -1,4 +1,4 @@
-export const CHINESE_WORDS = Object.freeze([
+﻿export const CHINESE_WORDS = Object.freeze([
   '爱心', '安全', '白云', '帮助', '包子', '北方', '本领', '比赛', '变化', '别人',
   '冰箱', '播种', '博士', '操场', '草地', '茶杯', '长城', '唱歌', '车站', '成功',
   '城市', '翅膀', '春天', '聪明', '大海', '大山', '蛋糕', '灯笼', '地图', '电话',
@@ -116,6 +116,20 @@ const WORD_EMOJI = Object.freeze({
   doctor: '🧑‍⚕️', nurse: '👩‍⚕️', farmer: '🧑‍🌾', driver: '🧑‍✈️', neighbor: '🏡🏠', guest: '🙋',
 });
 
+
+const WORD_LABELS = Object.freeze({
+  rice:'米饭', bread:'面包', noodle:'面条', dumpling:'饺子', cake:'蛋糕', cookie:'饼干', candy:'糖果', chocolate:'巧克力', egg:'鸡蛋', meat:'肉', beef:'牛肉', chicken:'小鸡', seafood:'海鲜', soup:'汤', salad:'沙拉', cheese:'奶酪', butter:'黄油', jam:'果酱', sandwich:'三明治', hamburger:'汉堡包', pizza:'披萨', sausage:'香肠', tofu:'豆腐', porridge:'粥', pie:'馅饼', pancake:'煎饼', biscuit:'饼干', meal:'一餐',
+  apple:'苹果', banana:'香蕉', orange:'橙子', pear:'梨', peach:'桃子', grape:'葡萄', watermelon:'西瓜', strawberry:'草莓', blueberry:'蓝莓', pineapple:'菠萝', mango:'芒果', lemon:'柠檬', cherry:'樱桃', coconut:'椰子', kiwi:'猕猴桃', plum:'李子', apricot:'杏子', papaya:'木瓜', melon:'甜瓜', lime:'青柠', fig:'无花果', date:'枣', guava:'番石榴', lychee:'荔枝', raspberry:'树莓', blackberry:'黑莓', grapefruit:'西柚', tangerine:'橘子',
+  cat:'猫', dog:'狗', bird:'小鸟', fish:'鱼', rabbit:'兔子', mouse:'老鼠', horse:'马', cow:'奶牛', sheep:'绵羊', goat:'山羊', pig:'猪', duck:'鸭子', hen:'母鸡', rooster:'公鸡', goose:'鹅', tiger:'老虎', lion:'狮子', elephant:'大象', monkey:'猴子', panda:'熊猫', bear:'熊', fox:'狐狸', wolf:'狼', deer:'鹿', zebra:'斑马', giraffe:'长颈鹿', snake:'蛇', frog:'青蛙', turtle:'乌龟', butterfly:'蝴蝶',
+  table:'桌子', chair:'椅子', sofa:'沙发', bed:'床', desk:'书桌', lamp:'台灯', clock:'钟表', mirror:'镜子', curtain:'窗帘', pillow:'枕头', blanket:'毯子', sheet:'床单', wardrobe:'衣柜', drawer:'抽屉', shelf:'架子', carpet:'地毯', television:'电视', computer:'电脑', telephone:'电话', fan:'风扇', fridge:'冰箱', freezer:'冰柜', oven:'烤箱', stove:'炉子', kettle:'水壶', bowl:'碗', plate:'盘子', spoon:'勺子',
+  car:'汽车', bus:'公交车', train:'火车', plane:'飞机', ship:'轮船', boat:'小船', bike:'自行车', bicycle:'自行车', taxi:'出租车', truck:'卡车', van:'面包车', subway:'地铁', metro:'地铁', tram:'有轨电车', rocket:'火箭', scooter:'滑板车', motorcycle:'摩托车', helicopter:'直升机', ambulance:'救护车', tractor:'拖拉机', ferry:'渡轮', canoe:'独木舟', jeep:'吉普车', skateboard:'滑板',
+  red:'红色', amber:'琥珀色', yellow:'黄色', green:'绿色', blue:'蓝色', purple:'紫色', pink:'粉色', brown:'棕色', black:'黑色', white:'白色', gray:'灰色', gold:'金色', silver:'银色', violet:'紫罗兰色', indigo:'靛蓝色', beige:'米色', cyan:'青色', navy:'藏青色', coral:'珊瑚色', turquoise:'绿松石色',
+  head:'头', face:'脸', hair:'头发', eye:'眼睛', ear:'耳朵', nose:'鼻子', mouth:'嘴巴', tooth:'牙齿', tongue:'舌头', neck:'脖子', shoulder:'肩膀', arm:'手臂', elbow:'手肘', hand:'手', finger:'手指', thumb:'拇指', chest:'胸部', back:'背部', waist:'腰', leg:'腿', knee:'膝盖', foot:'脚', toe:'脚趾', skin:'皮肤', heart:'心脏', stomach:'肚子', ankle:'脚踝', wrist:'手腕',
+  zero:'零', one:'一', two:'二', three:'三', four:'四', five:'五', six:'六', seven:'七', eight:'八', nine:'九', ten:'十', eleven:'十一', twelve:'十二', thirteen:'十三', fourteen:'十四', fifteen:'十五', sixteen:'十六', seventeen:'十七', eighteen:'十八', nineteen:'十九', twenty:'二十', thirty:'三十', forty:'四十', fifty:'五十', hundred:'一百',
+  cup:'杯子', bottle:'瓶子', box:'盒子', bag:'包', basket:'篮子', umbrella:'雨伞', towel:'毛巾', soap:'肥皂', shampoo:'洗发水', comb:'梳子', toothbrush:'牙刷', toothpaste:'牙膏', tissue:'纸巾', key:'钥匙', lock:'锁', wallet:'钱包', watch:'手表', glasses:'眼镜', hat:'帽子', cap:'帽子', shirt:'衬衫', coat:'外套', dress:'连衣裙', skirt:'裙子', shoe:'鞋子', sock:'袜子', glove:'手套', scarf:'围巾',
+  book:'书', notebook:'笔记本', paper:'纸', pen:'钢笔', pencil:'铅笔', eraser:'橡皮', ruler:'尺子', crayon:'蜡笔', marker:'马克笔', chalk:'粉笔', board:'黑板', schoolbag:'书包', backpack:'背包', dictionary:'词典', map:'地图', globe:'地球仪', scissors:'剪刀', glue:'胶水', stapler:'订书机', calculator:'计算器', folder:'文件夹', workbook:'练习册', paintbrush:'画笔', palette:'调色板', compass:'圆规', protractor:'量角器', clipboard:'写字板', calendar:'日历',
+  family:'家人', father:'爸爸', mother:'妈妈', parent:'家长', dad:'爸爸', mum:'妈妈', son:'儿子', daughter:'女儿', brother:'哥哥/弟弟', sister:'姐姐/妹妹', grandfather:'爷爷/外公', grandmother:'奶奶/外婆', grandpa:'爷爷/外公', grandma:'奶奶/外婆', uncle:'叔叔/舅舅', aunt:'阿姨/姑姑', cousin:'表兄弟姐妹', husband:'丈夫', wife:'妻子', baby:'婴儿', child:'孩子', boy:'男孩', girl:'女孩', friend:'朋友', classmate:'同学', teacher:'老师', student:'学生', doctor:'医生', nurse:'护士', farmer:'农民', driver:'司机', neighbor:'邻居', guest:'客人',
+});
 const COLOR_SWATCHES = Object.freeze({
   red: '#e53935', amber: '#ffb300', yellow: '#fdd835', green: '#43a047', blue: '#1e88e5', purple: '#8e24aa', pink: '#ec407a', brown: '#795548',
   black: '#212121', white: '#ffffff', gray: '#757575', gold: '#d4af37', silver: '#b0bec5', violet: '#7e57c2', indigo: '#3949ab', beige: '#d7ccc8',
@@ -189,8 +203,8 @@ export function createCardVisual(word, category) {
     swatchColor,
     backgroundColor,
     accentColor,
-    svg: createPictogramSvg(hash, accentColor),
-    alt: `${category}儿童实物图卡`,
+    svg: createPictogramSvg(hash, accentColor),    alt: category + '儿童实物图卡',
+    label: WORD_LABELS[word] || category,
   });
 }
 

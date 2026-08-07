@@ -32,9 +32,10 @@ test('入口资源带版本参数，避免线上旧缓存继续加载旧文件',
 test('Service Worker 升级缓存名并优先读取网络文件', () => {
   const source = readFileSync(new URL('../../sw.js', import.meta.url), 'utf8');
 
-  assert.match(source, /growth-desk-v4-20260806/);
+  assert.match(source, /growth-desk-v5-20260807/);
   assert.match(source, /dist\/app\.bundle\.js/);
   assert.match(source, /async function fetchFreshThenCache/);
   assert.match(source, /const response = await fetch\(request\)/);
   assert.match(source, /await cache\.put\(request, response\.clone\(\)\)/);
+  assert.match(source, /\.\/huiben\/manifest\.json/);
 });

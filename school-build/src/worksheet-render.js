@@ -1,4 +1,4 @@
-/** 将用户或生成器文本安全编码为 HTML 文本。 */
+﻿/** 将用户或生成器文本安全编码为 HTML 文本。 */
 function escapeHtml(value = '') {
   return String(value).replace(/[&<>'"]/g, (character) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' }[character]));
 }
@@ -34,7 +34,22 @@ const HANZI_FONT_CLASSES = Object.freeze({
 function hanziFontClass(problem) {
   return HANZI_FONT_CLASSES[problem.meta?.font] || HANZI_FONT_CLASSES.kaiti;
 }
-/** 根据模板识别试卷整体版式。 */
+
+const ENGLISH_FONT_CLASSES = Object.freeze({
+  comic: 'english-font-comic',
+  print: 'english-font-print',
+  serif: 'english-font-serif',
+  cursive: 'english-font-cursive',
+});
+
+/**
+ * 根据题目元数据返回安全的英语练习字体类名。
+ * @param {Record<string, unknown>} problem 当前题目对象。
+ * @returns {string} 已白名单校验的字体类名。
+ */
+function englishFontClass(problem) {
+  return ENGLISH_FONT_CLASSES[problem.meta?.font] || ENGLISH_FONT_CLASSES.comic;
+}/** 根据模板识别试卷整体版式。 */
 export function worksheetLayoutClass(paper = {}) {
   const template = paper.config?.template || paper.problems?.[0]?.kind || paper.problems?.[0]?.type || 'horizontal';
   const normalized = {
@@ -51,7 +66,8 @@ export function worksheetLayoutClass(paper = {}) {
 /** 根据版式给题目网格设置默认列数。 */
 export function worksheetColumns(paper = {}) {
   const layout = worksheetLayoutClass(paper);
-  if (layout.includes('make-ten') || layout.includes('break-ten') || layout.includes('vertical')) return 3;
+  if (layout.includes('make-ten') || layout.includes('break-ten')) return 2;
+  if (layout.includes('vertical')) return 3;
   if (layout.includes('equation') || layout.includes('word-problem')) return 1;
   if (layout.includes('multiply') || layout.includes('divide')) return 4;
   if (layout.includes('currency') || layout.includes('unit')) return 2;
@@ -61,11 +77,7 @@ export function worksheetColumns(paper = {}) {
 
 /** 按图片样式渲染姓名、日期、用时填写线。 */
 export function renderWorksheetMetaHtml(paper = {}) {
-  const layout = worksheetLayoutClass(paper);
-  if (layout.includes('chain-add') || layout.includes('chain-sub') || layout.includes('mixed') || layout.includes('unit') || layout.includes('currency')) {
-    return '';
-  }
-  return '<div class="worksheet-meta-line"><span>姓名 <i></i></span><span>日期 <i></i></span><span>用时 <i></i></span></div>';
+  return '';
 }
 
 /**
@@ -77,10 +89,13 @@ export function renderWorksheetMetaHtml(paper = {}) {
  */
 function renderTenDiagram(problem, operator, diagramClass) {
   const [left = '', right = ''] = problem.operands || [];
-  const treeClass = diagramClass === 'break-ten-diagram' ? 'break-ten-tree' : '';
-  return `<div class="problem ten-diagram ${diagramClass}"><span class="ten-operand ten-left-operand">${escapeHtml(left)}</span><span class="ten-operator">${operator}</span><span class="ten-operand ten-target-number">${escapeHtml(right)}</span><span class="ten-operator">=</span><span class="answer-box ten-answer-box"></span><div class="ten-tree ${treeClass}"><div class="ten-branch-line ten-left-branch"></div><div class="ten-branch-line ten-right-branch"></div><span class="answer-box ten-small-box ten-split-left"></span><span class="answer-box ten-small-box ten-split-right"></span></div></div>`;
+  const answer = `<span class="answer-box ten-answer-box"></span>`;
+  const expression = `<div class="ten-expression"><span class="ten-operand ten-left-operand">${escapeHtml(left)}</span><span class="ten-operator">${operator}</span><span class="ten-operand ten-right-operand">${escapeHtml(right)}</span><span class="ten-operator">=</span>${answer}</div>`;
+  if (diagramClass === 'make-ten-diagram') {
+    return `<div class="problem ten-diagram make-ten-diagram">${expression}<div class="ten-process make-ten-process"><div class="ten-anchor"><span class="ten-anchor-line"></span><span class="ten-target-number">10</span></div><div class="ten-split"><div class="ten-slashes"><span>/</span><span>\\</span></div><div class="ten-split-boxes"><span class="answer-box ten-small-box"></span><span class="answer-box ten-small-box"></span></div></div></div></div>`;
+  }
+  return `<div class="problem ten-diagram break-ten-diagram">${expression}<div class="ten-process break-ten-process"><div class="ten-split"><div class="ten-slashes"><span>/</span><span>\\</span></div><div class="ten-split-boxes"><span class="answer-box ten-small-box"></span><span class="answer-box ten-small-box"></span></div></div><div class="ten-result-tree"><span class="ten-result-operator">-</span><span class="ten-result-box-wrap"><span class="answer-box ten-result-box"></span></span></div></div></div>`;
 }
-
 /** 渲染凑十法过程图，拆分框固定对准第二个数字。 */
 function renderMakeTenDiagram(problem) {
   return renderTenDiagram(problem, '+', 'make-ten-diagram');
@@ -110,7 +125,7 @@ function renderHanziPractice(problem) {
   const strokeHint = Array.isArray(problem.strokeSteps) && problem.strokeSteps.length
     ? `<div class="stroke-order-row">${problem.strokeSteps.map((step, index) => `<span>${index + 1}. ${escapeHtml(step)}</span>`).join('')}</div>`
     : '';
-  return `<div class="problem writing-practice hanzi-writing ${hanziFontClass(problem)}"><div class="practice-label">${escapeHtml(text)}</div>${strokeHint}<div class="mizi-row">${cells}</div></div>`;
+  return `<div class="problem writing-practice hanzi-writing ${hanziFontClass(problem)}">${strokeHint}<div class="mizi-row">${cells}</div></div>`;
 }
 
 function renderHanziStrokePractice(problem) {
@@ -118,28 +133,36 @@ function renderHanziStrokePractice(problem) {
   const character = Array.from(text).find((item) => item.trim()) || '';
   const steps = Array.isArray(problem.strokeSteps) ? problem.strokeSteps : [];
   const strokePaths = Array.isArray(problem.strokePaths) ? problem.strokePaths : [];
+  const isHanziWriterData = problem.strokeDataSource === 'hanzi-writer-data';
   const progress = Array.isArray(problem.strokeProgress) && problem.strokeProgress.length
     ? problem.strokeProgress
     : [character];
-  const progressCount = Math.min(12, strokePaths.length || progress.length);
-  const sampleCells = Array.from({ length: progressCount }, (_, index) => {
-    const sample = progress[index] || character;
-    const content = strokePaths.length
-      ? `<svg class="stroke-progress-svg" viewBox="0 0 100 100" aria-label="${escapeHtml(character)}第${index + 1}笔">${strokePaths.slice(0, index + 1).map((path) => `<path d="${escapeHtml(path)}"></path>`).join('')}</svg>`
-      : `<span>${escapeHtml(sample)}</span>`;
-    return `<span class="mizi-cell mizi-sample-cell stroke-progress-cell">${content}<i>${index + 1}</i></span>`;
-  }).join('');
-  const cells = `${sampleCells}${Array.from({ length: Math.max(0, 12 - progressCount) }, () => '<span class="mizi-cell"></span>').join('')}`;
+  const referenceCell = `<span class="mizi-cell mizi-sample-cell stroke-progress-cell stroke-reference-cell"><span>${escapeHtml(character)}</span></span>`;
+  const pathCells = strokePaths.length
+    ? Array.from({ length: strokePaths.length }, (_, index) => {
+      const paths = strokePaths.slice(0, index + 1).map((path) => `<path d="${escapeHtml(path)}"></path>`).join('');
+      const content = isHanziWriterData
+        ? `<g transform="scale(1 -1) translate(0 -900)">${paths}</g>`
+        : paths;
+      return `<span class="mizi-cell mizi-sample-cell stroke-progress-cell"><svg class="stroke-progress-svg ${isHanziWriterData ? 'hanzi-writer-stroke' : ''}" viewBox="${isHanziWriterData ? '0 0 1024 900' : '0 0 100 100'}" aria-label="${escapeHtml(character)}第${index + 1}笔">${content}</svg></span>`;
+    })
+    : progress.slice(0, Math.max(1, progress.length - 1)).map((sample) => `<span class="mizi-cell mizi-sample-cell stroke-progress-cell"><span class="stroke-progress-fallback">${escapeHtml(sample)}</span></span>`);
+  const cellList = [referenceCell, ...pathCells];
+  const rowHtml = [];
+  for (let index = 0; index < cellList.length; index += 12) {
+    const rowCells = cellList.slice(index, index + 12);
+    rowHtml.push(`<div class="mizi-row">${rowCells.join('')}${Array.from({ length: Math.max(0, 12 - rowCells.length) }, () => '<span class="mizi-cell"></span>').join('')}</div>`);
+  }
   const strokeHint = steps.length
-    ? `<div class="stroke-order-row">${steps.map((step, index) => `<span>${index + 1}. ${escapeHtml(step)}</span>`).join('')}</div>`
+    ? `<div class="stroke-order-row stroke-order-hidden">${steps.map((step, index) => `<span>${index + 1}. ${escapeHtml(step)}</span>`).join('')}</div>`
     : '';
-  return `<div class="problem writing-practice hanzi-writing hanzi-stroke-writing ${hanziFontClass(problem)}"><div class="practice-label">${escapeHtml(text)}</div>${strokeHint}<div class="mizi-row">${cells}</div></div>`;
+  return `<div class="problem writing-practice hanzi-writing hanzi-stroke-writing ${hanziFontClass(problem)}">${strokeHint}${rowHtml.join('')}</div>`;
 }
 
 /** 渲染英文四线三格练习行。 */
 function renderEnglishPractice(problem) {
   const text = escapeHtml(problem.prompt || '');
-  return `<div class="problem writing-practice english-writing"><div class="english-copybook-line"><span class="english-sample">${text}</span><span class="english-ghost">${text}</span><span class="english-ghost">${text}</span><span class="english-ghost">${text}</span></div></div>`;
+  return `<div class="problem writing-practice english-writing ${englishFontClass(problem)}"><div class="english-copybook-line"><span class="english-sample">${text}</span><span class="english-ghost">${text}</span><span class="english-ghost">${text}</span><span class="english-ghost">${text}</span></div></div>`;
 }
 
 /**

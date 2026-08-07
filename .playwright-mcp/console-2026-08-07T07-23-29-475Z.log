@@ -1,0 +1,8 @@
+[     198ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://127.0.0.1:4175/huiben/manifest.json:0
+[     202ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://127.0.0.1:4175/huiben/manifest.json:0
+[   52785ms] TypeError: Cannot set properties of null (setting 'onclick')
+    at bind (http://127.0.0.1:4175/src/games.js:38:45)
+    at render (http://127.0.0.1:4175/src/games.js:32:5)
+    at start (http://127.0.0.1:4175/src/games.js:24:5)
+    at Module.mountHanziGame (http://127.0.0.1:4175/src/games.js:61:3)
+    at HTMLDocument.handleGlobalClick (http://127.0.0.1:4175/src/app.js?v=20260806-2:756:194)

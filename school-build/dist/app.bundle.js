@@ -383,7 +383,7 @@
     }
     const complement = complementToNextTen(left);
     const maximumRight = options.limit - left;
-    const minimumRight = options.rightNumber === void 0 ? Math.max(11, complement) : complement;
+    const minimumRight = Math.max(11, complement);
     if (maximumRight < minimumRight) {
       return null;
     }
@@ -535,12 +535,11 @@
     }, options.limit);
   }
   function generateCurrency(options) {
-    const available = CURRENCY_CONVERSIONS.filter(({ factor }) => factor <= options.limit);
-    if (available.length === 0) {
-      return null;
-    }
+    const fitting = CURRENCY_CONVERSIONS.filter(({ factor }) => factor <= options.limit);
+    const available = fitting.length ? fitting : CURRENCY_CONVERSIONS;
     const conversion = randomItem(options.random, available);
-    const sourceValue = randomInteger(options.random, 1, Math.floor(options.limit / conversion.factor));
+    const sourceMaximum = Math.max(1, options.limit);
+    const sourceValue = randomInteger(options.random, 1, sourceMaximum);
     const answer = sourceValue * conversion.factor;
     return createProblem(TEMPLATE_TYPES.CURRENCY, {
       prompt: `${sourceValue}${conversion.sourceUnit} = \u25A1${conversion.targetUnit}`,
@@ -552,12 +551,12 @@
   }
   function generateUnitConversion(options) {
     const categories = options.category ? [options.category] : Object.values(UNIT_CATEGORIES);
-    const available = categories.flatMap((category) => UNIT_CONVERSIONS[category].filter(({ factor }) => factor <= options.limit).map((conversion2) => ({ category, ...conversion2 })));
-    if (available.length === 0) {
-      return null;
-    }
+    const fittingAvailable = categories.flatMap((category) => UNIT_CONVERSIONS[category].filter(({ factor }) => factor <= options.limit).map((conversion2) => ({ category, ...conversion2 })));
+    const fallbackAvailable = categories.flatMap((category) => UNIT_CONVERSIONS[category].map((conversion2) => ({ category, ...conversion2 })));
+    const available = fittingAvailable.length ? fittingAvailable : fallbackAvailable;
     const conversion = randomItem(options.random, available);
-    const sourceValue = randomInteger(options.random, 1, Math.floor(options.limit / conversion.factor));
+    const sourceMaximum = Math.max(1, options.limit);
+    const sourceValue = randomInteger(options.random, 1, sourceMaximum);
     const answer = sourceValue * conversion.factor;
     return createProblem(TEMPLATE_TYPES.UNIT_CONVERSION, {
       prompt: `${sourceValue}${conversion.sourceUnit} = \u25A1${conversion.targetUnit}`,
@@ -710,7 +709,8 @@
       if (typeof problem.answer === "number") {
         values.push(problem.answer);
       }
-      if (values.some((value) => !Number.isFinite(value) || value < 0 || value > limit)) {
+      const enforceUpperBound = ![TEMPLATE_TYPES.CURRENCY, TEMPLATE_TYPES.UNIT_CONVERSION].includes(problem.type);
+      if (values.some((value) => !Number.isFinite(value) || value < 0 || enforceUpperBound && value > limit)) {
         errors.push("\u5B58\u5728\u8D85\u51FA 0\uFF5EN \u7684\u6570\u503C");
       }
     }
@@ -941,10 +941,11 @@
       backgroundColor,
       accentColor,
       svg: createPictogramSvg(hash, accentColor),
-      alt: `${category}\u513F\u7AE5\u5B9E\u7269\u56FE\u5361`
+      alt: category + "\u513F\u7AE5\u5B9E\u7269\u56FE\u5361",
+      label: WORD_LABELS[word] || category
     });
   }
-  var CHINESE_WORDS, CATEGORY_DATA, ENGLISH_CATEGORIES, CARD_COLORS, CARD_SHAPES, WORD_EMOJI, COLOR_SWATCHES, NUMBER_SYMBOLS, ENGLISH_WORDS;
+  var CHINESE_WORDS, CATEGORY_DATA, ENGLISH_CATEGORIES, CARD_COLORS, CARD_SHAPES, WORD_EMOJI, WORD_LABELS, COLOR_SWATCHES, NUMBER_SYMBOLS, ENGLISH_WORDS;
   var init_word_lists = __esm({
     "src/data/word-lists.js"() {
       CHINESE_WORDS = Object.freeze([
@@ -1095,7 +1096,101 @@
         "\u5929\u5929\u5411\u4E0A",
         "\u5E73\u5E73\u5B89\u5B89",
         "\u81EA\u8A00\u81EA\u8BED",
-        "\u6B22\u5929\u559C\u5730"
+        "\u6B22\u5929\u559C\u5730",
+        "\u5C0F\u5B66\u751F",
+        "\u4E00\u5E74\u7EA7",
+        "\u4E8C\u5E74\u7EA7",
+        "\u4E09\u5E74\u7EA7",
+        "\u56DB\u5E74\u7EA7",
+        "\u4E94\u5E74\u7EA7",
+        "\u516D\u5E74\u7EA7",
+        "\u597D\u670B\u53CB",
+        "\u5C0F\u7EA2\u82B1",
+        "\u8FD0\u52A8\u4F1A",
+        "\u6545\u4E8B\u4E66",
+        "\u94C5\u7B14\u76D2",
+        "\u6587\u5177\u76D2",
+        "\u4F5C\u4E1A\u672C",
+        "\u56FE\u753B\u4E66",
+        "\u516C\u4EA4\u8F66",
+        "\u6591\u9A6C\u7EBF",
+        "\u7EA2\u9886\u5DFE",
+        "\u5C11\u5148\u961F",
+        "\u5927\u81EA\u7136",
+        "\u673A\u5668\u4EBA",
+        "\u6E38\u4E50\u56ED",
+        "\u52A8\u7269\u56ED",
+        "\u690D\u7269\u56ED",
+        "\u6C34\u5F69\u7B14",
+        "\u6A61\u76AE\u64E6",
+        "\u65E5\u7528\u54C1",
+        "\u8BFE\u95F4\u64CD",
+        "\u5347\u65D7\u53F0",
+        "\u7535\u89C6\u673A",
+        "\u6D17\u8863\u673A",
+        "\u7535\u51B0\u7BB1",
+        "\u81EA\u884C\u8F66",
+        "\u5927\u718A\u732B",
+        "\u91D1\u4E1D\u7334",
+        "\u5C0F\u767D\u5154",
+        "\u5C0F\u82B1\u732B",
+        "\u5C0F\u9EC4\u72D7",
+        "\u592A\u9633\u82B1",
+        "\u5411\u65E5\u8475",
+        "\u5C0F\u96E8\u4F1E",
+        "\u5C0F\u4E66\u5305",
+        "\u597D\u4E60\u60EF",
+        "\u8BB2\u536B\u751F",
+        "\u7231\u52B3\u52A8",
+        "\u505A\u6E38\u620F",
+        "\u8BFB\u8BFE\u6587",
+        "\u5199\u4F5C\u4E1A",
+        "\u8FC7\u9A6C\u8DEF",
+        "\u770B\u7535\u89C6",
+        "\u542C\u97F3\u4E50",
+        "\u5531\u513F\u6B4C",
+        "\u62CD\u76AE\u7403",
+        "\u8DF3\u76AE\u7B4B",
+        "\u8E22\u6BFD\u5B50",
+        "\u6349\u8FF7\u85CF",
+        "\u653E\u98CE\u7B5D",
+        "\u722C\u697C\u68AF",
+        "\u6D17\u624B\u95F4",
+        "\u56FE\u4E66\u89D2",
+        "\u5C0A\u8001\u7231\u5E7C",
+        "\u8BDA\u5B9E\u5B88\u4FE1",
+        "\u56E2\u7ED3\u53CB\u7231",
+        "\u7231\u62A4\u516C\u7269",
+        "\u4FDD\u62A4\u73AF\u5883",
+        "\u8BA4\u771F\u542C\u8BB2",
+        "\u79EF\u6781\u53D1\u8A00",
+        "\u6309\u65F6\u4F5C\u606F",
+        "\u5FEB\u4E50\u6210\u957F",
+        "\u70ED\u7231\u7956\u56FD",
+        "\u52E4\u5B66\u597D\u95EE",
+        "\u4E92\u76F8\u5E2E\u52A9",
+        "\u5929\u5929\u953B\u70BC",
+        "\u4E66\u58F0\u7405\u7405",
+        "\u6625\u6696\u82B1\u5F00",
+        "\u79CB\u9AD8\u6C14\u723D",
+        "\u4E94\u989C\u516D\u8272",
+        "\u4E03\u4E0A\u516B\u4E0B",
+        "\u4E09\u5FC3\u4E8C\u610F",
+        "\u5341\u5168\u5341\u7F8E",
+        "\u753B\u86C7\u6DFB\u8DB3",
+        "\u5B88\u682A\u5F85\u5154",
+        "\u4E95\u5E95\u4E4B\u86D9",
+        "\u5750\u4E95\u89C2\u5929",
+        "\u4EA1\u7F8A\u8865\u7262",
+        "\u523B\u821F\u6C42\u5251",
+        "\u4E00\u5FC3\u4E00\u610F",
+        "\u5C71\u6E05\u6C34\u79C0",
+        "\u9E1F\u8BED\u82B1\u9999",
+        "\u98CE\u548C\u65E5\u4E3D",
+        "\u6B22\u58F0\u7B11\u8BED",
+        "\u5E73\u5B89\u5065\u5EB7",
+        "\u9633\u5149\u660E\u5A9A",
+        "\u6587\u660E\u793C\u8C8C"
       ]);
       CATEGORY_DATA = Object.freeze({
         "\u98DF\u7269": {
@@ -1167,7 +1262,7 @@
         egg: "\u{1F95A}",
         meat: "\u{1F969}",
         beef: "\u{1F404}",
-        chicken: "\u{1F357}",
+        chicken: "\u{1F425}",
         seafood: "\u{1F990}",
         soup: "\u{1F963}",
         salad: "\u{1F957}",
@@ -1407,6 +1502,308 @@
         neighbor: "\u{1F3E1}\u{1F3E0}",
         guest: "\u{1F64B}"
       });
+      WORD_LABELS = Object.freeze({
+        rice: "\u7C73\u996D",
+        bread: "\u9762\u5305",
+        noodle: "\u9762\u6761",
+        dumpling: "\u997A\u5B50",
+        cake: "\u86CB\u7CD5",
+        cookie: "\u997C\u5E72",
+        candy: "\u7CD6\u679C",
+        chocolate: "\u5DE7\u514B\u529B",
+        egg: "\u9E21\u86CB",
+        meat: "\u8089",
+        beef: "\u725B\u8089",
+        chicken: "\u5C0F\u9E21",
+        seafood: "\u6D77\u9C9C",
+        soup: "\u6C64",
+        salad: "\u6C99\u62C9",
+        cheese: "\u5976\u916A",
+        butter: "\u9EC4\u6CB9",
+        jam: "\u679C\u9171",
+        sandwich: "\u4E09\u660E\u6CBB",
+        hamburger: "\u6C49\u5821\u5305",
+        pizza: "\u62AB\u8428",
+        sausage: "\u9999\u80A0",
+        tofu: "\u8C46\u8150",
+        porridge: "\u7CA5",
+        pie: "\u9985\u997C",
+        pancake: "\u714E\u997C",
+        biscuit: "\u997C\u5E72",
+        meal: "\u4E00\u9910",
+        apple: "\u82F9\u679C",
+        banana: "\u9999\u8549",
+        orange: "\u6A59\u5B50",
+        pear: "\u68A8",
+        peach: "\u6843\u5B50",
+        grape: "\u8461\u8404",
+        watermelon: "\u897F\u74DC",
+        strawberry: "\u8349\u8393",
+        blueberry: "\u84DD\u8393",
+        pineapple: "\u83E0\u841D",
+        mango: "\u8292\u679C",
+        lemon: "\u67E0\u6AAC",
+        cherry: "\u6A31\u6843",
+        coconut: "\u6930\u5B50",
+        kiwi: "\u7315\u7334\u6843",
+        plum: "\u674E\u5B50",
+        apricot: "\u674F\u5B50",
+        papaya: "\u6728\u74DC",
+        melon: "\u751C\u74DC",
+        lime: "\u9752\u67E0",
+        fig: "\u65E0\u82B1\u679C",
+        date: "\u67A3",
+        guava: "\u756A\u77F3\u69B4",
+        lychee: "\u8354\u679D",
+        raspberry: "\u6811\u8393",
+        blackberry: "\u9ED1\u8393",
+        grapefruit: "\u897F\u67DA",
+        tangerine: "\u6A58\u5B50",
+        cat: "\u732B",
+        dog: "\u72D7",
+        bird: "\u5C0F\u9E1F",
+        fish: "\u9C7C",
+        rabbit: "\u5154\u5B50",
+        mouse: "\u8001\u9F20",
+        horse: "\u9A6C",
+        cow: "\u5976\u725B",
+        sheep: "\u7EF5\u7F8A",
+        goat: "\u5C71\u7F8A",
+        pig: "\u732A",
+        duck: "\u9E2D\u5B50",
+        hen: "\u6BCD\u9E21",
+        rooster: "\u516C\u9E21",
+        goose: "\u9E45",
+        tiger: "\u8001\u864E",
+        lion: "\u72EE\u5B50",
+        elephant: "\u5927\u8C61",
+        monkey: "\u7334\u5B50",
+        panda: "\u718A\u732B",
+        bear: "\u718A",
+        fox: "\u72D0\u72F8",
+        wolf: "\u72FC",
+        deer: "\u9E7F",
+        zebra: "\u6591\u9A6C",
+        giraffe: "\u957F\u9888\u9E7F",
+        snake: "\u86C7",
+        frog: "\u9752\u86D9",
+        turtle: "\u4E4C\u9F9F",
+        butterfly: "\u8774\u8776",
+        table: "\u684C\u5B50",
+        chair: "\u6905\u5B50",
+        sofa: "\u6C99\u53D1",
+        bed: "\u5E8A",
+        desk: "\u4E66\u684C",
+        lamp: "\u53F0\u706F",
+        clock: "\u949F\u8868",
+        mirror: "\u955C\u5B50",
+        curtain: "\u7A97\u5E18",
+        pillow: "\u6795\u5934",
+        blanket: "\u6BEF\u5B50",
+        sheet: "\u5E8A\u5355",
+        wardrobe: "\u8863\u67DC",
+        drawer: "\u62BD\u5C49",
+        shelf: "\u67B6\u5B50",
+        carpet: "\u5730\u6BEF",
+        television: "\u7535\u89C6",
+        computer: "\u7535\u8111",
+        telephone: "\u7535\u8BDD",
+        fan: "\u98CE\u6247",
+        fridge: "\u51B0\u7BB1",
+        freezer: "\u51B0\u67DC",
+        oven: "\u70E4\u7BB1",
+        stove: "\u7089\u5B50",
+        kettle: "\u6C34\u58F6",
+        bowl: "\u7897",
+        plate: "\u76D8\u5B50",
+        spoon: "\u52FA\u5B50",
+        car: "\u6C7D\u8F66",
+        bus: "\u516C\u4EA4\u8F66",
+        train: "\u706B\u8F66",
+        plane: "\u98DE\u673A",
+        ship: "\u8F6E\u8239",
+        boat: "\u5C0F\u8239",
+        bike: "\u81EA\u884C\u8F66",
+        bicycle: "\u81EA\u884C\u8F66",
+        taxi: "\u51FA\u79DF\u8F66",
+        truck: "\u5361\u8F66",
+        van: "\u9762\u5305\u8F66",
+        subway: "\u5730\u94C1",
+        metro: "\u5730\u94C1",
+        tram: "\u6709\u8F68\u7535\u8F66",
+        rocket: "\u706B\u7BAD",
+        scooter: "\u6ED1\u677F\u8F66",
+        motorcycle: "\u6469\u6258\u8F66",
+        helicopter: "\u76F4\u5347\u673A",
+        ambulance: "\u6551\u62A4\u8F66",
+        tractor: "\u62D6\u62C9\u673A",
+        ferry: "\u6E21\u8F6E",
+        canoe: "\u72EC\u6728\u821F",
+        jeep: "\u5409\u666E\u8F66",
+        skateboard: "\u6ED1\u677F",
+        red: "\u7EA2\u8272",
+        amber: "\u7425\u73C0\u8272",
+        yellow: "\u9EC4\u8272",
+        green: "\u7EFF\u8272",
+        blue: "\u84DD\u8272",
+        purple: "\u7D2B\u8272",
+        pink: "\u7C89\u8272",
+        brown: "\u68D5\u8272",
+        black: "\u9ED1\u8272",
+        white: "\u767D\u8272",
+        gray: "\u7070\u8272",
+        gold: "\u91D1\u8272",
+        silver: "\u94F6\u8272",
+        violet: "\u7D2B\u7F57\u5170\u8272",
+        indigo: "\u975B\u84DD\u8272",
+        beige: "\u7C73\u8272",
+        cyan: "\u9752\u8272",
+        navy: "\u85CF\u9752\u8272",
+        coral: "\u73CA\u745A\u8272",
+        turquoise: "\u7EFF\u677E\u77F3\u8272",
+        head: "\u5934",
+        face: "\u8138",
+        hair: "\u5934\u53D1",
+        eye: "\u773C\u775B",
+        ear: "\u8033\u6735",
+        nose: "\u9F3B\u5B50",
+        mouth: "\u5634\u5DF4",
+        tooth: "\u7259\u9F7F",
+        tongue: "\u820C\u5934",
+        neck: "\u8116\u5B50",
+        shoulder: "\u80A9\u8180",
+        arm: "\u624B\u81C2",
+        elbow: "\u624B\u8098",
+        hand: "\u624B",
+        finger: "\u624B\u6307",
+        thumb: "\u62C7\u6307",
+        chest: "\u80F8\u90E8",
+        back: "\u80CC\u90E8",
+        waist: "\u8170",
+        leg: "\u817F",
+        knee: "\u819D\u76D6",
+        foot: "\u811A",
+        toe: "\u811A\u8DBE",
+        skin: "\u76AE\u80A4",
+        heart: "\u5FC3\u810F",
+        stomach: "\u809A\u5B50",
+        ankle: "\u811A\u8E1D",
+        wrist: "\u624B\u8155",
+        zero: "\u96F6",
+        one: "\u4E00",
+        two: "\u4E8C",
+        three: "\u4E09",
+        four: "\u56DB",
+        five: "\u4E94",
+        six: "\u516D",
+        seven: "\u4E03",
+        eight: "\u516B",
+        nine: "\u4E5D",
+        ten: "\u5341",
+        eleven: "\u5341\u4E00",
+        twelve: "\u5341\u4E8C",
+        thirteen: "\u5341\u4E09",
+        fourteen: "\u5341\u56DB",
+        fifteen: "\u5341\u4E94",
+        sixteen: "\u5341\u516D",
+        seventeen: "\u5341\u4E03",
+        eighteen: "\u5341\u516B",
+        nineteen: "\u5341\u4E5D",
+        twenty: "\u4E8C\u5341",
+        thirty: "\u4E09\u5341",
+        forty: "\u56DB\u5341",
+        fifty: "\u4E94\u5341",
+        hundred: "\u4E00\u767E",
+        cup: "\u676F\u5B50",
+        bottle: "\u74F6\u5B50",
+        box: "\u76D2\u5B50",
+        bag: "\u5305",
+        basket: "\u7BEE\u5B50",
+        umbrella: "\u96E8\u4F1E",
+        towel: "\u6BDB\u5DFE",
+        soap: "\u80A5\u7682",
+        shampoo: "\u6D17\u53D1\u6C34",
+        comb: "\u68B3\u5B50",
+        toothbrush: "\u7259\u5237",
+        toothpaste: "\u7259\u818F",
+        tissue: "\u7EB8\u5DFE",
+        key: "\u94A5\u5319",
+        lock: "\u9501",
+        wallet: "\u94B1\u5305",
+        watch: "\u624B\u8868",
+        glasses: "\u773C\u955C",
+        hat: "\u5E3D\u5B50",
+        cap: "\u5E3D\u5B50",
+        shirt: "\u886C\u886B",
+        coat: "\u5916\u5957",
+        dress: "\u8FDE\u8863\u88D9",
+        skirt: "\u88D9\u5B50",
+        shoe: "\u978B\u5B50",
+        sock: "\u889C\u5B50",
+        glove: "\u624B\u5957",
+        scarf: "\u56F4\u5DFE",
+        book: "\u4E66",
+        notebook: "\u7B14\u8BB0\u672C",
+        paper: "\u7EB8",
+        pen: "\u94A2\u7B14",
+        pencil: "\u94C5\u7B14",
+        eraser: "\u6A61\u76AE",
+        ruler: "\u5C3A\u5B50",
+        crayon: "\u8721\u7B14",
+        marker: "\u9A6C\u514B\u7B14",
+        chalk: "\u7C89\u7B14",
+        board: "\u9ED1\u677F",
+        schoolbag: "\u4E66\u5305",
+        backpack: "\u80CC\u5305",
+        dictionary: "\u8BCD\u5178",
+        map: "\u5730\u56FE",
+        globe: "\u5730\u7403\u4EEA",
+        scissors: "\u526A\u5200",
+        glue: "\u80F6\u6C34",
+        stapler: "\u8BA2\u4E66\u673A",
+        calculator: "\u8BA1\u7B97\u5668",
+        folder: "\u6587\u4EF6\u5939",
+        workbook: "\u7EC3\u4E60\u518C",
+        paintbrush: "\u753B\u7B14",
+        palette: "\u8C03\u8272\u677F",
+        compass: "\u5706\u89C4",
+        protractor: "\u91CF\u89D2\u5668",
+        clipboard: "\u5199\u5B57\u677F",
+        calendar: "\u65E5\u5386",
+        family: "\u5BB6\u4EBA",
+        father: "\u7238\u7238",
+        mother: "\u5988\u5988",
+        parent: "\u5BB6\u957F",
+        dad: "\u7238\u7238",
+        mum: "\u5988\u5988",
+        son: "\u513F\u5B50",
+        daughter: "\u5973\u513F",
+        brother: "\u54E5\u54E5/\u5F1F\u5F1F",
+        sister: "\u59D0\u59D0/\u59B9\u59B9",
+        grandfather: "\u7237\u7237/\u5916\u516C",
+        grandmother: "\u5976\u5976/\u5916\u5A46",
+        grandpa: "\u7237\u7237/\u5916\u516C",
+        grandma: "\u5976\u5976/\u5916\u5A46",
+        uncle: "\u53D4\u53D4/\u8205\u8205",
+        aunt: "\u963F\u59E8/\u59D1\u59D1",
+        cousin: "\u8868\u5144\u5F1F\u59D0\u59B9",
+        husband: "\u4E08\u592B",
+        wife: "\u59BB\u5B50",
+        baby: "\u5A74\u513F",
+        child: "\u5B69\u5B50",
+        boy: "\u7537\u5B69",
+        girl: "\u5973\u5B69",
+        friend: "\u670B\u53CB",
+        classmate: "\u540C\u5B66",
+        teacher: "\u8001\u5E08",
+        student: "\u5B66\u751F",
+        doctor: "\u533B\u751F",
+        nurse: "\u62A4\u58EB",
+        farmer: "\u519C\u6C11",
+        driver: "\u53F8\u673A",
+        neighbor: "\u90BB\u5C45",
+        guest: "\u5BA2\u4EBA"
+      });
       COLOR_SWATCHES = Object.freeze({
         red: "#e53935",
         amber: "#ffb300",
@@ -1594,6 +1991,19 @@
     }
     return shuffle(candidates, random);
   }
+  function createThreeCharacterFallbackPaths(random) {
+    const paths = [];
+    for (let blockRow = 0; blockRow < BOARD_SIDE; blockRow += 3) {
+      for (let blockColumn = 0; blockColumn < BOARD_SIDE; blockColumn += 3) {
+        const vertical = random() >= 0.5;
+        for (let offset = 0; offset < 3; offset += 1) {
+          const path = vertical ? [0, 1, 2].map((delta) => (blockRow + delta) * BOARD_SIDE + blockColumn + offset) : [0, 1, 2].map((delta) => (blockRow + offset) * BOARD_SIDE + blockColumn + delta);
+          paths.push(path);
+        }
+      }
+    }
+    return shuffle(paths, random);
+  }
   function createScatteredSolutionPaths(solutionWords, random) {
     const orderedWords = solutionWords.map((solution, index) => ({ index, length: [...solution.word].length })).sort((left, right) => right.length - left.length || left.index - right.index);
     for (let attempt = 0; attempt < 200; attempt += 1) {
@@ -1617,6 +2027,7 @@
       }
       if (!failed && occupied.every(Boolean)) return paths;
     }
+    if (solutionWords.every((solution) => [...solution.word].length === 3)) return createThreeCharacterFallbackPaths(random);
     throw new RangeError("\u65E0\u6CD5\u4E3A\u5F53\u524D\u8BCD\u5E93\u751F\u6210\u5206\u6563\u7684\u56DB\u65B9\u5411\u6D88\u9664\u8DEF\u5F84");
   }
   function normalizeWords(words, allowedWordLengths) {
@@ -1646,7 +2057,8 @@
       const pool = pools.get(length);
       if (!pool?.length) throw new RangeError(`\u5185\u7F6E\u8BCD\u5E93\u7F3A\u5C11 ${length} \u5B57\u8BCD\uFF0C\u65E0\u6CD5\u586B\u6EE1\u68CB\u76D8`);
       const cursor = cursors.get(length) ?? 0;
-      selected.push({ word: pool[cursor % pool.length], source: "built-in" });
+      if (cursor >= pool.length) throw new RangeError(`\u5185\u7F6E\u8BCD\u5E93\u7F3A\u5C11\u8DB3\u591F\u591A\u7684\u4E0D\u91CD\u590D ${length} \u5B57\u8BCD\uFF0C\u65E0\u6CD5\u586B\u6EE1\u68CB\u76D8`);
+      selected.push({ word: pool[cursor], source: "built-in" });
       cursors.set(length, cursor + 1);
     }
     return selected;
@@ -1880,19 +2292,15 @@
       render2();
     }
     function render2() {
-      host.innerHTML = `<div class="page-header"><div><h1>\u6C49\u5B57\u7EC4\u8BCD\u6D88\u6D88\u4E50</h1><p>\u53EA\u8FDE\u63A5\u4E0A\u4E0B\u5DE6\u53F3\u76F8\u90BB\u6C49\u5B57\uFF0C\u8DEF\u5F84\u53EF\u4EE5\u8F6C\u5F2F\uFF0C\u540C\u4E00\u683C\u4E0D\u80FD\u91CD\u590D\u3002</p></div><div class="header-actions"><button class="secondary" id="gameExit">\u9000\u51FA\u6E38\u620F</button></div></div>
-      <div class="panel"><div class="paper-toolbar"><strong>\u8BCD\u8BED\u957F\u5EA6</strong>${[2, 3, 4].map((length) => `<label class="check-item"><input type="checkbox" data-word-length="${length}" ${allowedWordLengths.includes(length) ? "checked" : ""}>${length} \u5B57</label>`).join("")}<button class="secondary" id="hanziRestart">\u91CD\u65B0\u5F00\u59CB</button><button class="secondary" id="hanziHint">\u63D0\u793A\u4E00\u6B65</button><span>\u5DF2\u9009\u62E9\uFF1A<strong id="selectedWord"></strong></span><span>\u9519\u8BEF\uFF1A<strong>${game.session.errorCount}</strong></span></div>
+      host.innerHTML = `<div class="game-screen hanzi-game-screen"><div class="page-header game-header"><div><h1>\u6C49\u5B57\u7EC4\u8BCD\u6D88\u6D88\u4E50</h1><p>\u53EA\u8FDE\u63A5\u4E0A\u4E0B\u5DE6\u53F3\u76F8\u90BB\u6C49\u5B57\uFF0C\u8DEF\u5F84\u53EF\u4EE5\u8F6C\u5F2F\uFF0C\u540C\u4E00\u683C\u4E0D\u80FD\u91CD\u590D\u3002</p></div><div class="header-actions"><button class="secondary" id="gameExit">\u9000\u51FA\u6E38\u620F</button></div></div>
+      <div class="panel game-panel"><div class="paper-toolbar game-toolbar"><strong>\u8BCD\u8BED\u957F\u5EA6</strong>${[2, 3, 4].map((length) => `<label class="check-item"><input type="checkbox" data-word-length="${length}" ${allowedWordLengths.includes(length) ? "checked" : ""}>${length} \u5B57</label>`).join("")}<button class="secondary" id="hanziRestart">\u91CD\u65B0\u5F00\u59CB</button><button class="secondary" id="hanziHint">\u63D0\u793A\u4E00\u6B65</button><span>\u5DF2\u9009\u62E9\uFF1A<strong id="selectedWord"></strong></span><span>\u9519\u8BEF\uFF1A<strong>${game.session.errorCount}</strong></span></div>
       <div class="game-board hanzi-board">${game.board.map((character, index) => `<button class="hanzi-cell ${character == null ? "empty" : ""} ${selected.includes(index) ? "selected" : ""}" data-cell-index="${index}">${character || ""}</button>`).join("")}</div>
-      <div class="header-actions" style="justify-content:center;margin-top:16px"><button class="primary" id="submitWord">\u63D0\u4EA4\u8BCD\u8BED</button><button class="secondary" id="clearWord">\u91CD\u65B0\u9009\u62E9</button></div></div>`;
+      </div></div>`;
       bind();
     }
     function bind() {
       host.querySelector("#gameExit").onclick = onExit;
       host.querySelector("#hanziRestart").onclick = start;
-      host.querySelector("#clearWord").onclick = () => {
-        selected = [];
-        render2();
-      };
       host.querySelectorAll("[data-word-length]").forEach((input) => input.onchange = () => {
         const next = [...host.querySelectorAll("[data-word-length]:checked")].map((item) => Number(item.dataset.wordLength));
         try {
@@ -1904,9 +2312,15 @@
           showToast2(error.message);
         }
       });
-      host.querySelectorAll("[data-cell-index]").forEach((cell) => cell.onclick = () => {
+      host.querySelectorAll("[data-cell-index]").forEach((cell) => cell.onclick = async () => {
         const index = Number(cell.dataset.cellIndex);
-        if (game.board[index] == null || selected.includes(index)) return;
+        if (game.board[index] == null) return;
+        const selectedIndex = selected.indexOf(index);
+        if (selectedIndex > -1) {
+          selected = selected.slice(0, selectedIndex);
+          render2();
+          return;
+        }
         if (selected.length) {
           const last = selected[selected.length - 1];
           const lr = Math.floor(last / 9), lc = last % 9, cr = Math.floor(index / 9), cc = index % 9;
@@ -1916,6 +2330,25 @@
           }
         }
         selected.push(index);
+        const word = selected.map((cellIndex) => game.board[cellIndex]).join("");
+        if (allowedWordLengths.includes(selected.length) && game.dictionary.includes(word)) {
+          const result = submitChinesePath(game, selected);
+          if (result.correct) {
+            showToast2(`\u201C${result.word}\u201D\u6D88\u9664\u6210\u529F`);
+            selected = [];
+            if (game.session.status === "completed") {
+              await persistSession("hanzi", game.session);
+              setTimeout(() => {
+                showToast2("\u606D\u559C\uFF0C81 \u4E2A\u6C49\u5B57\u5168\u90E8\u6D88\u9664\uFF01");
+                start();
+              }, 300);
+              return;
+            }
+            if (!hasChineseMove(game)) reshuffleChineseBoard(game, { seed: Date.now() });
+            render2();
+            return;
+          }
+        }
         render2();
       });
       host.querySelector("#hanziHint").onclick = () => {
@@ -1925,28 +2358,6 @@
           render2();
           showToast2(`\u53EF\u4EE5\u7EC4\u6210\u201C${move.word}\u201D`);
         } else showToast2("\u6B63\u5728\u91CD\u65B0\u6392\u5217");
-      };
-      host.querySelector("#submitWord").onclick = async () => {
-        const result = submitChinesePath(game, selected);
-        if (result.correct) {
-          showToast2(`\u201C${result.word}\u201D\u6D88\u9664\u6210\u529F`);
-          selected = [];
-          if (game.session.status === "completed") {
-            await persistSession("hanzi", game.session);
-            setTimeout(() => {
-              showToast2("\u606D\u559C\uFF0C81 \u4E2A\u6C49\u5B57\u5168\u90E8\u6D88\u9664\uFF01");
-              start();
-            }, 300);
-            return;
-          }
-          if (!hasChineseMove(game)) reshuffleChineseBoard(game, { seed: Date.now() });
-          render2();
-        } else {
-          if (result.reason === "not-in-dictionary") showToast2(`\u201C${result.word}\u201D\u4E0D\u5728\u8BCD\u5E93\u4E2D\uFF0C\u9519\u8BEF +1`);
-          else showToast2("\u8DEF\u5F84\u6216\u5B57\u6570\u4E0D\u7B26\u5408\u5F53\u524D\u89C4\u5219");
-          selected = [];
-          render2();
-        }
       };
       const selectedLabel = host.querySelector("#selectedWord");
       if (selectedLabel) selectedLabel.textContent = selected.map((index) => game.board[index]).join("");
@@ -1976,7 +2387,7 @@
       render2();
     }
     function render2() {
-      host.innerHTML = `<div class="page-header"><div><h1>\u82F1\u8BED\u5B9E\u7269\u914D\u5BF9</h1><p>\u62D6\u52A8\u513F\u7AE5\u56FE\u5361\u5230\u6B63\u786E\u7684\u82F1\u6587\u5355\u8BCD\u533A\u57DF\u3002</p></div><div class="header-actions"><button class="secondary" id="gameExit">\u9000\u51FA\u6E38\u620F</button></div></div><div class="panel"><div class="paper-toolbar"><label>\u6BCF\u5173\u6570\u91CF <input id="matchCount" type="number" min="2" max="20" value="${count}" style="width:70px"></label><button class="secondary" id="matchRestart">\u91CD\u65B0\u5F00\u59CB</button><span>\u9519\u8BEF\uFF1A<strong>${game.session.errorCount}</strong></span></div><div class="match-layout"><div class="picture-pool">${game.cards.map((card) => `<div class="picture-card ${card.status === "matched" ? "matched" : ""}" draggable="true" data-card-id="${card.id}">${cardVisualHtml(card)}<small>${card.category}</small></div>`).join("")}</div><div class="word-targets">${game.targets.map((target) => `<div class="word-target ${target.matchedCardId ? "matched" : ""}" data-target-id="${target.id}">${target.word}</div>`).join("")}</div></div></div>`;
+      host.innerHTML = `<div class="game-screen english-game-screen"><div class="page-header game-header"><div><h1>\u82F1\u8BED\u5B9E\u7269\u914D\u5BF9</h1><p>\u62D6\u52A8\u513F\u7AE5\u56FE\u5361\u5230\u6B63\u786E\u7684\u82F1\u6587\u5355\u8BCD\u533A\u57DF\u3002</p></div><div class="header-actions"><button class="secondary" id="gameExit">\u9000\u51FA\u6E38\u620F</button></div></div><div class="panel game-panel"><div class="paper-toolbar game-toolbar"><label>\u6BCF\u5173\u6570\u91CF <input id="matchCount" type="number" min="2" max="20" value="${count}" style="width:70px"></label><button class="secondary" id="matchRestart">\u91CD\u65B0\u5F00\u59CB</button><span>\u9519\u8BEF\uFF1A<strong>${game.session.errorCount}</strong></span></div><div class="match-layout"><div class="picture-pool">${game.cards.map((card) => `<div class="picture-card ${card.status === "matched" ? "matched" : ""}" draggable="true" data-card-id="${card.id}">${cardVisualHtml(card)}<small>${card.visual?.label || card.category}</small></div>`).join("")}</div><div class="word-targets">${game.targets.map((target) => `<div class="word-target ${target.matchedCardId ? "matched" : ""}" data-target-id="${target.id}">${target.word}</div>`).join("")}</div></div></div>`;
       bind();
     }
     function cleanupPointerDrag() {
@@ -2088,6 +2499,7 @@
   function createDrawingLayer(host, options) {
     const canvas = document.createElement("canvas");
     canvas.className = "ink-layer";
+    canvas.style.touchAction = "none";
     canvas.setAttribute("aria-label", `${options.color === "#d93636" ? "\u7EA2\u7B14" : "\u9ED1\u7B14"}\u4E66\u5199\u5C42`);
     canvas.classList.toggle("disabled", !options.enabled);
     host.appendChild(canvas);
@@ -2349,55 +2761,66 @@
 
   // src/reading.js
   init_db();
-
-  // src/data/readings.js
-  var BUILTIN_PICTURE_BOOKS = [
-    ["\u5C0F\u79CD\u5B50\u53BB\u65C5\u884C", "zh", ["\u4E00\u9897\u5C0F\u79CD\u5B50\u4F4F\u5728\u6696\u6696\u7684\u679C\u835A\u91CC\u3002", "\u98CE\u6765\u4E86\uFF0C\u5B83\u5F20\u5F00\u5C0F\u4F1E\u98DE\u8FC7\u7530\u91CE\u3002", "\u96E8\u843D\u4E0B\uFF0C\u5C0F\u79CD\u5B50\u94BB\u8FDB\u677E\u8F6F\u7684\u6CE5\u571F\u3002", "\u6625\u5929\uFF0C\u5B83\u957F\u6210\u4E86\u4E00\u682A\u4F1A\u5FAE\u7B11\u7684\u5C0F\u82B1\u3002"]],
-    ["\u6708\u4EAE\u7684\u53E3\u888B", "zh", ["\u6708\u4EAE\u6709\u4E00\u4E2A\u94F6\u8272\u7684\u53E3\u888B\u3002", "\u5B83\u628A\u8FF7\u8DEF\u7684\u661F\u661F\u8F7B\u8F7B\u88C5\u8FDB\u53BB\u3002", "\u5929\u4EAE\u524D\uFF0C\u6708\u4EAE\u628A\u661F\u661F\u9001\u56DE\u5929\u7A7A\u3002", "\u6BCF\u4E00\u9897\u661F\u661F\u90FD\u5BF9\u5B83\u7728\u7728\u773C\u3002"]],
-    ["\u4F1A\u5531\u6B4C\u7684\u5C0F\u6CB3", "zh", ["\u5C0F\u6CB3\u4ECE\u5C71\u811A\u51FA\u53D1\uFF0C\u4E00\u8DEF\u5531\u7740\u6B4C\u3002", "\u5B83\u9047\u89C1\u77F3\u5934\uFF0C\u5C31\u5531\u8D77\u8DF3\u8DC3\u7684\u6B4C\u3002", "\u5B83\u9047\u89C1\u5C0F\u9C7C\uFF0C\u5C31\u5531\u8D77\u5FEB\u4E50\u7684\u6B4C\u3002", "\u6700\u540E\uFF0C\u5C0F\u6CB3\u628A\u6B4C\u58F0\u5E26\u7ED9\u4E86\u5927\u6D77\u3002"]],
-    ["\u4E91\u6735\u9762\u5305\u5E97", "zh", ["\u767D\u4E91\u5F00\u4E86\u4E00\u5BB6\u9762\u5305\u5E97\u3002", "\u6E05\u6668\u7684\u9762\u5305\u50CF\u592A\u9633\u4E00\u6837\u5706\u3002", "\u5C0F\u9E1F\u5403\u4E86\u4E00\u53E3\uFF0C\u98DE\u5F97\u66F4\u9AD8\u4E86\u3002", "\u508D\u665A\uFF0C\u4E91\u6735\u628A\u6700\u540E\u4E00\u5757\u9762\u5305\u9001\u7ED9\u6708\u4EAE\u3002"]],
-    ["\u7EA2\u96E8\u9774", "zh", ["\u95E8\u53E3\u6709\u4E00\u53CC\u7EA2\u8272\u7684\u5C0F\u96E8\u9774\u3002", "\u5B83\u8E29\u8FC7\u6C34\u6D3C\uFF0C\u6C34\u82B1\u50CF\u5C0F\u82B1\u5F00\u653E\u3002", "\u5B83\u8D70\u8FC7\u6CE5\u8DEF\uFF0C\u7559\u4E0B\u4E24\u4E32\u811A\u5370\u3002", "\u56DE\u5230\u5BB6\uFF0C\u5C0F\u96E8\u9774\u5B89\u9759\u5730\u7B49\u4E0B\u4E00\u573A\u96E8\u3002"]],
-    ["\u5C0F\u718A\u7684\u7B2C\u4E00\u5C01\u4FE1", "zh", ["\u5C0F\u718A\u60F3\u7ED9\u8FDC\u65B9\u7684\u670B\u53CB\u5199\u4FE1\u3002", "\u5B83\u753B\u4E86\u4E00\u68F5\u6811\u3001\u4E00\u5EA7\u5C71\u548C\u4E00\u4E2A\u592A\u9633\u3002", "\u98CE\u628A\u4FE1\u9001\u8FC7\u68EE\u6797\u548C\u6CB3\u6D41\u3002", "\u670B\u53CB\u56DE\u4FE1\u8BF4\uFF1A\u6211\u770B\u89C1\u4E86\u4F60\u7684\u601D\u5FF5\u3002"]],
-    ["\u4E0D\u6015\u9ED1\u7684\u5C0F\u706F", "zh", ["\u5C0F\u706F\u4F4F\u5728\u957F\u957F\u7684\u8D70\u5ECA\u91CC\u3002", "\u591C\u665A\u6765\u4E34\uFF0C\u5B83\u4EAE\u8D77\u6E29\u67D4\u7684\u5149\u3002", "\u6015\u9ED1\u7684\u5C0F\u732B\u8DDF\u7740\u5149\u627E\u5230\u5988\u5988\u3002", "\u5C0F\u706F\u53D1\u73B0\uFF0C\u52C7\u6562\u5C31\u662F\u7167\u4EAE\u522B\u4EBA\u3002"]],
-    ["\u4E03\u5F69\u7684\u6865", "zh", ["\u96E8\u505C\u4E86\uFF0C\u5929\u7A7A\u51FA\u73B0\u4E00\u5EA7\u4E03\u5F69\u6865\u3002", "\u7EA2\u8272\u50CF\u82F9\u679C\uFF0C\u6A59\u8272\u50CF\u665A\u971E\u3002", "\u7EFF\u8272\u50CF\u6811\u53F6\uFF0C\u84DD\u8272\u50CF\u5927\u6D77\u3002", "\u5B69\u5B50\u4EEC\u62AC\u5934\uFF0C\u628A\u989C\u8272\u8BB0\u5728\u5FC3\u91CC\u3002"]],
-    ["\u84B2\u516C\u82F1\u90AE\u5DEE", "zh", ["\u84B2\u516C\u82F1\u90AE\u5DEE\u80CC\u7740\u767D\u8272\u7684\u5C0F\u5305\u3002", "\u5B83\u628A\u6625\u5929\u7684\u6D88\u606F\u9001\u5230\u8349\u5730\u3002", "\u628A\u590F\u5929\u7684\u95EE\u5019\u9001\u5230\u6C60\u5858\u3002", "\u843D\u5730\u65F6\uFF0C\u5B83\u53C8\u53D8\u6210\u4E86\u4E00\u9897\u65B0\u79CD\u5B50\u3002"]],
-    ["\u8FDF\u5230\u7684\u96EA\u82B1", "zh", ["\u4E00\u7247\u96EA\u82B1\u7761\u8FC7\u4E86\u51AC\u5929\u3002", "\u9192\u6765\u65F6\uFF0C\u82B1\u6735\u5DF2\u7ECF\u5F00\u653E\u3002", "\u5B83\u4E0D\u613F\u8BA9\u6625\u5929\u53D8\u51B7\uFF0C\u5C31\u5316\u6210\u4E00\u6EF4\u6C34\u3002", "\u5C0F\u6C34\u6EF4\u6ECB\u6DA6\u4E86\u521A\u53D1\u82BD\u7684\u5C0F\u6811\u3002"]],
-    ["\u52C7\u6562\u7684\u5C0F\u7EBD\u6263", "zh", ["\u4E00\u9897\u7EBD\u6263\u4ECE\u5916\u5957\u4E0A\u6389\u4E0B\u6765\u3002", "\u5B83\u6EDA\u8FC7\u684C\u811A\uFF0C\u94BB\u8FC7\u6C99\u53D1\u3002", "\u5B69\u5B50\u627E\u5230\u5B83\uFF0C\u628A\u5B83\u91CD\u65B0\u7F1D\u597D\u3002", "\u5C0F\u7EBD\u6263\u53C8\u56DE\u5230\u6E29\u6696\u7684\u4F4D\u7F6E\u3002"]],
-    ["\u4F1A\u5206\u4EAB\u7684\u82F9\u679C\u6811", "zh", ["\u82F9\u679C\u6811\u7ED3\u4E86\u8BB8\u591A\u7EA2\u82F9\u679C\u3002", "\u5B83\u9001\u7ED9\u5C0F\u9E1F\u4E00\u4E2A\uFF0C\u9001\u7ED9\u677E\u9F20\u4E24\u4E2A\u3002", "\u5B69\u5B50\u4EEC\u5728\u6811\u4E0B\u5206\u4EAB\u751C\u751C\u7684\u679C\u5B9E\u3002", "\u82F9\u679C\u6811\u542C\u89C1\u7B11\u58F0\uFF0C\u4E5F\u5FEB\u4E50\u5730\u6447\u8D77\u53F6\u5B50\u3002"]],
-    ["\u7EB8\u8239\u5411\u524D\u8D70", "zh", ["\u5B69\u5B50\u6298\u4E86\u4E00\u53EA\u84DD\u8272\u7EB8\u8239\u3002", "\u7EB8\u8239\u6CBF\u7740\u5C0F\u6EAA\u6162\u6162\u5411\u524D\u3002", "\u5B83\u7ED5\u8FC7\u6811\u679D\uFF0C\u7A7F\u8FC7\u77F3\u6865\u3002", "\u5230\u4E86\u6CB3\u6E7E\uFF0C\u5B83\u8F7D\u7740\u613F\u671B\u7EE7\u7EED\u65C5\u884C\u3002"]],
-    ["\u65E9\u5B89\uFF0C\u5C0F\u592A\u9633", "zh", ["\u592A\u9633\u4ECE\u5C71\u540E\u63A2\u51FA\u5934\u3002", "\u5B83\u53EB\u9192\u82B1\u6735\uFF0C\u4E5F\u53EB\u9192\u5C4B\u9876\u7684\u5C0F\u732B\u3002", "\u5B69\u5B50\u62C9\u5F00\u7A97\u5E18\uFF0C\u8BF4\u4E86\u4E00\u58F0\u65E9\u5B89\u3002", "\u65B0\u7684\u4E00\u5929\u5728\u91D1\u8272\u7684\u5149\u91CC\u5F00\u59CB\u3002"]],
-    ["\u68EE\u6797\u97F3\u4E50\u4F1A", "zh", ["\u591C\u665A\uFF0C\u68EE\u6797\u8981\u5F00\u97F3\u4E50\u4F1A\u3002", "\u9752\u86D9\u6253\u9F13\uFF0C\u87CB\u87C0\u62C9\u7434\u3002", "\u732B\u5934\u9E70\u8F7B\u8F7B\u5531\u8D77\u6B4C\u3002", "\u6708\u4EAE\u5750\u5728\u6811\u68A2\uFF0C\u542C\u5230\u6700\u540E\u4E00\u4E2A\u97F3\u7B26\u3002"]],
-    ["The Little Blue Kite", "en", ["A little blue kite waits by the door.", "A warm wind lifts it over the green hill.", "It dances with a cloud and waves to a bird.", "At sunset, it comes home with a happy tail."]],
-    ["Mia and the Red Ball", "en", ["Mia has a bright red ball.", "The ball rolls under a yellow chair.", "Her puppy finds it and pushes it back.", "Mia says thank you and they play together."]],
-    ["A Busy Little Bee", "en", ["A little bee wakes up in the sun.", "It visits a pink flower and a white flower.", "It carries sweet pollen back home.", "The garden says thank you with a gentle smell."]],
-    ["Sam Sees the Moon", "en", ["Sam looks out of his window.", "The moon is round and bright.", "He counts five stars beside it.", "Sam whispers good night to the quiet sky."]],
-    ["My Green Garden", "en", ["I put a small seed in the ground.", "I give it water every morning.", "Two green leaves reach for the sun.", "Soon, a yellow flower opens for me."]]
-  ].map(([title, language, pages], index) => ({
-    id: `builtin-book-${index + 1}`,
-    type: "picture-book",
-    category: "\u7ED8\u672C",
-    title,
-    language,
-    builtin: true,
-    pages: pages.map((text, pageIndex) => ({
-      id: `page-${pageIndex + 1}`,
-      illustration: { seed: index * 7 + pageIndex, palette: ["#ffcf73", "#76b5a8", "#f08a75", "#7f9ed4"] },
-      textBoxes: [{ id: `text-${pageIndex + 1}`, text, x: 8, y: 72, width: 84 }]
-    }))
-  }));
-  var SAMPLE_READINGS = [
-    { id: "sample-poem", category: "\u53E4\u8BD7", type: "text", title: "\u9759\u591C\u601D", language: "zh", content: "\u5E8A\u524D\u660E\u6708\u5149\uFF0C\u7591\u662F\u5730\u4E0A\u971C\u3002\n\u4E3E\u5934\u671B\u660E\u6708\uFF0C\u4F4E\u5934\u601D\u6545\u4E61\u3002" },
-    { id: "sample-idiom", category: "\u6210\u8BED\u6545\u4E8B", type: "text", title: "\u4E95\u5E95\u4E4B\u86D9", language: "zh", content: "\u4E00\u53EA\u9752\u86D9\u4F4F\u5728\u4E95\u5E95\uFF0C\u5B83\u4EE5\u4E3A\u5929\u7A7A\u53EA\u6709\u4E95\u53E3\u90A3\u4E48\u5927\u3002\n\u6D77\u9F9F\u544A\u8BC9\u5B83\u5927\u6D77\u65E0\u8FB9\u65E0\u9645\uFF0C\u9752\u86D9\u624D\u660E\u767D\u81EA\u5DF1\u7684\u89C1\u8BC6\u5F88\u6709\u9650\u3002" },
-    { id: "sample-english", category: "\u82F1\u8BED\u9605\u8BFB", type: "text", title: "A Sunny Day", language: "en", content: "The sun is warm today.\nI see a blue bird in the tree.\nWe play in the green park." }
-  ];
-
-  // src/reading.js
   var speechRun = 0;
   async function ensureReadingSeeds() {
     const existing = await getAll("readings");
-    if (existing.length) return existing;
-    await Promise.all([...BUILTIN_PICTURE_BOOKS, ...SAMPLE_READINGS].map((item) => put("readings", { ...item, createdAt: Date.now() })));
+    const builtinItems = existing.filter((item) => item.builtin);
+    if (builtinItems.length) await Promise.all(builtinItems.map((item) => remove("readings", item.id)));
+    const keptItems = existing.filter((item) => !item.builtin);
+    const knownIds = new Set(keptItems.map((item) => item.id));
+    const localBooks = await loadHuibenBooks();
+    const newBooks = localBooks.filter((book) => !knownIds.has(book.id));
+    if (newBooks.length) await Promise.all(newBooks.map((book) => put("readings", book)));
     return getAll("readings");
+  }
+  async function loadHuibenBooks() {
+    if (typeof fetch !== "function") return [];
+    try {
+      const response = await fetch("./huiben/manifest.json", { cache: "no-store" });
+      if (!response.ok) return [];
+      const manifest = await response.json();
+      const books = Array.isArray(manifest.books) ? manifest.books : [];
+      return books.map((entry) => createHuibenBookReading(entry));
+    } catch (error) {
+      console.warn("huiben \u6E05\u5355\u8BFB\u53D6\u5931\u8D25", error);
+      return [];
+    }
+  }
+  function stableBookId(text) {
+    let hash = 2166136261;
+    for (let index = 0; index < text.length; index += 1) {
+      hash ^= text.charCodeAt(index);
+      hash = Math.imul(hash, 16777619);
+    }
+    return (hash >>> 0).toString(36);
+  }
+  function bookFileKind(fileName = "") {
+    const lowerName = String(fileName).toLowerCase();
+    if (lowerName.endsWith(".pdf")) return "pdf";
+    if (lowerName.endsWith(".epub")) return "epub";
+    if (lowerName.endsWith(".equb")) return "equb";
+    return "file";
+  }
+  function createHuibenBookReading(entry, options = {}) {
+    const title = String(entry.title || entry.fileName || "\u672A\u547D\u540D\u7ED8\u672C").trim();
+    const fileName = String(entry.fileName || title).trim();
+    const sourceUrl = String(entry.url || `./huiben/${encodeURIComponent(fileName)}`);
+    const now = options.now ?? Date.now();
+    return {
+      id: entry.id || `huiben-${stableBookId(sourceUrl)}`,
+      type: "file-book",
+      category: entry.category || "\u7ED8\u672C",
+      title,
+      language: entry.language === "en" ? "en" : "zh",
+      builtin: false,
+      source: "huiben",
+      fileName,
+      fileKind: entry.fileKind || bookFileKind(fileName || sourceUrl),
+      sourceUrl,
+      size: entry.size || 0,
+      createdAt: entry.createdAt || now,
+      updatedAt: entry.updatedAt || now
+    };
   }
   function tokenizeForReading(text, language) {
     if (language === "en") return text.match(/\S+\s*/g) || [];
@@ -2470,6 +2893,26 @@
       language: values.language === "en" ? "en" : "zh",
       builtin: false,
       pages,
+      createdAt: now,
+      updatedAt: now
+    };
+  }
+  function createFileBookReading(values, file, options = {}) {
+    if (!file?.dataUrl) throw new Error("\u8BF7\u5148\u9009\u62E9\u8981\u5BFC\u5165\u7684\u7ED8\u672C\u6587\u4EF6");
+    const now = options.now ?? Date.now();
+    const title = String(values.title || "").trim() || String(file.name || "").replace(/\.[^.]+$/u, "") || "\u672A\u547D\u540D\u7ED8\u672C";
+    return {
+      id: options.id || uid("reading"),
+      type: "file-book",
+      category: values.category || "\u7ED8\u672C",
+      title,
+      language: values.language === "en" ? "en" : "zh",
+      builtin: false,
+      source: "imported",
+      fileName: file.name || title,
+      fileKind: bookFileKind(file.name || file.type || ""),
+      sourceUrl: file.dataUrl,
+      size: file.size || 0,
       createdAt: now,
       updatedAt: now
     };
@@ -2619,6 +3062,24 @@
   function answerBoxes(count, className = "") {
     return Array.from({ length: count }, () => `<span class="answer-box ${className}"></span>`).join("");
   }
+  var HANZI_FONT_CLASSES = Object.freeze({
+    kaiti: "hanzi-font-kaiti",
+    songti: "hanzi-font-songti",
+    heiti: "hanzi-font-heiti",
+    fangsong: "hanzi-font-fangsong"
+  });
+  function hanziFontClass(problem) {
+    return HANZI_FONT_CLASSES[problem.meta?.font] || HANZI_FONT_CLASSES.kaiti;
+  }
+  var ENGLISH_FONT_CLASSES = Object.freeze({
+    comic: "english-font-comic",
+    print: "english-font-print",
+    serif: "english-font-serif",
+    cursive: "english-font-cursive"
+  });
+  function englishFontClass(problem) {
+    return ENGLISH_FONT_CLASSES[problem.meta?.font] || ENGLISH_FONT_CLASSES.comic;
+  }
   function worksheetLayoutClass(paper = {}) {
     const template = paper.config?.template || paper.problems?.[0]?.kind || paper.problems?.[0]?.type || "horizontal";
     const normalized = {
@@ -2649,7 +3110,8 @@
   }
   function worksheetColumns(paper = {}) {
     const layout = worksheetLayoutClass(paper);
-    if (layout.includes("make-ten") || layout.includes("break-ten") || layout.includes("vertical")) return 3;
+    if (layout.includes("make-ten") || layout.includes("break-ten")) return 2;
+    if (layout.includes("vertical")) return 3;
     if (layout.includes("equation") || layout.includes("word-problem")) return 1;
     if (layout.includes("multiply") || layout.includes("divide")) return 4;
     if (layout.includes("currency") || layout.includes("unit")) return 2;
@@ -2657,19 +3119,22 @@
     return paper.orientation === "landscape" ? 4 : 3;
   }
   function renderWorksheetMetaHtml(paper = {}) {
-    const layout = worksheetLayoutClass(paper);
-    if (layout.includes("chain-add") || layout.includes("chain-sub") || layout.includes("mixed") || layout.includes("unit") || layout.includes("currency")) {
-      return "";
+    return "";
+  }
+  function renderTenDiagram(problem, operator, diagramClass) {
+    const [left = "", right = ""] = problem.operands || [];
+    const answer = `<span class="answer-box ten-answer-box"></span>`;
+    const expression = `<div class="ten-expression"><span class="ten-operand ten-left-operand">${escapeHtml(left)}</span><span class="ten-operator">${operator}</span><span class="ten-operand ten-right-operand">${escapeHtml(right)}</span><span class="ten-operator">=</span>${answer}</div>`;
+    if (diagramClass === "make-ten-diagram") {
+      return `<div class="problem ten-diagram make-ten-diagram">${expression}<div class="ten-process make-ten-process"><div class="ten-anchor"><span class="ten-anchor-line"></span><span class="ten-target-number">10</span></div><div class="ten-split"><div class="ten-slashes"><span>/</span><span>\\</span></div><div class="ten-split-boxes"><span class="answer-box ten-small-box"></span><span class="answer-box ten-small-box"></span></div></div></div></div>`;
     }
-    return '<div class="worksheet-meta-line"><span>\u59D3\u540D <i></i></span><span>\u65E5\u671F <i></i></span><span>\u7528\u65F6 <i></i></span></div>';
+    return `<div class="problem ten-diagram break-ten-diagram">${expression}<div class="ten-process break-ten-process"><div class="ten-split"><div class="ten-slashes"><span>/</span><span>\\</span></div><div class="ten-split-boxes"><span class="answer-box ten-small-box"></span><span class="answer-box ten-small-box"></span></div></div><div class="ten-result-tree"><span class="ten-result-operator">-</span><span class="ten-result-box-wrap"><span class="answer-box ten-result-box"></span></span></div></div></div>`;
   }
   function renderMakeTenDiagram(problem) {
-    const [left = "", right = ""] = problem.operands || [];
-    return `<div class="problem ten-diagram make-ten-diagram"><div class="ten-formula"><span>${escapeHtml(left)}</span><span>+</span><span class="ten-target-number">${escapeHtml(right)}</span><span>=</span><span class="answer-box ten-answer-box"></span></div><div class="ten-tree"><div class="ten-branch-line ten-left-branch"></div><div class="ten-branch-line ten-right-branch"></div><span class="answer-box ten-small-box ten-split-left"></span><span class="answer-box ten-small-box ten-split-right"></span></div></div>`;
+    return renderTenDiagram(problem, "+", "make-ten-diagram");
   }
   function renderBreakTenDiagram(problem) {
-    const [left = "", right = ""] = problem.operands || [];
-    return `<div class="problem ten-diagram break-ten-diagram"><div class="ten-formula"><span>${escapeHtml(left)}</span><span>-</span><span class="ten-target-number">${escapeHtml(right)}</span><span>=</span><span class="answer-box ten-answer-box"></span></div><div class="ten-tree break-ten-tree"><div class="ten-branch-line ten-left-branch"></div><div class="ten-branch-line ten-right-branch"></div><span class="answer-box ten-small-box ten-split-left"></span><span class="answer-box ten-small-box ten-split-right"></span></div></div>`;
+    return renderTenDiagram(problem, "-", "break-ten-diagram");
   }
   function renderVerticalCalculation(problem) {
     const [left = "", right = ""] = problem.operands || [];
@@ -2686,27 +3151,33 @@
     const sampleCells = samples.map((character) => `<span class="mizi-cell mizi-sample-cell">${escapeHtml(character)}</span>`).join("");
     const cells = `${sampleCells}${Array.from({ length: Math.max(0, 12 - samples.length) }, () => '<span class="mizi-cell"></span>').join("")}`;
     const strokeHint = Array.isArray(problem.strokeSteps) && problem.strokeSteps.length ? `<div class="stroke-order-row">${problem.strokeSteps.map((step, index) => `<span>${index + 1}. ${escapeHtml(step)}</span>`).join("")}</div>` : "";
-    return `<div class="problem writing-practice hanzi-writing"><div class="practice-label">${escapeHtml(text)}</div>${strokeHint}<div class="mizi-row">${cells}</div></div>`;
+    return `<div class="problem writing-practice hanzi-writing ${hanziFontClass(problem)}">${strokeHint}<div class="mizi-row">${cells}</div></div>`;
   }
   function renderHanziStrokePractice(problem) {
     const text = String(problem.prompt || "").trim();
     const character = Array.from(text).find((item) => item.trim()) || "";
     const steps = Array.isArray(problem.strokeSteps) ? problem.strokeSteps : [];
     const strokePaths = Array.isArray(problem.strokePaths) ? problem.strokePaths : [];
+    const isHanziWriterData = problem.strokeDataSource === "hanzi-writer-data";
     const progress = Array.isArray(problem.strokeProgress) && problem.strokeProgress.length ? problem.strokeProgress : [character];
-    const progressCount = Math.min(12, strokePaths.length || progress.length);
-    const sampleCells = Array.from({ length: progressCount }, (_, index) => {
-      const sample = progress[index] || character;
-      const content = strokePaths.length ? `<svg class="stroke-progress-svg" viewBox="0 0 100 100" aria-label="${escapeHtml(character)}\u7B2C${index + 1}\u7B14">${strokePaths.slice(0, index + 1).map((path) => `<path d="${escapeHtml(path)}"></path>`).join("")}</svg>` : `<span>${escapeHtml(sample)}</span>`;
-      return `<span class="mizi-cell mizi-sample-cell stroke-progress-cell">${content}<i>${index + 1}</i></span>`;
-    }).join("");
-    const cells = `${sampleCells}${Array.from({ length: Math.max(0, 12 - progressCount) }, () => '<span class="mizi-cell"></span>').join("")}`;
-    const strokeHint = steps.length ? `<div class="stroke-order-row">${steps.map((step, index) => `<span>${index + 1}. ${escapeHtml(step)}</span>`).join("")}</div>` : "";
-    return `<div class="problem writing-practice hanzi-writing hanzi-stroke-writing"><div class="practice-label">${escapeHtml(text)}</div>${strokeHint}<div class="mizi-row">${cells}</div></div>`;
+    const referenceCell = `<span class="mizi-cell mizi-sample-cell stroke-progress-cell stroke-reference-cell"><span>${escapeHtml(character)}</span></span>`;
+    const pathCells = strokePaths.length ? Array.from({ length: strokePaths.length }, (_, index) => {
+      const paths = strokePaths.slice(0, index + 1).map((path) => `<path d="${escapeHtml(path)}"></path>`).join("");
+      const content = isHanziWriterData ? `<g transform="scale(1 -1) translate(0 -900)">${paths}</g>` : paths;
+      return `<span class="mizi-cell mizi-sample-cell stroke-progress-cell"><svg class="stroke-progress-svg ${isHanziWriterData ? "hanzi-writer-stroke" : ""}" viewBox="${isHanziWriterData ? "0 0 1024 900" : "0 0 100 100"}" aria-label="${escapeHtml(character)}\u7B2C${index + 1}\u7B14">${content}</svg></span>`;
+    }) : progress.slice(0, Math.max(1, progress.length - 1)).map((sample) => `<span class="mizi-cell mizi-sample-cell stroke-progress-cell"><span class="stroke-progress-fallback">${escapeHtml(sample)}</span></span>`);
+    const cellList = [referenceCell, ...pathCells];
+    const rowHtml = [];
+    for (let index = 0; index < cellList.length; index += 12) {
+      const rowCells = cellList.slice(index, index + 12);
+      rowHtml.push(`<div class="mizi-row">${rowCells.join("")}${Array.from({ length: Math.max(0, 12 - rowCells.length) }, () => '<span class="mizi-cell"></span>').join("")}</div>`);
+    }
+    const strokeHint = steps.length ? `<div class="stroke-order-row stroke-order-hidden">${steps.map((step, index) => `<span>${index + 1}. ${escapeHtml(step)}</span>`).join("")}</div>` : "";
+    return `<div class="problem writing-practice hanzi-writing hanzi-stroke-writing ${hanziFontClass(problem)}">${strokeHint}${rowHtml.join("")}</div>`;
   }
   function renderEnglishPractice(problem) {
     const text = escapeHtml(problem.prompt || "");
-    return `<div class="problem writing-practice english-writing"><div class="english-copybook-line"><span class="english-sample">${text}</span><span class="english-ghost">${text}</span><span class="english-ghost">${text}</span><span class="english-ghost">${text}</span></div></div>`;
+    return `<div class="problem writing-practice english-writing ${englishFontClass(problem)}"><div class="english-copybook-line"><span class="english-sample">${text}</span><span class="english-ghost">${text}</span><span class="english-ghost">${text}</span><span class="english-ghost">${text}</span></div></div>`;
   }
   function renderProblemHtml(problem, index) {
     const number = `<span class="problem-number">${index + 1}.</span>`;
@@ -2770,8 +3241,10 @@
     stopSpeaking();
     state.route = route;
     state.activePaperId = detail?.paperId || null;
+    if (route === "reading" && !detail?.readingId) state.activeReadingId = null;
     document.querySelectorAll(".nav-item").forEach((item) => item.classList.toggle("active", item.dataset.route === route));
     document.querySelector("#sidebar").classList.remove("open");
+    document.body.classList.remove("paper-focus-active");
     main.scrollTop = 0;
     await render();
     main.focus({ preventScroll: true });
@@ -2814,10 +3287,11 @@
     const papers = await listPapers();
     const filtered = state.paperFilter === "all" ? papers : papers.filter((paper) => paper.status === state.paperFilter);
     const tabs = [["all", "\u5168\u90E8"], ...Object.entries(PAPER_STATUS)];
-    main.innerHTML = `${pageHeader("\u8BD5\u5377\u76EE\u5F55", "\u9ED8\u8BA4\u6309\u751F\u6210\u65F6\u95F4\u5012\u5E8F\u6392\u5217", '<button class="primary" data-route="generator">\uFF0B \u751F\u6210\u65B0\u8BD5\u5377</button>')}
+    main.innerHTML = `${pageHeader("\u8BD5\u5377\u76EE\u5F55", "\u9ED8\u8BA4\u6309\u751F\u6210\u65F6\u95F4\u5012\u5E8F\u6392\u5217", '<button class="secondary" data-batch-delete-papers>\u6279\u91CF\u5220\u9664</button><button class="primary" data-route="generator">\uFF0B \u751F\u6210\u65B0\u8BD5\u5377</button>')}
     <div class="tabs">${tabs.map(([key, label]) => `<button class="tab ${state.paperFilter === key ? "active" : ""}" data-paper-filter="${key}">${label}${key === "all" ? ` (${papers.length})` : ""}</button>`).join("")}</div>
     ${filtered.length ? `<section class="paper-grid">${filtered.map((paper) => `
       <article class="paper-card">
+        <label class="paper-select no-print"><input type="checkbox" data-paper-select="${paper.id}"> \u9009\u62E9</label>
         <button class="paper-preview" data-open-paper="${paper.id}" aria-label="\u6253\u5F00${escapeHtml2(paper.title)}"><div class="paper-mini"><i></i><i></i><i></i><i></i><i></i><i></i></div></button>
         <div class="paper-meta"><h3>${escapeHtml2(paper.title)}</h3><div class="paper-meta-row"><span class="status ${paperStatusClass(paper.status)}">${PAPER_STATUS[paper.status]}</span><time>${new Date(paper.createdAt).toLocaleString("zh-CN")}</time></div>
         <div class="card-actions"><button data-copy-paper="${paper.id}">\u590D\u5236</button><button data-rename-paper="${paper.id}">\u6539\u540D</button><button data-delete-paper="${paper.id}">\u5220\u9664</button></div></div>
@@ -2849,9 +3323,11 @@
   function generatorFields(subject, template) {
     if (subject !== "\u6570\u5B66") {
       const strokeFields = template === "hanzi-stroke" ? '<div class="field"><label>\u6309\u7B14\u753B\u751F\u6210\u5B57</label><select name="strokePreset"><option value="basic">\u57FA\u7840\u7B14\u753B\u5B57</option><option value="numbers">\u6570\u5B57\u6C49\u5B57</option><option value="simple">\u7B80\u5355\u5E38\u7528\u5B57</option></select></div>' : "";
+      const hanziFontFields = template === "hanzi-trace" ? '<div class="field"><label>\u63CF\u7EA2\u5B57\u4F53</label><select name="hanziFont"><option value="kaiti">\u6977\u4F53</option><option value="songti">\u5B8B\u4F53</option><option value="heiti">\u9ED1\u4F53</option><option value="fangsong">\u4EFF\u5B8B</option></select></div>' : "";
+      const englishFontFields = subject === "\u82F1\u8BED" ? '<div class="field"><label>\u82F1\u8BED\u63CF\u7EA2\u5B57\u4F53</label><select name="englishFont"><option value="comic">\u513F\u7AE5\u624B\u5199\u4F53</option><option value="print">\u5370\u5237\u4F53</option><option value="serif">\u886C\u7EBF\u4F53</option><option value="cursive">\u8FDE\u5199\u4F53</option></select></div>' : "";
       return `
     <div class="field"><label>\u7EC3\u4E60\u5185\u5BB9\uFF08\u6BCF\u884C\u4E00\u9879\uFF09</label><textarea name="customContent" placeholder="\u4E00\u884C\u53EF\u8F93\u5165\u591A\u4E2A\u5B57\uFF0C\u4F8B\u5982\uFF1A\u4F60\u597D"></textarea></div>
-    ${strokeFields}`;
+    ${hanziFontFields}${englishFontFields}${strokeFields}`;
     }
     const operationTemplates = ["horizontal", "missing", "vertical", "equation"];
     const chainTemplates = ["chain-add", "chain-sub", "mixed"];
@@ -2879,7 +3355,7 @@
       <div id="dynamicFields">${generatorFields(subject, template)}</div>
       <button class="primary" type="submit">\u751F\u6210\u5E76\u4FDD\u5B58\u8BD5\u5377</button> <button class="secondary" type="button" id="previewWorksheetButton">\u751F\u6210\u9884\u89C8</button> <button class="secondary" type="button" id="saveTemplateButton">\u4FDD\u5B58\u4E3A\u914D\u7F6E\u6A21\u677F</button>
     </form>
-    <div class="panel"><h2>\u914D\u7F6E\u751F\u6210\u9884\u89C8</h2><p>\u8C03\u6574\u5DE6\u4FA7\u914D\u7F6E\u540E\u70B9\u51FB\u751F\u6210\u9884\u89C8\uFF0C\u9884\u89C8\u4E0D\u4F1A\u4FDD\u5B58\u8BD5\u5377\u3002</p><div id="worksheetPreview">${renderStaticPreview(subject, template)}</div></div></section>`;
+    <div class="panel preview-panel"><h2>\u914D\u7F6E\u751F\u6210\u9884\u89C8</h2><p>\u8C03\u6574\u5DE6\u4FA7\u914D\u7F6E\u540E\u70B9\u51FB\u751F\u6210\u9884\u89C8\uFF0C\u9884\u89C8\u4E0D\u4F1A\u4FDD\u5B58\u8BD5\u5377\u3002</p><div id="worksheetPreview">${renderStaticPreview(subject, template)}</div></div></section>`;
     if (state.generatorConfig) applyConfigToForm(document.querySelector("#generatorForm"), state.generatorConfig);
   }
   function applyConfigToForm(form, config) {
@@ -2900,7 +3376,7 @@
     return Object.fromEntries(new FormData(form));
   }
   async function renderGeneratedPreview(values) {
-    const problems = await createProblemsFromForm({ ...values, count: String(Math.min(Number(values.count || 12), 12)) });
+    const problems = await createProblemsFromForm({ ...values, count: String(Math.min(Number(values.count || 12), 100)) });
     const templateLabel = TEMPLATE_GROUPS[values.subject].find(([key]) => key === values.template)?.[1] || values.template;
     const paper = createPaperSnapshot({
       title: `${values.subject}\xB7${templateLabel}\xB7\u9884\u89C8`,
@@ -2909,24 +3385,48 @@
       config: values,
       problems
     });
-    return `<div class="worksheet-wrap preview-wrap">${renderWorksheetPagesHtml(paper)}</div>`;
+    return `<div class="worksheet-wrap preview-wrap" tabindex="0" aria-label="\u8BD5\u5377\u9884\u89C8">${renderWorksheetPagesHtml(paper)}</div>`;
   }
   function renderStaticPreview(subject, template) {
     return `<div class="empty-state"><span class="emoji">\u{1F4C4}</span><h2>${escapeHtml2(subject)}\xB7${escapeHtml2(template)}</h2><p>\u70B9\u51FB\u201C\u751F\u6210\u9884\u89C8\u201D\u67E5\u770B\u5F53\u524D\u914D\u7F6E\u4F1A\u751F\u6210\u7684\u8BD5\u5377\u6837\u5F0F\u3002</p></div>`;
   }
   function worksheetProblemsPerPage(paper) {
     const layout = worksheetLayoutClass(paper);
+    const compactViewport = typeof window !== "undefined" && window.matchMedia?.("(max-width: 760px)").matches;
+    if (compactViewport) {
+      if (layout.includes("vertical")) return 2;
+      if (layout.includes("make-ten") || layout.includes("break-ten")) return 2;
+      if (layout.includes("word-problem")) return 1;
+      if (layout.includes("equation")) return 2;
+      if (layout.includes("hanzi-practice") || layout.includes("english-practice")) return 3;
+      return 8;
+    }
     if (layout.includes("vertical")) return 6;
-    if (layout.includes("make-ten") || layout.includes("break-ten")) return 4;
+    if (layout.includes("make-ten") || layout.includes("break-ten")) return 8;
     if (layout.includes("word-problem")) return 2;
     if (layout.includes("equation")) return 3;
-    if (layout.includes("hanzi-practice") || layout.includes("english-practice")) return 4;
-    return paper.orientation === "landscape" ? 16 : 12;
+    if (layout.includes("hanzi-practice") || layout.includes("english-practice")) return 8;
+    if (layout.includes("multiply") || layout.includes("divide")) return 24;
+    if (layout.includes("currency") || layout.includes("unit")) return 16;
+    if (layout.includes("chain-add") || layout.includes("chain-sub") || layout.includes("mixed")) return 18;
+    return paper.orientation === "landscape" ? 24 : 24;
   }
-  function paginateProblems(problems, size) {
+  function paginateProblems(problems, size, layout = "") {
     const pages = [];
-    for (let index = 0; index < problems.length; index += size) {
-      pages.push(problems.slice(index, index + size));
+    let currentPage = [];
+    let currentUnits = 0;
+    for (const problem of problems) {
+      const strokeUnits = layout.includes("hanzi-practice") && (problem.kind || problem.type) === "hanzi-stroke" ? Math.max(1, Math.ceil((problem.strokePaths?.length || 1) / 11)) : 1;
+      if (currentPage.length && currentUnits + strokeUnits > size) {
+        pages.push(currentPage);
+        currentPage = [];
+        currentUnits = 0;
+      }
+      currentPage.push(problem);
+      currentUnits += strokeUnits;
+    }
+    if (currentPage.length) {
+      pages.push(currentPage);
     }
     return pages.length ? pages : [[]];
   }
@@ -2934,11 +3434,13 @@
     const layoutClass = worksheetLayoutClass(paper);
     const columns = worksheetColumns(paper);
     const metaLine = renderWorksheetMetaHtml(paper);
-    const pages = paginateProblems(paper.problems || [], worksheetProblemsPerPage(paper));
+    const pages = paginateProblems(paper.problems || [], worksheetProblemsPerPage(paper), layoutClass);
+    let offset = 0;
     return pages.map((pageProblems, pageIndex) => {
-      const offset = pageIndex * worksheetProblemsPerPage(paper);
+      const pageOffset = offset;
+      offset += pageProblems.length;
       const pageTitle = pages.length > 1 ? `${escapeHtml2(paper.title)}\uFF08\u7B2C ${pageIndex + 1}/${pages.length} \u9875\uFF09` : escapeHtml2(paper.title);
-      return `<article class="worksheet ${paper.orientation} ${layoutClass}"><div class="worksheet-content"><h2 class="worksheet-title">${pageTitle}</h2>${metaLine}<div class="worksheet-lines ${layoutClass}" style="--columns:${columns}">${pageProblems.map((problem, index) => renderProblemHtml(problem, offset + index)).join("")}</div></div></article>`;
+      return `<article class="worksheet ${paper.orientation} ${layoutClass}"><div class="worksheet-content"><h2 class="worksheet-title">${pageTitle}</h2>${metaLine}<div class="worksheet-lines ${layoutClass}" style="--columns:${columns}">${pageProblems.map((problem, index) => renderProblemHtml(problem, pageOffset + index)).join("")}</div></div></article>`;
     }).join("");
   }
   function normalizeProblem(problem, index) {
@@ -2987,32 +3489,32 @@
   }
   var HANZI_STROKE_PRESETS = {
     basic: [
-      { text: "\u4E00", steps: ["\u6A2A"], strokeProgress: ["\u4E00"] },
-      { text: "\u4E8C", steps: ["\u6A2A", "\u6A2A"], strokeProgress: ["\u4E00", "\u4E8C"] },
-      { text: "\u4E09", steps: ["\u6A2A", "\u6A2A", "\u6A2A"], strokeProgress: ["\u4E00", "\u4E8C", "\u4E09"] },
-      { text: "\u5341", steps: ["\u6A2A", "\u7AD6"], strokeProgress: ["\u4E00", "\u5341"] }
+      { text: "\u4E00", steps: ["\u6A2A"], strokeProgress: ["\u4E00"], strokePaths: ["M18 50 H82"] },
+      { text: "\u4E8C", steps: ["\u6A2A", "\u6A2A"], strokeProgress: ["\u4E00", "\u4E8C"], strokePaths: ["M23 35 H77", "M18 65 H82"] },
+      { text: "\u4E09", steps: ["\u6A2A", "\u6A2A", "\u6A2A"], strokeProgress: ["\u4E00", "\u4E8C", "\u4E09"], strokePaths: ["M28 25 H72", "M22 50 H78", "M16 75 H84"] },
+      { text: "\u5341", steps: ["\u6A2A", "\u7AD6"], strokeProgress: ["\u4E00", "\u5341"], strokePaths: ["M18 50 H82", "M50 18 V82"] }
     ],
     numbers: [
-      { text: "\u4E00", steps: ["\u6A2A"], strokeProgress: ["\u4E00"] },
-      { text: "\u4E8C", steps: ["\u6A2A", "\u6A2A"], strokeProgress: ["\u4E00", "\u4E8C"] },
-      { text: "\u4E09", steps: ["\u6A2A", "\u6A2A", "\u6A2A"], strokeProgress: ["\u4E00", "\u4E8C", "\u4E09"] },
-      { text: "\u56DB", steps: ["\u7AD6", "\u6A2A\u6298", "\u6487", "\u7AD6\u5F2F", "\u6A2A"], strokeProgress: ["\u4E28", "\u5182", "\u513F", "\u56DB", "\u56DB"] },
-      { text: "\u4E94", steps: ["\u6A2A", "\u7AD6", "\u6A2A\u6298", "\u6A2A"], strokeProgress: ["\u4E00", "\u5341", "\u4E94", "\u4E94"] }
+      { text: "\u4E00", steps: ["\u6A2A"], strokeProgress: ["\u4E00"], strokePaths: ["M18 50 H82"] },
+      { text: "\u4E8C", steps: ["\u6A2A", "\u6A2A"], strokeProgress: ["\u4E00", "\u4E8C"], strokePaths: ["M23 35 H77", "M18 65 H82"] },
+      { text: "\u4E09", steps: ["\u6A2A", "\u6A2A", "\u6A2A"], strokeProgress: ["\u4E00", "\u4E8C", "\u4E09"], strokePaths: ["M28 25 H72", "M22 50 H78", "M16 75 H84"] },
+      { text: "\u56DB", steps: ["\u7AD6", "\u6A2A\u6298", "\u6487", "\u7AD6\u5F2F", "\u6A2A"], strokeProgress: ["\u4E28", "\u5182", "\u513F", "\u56DB", "\u56DB"], strokePaths: ["M28 20 V80", "M28 20 H76 V78", "M60 34 L45 55", "M45 55 Q58 67 72 58", "M22 80 H80"] },
+      { text: "\u4E94", steps: ["\u6A2A", "\u7AD6", "\u6A2A\u6298", "\u6A2A"], strokeProgress: ["\u4E00", "\u5341", "\u4E94", "\u4E94"], strokePaths: ["M24 22 H76", "M50 22 V46", "M25 47 H74 V70", "M22 72 H80"] }
     ],
     simple: [
-      { text: "\u4EBA", steps: ["\u6487", "\u637A"], strokeProgress: ["\u4E3F", "\u4EBA"] },
-      { text: "\u5927", steps: ["\u6A2A", "\u6487", "\u637A"], strokeProgress: ["\u4E00", "\u30CA", "\u5927"] },
-      { text: "\u53E3", steps: ["\u7AD6", "\u6A2A\u6298", "\u6A2A"], strokeProgress: ["\u4E28", "\u5182", "\u53E3"] },
-      { text: "\u65E5", steps: ["\u7AD6", "\u6A2A\u6298", "\u6A2A", "\u6A2A"], strokeProgress: ["\u4E28", "\u5182", "\u76EE", "\u65E5"] }
+      { text: "\u4EBA", steps: ["\u6487", "\u637A"], strokeProgress: ["\u4E3F", "\u4EBA"], strokePaths: ["M48 22 Q38 48 20 76", "M49 22 Q59 52 80 78"] },
+      { text: "\u5927", steps: ["\u6A2A", "\u6487", "\u637A"], strokeProgress: ["\u4E00", "\u30CA", "\u5927"], strokePaths: ["M18 40 H82", "M50 20 Q42 51 22 78", "M50 40 Q62 60 80 79"] },
+      { text: "\u53E3", steps: ["\u7AD6", "\u6A2A\u6298", "\u6A2A"], strokeProgress: ["\u4E28", "\u5182", "\u53E3"], strokePaths: ["M25 22 V78", "M25 22 H76 V78", "M25 78 H76"] },
+      { text: "\u65E5", steps: ["\u7AD6", "\u6A2A\u6298", "\u6A2A", "\u6A2A"], strokeProgress: ["\u4E28", "\u5182", "\u76EE", "\u65E5"], strokePaths: ["M25 18 V82", "M25 18 H76 V82", "M25 50 H76", "M25 82 H76"] }
     ]
   };
   var HANZI_STROKE_LIBRARY = Object.freeze({
     ...Object.fromEntries(Object.values(HANZI_STROKE_PRESETS).flat().map((item) => [item.text, item])),
-    \u4F60: { text: "\u4F60", steps: ["\u6487", "\u7AD6", "\u6487", "\u6A2A\u6487", "\u7AD6\u94A9", "\u6487", "\u70B9"], strokeProgress: ["\u4E3F", "\u4EBB", "\u5C14", "\u5C14", "\u4F60", "\u4F60", "\u4F60"] },
-    \u597D: { text: "\u597D", steps: ["\u6487\u70B9", "\u6487", "\u6A2A", "\u6A2A\u6487", "\u7AD6\u94A9", "\u6A2A"], strokeProgress: ["\u304F", "\u5973", "\u5973", "\u5B50", "\u597D", "\u597D"] },
-    \u65E0: { text: "\u65E0", steps: ["\u6A2A", "\u6A2A", "\u6487", "\u7AD6\u5F2F\u94A9"], strokeProgress: ["\u4E00", "\u4E8C", "\u5C22", "\u65E0"] },
-    \u4E0E: { text: "\u4E0E", steps: ["\u6A2A", "\u7AD6\u6298\u6298\u94A9", "\u6A2A"], strokeProgress: ["\u4E00", "\u4E0E", "\u4E0E"] },
-    \u5B50: { text: "\u5B50", steps: ["\u6A2A\u6487", "\u5F2F\u94A9", "\u6A2A"], strokeProgress: ["\u4E86", "\u4E86", "\u5B50"] },
+    \u4F60: { text: "\u4F60", steps: ["\u6487", "\u7AD6", "\u6487", "\u6A2A\u6487", "\u7AD6\u94A9", "\u6487", "\u70B9"], strokeProgress: ["\u4E3F", "\u4EBB", "\u5C14", "\u5C14", "\u4F60", "\u4F60", "\u4F60"], strokePaths: ["M39 18 Q32 40 20 61", "M39 18 V80", "M39 45 Q50 32 60 24", "M60 24 Q51 48 62 54", "M62 54 V80", "M62 54 Q74 67 82 79", "M65 30 L70 25"] },
+    \u597D: { text: "\u597D", steps: ["\u6487\u70B9", "\u6487", "\u6A2A", "\u6A2A\u6487", "\u7AD6\u94A9", "\u6A2A"], strokeProgress: ["\u304F", "\u5973", "\u5973", "\u5B50", "\u597D", "\u597D"], strokePaths: ["M40 20 Q29 42 22 58", "M40 20 Q48 37 57 49", "M20 58 H60", "M67 22 H82 Q73 39 65 45", "M73 40 V80", "M61 65 H84"] },
+    \u65E0: { text: "\u65E0", steps: ["\u6A2A", "\u6A2A", "\u6487", "\u7AD6\u5F2F\u94A9"], strokeProgress: ["\u4E00", "\u4E8C", "\u5C22", "\u65E0"], strokePaths: ["M22 28 H78", "M18 48 H82", "M52 48 Q43 68 25 80", "M52 48 Q65 63 75 80"] },
+    \u4E0E: { text: "\u4E0E", steps: ["\u6A2A", "\u7AD6\u6298\u6298\u94A9", "\u6A2A"], strokeProgress: ["\u4E00", "\u4E0E", "\u4E0E"], strokePaths: ["M20 25 H80", "M52 25 V45 H30 V70 H76 V82", "M18 62 H82"] },
+    \u5B50: { text: "\u5B50", steps: ["\u6A2A\u6487", "\u5F2F\u94A9", "\u6A2A"], strokeProgress: ["\u4E86", "\u4E86", "\u5B50"], strokePaths: ["M22 28 H78 Q68 40 55 43", "M55 43 V75 Q55 82 65 82 H78", "M18 60 H82"] },
     \u5E38: {
       text: "\u5E38",
       steps: ["\u7AD6", "\u70B9", "\u6487", "\u70B9", "\u6A2A\u94A9", "\u7AD6", "\u6A2A\u6298", "\u6A2A", "\u7AD6", "\u6A2A\u6298\u94A9", "\u7AD6"],
@@ -3047,10 +3549,35 @@
       ]
     }
   });
-  function createStrokePracticeProblems(values, lines) {
+  var HANZI_WRITER_DATA_PATH = "./assets/hanzi-writer-data";
+  var hanziWriterDataCache = /* @__PURE__ */ new Map();
+  async function loadHanziWriterStrokePaths(character) {
+    const value = String(character || "").trim();
+    if (!/^[\u3400-\u9fff]$/u.test(value)) return null;
+    if (hanziWriterDataCache.has(value)) return hanziWriterDataCache.get(value);
+    if (typeof fetch !== "function") return null;
+    try {
+      const url = `${HANZI_WRITER_DATA_PATH}/${encodeURIComponent(value)}.json`;
+      const response = await fetch(url, { cache: "force-cache" });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      const paths = Array.isArray(data.strokes) ? data.strokes.filter((path) => typeof path === "string" && path.trim()) : [];
+      hanziWriterDataCache.set(value, paths);
+      return paths;
+    } catch (error) {
+      console.warn(`\u6C49\u5B57\u201C${value}\u201D\u7B14\u753B\u6570\u636E\u52A0\u8F7D\u5931\u8D25`, error);
+      hanziWriterDataCache.set(value, null);
+      return null;
+    }
+  }
+  async function createStrokePracticeProblems(values, lines) {
     const preset = HANZI_STROKE_PRESETS[values.strokePreset] || HANZI_STROKE_PRESETS.basic;
     const source = lines.length ? lines.flatMap((text) => Array.from(text).filter((character) => character.trim()).map((character) => HANZI_STROKE_LIBRARY[character] || { text: character, steps: [], strokeProgress: [character] })) : preset;
-    return source.map((item, index) => ({
+    const enrichedSource = await Promise.all(source.map(async (item) => {
+      const remotePaths = await loadHanziWriterStrokePaths(item.text);
+      return remotePaths?.length ? { ...item, strokePaths: remotePaths, strokeDataSource: "hanzi-writer-data" } : item;
+    }));
+    return enrichedSource.map((item, index) => ({
       id: `problem-${index + 1}`,
       kind: "hanzi-stroke",
       prompt: item.text,
@@ -3058,14 +3585,18 @@
       boxes: 0,
       strokeSteps: item.steps,
       strokeProgress: item.strokeProgress || buildStrokeProgress(item.steps, item.text),
-      strokePaths: item.strokePaths
+      strokePaths: item.strokePaths || [],
+      strokeDataSource: item.strokeDataSource || "local-fallback"
     }));
   }
   async function createProblemsFromForm(values) {
     if (values.subject !== "\u6570\u5B66") {
       const lines = String(values.customContent || "").split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
       if (values.template === "hanzi-stroke") return createStrokePracticeProblems(values, lines);
-      return (lines.length ? lines : ["\u8BF7\u5728\u6B64\u63CF\u5199"]).map((line, index) => ({ id: `problem-${index + 1}`, kind: values.template, prompt: line, answer: "", boxes: 0 }));
+      const meta = {};
+      if (values.template === "hanzi-trace") meta.font = values.hanziFont || "kaiti";
+      if (values.subject === "\u82F1\u8BED") meta.font = values.englishFont || "comic";
+      return (lines.length ? lines : ["\u8BF7\u5728\u6B64\u63CF\u5199"]).map((line, index) => ({ id: `problem-${index + 1}`, kind: values.template, prompt: line, answer: "", boxes: 0, meta }));
     }
     const module = await Promise.resolve().then(() => (init_math(), math_exports));
     const templateMap = {
@@ -3125,17 +3656,22 @@
     <div class="wrong-problem-buttons">${paper.problems.map((problem, index) => `<button class="${wrongIds.has(problem.id) ? "active" : ""}" data-toggle-wrong="${problem.id}">${index + 1}</button>`).join("")}</div>
     <div class="header-actions"><button class="secondary" data-batch-wrong>\u6309\u9898\u53F7\u6279\u91CF\u6807\u8BB0</button>${wrongIds.size ? '<button class="secondary" data-retry-wrong="original">\u539F\u9898\u91CD\u505A</button><button class="primary" data-retry-wrong="similar">\u751F\u6210\u540C\u7C7B\u65B0\u9898</button>' : ""}</div>
   </section>` : "";
-    main.innerHTML = `${pageHeader(escapeHtml2(paper.title), `${PAPER_STATUS[paper.status]} \xB7 ${paper.subject}`, `<button class="secondary" data-route="papers">\u8FD4\u56DE\u76EE\u5F55</button>`)}
-    <div class="paper-toolbar no-print">
-      ${editable ? `<button class="toolbar-button active ${mode}" data-ink-mode="pen">${mode === "red" ? "\u{1F534} \u7EA2\u7B14\u6279\u6539" : "\u26AB \u9ED1\u7B14\u4F5C\u7B54"}</button>
+    const focusWriting = mode === "black" && editable;
+    document.body.classList.toggle("paper-focus-active", focusWriting);
+    const scrollButtons = '<button class="secondary" data-paper-scroll="-1">\u2191 \u4E0A\u79FB</button><button class="secondary" data-paper-scroll="1">\u2193 \u4E0B\u79FB</button>';
+    const headerHtml = focusWriting ? "" : pageHeader(escapeHtml2(paper.title), `${PAPER_STATUS[paper.status]} \xB7 ${paper.subject}`, `<button class="secondary" data-route="papers">\u8FD4\u56DE\u76EE\u5F55</button>`);
+    main.innerHTML = `${headerHtml}<section class="paper-view ${focusWriting ? "paper-writing-view" : ""}">
+    <div class="paper-toolbar no-print ${focusWriting ? "paper-floating-toolbar" : ""}">
+      ${focusWriting ? '<button class="secondary" data-route="papers">\u9000\u51FA</button>' : ""}
+      ${editable ? `<button class="toolbar-button active ${mode}" data-ink-mode="pen">${mode === "red" ? "\u{1F534} \u7EA2\u7B14\u6279\u6539" : "\u26AB \u9ED1\u7B14\u4F5C\u7B54"}</button>${scrollButtons}
       <button class="toolbar-button" data-ink-mode="eraser">\u232B \u64E6\u9664\u5F53\u524D\u7B14\u8FF9</button><button class="toolbar-button" data-ink-action="undo">\u21B6 \u64A4\u9500</button>` : ""}
       ${paper.status === "writing" ? '<button class="primary" data-paper-submit>\u63D0\u4EA4\u4F5C\u7B54</button>' : ""}
       ${paper.status === "review" ? '<button class="primary" data-paper-reviewed>\u5B8C\u6210\u6279\u6539</button>' : ""}
       ${paper.status === "done" ? '<button class="secondary" data-reopen-review>\u4FEE\u6539\u6279\u6539</button>' : ""}
-      <select id="printVersion" class="toolbar-button"><option value="blank">\u6253\u5370\u7A7A\u767D\u7248</option><option value="answer">\u6253\u5370\u9ED1\u7B14\u4F5C\u7B54\u7248</option><option value="final">\u6253\u5370\u7EA2\u7B14\u6700\u7EC8\u7248</option></select><button class="secondary" data-print-paper>\u6253\u5370</button>
+      ${focusWriting ? "" : '<select id="printVersion" class="toolbar-button"><option value="blank">\u6253\u5370\u7A7A\u767D\u7248</option><option value="answer">\u6253\u5370\u9ED1\u7B14\u4F5C\u7B54\u7248</option><option value="final">\u6253\u5370\u7EA2\u7B14\u6700\u7EC8\u7248</option></select><button class="secondary" data-print-paper>\u6253\u5370</button>'}
     </div>
     ${wrongTools}
-    <div class="worksheet-wrap"><div id="activeWorksheet" class="worksheet-pages">${renderWorksheetPagesHtml(paper)}</div></div>`;
+    <div class="worksheet-wrap"><div id="activeWorksheet" class="worksheet-pages">${renderWorksheetPagesHtml(paper)}</div></div></section>`;
     const worksheet = document.querySelector("#activeWorksheet");
     const blackLayer = createDrawingLayer(worksheet, { color: "#1e252b", enabled: ["unstarted", "writing"].includes(paper.status), strokes: paper.blackStrokes, onChange: (strokes) => handlePaperStrokeChange(paper, "black", strokes) });
     const redLayer = createDrawingLayer(worksheet, { color: "#d93636", enabled: paper.status === "review", strokes: paper.redStrokes, onChange: (strokes) => handlePaperStrokeChange(paper, "red", strokes) });
@@ -3143,20 +3679,37 @@
   }
   async function renderReading() {
     const readings = (await ensureReadingSeeds()).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-    const active = readings.find((item) => item.id === state.activeReadingId) || readings[0];
-    state.activeReadingId = active?.id;
-    main.innerHTML = `${pageHeader("\u9605\u8BFB\u8D44\u6599", "\u6309\u6BB5\u843D\u70B9\u8BFB\uFF0C\u4E2D\u6587\u9010\u5B57\u3001\u82F1\u6587\u9010\u8BCD\u8DDF\u968F\u53D8\u8272", '<button class="primary" data-new-reading>\uFF0B \u65B0\u5EFA\u9605\u8BFB\u8D44\u6599</button>')}
-    <section class="reading-layout"><aside class="panel"><div class="field"><label>\u8D44\u6599\u5206\u7C7B</label><select id="readingCategory"><option>\u5168\u90E8</option>${[...new Set(readings.map((item) => item.category))].map((item) => `<option>${item}</option>`).join("")}</select></div><div class="reading-list">${readings.map((item) => `<button class="reading-item ${item.id === active?.id ? "active" : ""}" data-reading-id="${item.id}">${escapeHtml2(item.title)}<small style="display:block;opacity:.7">${item.category}</small></button>`).join("")}</div></aside><div>${active ? renderReader(active) : '<div class="empty-state">\u6682\u65E0\u9605\u8BFB\u8D44\u6599</div>'}</div></section>`;
+    const active = readings.find((item) => item.id === state.activeReadingId);
+    if (active) {
+      main.innerHTML = renderReader(active);
+      return;
+    }
+    const categories = [...new Set(readings.map((item) => item.category || "\u7ED8\u672C"))];
+    main.innerHTML = `${pageHeader("\u7ED8\u672C\u4E66\u67B6", "\u8BFB\u53D6 huiben \u6587\u4EF6\u5939\u548C\u5DF2\u5BFC\u5165\u4E66\u7C4D", '<button class="primary" data-new-picture-book>\uFF0B \u5BFC\u5165\u4E66\u7C4D</button><button class="secondary" data-new-text-reading>\uFF0B \u65B0\u5EFA\u6587\u5B57</button>')}
+    ${readings.length ? `<section class="bookshelf-grid">${readings.map((item) => renderBookCard(item)).join("")}</section>` : '<div class="empty-state"><span class="emoji">\u{1F4DA}</span><h2>\u4E66\u67B6\u6682\u65E0\u4E66\u7C4D</h2><p>\u628A PDF\u3001EPUB\u3001EQUB \u653E\u5165 huiben \u6587\u4EF6\u5939\u5E76\u5237\u65B0\uFF0C\u6216\u70B9\u51FB\u5BFC\u5165\u4E66\u7C4D\u3002</p></div>'}`;
+  }
+  function renderBookCard(item) {
+    const badge = item.fileKind ? String(item.fileKind).toUpperCase() : item.type === "picture-book" ? "\u56FE\u7247" : "\u6587\u672C";
+    const source = item.source === "huiben" ? "huiben" : item.source === "imported" ? "\u5DF2\u5BFC\u5165" : item.category || "\u9605\u8BFB";
+    return `<button class="book-card" data-reading-id="${item.id}" aria-label="\u6253\u5F00${escapeHtml2(item.title)}"><span class="book-badge">${escapeHtml2(badge)}</span><strong>${escapeHtml2(item.title)}</strong><small>${escapeHtml2(source)}</small></button>`;
   }
   function renderReader(item) {
+    if (item.type === "file-book") return renderFileBookReader(item);
     if (item.type === "picture-book") {
       const page = item.pages?.[state.bookPage || 0] || item.pages?.[0];
       if (!page) return '<div class="empty-state">\u7ED8\u672C\u6682\u65E0\u9875\u9762</div>';
-      const background = page.illustration?.palette?.join(",") || "#ffe3b0,#a7d8cf";
-      return `<article class="reader"><div class="paper-toolbar"><button class="secondary" data-book-prev>\u2190 \u4E0A\u4E00\u9875</button><strong>${escapeHtml2(item.title)} \xB7 ${(state.bookPage || 0) + 1}/${item.pages.length}</strong><button class="secondary" data-book-next>\u4E0B\u4E00\u9875 \u2192</button><button class="primary" data-speak-book>\u6717\u8BFB\u672C\u9875</button>${item.builtin ? "" : '<button class="secondary" data-edit-book>\u7F16\u8F91\u7ED8\u672C</button>'}</div><div class="picture-page" style="background:linear-gradient(150deg,${background})">${page.imageDataUrl ? `<img src="${page.imageDataUrl}" alt="${escapeHtml2(page.fileName || item.title)}">` : '<div class="picture-placeholder"></div>'}${(page.textBoxes || []).map((box) => `<p class="reading-paragraph picture-reading-box" data-book-text data-text-box-id="${box.id}" style="left:${box.x}%;top:${box.y}%;width:${box.width}%">${tokenHtml(box.text, item.language)}</p>`).join("")}</div></article>`;
+      const background = page.illustration?.palette?.join(",") || "#f4f1e9,#ffffff";
+      return `<article class="reader fullscreen-reader"><div class="reader-floating-toolbar"><button class="secondary" data-book-prev>\u2190</button><strong>${escapeHtml2(item.title)} \xB7 ${(state.bookPage || 0) + 1}/${item.pages.length}</strong><button class="secondary" data-book-next>\u2192</button><button class="secondary" data-speak-book>\u6717\u8BFB</button>${item.source === "huiben" || item.builtin ? "" : '<button class="secondary" data-edit-book>\u7F16\u8F91</button>'}<button class="primary" data-exit-reader>\u9000\u51FA\u9605\u8BFB</button></div><div class="picture-page fullscreen-picture-page" style="background:linear-gradient(150deg,${background})">${page.imageDataUrl ? `<img src="${page.imageDataUrl}" alt="${escapeHtml2(page.fileName || item.title)}">` : '<div class="picture-placeholder"></div>'}${(page.textBoxes || []).map((box) => `<p class="reading-paragraph picture-reading-box" data-book-text data-text-box-id="${box.id}" style="left:${box.x}%;top:${box.y}%;width:${box.width}%">${tokenHtml(box.text, item.language)}</p>`).join("")}</div></article>`;
     }
     const paragraphs = item.content.split(/\n+/).filter(Boolean);
-    return `<article class="reader"><div class="paper-toolbar"><button class="primary" data-speak-all>\u25B6 \u8FDE\u7EED\u6717\u8BFB</button><button class="secondary" data-stop-speech>\u25A0 \u505C\u6B62</button><select id="traceMode"><option value="none">\u666E\u901A\u9605\u8BFB</option><option value="overlay">\u8986\u76D6\u539F\u6587\u63CF\u7EA2</option><option value="practice">\u63CF\u7EA2 + \u4EFF\u5199</option></select></div><h2>${escapeHtml2(item.title)}</h2>${paragraphs.map((paragraph, index) => `<div class="paragraph-wrap"><p class="reading-paragraph" data-paragraph-index="${index}" data-text="${escapeHtml2(paragraph)}">${tokenHtml(paragraph, item.language)}</p><div class="trace-extra"></div></div>`).join("")}</article>`;
+    return `<article class="reader fullscreen-reader text-reader"><div class="reader-floating-toolbar"><button class="primary" data-speak-all>\u25B6 \u8FDE\u7EED\u6717\u8BFB</button><button class="secondary" data-stop-speech>\u25A0 \u505C\u6B62</button><select id="traceMode"><option value="none">\u666E\u901A\u9605\u8BFB</option><option value="overlay">\u8986\u76D6\u539F\u6587\u63CF\u7EA2</option><option value="practice">\u63CF\u7EA2 + \u4EFF\u5199</option></select><button class="primary" data-exit-reader>\u9000\u51FA\u9605\u8BFB</button></div><h2>${escapeHtml2(item.title)}</h2>${paragraphs.map((paragraph, index) => `<div class="paragraph-wrap"><p class="reading-paragraph" data-paragraph-index="${index}" data-text="${escapeHtml2(paragraph)}">${tokenHtml(paragraph, item.language)}</p><div class="trace-extra"></div></div>`).join("")}</article>`;
+  }
+  function renderFileBookReader(item) {
+    const sourceUrl = escapeHtml2(item.sourceUrl || "");
+    const title = escapeHtml2(item.title);
+    const kind = String(item.fileKind || "file").toUpperCase();
+    const body = item.fileKind === "pdf" ? `<iframe class="book-file-frame" src="${sourceUrl}#toolbar=0&navpanes=0" title="${title}" loading="eager"></iframe>` : `<div class="book-file-fallback"><h2>${title}</h2><p>${kind} \u6587\u4EF6\u5DF2\u8F7D\u5165\u3002\u5F53\u524D\u6D4F\u89C8\u5668\u5982\u679C\u4E0D\u80FD\u76F4\u63A5\u9884\u89C8\uFF0C\u8BF7\u7528\u7CFB\u7EDF\u9605\u8BFB\u5668\u6253\u5F00\u3002</p><a class="primary" href="${sourceUrl}" target="_blank" rel="noopener">\u6253\u5F00\u4E66\u7C4D</a></div>`;
+    return `<article class="reader fullscreen-reader file-book-reader"><div class="reader-floating-toolbar"><strong>${title}</strong><span>${kind}</span><button class="primary" data-exit-reader>\u9000\u51FA\u9605\u8BFB</button></div>${body}</article>`;
   }
   function tokenHtml(text, language) {
     return tokenizeForReading(text, language).map((token, index) => `<span class="reading-token" data-token-index="${index}">${escapeHtml2(token)}</span>`).join("");
@@ -3227,19 +3780,19 @@
     next();
   }
   async function createReadingModal() {
-    openModal(`<h2>\u65B0\u5EFA\u9605\u8BFB\u8D44\u6599</h2><p>\u9009\u62E9\u8D44\u6599\u7C7B\u578B\u540E\u518D\u8F93\u5165\u5185\u5BB9\u3002</p><div class="entry-grid reading-create-options"><button class="entry-card" data-new-text-reading><span class="emoji">\u{1F4C4}</span><h3>\u7EAF\u6587\u5B57\u8D44\u6599</h3><p>\u53E4\u8BD7\u3001\u6C49\u5B57\u3001\u62FC\u97F3\u3001\u6545\u4E8B\u6216\u82F1\u8BED\u9605\u8BFB\u3002</p></button><button class="entry-card" data-new-picture-book><span class="emoji">\u{1F5BC}\uFE0F</span><h3>\u4E0A\u4F20\u7ED8\u672C</h3><p>\u591A\u5F20\u56FE\u7247\u3001\u591A\u6587\u672C\u6846\uFF0C\u53EF\u62D6\u52A8\u6587\u5B57\u4F4D\u7F6E\u3002</p></button></div><div class="header-actions"><button type="button" class="secondary" data-close-modal>\u53D6\u6D88</button></div>`);
+    openModal(`<h2>\u65B0\u5EFA\u9605\u8BFB\u8D44\u6599</h2><p>\u9009\u62E9\u8D44\u6599\u7C7B\u578B\u540E\u518D\u8F93\u5165\u5185\u5BB9\u3002</p><div class="entry-grid reading-create-options"><button class="entry-card" data-new-text-reading><span class="emoji">\u{1F4C4}</span><h3>\u7EAF\u6587\u5B57\u8D44\u6599</h3><p>\u53E4\u8BD7\u3001\u6C49\u5B57\u3001\u62FC\u97F3\u3001\u6545\u4E8B\u6216\u82F1\u8BED\u9605\u8BFB\u3002</p></button><button class="entry-card" data-new-picture-book><span class="emoji">\u{1F4DA}</span><h3>\u5BFC\u5165\u4E66\u7C4D</h3><p>\u652F\u6301\u56FE\u7247\u7ED8\u672C\u3001PDF\u3001EPUB\u3001EQUB\u3002</p></button></div><div class="header-actions"><button type="button" class="secondary" data-close-modal>\u53D6\u6D88</button></div>`);
   }
   function createTextReadingModal() {
     openModal(`<h2>\u65B0\u5EFA\u7EAF\u6587\u5B57\u8D44\u6599</h2><form id="readingForm"><div class="field-row"><div class="field"><label>\u6807\u9898</label><input name="title"></div><div class="field"><label>\u5206\u7C7B</label><input name="category" placeholder="\u53E4\u8BD7\u3001\u6210\u8BED\u6545\u4E8B\u3001\u62FC\u97F3\u2026"></div></div><div class="field"><label>\u8BED\u8A00</label><select name="language"><option value="zh">\u4E2D\u6587</option><option value="en">\u82F1\u6587</option></select></div><div class="field"><label>\u6B63\u6587\uFF08\u6BCF\u4E2A\u6BB5\u843D\u6362\u4E00\u884C\uFF09</label><textarea name="content" required></textarea></div><div class="header-actions"><button type="button" class="secondary" data-close-modal>\u53D6\u6D88</button><button class="primary">\u4FDD\u5B58</button></div></form>`);
   }
   function createPictureBookModal() {
-    openModal(`<h2>\u4E0A\u4F20\u7ED8\u672C\u56FE\u7247</h2><form id="pictureBookForm"><div class="field-row"><div class="field"><label>\u7ED8\u672C\u540D\u79F0</label><input name="title" required></div><div class="field"><label>\u8BED\u8A00</label><select name="language"><option value="zh">\u4E2D\u6587</option><option value="en">\u82F1\u6587</option></select></div></div><div class="field"><label>\u9009\u62E9\u7ED8\u672C\u9875\u9762</label><input name="pages" type="file" accept="image/*" multiple required><small>\u6309\u9009\u62E9\u987A\u5E8F\u751F\u6210\u9875\u9762\uFF0C\u8FDB\u5165\u7F16\u8F91\u5668\u540E\u4ECD\u53EF\u8C03\u6574\u3002</small></div><div class="header-actions"><button type="button" class="secondary" data-close-modal>\u53D6\u6D88</button><button class="primary">\u8FDB\u5165\u7F16\u8F91\u5668</button></div></form>`);
+    openModal(`<h2>\u5BFC\u5165\u4E66\u7C4D</h2><form id="pictureBookForm"><div class="field-row"><div class="field"><label>\u4E66\u540D</label><input name="title" placeholder="\u7559\u7A7A\u5219\u4F7F\u7528\u6587\u4EF6\u540D"></div><div class="field"><label>\u8BED\u8A00</label><select name="language"><option value="zh">\u4E2D\u6587</option><option value="en">\u82F1\u6587</option></select></div></div><div class="field"><label>\u9009\u62E9\u6587\u4EF6</label><input name="pages" type="file" accept="image/*,.pdf,application/pdf,.epub,application/epub+zip,.equb" multiple required><small>\u591A\u5F20\u56FE\u7247\u4F1A\u8FDB\u5165\u56FE\u7247\u7ED8\u672C\u7F16\u8F91\u5668\uFF1BPDF\u3001EPUB\u3001EQUB \u4F1A\u76F4\u63A5\u8FDB\u5165\u4E66\u67B6\u3002</small></div><div class="header-actions"><button type="button" class="secondary" data-close-modal>\u53D6\u6D88</button><button class="primary">\u5BFC\u5165</button></div></form>`);
   }
   function readFileAsDataUrl(file) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(String(reader.result));
-      reader.onerror = () => reject(reader.error || new Error("\u56FE\u7247\u8BFB\u53D6\u5931\u8D25"));
+      reader.onerror = () => reject(reader.error || new Error("\u6587\u4EF6\u8BFB\u53D6\u5931\u8D25"));
       reader.readAsDataURL(file);
     });
   }
@@ -3292,6 +3845,11 @@
       state.bookPage = 0;
       return renderReading();
     }
+    if (event.target.closest("[data-exit-reader]")) {
+      state.activeReadingId = null;
+      state.bookPage = 0;
+      return renderReading();
+    }
     if (event.target.closest("[data-close-modal]")) return closeModal();
     if (event.target.closest("[data-new-reading]")) return createReadingModal();
     if (event.target.closest("[data-new-text-reading]")) return createTextReadingModal();
@@ -3300,6 +3858,19 @@
       await duplicatePaper(event.target.closest("[data-copy-paper]").dataset.copyPaper);
       showToast("\u5DF2\u590D\u5236\u8BD5\u5377");
       return renderPapers();
+    }
+    if (event.target.closest("[data-batch-delete-papers]")) {
+      const ids = [...document.querySelectorAll("[data-paper-select]:checked")].map((input) => input.dataset.paperSelect);
+      if (!ids.length) {
+        showToast("\u8BF7\u5148\u9009\u62E9\u8981\u5220\u9664\u7684\u8BD5\u5377");
+        return;
+      }
+      if (confirm(`\u786E\u5B9A\u5220\u9664\u9009\u4E2D\u7684 ${ids.length} \u4EFD\u8BD5\u5377\u5417\uFF1F`)) {
+        await Promise.all(ids.map((id) => remove("papers", id)));
+        showToast("\u5DF2\u6279\u91CF\u5220\u9664");
+        return renderPapers();
+      }
+      return;
     }
     if (event.target.closest("[data-delete-paper]")) {
       const id = event.target.closest("[data-delete-paper]").dataset.deletePaper;
@@ -3525,6 +4096,25 @@
       return;
     }
   }
+  var paperScrollTimer = null;
+  function scrollActiveWorksheet(direction) {
+    const wrap = document.querySelector(".paper-writing-view .worksheet-wrap, .paper-view .worksheet-wrap");
+    if (!wrap) return;
+    wrap.scrollBy({ top: Number(direction) * 90, behavior: "auto" });
+  }
+  function stopPaperScrollTimer() {
+    if (paperScrollTimer) clearInterval(paperScrollTimer);
+    paperScrollTimer = null;
+  }
+  document.addEventListener("pointerdown", (event) => {
+    const button = event.target.closest("[data-paper-scroll]");
+    if (!button) return;
+    event.preventDefault();
+    scrollActiveWorksheet(button.dataset.paperScroll);
+    stopPaperScrollTimer();
+    paperScrollTimer = setInterval(() => scrollActiveWorksheet(button.dataset.paperScroll), 90);
+  });
+  ["pointerup", "pointercancel", "pointerleave", "visibilitychange"].forEach((eventName) => document.addEventListener(eventName, stopPaperScrollTimer));
   document.addEventListener("click", handleGlobalClick);
   document.addEventListener("submit", async (event) => {
     if (event.target.id === "generatorForm") {
@@ -3547,10 +4137,23 @@
       event.preventDefault();
       try {
         const formData = new FormData(event.target);
+        const values = Object.fromEntries(formData);
         const files = [...event.target.elements.pages.files];
-        const pages = await Promise.all(files.map(async (file) => ({ imageDataUrl: await readFileAsDataUrl(file), fileName: file.name })));
-        state.pictureBookDraft = createPictureBookReading(Object.fromEntries(formData), pages);
-        renderPictureBookEditorModal();
+        const imageFiles = files.filter((file) => file.type.startsWith("image/"));
+        if (imageFiles.length === files.length) {
+          const pages = await Promise.all(files.map(async (file) => ({ imageDataUrl: await readFileAsDataUrl(file), fileName: file.name })));
+          state.pictureBookDraft = createPictureBookReading(values, pages);
+          renderPictureBookEditorModal();
+          return;
+        }
+        if (imageFiles.length) throw new Error("\u56FE\u7247\u9875\u548C PDF/EPUB/EQUB \u8BF7\u5206\u5F00\u5BFC\u5165");
+        const books = await Promise.all(files.map(async (file) => createFileBookReading(values, { name: file.name, type: file.type, size: file.size, dataUrl: await readFileAsDataUrl(file) })));
+        await Promise.all(books.map((book) => put("readings", book)));
+        closeModal();
+        state.activeReadingId = books[0]?.id || null;
+        state.bookPage = 0;
+        showToast(`\u5DF2\u5BFC\u5165 ${books.length} \u672C\u4E66`);
+        return renderReading();
       } catch (error) {
         showToast(error.message);
       }
@@ -3602,6 +4205,16 @@
       preview.innerHTML = `<div class="empty-state"><span class="emoji">\u26A0\uFE0F</span><h2>\u9884\u89C8\u5931\u8D25</h2><p>${escapeHtml2(error.message)}</p></div>`;
     }
   });
+  function handleMainContentWheel(event) {
+    const target = event.target instanceof Element ? event.target : null;
+    if (!target?.closest("#mainContent") || target.closest(".preview-panel")) return;
+    if (document.body.classList.contains("paper-focus-active")) return;
+    const mainScrollTarget = main.scrollHeight > main.clientHeight ? main : document.scrollingElement;
+    if (!mainScrollTarget) return;
+    mainScrollTarget.scrollTop += event.deltaY;
+    event.preventDefault();
+  }
+  document.addEventListener("wheel", handleMainContentWheel, { passive: false });
   document.querySelector("#menuButton").addEventListener("click", () => document.querySelector("#sidebar").classList.toggle("open"));
   async function init() {
     await openDatabase();

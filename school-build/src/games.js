@@ -1,4 +1,4 @@
-import { put, uid } from './db.js';
+﻿import { put, uid } from './db.js';
 import { createChineseWordGame, submitChinesePath, findChineseMove, hasChineseMove, reshuffleChineseBoard } from './games/chinese-word-game.js';
 import { createEnglishMatchGame, dropEnglishCard } from './games/english-match-game.js';
 
@@ -25,33 +25,36 @@ export function mountHanziGame(host, { onExit, showToast }) {
   }
 
   function render() {
-    host.innerHTML = `<div class="page-header"><div><h1>汉字组词消消乐</h1><p>只连接上下左右相邻汉字，路径可以转弯，同一格不能重复。</p></div><div class="header-actions"><button class="secondary" id="gameExit">退出游戏</button></div></div>
-      <div class="panel"><div class="paper-toolbar"><strong>词语长度</strong>${[2,3,4].map((length)=>`<label class="check-item"><input type="checkbox" data-word-length="${length}" ${allowedWordLengths.includes(length)?'checked':''}>${length} 字</label>`).join('')}<button class="secondary" id="hanziRestart">重新开始</button><button class="secondary" id="hanziHint">提示一步</button><span>已选择：<strong id="selectedWord"></strong></span><span>错误：<strong>${game.session.errorCount}</strong></span></div>
+    host.innerHTML = `<div class="game-screen hanzi-game-screen"><div class="page-header game-header"><div><h1>汉字组词消消乐</h1><p>只连接上下左右相邻汉字，路径可以转弯，同一格不能重复。</p></div><div class="header-actions"><button class="secondary" id="gameExit">退出游戏</button></div></div>
+      <div class="panel game-panel"><div class="paper-toolbar game-toolbar"><strong>词语长度</strong>${[2,3,4].map((length)=>`<label class="check-item"><input type="checkbox" data-word-length="${length}" ${allowedWordLengths.includes(length)?'checked':''}>${length} 字</label>`).join('')}<button class="secondary" id="hanziRestart">重新开始</button><button class="secondary" id="hanziHint">提示一步</button><span>已选择：<strong id="selectedWord"></strong></span><span>错误：<strong>${game.session.errorCount}</strong></span></div>
       <div class="game-board hanzi-board">${game.board.map((character,index)=>`<button class="hanzi-cell ${character==null?'empty':''} ${selected.includes(index)?'selected':''}" data-cell-index="${index}">${character||''}</button>`).join('')}</div>
-      <div class="header-actions" style="justify-content:center;margin-top:16px"><button class="primary" id="submitWord">提交词语</button><button class="secondary" id="clearWord">重新选择</button></div></div>`;
+      </div></div>`;
     bind();
   }
 
   function bind() {
     host.querySelector('#gameExit').onclick=onExit;
     host.querySelector('#hanziRestart').onclick=start;
-    host.querySelector('#clearWord').onclick=()=>{selected=[];render();};
     host.querySelectorAll('[data-word-length]').forEach((input)=>input.onchange=()=>{
       const next=[...host.querySelectorAll('[data-word-length]:checked')].map((item)=>Number(item.dataset.wordLength));
       try { createChineseWordGame({allowedWordLengths:next,seed:1}); allowedWordLengths=next; start(); } catch(error){ input.checked=!input.checked; showToast(error.message); }
     });
-    host.querySelectorAll('[data-cell-index]').forEach((cell)=>cell.onclick=()=>{
+    host.querySelectorAll('[data-cell-index]').forEach((cell)=>cell.onclick=async()=>{
       const index=Number(cell.dataset.cellIndex);
-      if(game.board[index]==null||selected.includes(index)) return;
+      if(game.board[index]==null) return;
+      const selectedIndex = selected.indexOf(index);
+      if(selectedIndex > -1){ selected=selected.slice(0, selectedIndex); render(); return; }
       if(selected.length){ const last=selected[selected.length-1]; const lr=Math.floor(last/9),lc=last%9,cr=Math.floor(index/9),cc=index%9; if(Math.abs(lr-cr)+Math.abs(lc-cc)!==1){showToast('只能连接上下左右相邻汉字');return;} }
-      selected.push(index); render();
+      selected.push(index);
+      const word = selected.map((cellIndex)=>game.board[cellIndex]).join('');
+      if(allowedWordLengths.includes(selected.length) && game.dictionary.includes(word)){
+        const result=submitChinesePath(game,selected);
+        if(result.correct){showToast(`“${result.word}”消除成功`);selected=[];if(game.session.status==='completed'){await persistSession('hanzi',game.session);setTimeout(()=>{showToast('恭喜，81 个汉字全部消除！');start();},300);return;}if(!hasChineseMove(game))reshuffleChineseBoard(game,{seed:Date.now()});render();return;}
+      }
+      render();
     });
     host.querySelector('#hanziHint').onclick=()=>{const move=findChineseMove(game); if(move){selected=move.path;render();showToast(`可以组成“${move.word}”`);}else showToast('正在重新排列');};
-    host.querySelector('#submitWord').onclick=async()=>{
-      const result=submitChinesePath(game,selected);
-      if(result.correct){showToast(`“${result.word}”消除成功`);selected=[];if(game.session.status==='completed'){await persistSession('hanzi',game.session);setTimeout(()=>{showToast('恭喜，81 个汉字全部消除！');start();},300);return;}if(!hasChineseMove(game))reshuffleChineseBoard(game,{seed:Date.now()});render();}
-      else {if(result.reason==='not-in-dictionary')showToast(`“${result.word}”不在词库中，错误 +1`);else showToast('路径或字数不符合当前规则');selected=[];render();}
-    };
+
     const selectedLabel=host.querySelector('#selectedWord'); if(selectedLabel)selectedLabel.textContent=selected.map((index)=>game.board[index]).join('');
   }
   start();
@@ -94,7 +97,7 @@ export function mountEnglishGame(host, { onExit, showToast }) {
 
   /** 渲染当前游戏状态并重新绑定本轮交互。 */
   function render() {
-    host.innerHTML = `<div class="page-header"><div><h1>英语实物配对</h1><p>拖动儿童图卡到正确的英文单词区域。</p></div><div class="header-actions"><button class="secondary" id="gameExit">退出游戏</button></div></div><div class="panel"><div class="paper-toolbar"><label>每关数量 <input id="matchCount" type="number" min="2" max="20" value="${count}" style="width:70px"></label><button class="secondary" id="matchRestart">重新开始</button><span>错误：<strong>${game.session.errorCount}</strong></span></div><div class="match-layout"><div class="picture-pool">${game.cards.map((card)=>`<div class="picture-card ${card.status==='matched'?'matched':''}" draggable="true" data-card-id="${card.id}">${cardVisualHtml(card)}<small>${card.category}</small></div>`).join('')}</div><div class="word-targets">${game.targets.map((target)=>`<div class="word-target ${target.matchedCardId?'matched':''}" data-target-id="${target.id}">${target.word}</div>`).join('')}</div></div></div>`;
+    host.innerHTML = `<div class="game-screen english-game-screen"><div class="page-header game-header"><div><h1>英语实物配对</h1><p>拖动儿童图卡到正确的英文单词区域。</p></div><div class="header-actions"><button class="secondary" id="gameExit">退出游戏</button></div></div><div class="panel game-panel"><div class="paper-toolbar game-toolbar"><label>每关数量 <input id="matchCount" type="number" min="2" max="20" value="${count}" style="width:70px"></label><button class="secondary" id="matchRestart">重新开始</button><span>错误：<strong>${game.session.errorCount}</strong></span></div><div class="match-layout"><div class="picture-pool">${game.cards.map((card)=>`<div class="picture-card ${card.status==='matched'?'matched':''}" draggable="true" data-card-id="${card.id}">${cardVisualHtml(card)}<small>${card.visual?.label || card.category}</small></div>`).join('')}</div><div class="word-targets">${game.targets.map((target)=>`<div class="word-target ${target.matchedCardId?'matched':''}" data-target-id="${target.id}">${target.word}</div>`).join('')}</div></div></div>`;
     bind();
   }
 

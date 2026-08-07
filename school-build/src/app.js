@@ -1,4 +1,4 @@
-import { openDatabase, getAll, put, get, remove } from './db.js';
+﻿import { openDatabase, getAll, put, get, remove } from './db.js';
 import { createDrawingLayer } from './drawing.js';
 import {
   PAPER_STATUS,
@@ -13,6 +13,7 @@ import {
 } from './papers.js';
 import {
   addPictureBookTextBox,
+  createFileBookReading,
   createPictureBookReading,
   ensureReadingSeeds,
   movePictureBookPage,
@@ -74,8 +75,10 @@ export async function navigate(route, detail = null) {
   stopSpeaking();
   state.route = route;
   state.activePaperId = detail?.paperId || null;
+  if (route === 'reading' && !detail?.readingId) state.activeReadingId = null;
   document.querySelectorAll('.nav-item').forEach((item) => item.classList.toggle('active', item.dataset.route === route));
   document.querySelector('#sidebar').classList.remove('open');
+  document.body.classList.remove('paper-focus-active');
   main.scrollTop = 0;
   await render();
   main.focus({ preventScroll: true });
@@ -122,10 +125,11 @@ async function renderPapers() {
   const papers = await listPapers();
   const filtered = state.paperFilter === 'all' ? papers : papers.filter((paper) => paper.status === state.paperFilter);
   const tabs = [['all','全部'], ...Object.entries(PAPER_STATUS)];
-  main.innerHTML = `${pageHeader('试卷目录','默认按生成时间倒序排列','<button class="primary" data-route="generator">＋ 生成新试卷</button>')}
+  main.innerHTML = `${pageHeader('试卷目录','默认按生成时间倒序排列','<button class="secondary" data-batch-delete-papers>批量删除</button><button class="primary" data-route="generator">＋ 生成新试卷</button>')}
     <div class="tabs">${tabs.map(([key,label]) => `<button class="tab ${state.paperFilter === key ? 'active':''}" data-paper-filter="${key}">${label}${key === 'all' ? ` (${papers.length})` : ''}</button>`).join('')}</div>
     ${filtered.length ? `<section class="paper-grid">${filtered.map((paper) => `
       <article class="paper-card">
+        <label class="paper-select no-print"><input type="checkbox" data-paper-select="${paper.id}"> 选择</label>
         <button class="paper-preview" data-open-paper="${paper.id}" aria-label="打开${escapeHtml(paper.title)}"><div class="paper-mini"><i></i><i></i><i></i><i></i><i></i><i></i></div></button>
         <div class="paper-meta"><h3>${escapeHtml(paper.title)}</h3><div class="paper-meta-row"><span class="status ${paperStatusClass(paper.status)}">${PAPER_STATUS[paper.status]}</span><time>${new Date(paper.createdAt).toLocaleString('zh-CN')}</time></div>
         <div class="card-actions"><button data-copy-paper="${paper.id}">复制</button><button data-rename-paper="${paper.id}">改名</button><button data-delete-paper="${paper.id}">删除</button></div></div>
@@ -150,9 +154,12 @@ function generatorFields(subject, template) {
     const hanziFontFields = template === 'hanzi-trace'
       ? '<div class="field"><label>描红字体</label><select name="hanziFont"><option value="kaiti">楷体</option><option value="songti">宋体</option><option value="heiti">黑体</option><option value="fangsong">仿宋</option></select></div>'
       : '';
+    const englishFontFields = subject === '英语'
+      ? '<div class="field"><label>英语描红字体</label><select name="englishFont"><option value="comic">儿童手写体</option><option value="print">印刷体</option><option value="serif">衬线体</option><option value="cursive">连写体</option></select></div>'
+      : '';
     return `
     <div class="field"><label>练习内容（每行一项）</label><textarea name="customContent" placeholder="一行可输入多个字，例如：你好"></textarea></div>
-    ${hanziFontFields}${strokeFields}`;
+    ${hanziFontFields}${englishFontFields}${strokeFields}`;
   }
   const operationTemplates = ['horizontal', 'missing', 'vertical', 'equation'];
   const chainTemplates = ['chain-add', 'chain-sub', 'mixed'];
@@ -183,7 +190,7 @@ async function renderGenerator() {
       <div id="dynamicFields">${generatorFields(subject, template)}</div>
       <button class="primary" type="submit">生成并保存试卷</button> <button class="secondary" type="button" id="previewWorksheetButton">生成预览</button> <button class="secondary" type="button" id="saveTemplateButton">保存为配置模板</button>
     </form>
-    <div class="panel"><h2>配置生成预览</h2><p>调整左侧配置后点击生成预览，预览不会保存试卷。</p><div id="worksheetPreview">${renderStaticPreview(subject, template)}</div></div></section>`;
+    <div class="panel preview-panel"><h2>配置生成预览</h2><p>调整左侧配置后点击生成预览，预览不会保存试卷。</p><div id="worksheetPreview">${renderStaticPreview(subject, template)}</div></div></section>`;
   if (state.generatorConfig) applyConfigToForm(document.querySelector('#generatorForm'), state.generatorConfig);
 }
 
@@ -221,7 +228,7 @@ function readGeneratorValues(form) {
  * @returns {Promise<string>} 预览区域 HTML。
  */
 async function renderGeneratedPreview(values) {
-  const problems = await createProblemsFromForm({ ...values, count: String(Math.min(Number(values.count || 12), 12)) });
+  const problems = await createProblemsFromForm({ ...values, count: String(Math.min(Number(values.count || 12), 100)) });
   const templateLabel = TEMPLATE_GROUPS[values.subject].find(([key]) => key === values.template)?.[1] || values.template;
   const paper = createPaperSnapshot({
     title: `${values.subject}·${templateLabel}·预览`,
@@ -230,7 +237,7 @@ async function renderGeneratedPreview(values) {
     config: values,
     problems,
   });
-  return `<div class="worksheet-wrap preview-wrap">${renderWorksheetPagesHtml(paper)}</div>`;
+  return `<div class="worksheet-wrap preview-wrap" tabindex="0" aria-label="试卷预览">${renderWorksheetPagesHtml(paper)}</div>`;
 }
 
 /**
@@ -250,24 +257,52 @@ function renderStaticPreview(subject, template) {
  */
 function worksheetProblemsPerPage(paper) {
   const layout = worksheetLayoutClass(paper);
+  const compactViewport = typeof window !== 'undefined' && window.matchMedia?.('(max-width: 760px)').matches;
+  if (compactViewport) {
+    if (layout.includes('vertical')) return 2;
+    if (layout.includes('make-ten') || layout.includes('break-ten')) return 2;
+    if (layout.includes('word-problem')) return 1;
+    if (layout.includes('equation')) return 2;
+    if (layout.includes('hanzi-practice') || layout.includes('english-practice')) return 3;
+    return 8;
+  }
   if (layout.includes('vertical')) return 6;
-  if (layout.includes('make-ten') || layout.includes('break-ten')) return 4;
+  if (layout.includes('make-ten') || layout.includes('break-ten')) return 8;
   if (layout.includes('word-problem')) return 2;
   if (layout.includes('equation')) return 3;
-  if (layout.includes('hanzi-practice') || layout.includes('english-practice')) return 4;
-  return paper.orientation === 'landscape' ? 16 : 12;
+  if (layout.includes('hanzi-practice') || layout.includes('english-practice')) return 8;
+  if (layout.includes('multiply') || layout.includes('divide')) return 24;
+  if (layout.includes('currency') || layout.includes('unit')) return 16;
+  if (layout.includes('chain-add') || layout.includes('chain-sub') || layout.includes('mixed')) return 18;
+  return paper.orientation === 'landscape' ? 24 : 24;
 }
 
 /**
  * 将题目切分为多页。
  * @param {Array<Record<string, unknown>>} problems 试卷题目列表。
  * @param {number} size 每页题量。
+ * @param {string} layout 当前试卷版式。
  * @returns {Array<Array<Record<string, unknown>>>} 分页后的题目。
  */
-function paginateProblems(problems, size) {
+function paginateProblems(problems, size, layout = '') {
   const pages = [];
-  for (let index = 0; index < problems.length; index += size) {
-    pages.push(problems.slice(index, index + size));
+  let currentPage = [];
+  let currentUnits = 0;
+  for (const problem of problems) {
+    // 多行笔画路径按实际占用的米字格行数计量，避免第二行被 A4 页面裁掉。
+    const strokeUnits = layout.includes('hanzi-practice') && (problem.kind || problem.type) === 'hanzi-stroke'
+      ? Math.max(1, Math.ceil((problem.strokePaths?.length || 1) / 11))
+      : 1;
+    if (currentPage.length && currentUnits + strokeUnits > size) {
+      pages.push(currentPage);
+      currentPage = [];
+      currentUnits = 0;
+    }
+    currentPage.push(problem);
+    currentUnits += strokeUnits;
+  }
+  if (currentPage.length) {
+    pages.push(currentPage);
   }
   return pages.length ? pages : [[]];
 }
@@ -281,11 +316,13 @@ function renderWorksheetPagesHtml(paper) {
   const layoutClass = worksheetLayoutClass(paper);
   const columns = worksheetColumns(paper);
   const metaLine = renderWorksheetMetaHtml(paper);
-  const pages = paginateProblems(paper.problems || [], worksheetProblemsPerPage(paper));
+  const pages = paginateProblems(paper.problems || [], worksheetProblemsPerPage(paper), layoutClass);
+  let offset = 0;
   return pages.map((pageProblems, pageIndex) => {
-    const offset = pageIndex * worksheetProblemsPerPage(paper);
+    const pageOffset = offset;
+    offset += pageProblems.length;
     const pageTitle = pages.length > 1 ? `${escapeHtml(paper.title)}（第 ${pageIndex + 1}/${pages.length} 页）` : escapeHtml(paper.title);
-    return `<article class="worksheet ${paper.orientation} ${layoutClass}"><div class="worksheet-content"><h2 class="worksheet-title">${pageTitle}</h2>${metaLine}<div class="worksheet-lines ${layoutClass}" style="--columns:${columns}">${pageProblems.map((problem, index) => renderProblemHtml(problem, offset + index)).join('')}</div></div></article>`;
+    return `<article class="worksheet ${paper.orientation} ${layoutClass}"><div class="worksheet-content"><h2 class="worksheet-title">${pageTitle}</h2>${metaLine}<div class="worksheet-lines ${layoutClass}" style="--columns:${columns}">${pageProblems.map((problem, index) => renderProblemHtml(problem, pageOffset + index)).join('')}</div></div></article>`;
   }).join('');
 }
 
@@ -335,33 +372,33 @@ function buildStrokeProgress(steps, finalCharacter) {
 
 const HANZI_STROKE_PRESETS = {
   basic: [
-    { text:'一', steps:['横'], strokeProgress:['一'] },
-    { text:'二', steps:['横', '横'], strokeProgress:['一', '二'] },
-    { text:'三', steps:['横', '横', '横'], strokeProgress:['一', '二', '三'] },
-    { text:'十', steps:['横', '竖'], strokeProgress:['一', '十'] },
+    { text:'一', steps:['横'], strokeProgress:['一'], strokePaths:['M18 50 H82'] },
+    { text:'二', steps:['横', '横'], strokeProgress:['一', '二'], strokePaths:['M23 35 H77', 'M18 65 H82'] },
+    { text:'三', steps:['横', '横', '横'], strokeProgress:['一', '二', '三'], strokePaths:['M28 25 H72', 'M22 50 H78', 'M16 75 H84'] },
+    { text:'十', steps:['横', '竖'], strokeProgress:['一', '十'], strokePaths:['M18 50 H82', 'M50 18 V82'] },
   ],
   numbers: [
-    { text:'一', steps:['横'], strokeProgress:['一'] },
-    { text:'二', steps:['横', '横'], strokeProgress:['一', '二'] },
-    { text:'三', steps:['横', '横', '横'], strokeProgress:['一', '二', '三'] },
-    { text:'四', steps:['竖', '横折', '撇', '竖弯', '横'], strokeProgress:['丨', '冂', '儿', '四', '四'] },
-    { text:'五', steps:['横', '竖', '横折', '横'], strokeProgress:['一', '十', '五', '五'] },
+    { text:'一', steps:['横'], strokeProgress:['一'], strokePaths:['M18 50 H82'] },
+    { text:'二', steps:['横', '横'], strokeProgress:['一', '二'], strokePaths:['M23 35 H77', 'M18 65 H82'] },
+    { text:'三', steps:['横', '横', '横'], strokeProgress:['一', '二', '三'], strokePaths:['M28 25 H72', 'M22 50 H78', 'M16 75 H84'] },
+    { text:'四', steps:['竖', '横折', '撇', '竖弯', '横'], strokeProgress:['丨', '冂', '儿', '四', '四'], strokePaths:['M28 20 V80', 'M28 20 H76 V78', 'M60 34 L45 55', 'M45 55 Q58 67 72 58', 'M22 80 H80'] },
+    { text:'五', steps:['横', '竖', '横折', '横'], strokeProgress:['一', '十', '五', '五'], strokePaths:['M24 22 H76', 'M50 22 V46', 'M25 47 H74 V70', 'M22 72 H80'] },
   ],
   simple: [
-    { text:'人', steps:['撇', '捺'], strokeProgress:['丿', '人'] },
-    { text:'大', steps:['横', '撇', '捺'], strokeProgress:['一', 'ナ', '大'] },
-    { text:'口', steps:['竖', '横折', '横'], strokeProgress:['丨', '冂', '口'] },
-    { text:'日', steps:['竖', '横折', '横', '横'], strokeProgress:['丨', '冂', '目', '日'] },
+    { text:'人', steps:['撇', '捺'], strokeProgress:['丿', '人'], strokePaths:['M48 22 Q38 48 20 76', 'M49 22 Q59 52 80 78'] },
+    { text:'大', steps:['横', '撇', '捺'], strokeProgress:['一', 'ナ', '大'], strokePaths:['M18 40 H82', 'M50 20 Q42 51 22 78', 'M50 40 Q62 60 80 79'] },
+    { text:'口', steps:['竖', '横折', '横'], strokeProgress:['丨', '冂', '口'], strokePaths:['M25 22 V78', 'M25 22 H76 V78', 'M25 78 H76'] },
+    { text:'日', steps:['竖', '横折', '横', '横'], strokeProgress:['丨', '冂', '目', '日'], strokePaths:['M25 18 V82', 'M25 18 H76 V82', 'M25 50 H76', 'M25 82 H76'] },
   ],
 };
 
 const HANZI_STROKE_LIBRARY = Object.freeze({
   ...Object.fromEntries(Object.values(HANZI_STROKE_PRESETS).flat().map((item) => [item.text, item])),
-  你: { text:'你', steps:['撇', '竖', '撇', '横撇', '竖钩', '撇', '点'], strokeProgress:['丿', '亻', '尔', '尔', '你', '你', '你'] },
-  好: { text:'好', steps:['撇点', '撇', '横', '横撇', '竖钩', '横'], strokeProgress:['く', '女', '女', '子', '好', '好'] },
-  无: { text:'无', steps:['横', '横', '撇', '竖弯钩'], strokeProgress:['一', '二', '尢', '无'] },
-  与: { text:'与', steps:['横', '竖折折钩', '横'], strokeProgress:['一', '与', '与'] },
-  子: { text:'子', steps:['横撇', '弯钩', '横'], strokeProgress:['了', '了', '子'] },
+  你: { text:'你', steps:['撇', '竖', '撇', '横撇', '竖钩', '撇', '点'], strokeProgress:['丿', '亻', '尔', '尔', '你', '你', '你'], strokePaths:['M39 18 Q32 40 20 61', 'M39 18 V80', 'M39 45 Q50 32 60 24', 'M60 24 Q51 48 62 54', 'M62 54 V80', 'M62 54 Q74 67 82 79', 'M65 30 L70 25'] },
+  好: { text:'好', steps:['撇点', '撇', '横', '横撇', '竖钩', '横'], strokeProgress:['く', '女', '女', '子', '好', '好'], strokePaths:['M40 20 Q29 42 22 58', 'M40 20 Q48 37 57 49', 'M20 58 H60', 'M67 22 H82 Q73 39 65 45', 'M73 40 V80', 'M61 65 H84'] },
+  无: { text:'无', steps:['横', '横', '撇', '竖弯钩'], strokeProgress:['一', '二', '尢', '无'], strokePaths:['M22 28 H78', 'M18 48 H82', 'M52 48 Q43 68 25 80', 'M52 48 Q65 63 75 80'] },
+  与: { text:'与', steps:['横', '竖折折钩', '横'], strokeProgress:['一', '与', '与'], strokePaths:['M20 25 H80', 'M52 25 V45 H30 V70 H76 V82', 'M18 62 H82'] },
+  子: { text:'子', steps:['横撇', '弯钩', '横'], strokeProgress:['了', '了', '子'], strokePaths:['M22 28 H78 Q68 40 55 43', 'M55 43 V75 Q55 82 65 82 H78', 'M18 60 H82'] },
   常: {
     text:'常',
     steps:['竖', '点', '撇', '点', '横钩', '竖', '横折', '横', '竖', '横折钩', '竖'],
@@ -383,20 +420,56 @@ const HANZI_STROKE_LIBRARY = Object.freeze({
   },
 });
 
+const HANZI_WRITER_DATA_PATH = './assets/hanzi-writer-data';
+const hanziWriterDataCache = new Map();
+
+/**
+ * 从 hanzi-writer-data 加载单个汉字的真实笔画路径。
+ * @param {string} character 需要加载的单个汉字。
+ * @returns {Promise<string[]|null>} 按书写顺序排列的 SVG 路径数组，加载失败时返回空值。
+ */
+async function loadHanziWriterStrokePaths(character) {
+  const value = String(character || '').trim();
+  if (!/^[\u3400-\u9fff]$/u.test(value)) return null;
+  if (hanziWriterDataCache.has(value)) return hanziWriterDataCache.get(value);
+  if (typeof fetch !== 'function') return null;
+
+  try {
+    const url = `${HANZI_WRITER_DATA_PATH}/${encodeURIComponent(value)}.json`;
+    const response = await fetch(url, { cache: 'force-cache' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    const paths = Array.isArray(data.strokes) ? data.strokes.filter((path) => typeof path === 'string' && path.trim()) : [];
+    hanziWriterDataCache.set(value, paths);
+    return paths;
+  } catch (error) {
+    // 本地字形资源缺失或读取失败时保留基础字路径，避免生成整份试卷失败。
+    console.warn(`汉字“${value}”笔画数据加载失败`, error);
+    hanziWriterDataCache.set(value, null);
+    return null;
+  }
+}
+
 /**
  * 根据按笔画预设和用户输入生成汉字练习题。
  * @param {Record<string, unknown>} values 当前生成配置。
  * @param {string[]} lines 用户输入行。
- * @returns {Array<Record<string, unknown>>} 汉字笔画练习题。
+ * @returns {Promise<Array<Record<string, unknown>>>} 汉字笔画练习题。
  */
-function createStrokePracticeProblems(values, lines) {
+async function createStrokePracticeProblems(values, lines) {
   const preset = HANZI_STROKE_PRESETS[values.strokePreset] || HANZI_STROKE_PRESETS.basic;
   const source = lines.length
     ? lines.flatMap((text) => Array.from(text).filter((character) => character.trim()).map((character) => (
       HANZI_STROKE_LIBRARY[character] || { text: character, steps: [], strokeProgress: [character] }
     )))
     : preset;
-  return source.map((item, index) => ({
+  const enrichedSource = await Promise.all(source.map(async (item) => {
+    const remotePaths = await loadHanziWriterStrokePaths(item.text);
+    return remotePaths?.length
+      ? { ...item, strokePaths: remotePaths, strokeDataSource: 'hanzi-writer-data' }
+      : item;
+  }));
+  return enrichedSource.map((item, index) => ({
     id: `problem-${index + 1}`,
     kind: 'hanzi-stroke',
     prompt: item.text,
@@ -404,7 +477,8 @@ function createStrokePracticeProblems(values, lines) {
     boxes: 0,
     strokeSteps: item.steps,
     strokeProgress: item.strokeProgress || buildStrokeProgress(item.steps, item.text),
-    strokePaths: item.strokePaths,
+    strokePaths: item.strokePaths || [],
+    strokeDataSource: item.strokeDataSource || 'local-fallback',
   }));
 }
 
@@ -412,7 +486,9 @@ async function createProblemsFromForm(values) {
   if (values.subject !== '数学') {
     const lines = String(values.customContent || '').split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
     if (values.template === 'hanzi-stroke') return createStrokePracticeProblems(values, lines);
-    const meta = values.template === 'hanzi-trace' ? { font: values.hanziFont || 'kaiti' } : {};
+    const meta = {};
+    if (values.template === 'hanzi-trace') meta.font = values.hanziFont || 'kaiti';
+    if (values.subject === '英语') meta.font = values.englishFont || 'comic';
     return (lines.length ? lines : ['请在此描写']).map((line,index) => ({ id:`problem-${index+1}`, kind:values.template, prompt:line, answer:'', boxes:0, meta }));
   }
   const module = await import('./math/index.mjs');
@@ -465,17 +541,22 @@ async function renderPaper() {
     <div class="wrong-problem-buttons">${paper.problems.map((problem,index)=>`<button class="${wrongIds.has(problem.id) ? 'active' : ''}" data-toggle-wrong="${problem.id}">${index + 1}</button>`).join('')}</div>
     <div class="header-actions"><button class="secondary" data-batch-wrong>按题号批量标记</button>${wrongIds.size ? '<button class="secondary" data-retry-wrong="original">原题重做</button><button class="primary" data-retry-wrong="similar">生成同类新题</button>' : ''}</div>
   </section>` : '';
-  main.innerHTML = `${pageHeader(escapeHtml(paper.title),`${PAPER_STATUS[paper.status]} · ${paper.subject}`,`<button class="secondary" data-route="papers">返回目录</button>`)}
-    <div class="paper-toolbar no-print">
-      ${editable ? `<button class="toolbar-button active ${mode}" data-ink-mode="pen">${mode === 'red' ? '🔴 红笔批改' : '⚫ 黑笔作答'}</button>
+  const focusWriting = mode === 'black' && editable;
+  document.body.classList.toggle('paper-focus-active', focusWriting);
+  const scrollButtons = '<button class="secondary" data-paper-scroll="-1">↑ 上移</button><button class="secondary" data-paper-scroll="1">↓ 下移</button>';
+  const headerHtml = focusWriting ? '' : pageHeader(escapeHtml(paper.title),`${PAPER_STATUS[paper.status]} · ${paper.subject}`,`<button class="secondary" data-route="papers">返回目录</button>`);
+  main.innerHTML = `${headerHtml}<section class="paper-view ${focusWriting ? 'paper-writing-view' : ''}">
+    <div class="paper-toolbar no-print ${focusWriting ? 'paper-floating-toolbar' : ''}">
+      ${focusWriting ? '<button class="secondary" data-route="papers">退出</button>' : ''}
+      ${editable ? `<button class="toolbar-button active ${mode}" data-ink-mode="pen">${mode === 'red' ? '🔴 红笔批改' : '⚫ 黑笔作答'}</button>${scrollButtons}
       <button class="toolbar-button" data-ink-mode="eraser">⌫ 擦除当前笔迹</button><button class="toolbar-button" data-ink-action="undo">↶ 撤销</button>` : ''}
       ${paper.status === 'writing' ? '<button class="primary" data-paper-submit>提交作答</button>' : ''}
       ${paper.status === 'review' ? '<button class="primary" data-paper-reviewed>完成批改</button>' : ''}
       ${paper.status === 'done' ? '<button class="secondary" data-reopen-review>修改批改</button>' : ''}
-      <select id="printVersion" class="toolbar-button"><option value="blank">打印空白版</option><option value="answer">打印黑笔作答版</option><option value="final">打印红笔最终版</option></select><button class="secondary" data-print-paper>打印</button>
+      ${focusWriting ? '' : '<select id="printVersion" class="toolbar-button"><option value="blank">打印空白版</option><option value="answer">打印黑笔作答版</option><option value="final">打印红笔最终版</option></select><button class="secondary" data-print-paper>打印</button>'}
     </div>
     ${wrongTools}
-    <div class="worksheet-wrap"><div id="activeWorksheet" class="worksheet-pages">${renderWorksheetPagesHtml(paper)}</div></div>`;
+    <div class="worksheet-wrap"><div id="activeWorksheet" class="worksheet-pages">${renderWorksheetPagesHtml(paper)}</div></div></section>`;
   const worksheet = document.querySelector('#activeWorksheet');
   const blackLayer = createDrawingLayer(worksheet, { color:'#1e252b', enabled:['unstarted','writing'].includes(paper.status), strokes:paper.blackStrokes, onChange:(strokes)=>handlePaperStrokeChange(paper,'black',strokes) });
   const redLayer = createDrawingLayer(worksheet, { color:'#d93636', enabled:paper.status === 'review', strokes:paper.redStrokes, onChange:(strokes)=>handlePaperStrokeChange(paper,'red',strokes) });
@@ -484,23 +565,43 @@ async function renderPaper() {
 
 async function renderReading() {
   const readings = (await ensureReadingSeeds()).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
-  const active = readings.find((item)=>item.id === state.activeReadingId) || readings[0];
-  state.activeReadingId = active?.id;
-  main.innerHTML = `${pageHeader('阅读资料','按段落点读，中文逐字、英文逐词跟随变色','<button class="primary" data-new-reading>＋ 新建阅读资料</button>')}
-    <section class="reading-layout"><aside class="panel"><div class="field"><label>资料分类</label><select id="readingCategory"><option>全部</option>${[...new Set(readings.map((item)=>item.category))].map((item)=>`<option>${item}</option>`).join('')}</select></div><div class="reading-list">${readings.map((item)=>`<button class="reading-item ${item.id === active?.id ? 'active':''}" data-reading-id="${item.id}">${escapeHtml(item.title)}<small style="display:block;opacity:.7">${item.category}</small></button>`).join('')}</div></aside><div>${active ? renderReader(active) : '<div class="empty-state">暂无阅读资料</div>'}</div></section>`;
+  const active = readings.find((item)=>item.id === state.activeReadingId);
+  if (active) {
+    main.innerHTML = renderReader(active);
+    return;
+  }
+  const categories = [...new Set(readings.map((item)=>item.category || '绘本'))];
+  main.innerHTML = `${pageHeader('绘本书架','读取 huiben 文件夹和已导入书籍','<button class="primary" data-new-picture-book>＋ 导入书籍</button><button class="secondary" data-new-text-reading>＋ 新建文字</button>')}
+    ${readings.length ? `<section class="bookshelf-grid">${readings.map((item)=>renderBookCard(item)).join('')}</section>` : '<div class="empty-state"><span class="emoji">📚</span><h2>书架暂无书籍</h2><p>把 PDF、EPUB、EQUB 放入 huiben 文件夹并刷新，或点击导入书籍。</p></div>'}`;
+}
+
+function renderBookCard(item) {
+  const badge = item.fileKind ? String(item.fileKind).toUpperCase() : (item.type === 'picture-book' ? '图片' : '文本');
+  const source = item.source === 'huiben' ? 'huiben' : (item.source === 'imported' ? '已导入' : item.category || '阅读');
+  return `<button class="book-card" data-reading-id="${item.id}" aria-label="打开${escapeHtml(item.title)}"><span class="book-badge">${escapeHtml(badge)}</span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(source)}</small></button>`;
 }
 
 function renderReader(item) {
+  if (item.type === 'file-book') return renderFileBookReader(item);
   if (item.type === 'picture-book') {
     const page = item.pages?.[state.bookPage || 0] || item.pages?.[0];
     if (!page) return '<div class="empty-state">绘本暂无页面</div>';
-    const background = page.illustration?.palette?.join(',') || '#ffe3b0,#a7d8cf';
-    return `<article class="reader"><div class="paper-toolbar"><button class="secondary" data-book-prev>← 上一页</button><strong>${escapeHtml(item.title)} · ${(state.bookPage || 0)+1}/${item.pages.length}</strong><button class="secondary" data-book-next>下一页 →</button><button class="primary" data-speak-book>朗读本页</button>${item.builtin ? '' : '<button class="secondary" data-edit-book>编辑绘本</button>'}</div><div class="picture-page" style="background:linear-gradient(150deg,${background})">${page.imageDataUrl ? `<img src="${page.imageDataUrl}" alt="${escapeHtml(page.fileName || item.title)}">` : '<div class="picture-placeholder"></div>'}${(page.textBoxes || []).map((box)=>`<p class="reading-paragraph picture-reading-box" data-book-text data-text-box-id="${box.id}" style="left:${box.x}%;top:${box.y}%;width:${box.width}%">${tokenHtml(box.text,item.language)}</p>`).join('')}</div></article>`;
+    const background = page.illustration?.palette?.join(',') || '#f4f1e9,#ffffff';
+    return `<article class="reader fullscreen-reader"><div class="reader-floating-toolbar"><button class="secondary" data-book-prev>←</button><strong>${escapeHtml(item.title)} · ${(state.bookPage || 0)+1}/${item.pages.length}</strong><button class="secondary" data-book-next>→</button><button class="secondary" data-speak-book>朗读</button>${item.source === 'huiben' || item.builtin ? '' : '<button class="secondary" data-edit-book>编辑</button>'}<button class="primary" data-exit-reader>退出阅读</button></div><div class="picture-page fullscreen-picture-page" style="background:linear-gradient(150deg,${background})">${page.imageDataUrl ? `<img src="${page.imageDataUrl}" alt="${escapeHtml(page.fileName || item.title)}">` : '<div class="picture-placeholder"></div>'}${(page.textBoxes || []).map((box)=>`<p class="reading-paragraph picture-reading-box" data-book-text data-text-box-id="${box.id}" style="left:${box.x}%;top:${box.y}%;width:${box.width}%">${tokenHtml(box.text,item.language)}</p>`).join('')}</div></article>`;
   }
   const paragraphs = item.content.split(/\n+/).filter(Boolean);
-  return `<article class="reader"><div class="paper-toolbar"><button class="primary" data-speak-all>▶ 连续朗读</button><button class="secondary" data-stop-speech>■ 停止</button><select id="traceMode"><option value="none">普通阅读</option><option value="overlay">覆盖原文描红</option><option value="practice">描红 + 仿写</option></select></div><h2>${escapeHtml(item.title)}</h2>${paragraphs.map((paragraph,index)=>`<div class="paragraph-wrap"><p class="reading-paragraph" data-paragraph-index="${index}" data-text="${escapeHtml(paragraph)}">${tokenHtml(paragraph,item.language)}</p><div class="trace-extra"></div></div>`).join('')}</article>`;
+  return `<article class="reader fullscreen-reader text-reader"><div class="reader-floating-toolbar"><button class="primary" data-speak-all>▶ 连续朗读</button><button class="secondary" data-stop-speech>■ 停止</button><select id="traceMode"><option value="none">普通阅读</option><option value="overlay">覆盖原文描红</option><option value="practice">描红 + 仿写</option></select><button class="primary" data-exit-reader>退出阅读</button></div><h2>${escapeHtml(item.title)}</h2>${paragraphs.map((paragraph,index)=>`<div class="paragraph-wrap"><p class="reading-paragraph" data-paragraph-index="${index}" data-text="${escapeHtml(paragraph)}">${tokenHtml(paragraph,item.language)}</p><div class="trace-extra"></div></div>`).join('')}</article>`;
 }
 
+function renderFileBookReader(item) {
+  const sourceUrl = escapeHtml(item.sourceUrl || '');
+  const title = escapeHtml(item.title);
+  const kind = String(item.fileKind || 'file').toUpperCase();
+  const body = item.fileKind === 'pdf'
+    ? `<iframe class="book-file-frame" src="${sourceUrl}#toolbar=0&navpanes=0" title="${title}" loading="eager"></iframe>`
+    : `<div class="book-file-fallback"><h2>${title}</h2><p>${kind} 文件已载入。当前浏览器如果不能直接预览，请用系统阅读器打开。</p><a class="primary" href="${sourceUrl}" target="_blank" rel="noopener">打开书籍</a></div>`;
+  return `<article class="reader fullscreen-reader file-book-reader"><div class="reader-floating-toolbar"><strong>${title}</strong><span>${kind}</span><button class="primary" data-exit-reader>退出阅读</button></div>${body}</article>`;
+}
 function tokenHtml(text, language) {
   return tokenizeForReading(text, language).map((token,index)=>`<span class="reading-token" data-token-index="${index}">${escapeHtml(token)}</span>`).join('');
 }
@@ -584,7 +685,7 @@ function speakPictureBookPage(item) {
 }
 
 async function createReadingModal() {
-  openModal(`<h2>新建阅读资料</h2><p>选择资料类型后再输入内容。</p><div class="entry-grid reading-create-options"><button class="entry-card" data-new-text-reading><span class="emoji">📄</span><h3>纯文字资料</h3><p>古诗、汉字、拼音、故事或英语阅读。</p></button><button class="entry-card" data-new-picture-book><span class="emoji">🖼️</span><h3>上传绘本</h3><p>多张图片、多文本框，可拖动文字位置。</p></button></div><div class="header-actions"><button type="button" class="secondary" data-close-modal>取消</button></div>`);
+  openModal(`<h2>新建阅读资料</h2><p>选择资料类型后再输入内容。</p><div class="entry-grid reading-create-options"><button class="entry-card" data-new-text-reading><span class="emoji">📄</span><h3>纯文字资料</h3><p>古诗、汉字、拼音、故事或英语阅读。</p></button><button class="entry-card" data-new-picture-book><span class="emoji">📚</span><h3>导入书籍</h3><p>支持图片绘本、PDF、EPUB、EQUB。</p></button></div><div class="header-actions"><button type="button" class="secondary" data-close-modal>取消</button></div>`);
 }
 
 /** 打开纯文字阅读资料表单。 */
@@ -594,19 +695,19 @@ function createTextReadingModal() {
 
 /** 打开绘本图片上传表单。 */
 function createPictureBookModal() {
-  openModal(`<h2>上传绘本图片</h2><form id="pictureBookForm"><div class="field-row"><div class="field"><label>绘本名称</label><input name="title" required></div><div class="field"><label>语言</label><select name="language"><option value="zh">中文</option><option value="en">英文</option></select></div></div><div class="field"><label>选择绘本页面</label><input name="pages" type="file" accept="image/*" multiple required><small>按选择顺序生成页面，进入编辑器后仍可调整。</small></div><div class="header-actions"><button type="button" class="secondary" data-close-modal>取消</button><button class="primary">进入编辑器</button></div></form>`);
+  openModal(`<h2>导入书籍</h2><form id="pictureBookForm"><div class="field-row"><div class="field"><label>书名</label><input name="title" placeholder="留空则使用文件名"></div><div class="field"><label>语言</label><select name="language"><option value="zh">中文</option><option value="en">英文</option></select></div></div><div class="field"><label>选择文件</label><input name="pages" type="file" accept="image/*,.pdf,application/pdf,.epub,application/epub+zip,.equb" multiple required><small>多张图片会进入图片绘本编辑器；PDF、EPUB、EQUB 会直接进入书架。</small></div><div class="header-actions"><button type="button" class="secondary" data-close-modal>取消</button><button class="primary">导入</button></div></form>`);
 }
 
 /**
- * 将本地图片文件读取为可保存在 IndexedDB 的 Data URL。
- * @param {File} file 用户选择的图片文件。
- * @returns {Promise<string>} 图片 Data URL。
+ * 将本地文件读取为可保存在 IndexedDB 的 Data URL。
+ * @param {File} file 用户选择的文件。
+ * @returns {Promise<string>} 文件 Data URL。
  */
 function readFileAsDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(reader.error || new Error('图片读取失败'));
+    reader.onerror = () => reject(reader.error || new Error('文件读取失败'));
     reader.readAsDataURL(file);
   });
 }
@@ -657,11 +758,22 @@ async function handleGlobalClick(event) {
   if (paperId) return navigate('paper',{paperId});
   const readingId = event.target.closest('[data-reading-id]')?.dataset.readingId;
   if (readingId) { state.activeReadingId = readingId; state.bookPage = 0; return renderReading(); }
+  if (event.target.closest('[data-exit-reader]')) { state.activeReadingId = null; state.bookPage = 0; return renderReading(); }
   if (event.target.closest('[data-close-modal]')) return closeModal();
   if (event.target.closest('[data-new-reading]')) return createReadingModal();
   if (event.target.closest('[data-new-text-reading]')) return createTextReadingModal();
   if (event.target.closest('[data-new-picture-book]')) return createPictureBookModal();
   if (event.target.closest('[data-copy-paper]')) { await duplicatePaper(event.target.closest('[data-copy-paper]').dataset.copyPaper); showToast('已复制试卷'); return renderPapers(); }
+  if (event.target.closest('[data-batch-delete-papers]')) {
+    const ids = [...document.querySelectorAll('[data-paper-select]:checked')].map((input) => input.dataset.paperSelect);
+    if (!ids.length) { showToast('请先选择要删除的试卷'); return; }
+    if (confirm(`确定删除选中的 ${ids.length} 份试卷吗？`)) {
+      await Promise.all(ids.map((id) => remove('papers', id)));
+      showToast('已批量删除');
+      return renderPapers();
+    }
+    return;
+  }
   if (event.target.closest('[data-delete-paper]')) {
     const id = event.target.closest('[data-delete-paper]').dataset.deletePaper;
     if (confirm('确定删除这份试卷吗？') && confirm('请再次确认：删除后无法恢复，是否继续？')) { await remove('papers',id); showToast('试卷已删除'); renderPapers(); }
@@ -748,6 +860,29 @@ async function handleGlobalClick(event) {
   }
 }
 
+let paperScrollTimer = null;
+
+/** 按按钮方向移动当前试卷，避免手指直接拖拽导致书写误滚动。 */
+function scrollActiveWorksheet(direction) {
+  const wrap = document.querySelector('.paper-writing-view .worksheet-wrap, .paper-view .worksheet-wrap');
+  if (!wrap) return;
+  wrap.scrollBy({ top: Number(direction) * 90, behavior: 'auto' });
+}
+
+function stopPaperScrollTimer() {
+  if (paperScrollTimer) clearInterval(paperScrollTimer);
+  paperScrollTimer = null;
+}
+
+document.addEventListener('pointerdown', (event) => {
+  const button = event.target.closest('[data-paper-scroll]');
+  if (!button) return;
+  event.preventDefault();
+  scrollActiveWorksheet(button.dataset.paperScroll);
+  stopPaperScrollTimer();
+  paperScrollTimer = setInterval(() => scrollActiveWorksheet(button.dataset.paperScroll), 90);
+});
+['pointerup', 'pointercancel', 'pointerleave', 'visibilitychange'].forEach((eventName) => document.addEventListener(eventName, stopPaperScrollTimer));
 document.addEventListener('click', handleGlobalClick);
 document.addEventListener('submit', async (event) => {
   if (event.target.id === 'generatorForm') { event.preventDefault(); try { await handleGeneratorSubmit(event.target); } catch(error){ showToast(error.message); } }
@@ -755,9 +890,24 @@ document.addEventListener('submit', async (event) => {
   if (event.target.id === 'pictureBookForm') {
     event.preventDefault();
     try {
-      const formData=new FormData(event.target); const files=[...event.target.elements.pages.files];
-      const pages=await Promise.all(files.map(async(file)=>({imageDataUrl:await readFileAsDataUrl(file),fileName:file.name})));
-      state.pictureBookDraft=createPictureBookReading(Object.fromEntries(formData),pages); renderPictureBookEditorModal();
+      const formData = new FormData(event.target);
+      const values = Object.fromEntries(formData);
+      const files = [...event.target.elements.pages.files];
+      const imageFiles = files.filter((file) => file.type.startsWith('image/'));
+      if (imageFiles.length === files.length) {
+        const pages = await Promise.all(files.map(async(file)=>({imageDataUrl:await readFileAsDataUrl(file),fileName:file.name})));
+        state.pictureBookDraft = createPictureBookReading(values, pages);
+        renderPictureBookEditorModal();
+        return;
+      }
+      if (imageFiles.length) throw new Error('图片页和 PDF/EPUB/EQUB 请分开导入');
+      const books = await Promise.all(files.map(async(file) => createFileBookReading(values, { name:file.name, type:file.type, size:file.size, dataUrl:await readFileAsDataUrl(file) })));
+      await Promise.all(books.map((book) => put('readings', book)));
+      closeModal();
+      state.activeReadingId = books[0]?.id || null;
+      state.bookPage = 0;
+      showToast(`已导入 ${books.length} 本书`);
+      return renderReading();
     } catch(error) { showToast(error.message); }
   }
 });
@@ -785,6 +935,25 @@ document.addEventListener('click', async (event) => {
     preview.innerHTML = `<div class="empty-state"><span class="emoji">⚠️</span><h2>预览失败</h2><p>${escapeHtml(error.message)}</p></div>`;
   }
 });
+
+/**
+ * 让右侧主内容区在鼠标滚轮操作时滚动整页。
+ * @param {WheelEvent} event 右侧页面收到的滚轮事件。
+ * @returns {void}
+ */
+function handleMainContentWheel(event) {
+  const target = event.target instanceof Element ? event.target : null;
+  if (!target?.closest('#mainContent') || target.closest('.preview-panel')) return;
+  if (document.body.classList.contains('paper-focus-active')) return;
+
+  const mainScrollTarget = main.scrollHeight > main.clientHeight ? main : document.scrollingElement;
+  if (!mainScrollTarget) return;
+
+  // 统一把滚轮增量交给右侧页面，避免光标位于表单留白时滚动被吞掉。
+  mainScrollTarget.scrollTop += event.deltaY;
+  event.preventDefault();
+}
+document.addEventListener('wheel', handleMainContentWheel, { passive: false });
 document.querySelector('#menuButton').addEventListener('click',()=>document.querySelector('#sidebar').classList.toggle('open'));
 
 async function init() {

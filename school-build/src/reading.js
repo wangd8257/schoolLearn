@@ -1,14 +1,76 @@
-import { getAll, put, uid } from './db.js';
-import { BUILTIN_PICTURE_BOOKS, SAMPLE_READINGS } from './data/readings.js';
+﻿import { getAll, put, remove, uid } from './db.js';
 
 let speechRun = 0;
 
-/** 初始化内置阅读资料，保留用户已有内容。 */
+/** 初始化阅读资料，移除旧内置绘本，并同步 huiben 文件夹清单。 */
 export async function ensureReadingSeeds() {
   const existing = await getAll('readings');
-  if (existing.length) return existing;
-  await Promise.all([...BUILTIN_PICTURE_BOOKS, ...SAMPLE_READINGS].map((item) => put('readings', { ...item, createdAt: Date.now() })));
+  const builtinItems = existing.filter((item) => item.builtin);
+  if (builtinItems.length) await Promise.all(builtinItems.map((item) => remove('readings', item.id)));
+
+  const keptItems = existing.filter((item) => !item.builtin);
+  const knownIds = new Set(keptItems.map((item) => item.id));
+  const localBooks = await loadHuibenBooks();
+  const newBooks = localBooks.filter((book) => !knownIds.has(book.id));
+  if (newBooks.length) await Promise.all(newBooks.map((book) => put('readings', book)));
   return getAll('readings');
+}
+
+/** 从 huiben/manifest.json 读取静态书籍清单。 */
+async function loadHuibenBooks() {
+  if (typeof fetch !== 'function') return [];
+  try {
+    const response = await fetch('./huiben/manifest.json', { cache: 'no-store' });
+    if (!response.ok) return [];
+    const manifest = await response.json();
+    const books = Array.isArray(manifest.books) ? manifest.books : [];
+    return books.map((entry) => createHuibenBookReading(entry));
+  } catch (error) {
+    console.warn('huiben 清单读取失败', error);
+    return [];
+  }
+}
+
+/** 为本地文件路径生成稳定短标识。 */
+function stableBookId(text) {
+  let hash = 2166136261;
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
+}
+
+/** 根据文件名或 URL 判断绘本文件类型。 */
+function bookFileKind(fileName = '') {
+  const lowerName = String(fileName).toLowerCase();
+  if (lowerName.endsWith('.pdf')) return 'pdf';
+  if (lowerName.endsWith('.epub')) return 'epub';
+  if (lowerName.endsWith('.equb')) return 'equb';
+  return 'file';
+}
+
+/** 根据 huiben 清单条目创建只读书架书籍。 */
+export function createHuibenBookReading(entry, options = {}) {
+  const title = String(entry.title || entry.fileName || '未命名绘本').trim();
+  const fileName = String(entry.fileName || title).trim();
+  const sourceUrl = String(entry.url || `./huiben/${encodeURIComponent(fileName)}`);
+  const now = options.now ?? Date.now();
+  return {
+    id: entry.id || `huiben-${stableBookId(sourceUrl)}`,
+    type: 'file-book',
+    category: entry.category || '绘本',
+    title,
+    language: entry.language === 'en' ? 'en' : 'zh',
+    builtin: false,
+    source: 'huiben',
+    fileName,
+    fileKind: entry.fileKind || bookFileKind(fileName || sourceUrl),
+    sourceUrl,
+    size: entry.size || 0,
+    createdAt: entry.createdAt || now,
+    updatedAt: entry.updatedAt || now,
+  };
 }
 
 /** 按中文逐字、英文逐词拆分朗读高亮单元。 @param {string} text 文本 @param {string} language 语言 */
@@ -101,6 +163,33 @@ export function createPictureBookReading(values, uploadedPages, options = {}) {
   };
 }
 
+/**
+ * 从上传的 PDF、EPUB、EQUB 或单文件绘本创建书架记录。
+ * @param {Record<string, unknown>} values 标题、分类和语言。
+ * @param {{name:string,type?:string,size?:number,dataUrl:string}} file 已读取的文件信息。
+ * @param {{id?:string,now?:number}} options 稳定标识和时间配置。
+ * @returns {Record<string, unknown>} 可保存到书架的文件绘本记录。
+ */
+export function createFileBookReading(values, file, options = {}) {
+  if (!file?.dataUrl) throw new Error('请先选择要导入的绘本文件');
+  const now = options.now ?? Date.now();
+  const title = String(values.title || '').trim() || String(file.name || '').replace(/\.[^.]+$/u, '') || '未命名绘本';
+  return {
+    id: options.id || uid('reading'),
+    type: 'file-book',
+    category: values.category || '绘本',
+    title,
+    language: values.language === 'en' ? 'en' : 'zh',
+    builtin: false,
+    source: 'imported',
+    fileName: file.name || title,
+    fileKind: bookFileKind(file.name || file.type || ''),
+    sourceUrl: file.dataUrl,
+    size: file.size || 0,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
 /**
  * 调整指定绘本页面的顺序。
  * @param {Record<string, unknown>} book 来源绘本快照。
