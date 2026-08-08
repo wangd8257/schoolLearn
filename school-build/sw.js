@@ -1,4 +1,4 @@
-const CACHE_NAME = 'growth-desk-v10-20260808';
+const CACHE_NAME = 'growth-desk-v11-20260808';
 const CORE = ['./','./index.html','./styles.css','./manifest.webmanifest','./assets/icon.svg','./dist/app.bundle.js','./src/app.js','./src/db.js','./src/drawing.js','./src/papers.js','./src/templates.js','./src/reading.js','./src/worksheet-render.js','./src/paper-controls.mjs','./src/games.js','./src/data/readings.js','./src/data/word-lists.js','./src/data/huiben-manifest.mjs','./src/vendor/epub-reader/epub-reader.js','./src/vendor/epub-reader/epub.js','./src/vendor/epub-reader/range-utils.js','./src/vendor/epub-reader/storage.js','./src/vendor/epub-reader/zip.js','./src/games/chinese-word-game.js','./src/games/english-match-game.js','./src/games/game-session.js','./src/games/random.js','./src/math/index.mjs','./src/math/constants.mjs','./src/math/generators.mjs','./src/math/random.mjs','./src/math/validator.mjs','./src/math/worksheet.mjs','./huiben/manifest.json'];
 
 /**

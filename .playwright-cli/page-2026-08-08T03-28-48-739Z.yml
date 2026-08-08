@@ -1,0 +1,124 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e8]:
+        - strong [ref=e9]: 光之进化
+        - text: 学习能量控制台
+      - navigation "主导航" [ref=e10]:
+        - button "⌂ 首页" [ref=e11] [cursor=pointer]:
+          - generic [ref=e12]: ⌂
+          - text: 首页
+        - button "▤ 试卷目录" [ref=e13] [cursor=pointer]:
+          - generic [ref=e14]: ▤
+          - text: 试卷目录
+        - button "✦ 生成试卷" [ref=e15] [cursor=pointer]:
+          - generic [ref=e16]: ✦
+          - text: 生成试卷
+        - button "▥ 阅读资料" [ref=e17] [cursor=pointer]:
+          - generic [ref=e18]: ▥
+          - text: 阅读资料
+        - button "◇ 学习游戏" [ref=e19] [cursor=pointer]:
+          - generic [ref=e20]: ◇
+          - text: 学习游戏
+        - button "⌘ 配置模板" [ref=e21] [cursor=pointer]:
+          - generic [ref=e22]: ⌘
+          - text: 配置模板
+      - paragraph [ref=e25]:
+        - strong [ref=e26]: 本机离线保存
+        - text: 请勿清除 Safari 网站数据
+    - main [active] [ref=e27]:
+      - generic [ref=e113]:
+        - generic [ref=e114]:
+          - generic [ref=e115]: 光之进化 / COMMAND DECK
+          - heading "绘本书架" [level=1] [ref=e116]
+          - paragraph [ref=e117]: 读取 huiben 文件夹和已导入书籍
+        - generic [ref=e123]:
+          - button "＋ 导入书籍" [ref=e124] [cursor=pointer]
+          - button "＋ 新建文字" [ref=e125] [cursor=pointer]
+      - generic [ref=e126]:
+        - button "打开发现与培养儿童职业启蒙绘本 第6辑 我要当汽车工程师 (刘香英著；幸福猫儿童文学工作室绘)" [ref=e127] [cursor=pointer]:
+          - text: ▥
+          - generic [ref=e128]: PDF
+          - strong [ref=e129]: 发现与培养儿童职业启蒙绘本 第6辑 我要当汽车工程师 (刘香英著；幸福猫儿童文学工作室绘)
+          - generic [ref=e130]: huiben
+        - button "打开汤汤奇幻童年故事本（套装6册）（第十届全国优秀儿童文学奖获奖作品，一段瑰丽丰富的童年往事，一阙悠扬漫长的田园牧歌；作家汤汤携全新奇幻..." [ref=e131] [cursor=pointer]:
+          - text: ▥
+          - generic [ref=e132]: EPUB
+          - strong [ref=e133]: 汤汤奇幻童年故事本（套装6册）（第十届全国优秀儿童文学奖获奖作品，一段瑰丽丰富的童年往事，一阙悠扬漫长的田园牧歌；作家汤汤携全新奇幻...
+          - generic [ref=e134]: huiben
+        - button "打开不一样的卡梅拉动漫绘本 我许下三个愿望 (（法）约里波瓦文, 据[法]克利斯提昂·约里波瓦同名绘本动画片改编 , 郑迪蔚 编译 etc.)" [ref=e135] [cursor=pointer]:
+          - text: ▥
+          - generic [ref=e136]: PDF
+          - strong [ref=e137]: 不一样的卡梅拉动漫绘本 我许下三个愿望 (（法）约里波瓦文, 据[法]克利斯提昂·约里波瓦同名绘本动画片改编 , 郑迪蔚 编译 etc.)
+          - generic [ref=e138]: huiben
+        - button "打开儿童行为习惯培养绘本：小兔子起床喽-孩子贪睡，怎么办？ (陈书韵、翁淑惠)" [ref=e139] [cursor=pointer]:
+          - text: ▥
+          - generic [ref=e140]: EPUB
+          - strong [ref=e141]: 儿童行为习惯培养绘本：小兔子起床喽-孩子贪睡，怎么办？ (陈书韵、翁淑惠)
+          - generic [ref=e142]: huiben
+        - button "打开小川未明童话绘本（5册套装） (（日）小川未明)" [ref=e143] [cursor=pointer]:
+          - text: ▥
+          - generic [ref=e144]: PDF
+          - strong [ref=e145]: 小川未明童话绘本（5册套装） (（日）小川未明)
+          - generic [ref=e146]: huiben
+        - button "打开不一样的卡梅拉动漫绘本 我是大明星 (（法）约里波瓦文；郑迪蔚编译, 据[法]克利斯提昂·约里波瓦同名绘本动画片改编 etc.)" [ref=e147] [cursor=pointer]:
+          - text: ▥
+          - generic [ref=e148]: PDF
+          - strong [ref=e149]: 不一样的卡梅拉动漫绘本 我是大明星 (（法）约里波瓦文；郑迪蔚编译, 据[法]克利斯提昂·约里波瓦同名绘本动画片改编 etc.)
+          - generic [ref=e150]: huiben
+        - button "打开成长文库：世界儿童文学经典（拼音美绘本）假话国历险记 (成长文库.世界儿童文学经典拼音美绘本) (罗大里 [罗大里])" [ref=e151] [cursor=pointer]:
+          - text: ▥
+          - generic [ref=e152]: EPUB
+          - strong [ref=e153]: 成长文库：世界儿童文学经典（拼音美绘本）假话国历险记 (成长文库.世界儿童文学经典拼音美绘本) (罗大里 [罗大里])
+          - generic [ref=e154]: huiben
+        - button "打开佩顿的理想宠物：《爱的五种语言》儿童绘本 (盖瑞·查普曼 瑞克·奥斯本)" [ref=e155] [cursor=pointer]:
+          - text: ▥
+          - generic [ref=e156]: EPUB
+          - strong [ref=e157]: 佩顿的理想宠物：《爱的五种语言》儿童绘本 (盖瑞·查普曼 瑞克·奥斯本)
+          - generic [ref=e158]: huiben
+        - button "打开绘本里的世界（套装共九册）【国际儿童读物联盟（IBBY）主席张明舟、前主席邓肯、北京作协副主席曹文轩、儿童文学作家高洪波等联袂推荐！凝集..." [ref=e159] [cursor=pointer]:
+          - text: ▥
+          - generic [ref=e160]: EPUB
+          - strong [ref=e161]: 绘本里的世界（套装共九册）【国际儿童读物联盟（IBBY）主席张明舟、前主席邓肯、北京作协副主席曹文轩、儿童文学作家高洪波等联袂推荐！凝集...
+          - generic [ref=e162]: huiben
+        - button "打开奇怪的生物图鉴【风靡日韩，日文版上市仅1个月加印4次！销量突破100000册日本亚马逊高分评价，日韩话题性科普绘本，40种生物，上百个冷知识：没..." [ref=e163] [cursor=pointer]:
+          - text: ▥
+          - generic [ref=e164]: EPUB
+          - strong [ref=e165]: 奇怪的生物图鉴【风靡日韩，日文版上市仅1个月加印4次！销量突破100000册日本亚马逊高分评价，日韩话题性科普绘本，40种生物，上百个冷知识：没...
+          - generic [ref=e166]: huiben
+        - button "打开不一样的卡梅拉动漫绘本 我下了个金鸡蛋 (（法）约里波瓦文, 据[法]克利斯提昂·约里波瓦同名绘本动画片改编 , 郑迪蔚 编译 etc.)" [ref=e167] [cursor=pointer]:
+          - text: ▥
+          - generic [ref=e168]: PDF
+          - strong [ref=e169]: 不一样的卡梅拉动漫绘本 我下了个金鸡蛋 (（法）约里波瓦文, 据[法]克利斯提昂·约里波瓦同名绘本动画片改编 , 郑迪蔚 编译 etc.)
+          - generic [ref=e170]: huiben
+        - button "打开中国经典古诗文彩绘读本 低年级 (陈雪梅主编, 陈雪梅主编, 陈雪梅)" [ref=e171] [cursor=pointer]:
+          - text: ▥
+          - generic [ref=e172]: PDF
+          - strong [ref=e173]: 中国经典古诗文彩绘读本 低年级 (陈雪梅主编, 陈雪梅主编, 陈雪梅)
+          - generic [ref=e174]: huiben
+        - button "打开十二生肖的故事【儿童绘本】 (Si-Jia Gu)" [ref=e175] [cursor=pointer]:
+          - text: ▥
+          - generic [ref=e176]: EPUB
+          - strong [ref=e177]: 十二生肖的故事【儿童绘本】 (Si-Jia Gu)
+          - generic [ref=e178]: huiben
+        - button "打开小王子三部曲(一直以来,我们只读了《小王子》的三分之一《小王子》只是三部曲的终篇,它的前传《风沙星辰》《夜间飞行》埋藏着《小王子》真正..." [ref=e179] [cursor=pointer]:
+          - text: ▥
+          - generic [ref=e180]: EPUB
+          - strong [ref=e181]: 小王子三部曲(一直以来,我们只读了《小王子》的三分之一《小王子》只是三部曲的终篇,它的前传《风沙星辰》《夜间飞行》埋藏着《小王子》真正...
+          - generic [ref=e182]: huiben
+        - button "打开不一样的卡梅拉动漫绘本 我的胆子变大了 (（法）克利斯提昂·约里波瓦改编；郑迪蔚编译 etc.)" [ref=e183] [cursor=pointer]:
+          - text: ▥
+          - generic [ref=e184]: PDF
+          - strong [ref=e185]: 不一样的卡梅拉动漫绘本 我的胆子变大了 (（法）克利斯提昂·约里波瓦改编；郑迪蔚编译 etc.)
+          - generic [ref=e186]: huiben
+        - button "打开不一样的卡梅拉动漫绘本 我是侠盗罗宾汉 (（法）克利斯提昂·约里波瓦改编；郑迪蔚编译 etc.)" [ref=e187] [cursor=pointer]:
+          - text: ▥
+          - generic [ref=e188]: PDF
+          - strong [ref=e189]: 不一样的卡梅拉动漫绘本 我是侠盗罗宾汉 (（法）克利斯提昂·约里波瓦改编；郑迪蔚编译 etc.)
+          - generic [ref=e190]: huiben
+        - button "打开成长文库 世界少年文学精选(拼音版美绘本)·洋葱头历险记 (成长文库•世界儿童文学经典拼音美绘本) (罗大里)" [ref=e191] [cursor=pointer]:
+          - text: ▥
+          - generic [ref=e192]: EPUB
+          - strong [ref=e193]: 成长文库 世界少年文学精选(拼音版美绘本)·洋葱头历险记 (成长文库•世界儿童文学经典拼音美绘本) (罗大里)
+          - generic [ref=e194]: huiben
+  - status

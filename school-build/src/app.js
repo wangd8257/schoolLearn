@@ -702,24 +702,56 @@ async function renderPaper() {
   applyPaperTransform(state.paperTransform);
 }
 
+/**
+ * 渲染阅读资料页面。
+ * 先使用 IndexedDB 中已有的书目完成首屏，再后台同步 huiben 清单，避免清单或大文件读取阻塞点击反馈。
+ * @returns {Promise<void>} 首屏结构完成渲染后的 Promise。
+ */
 async function renderReading() {
-  const readings = (await ensureReadingSeeds()).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
-  const active = readings.find((item)=>item.id === state.activeReadingId);
+  const cachedReadings = (await getAll('readings')).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  const active = cachedReadings.find((item)=>item.id === state.activeReadingId);
   if (active) {
-    const readerItem = active.type === 'file-book' ? await prepareFileBook(active) : active;
-    main.innerHTML = renderReader(readerItem);
-    if (readerItem.type === 'file-book' && ['epub', 'equb'].includes(readerItem.fileKind) && readerItem.fileAccessMode !== 'local-file') {
-      void mountEpubReader(readerItem);
-    }
+    renderActiveReading(active);
+    void ensureReadingSeeds().catch((error) => console.warn('阅读资料后台同步失败', error));
     return;
   }
+
+  renderReadingShelf(cachedReadings);
+  void ensureReadingSeeds().then((readings) => {
+    if (state.route !== 'reading' || state.activeReadingId) return;
+    renderReadingShelf(readings.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)));
+  }).catch((error) => {
+    console.warn('阅读资料后台同步失败', error);
+  });
+}
+
+/**
+ * 渲染书架列表。
+ * @param {Array<Record<string, unknown>>} readings 当前设备已保存的阅读资料。
+ * @returns {void}
+ */
+function renderReadingShelf(readings) {
   if (state.bookObjectUrl) {
     URL.revokeObjectURL(state.bookObjectUrl);
     state.bookObjectUrl = null;
   }
-  const categories = [...new Set(readings.map((item)=>item.category || '绘本'))];
   main.innerHTML = `${pageHeader('绘本书架','读取 huiben 文件夹和已导入书籍','<button class="primary" data-new-picture-book>＋ 导入书籍</button><button class="secondary" data-new-text-reading>＋ 新建文字</button>')}
-    ${readings.length ? `<section class="bookshelf-grid">${readings.map((item)=>renderBookCard(item)).join('')}</section>` : '<div class="empty-state"><span class="emoji">📚</span><h2>书架暂无书籍</h2><p>把 PDF、EPUB、EQUB 放入 huiben 文件夹并刷新，或点击导入书籍。</p></div>'}`;
+    ${readings.length ? `<section class="bookshelf-grid">${readings.map((item)=>renderBookCard(item)).join('')}</section>` : '<div class="empty-state"><span class="emoji">📚</span><h2>书架正在准备</h2><p>正在读取 huiben 文件夹清单，请稍候。</p></div>'}`;
+}
+
+/**
+ * 立即渲染已选中的阅读资料。
+ * 文件绘本先显示阅读层，再异步挂载阅读器或缓存离线副本，避免大文件让点击看起来失效。
+ * @param {Record<string, unknown>} item 当前选中的阅读资料。
+ * @returns {void}
+ */
+function renderActiveReading(item) {
+  const readerItem = item.type === 'file-book' ? createImmediateFileBook(item) : item;
+  main.innerHTML = renderReader(readerItem);
+  if (readerItem.type === 'file-book' && ['epub', 'equb'].includes(String(readerItem.fileKind).toLowerCase()) && readerItem.fileAccessMode !== 'local-file') {
+    void mountEpubReader(readerItem);
+  }
+  if (item.type === 'file-book') void cacheFileBook(item);
 }
 
 function renderBookCard(item) {
@@ -766,32 +798,39 @@ function renderFileBookReader(item) {
 }
 
 /**
- * 准备绘本文件的离线 Blob 来源。
+ * 为当前阅读层准备可立即使用的文件来源。
  * @param {Record<string, unknown>} item 书架中的文件绘本记录。
- * @returns {Promise<Record<string, unknown>>} 使用 Blob URL 或原始 URL 的绘本记录。
+ * @returns {Record<string, unknown>} 可直接交给 PDF iframe 或 EPUB 阅读器的记录。
  */
-async function prepareFileBook(item) {
+function createImmediateFileBook(item) {
   const sourceUrl = String(item.sourceUrl || '');
   const isLocalFileUrl = globalThis.location?.protocol === 'file:' || sourceUrl.startsWith('file:');
-  let blob = item.sourceBlob instanceof Blob ? item.sourceBlob : null;
-  // file:// 页面无法安全读取同目录文件，必须绕过 fetch 和 Blob URL，交给本地服务或系统阅读器。
-  if (!blob && item.sourceUrl && !isLocalFileUrl) {
-    try {
-      const response = await fetch(item.sourceUrl, { cache: 'force-cache' });
-      if (!response.ok) throw new Error(`绘本文件读取失败：${response.status}`);
-      blob = await response.blob();
-      await put('readings', { ...item, sourceBlob: blob, size: blob.size, updatedAt: Date.now() });
-    } catch (error) {
-      console.warn('绘本离线副本准备失败', error);
-    }
-  }
-  if (isLocalFileUrl) {
-    return { ...item, fileAccessMode: 'local-file' };
-  }
-  if (!blob || typeof URL?.createObjectURL !== 'function') return item;
+  if (isLocalFileUrl) return { ...item, fileAccessMode: 'local-file' };
+  if (!(item.sourceBlob instanceof Blob) || typeof URL?.createObjectURL !== 'function') return item;
   if (state.bookObjectUrl) URL.revokeObjectURL(state.bookObjectUrl);
-  state.bookObjectUrl = URL.createObjectURL(blob);
+  state.bookObjectUrl = URL.createObjectURL(item.sourceBlob);
   return { ...item, sourceUrl: state.bookObjectUrl };
+}
+
+/**
+ * 后台缓存绘本文件，避免首次点击时等待完整文件下载。
+ * @param {Record<string, unknown>} item 书架中的文件绘本记录。
+ * @returns {Promise<void>} 缓存完成或失败后的 Promise。
+ */
+async function cacheFileBook(item) {
+  const sourceUrl = String(item.sourceUrl || '');
+  const isLocalFileUrl = globalThis.location?.protocol === 'file:' || sourceUrl.startsWith('file:');
+  const isInlineSource = /^(blob:|data:)/u.test(sourceUrl);
+  if (isLocalFileUrl || isInlineSource || item.sourceBlob instanceof Blob || !sourceUrl) return;
+  try {
+    const response = await fetch(sourceUrl, { cache: 'force-cache' });
+    if (!response.ok) throw new Error(`绘本文件读取失败：${response.status}`);
+    const blob = await response.blob();
+    await put('readings', { ...item, sourceBlob: blob, size: blob.size, updatedAt: Date.now() });
+  } catch (error) {
+    // 阅读器已经使用原始 URL 尝试打开，后台缓存失败不应阻断当前阅读。
+    console.warn('绘本离线副本准备失败', error);
+  }
 }
 
 /**

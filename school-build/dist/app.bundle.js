@@ -7851,23 +7851,36 @@ ${user}`);
     applyPaperTransform(state.paperTransform);
   }
   async function renderReading() {
-    const readings = (await ensureReadingSeeds()).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-    const active = readings.find((item) => item.id === state.activeReadingId);
+    const cachedReadings = (await getAll("readings")).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    const active = cachedReadings.find((item) => item.id === state.activeReadingId);
     if (active) {
-      const readerItem = active.type === "file-book" ? await prepareFileBook(active) : active;
-      main.innerHTML = renderReader(readerItem);
-      if (readerItem.type === "file-book" && ["epub", "equb"].includes(readerItem.fileKind) && readerItem.fileAccessMode !== "local-file") {
-        void mountEpubReader(readerItem);
-      }
+      renderActiveReading(active);
+      void ensureReadingSeeds().catch((error) => console.warn("\u9605\u8BFB\u8D44\u6599\u540E\u53F0\u540C\u6B65\u5931\u8D25", error));
       return;
     }
+    renderReadingShelf(cachedReadings);
+    void ensureReadingSeeds().then((readings) => {
+      if (state.route !== "reading" || state.activeReadingId) return;
+      renderReadingShelf(readings.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)));
+    }).catch((error) => {
+      console.warn("\u9605\u8BFB\u8D44\u6599\u540E\u53F0\u540C\u6B65\u5931\u8D25", error);
+    });
+  }
+  function renderReadingShelf(readings) {
     if (state.bookObjectUrl) {
       URL.revokeObjectURL(state.bookObjectUrl);
       state.bookObjectUrl = null;
     }
-    const categories = [...new Set(readings.map((item) => item.category || "\u7ED8\u672C"))];
     main.innerHTML = `${pageHeader("\u7ED8\u672C\u4E66\u67B6", "\u8BFB\u53D6 huiben \u6587\u4EF6\u5939\u548C\u5DF2\u5BFC\u5165\u4E66\u7C4D", '<button class="primary" data-new-picture-book>\uFF0B \u5BFC\u5165\u4E66\u7C4D</button><button class="secondary" data-new-text-reading>\uFF0B \u65B0\u5EFA\u6587\u5B57</button>')}
-    ${readings.length ? `<section class="bookshelf-grid">${readings.map((item) => renderBookCard(item)).join("")}</section>` : '<div class="empty-state"><span class="emoji">\u{1F4DA}</span><h2>\u4E66\u67B6\u6682\u65E0\u4E66\u7C4D</h2><p>\u628A PDF\u3001EPUB\u3001EQUB \u653E\u5165 huiben \u6587\u4EF6\u5939\u5E76\u5237\u65B0\uFF0C\u6216\u70B9\u51FB\u5BFC\u5165\u4E66\u7C4D\u3002</p></div>'}`;
+    ${readings.length ? `<section class="bookshelf-grid">${readings.map((item) => renderBookCard(item)).join("")}</section>` : '<div class="empty-state"><span class="emoji">\u{1F4DA}</span><h2>\u4E66\u67B6\u6B63\u5728\u51C6\u5907</h2><p>\u6B63\u5728\u8BFB\u53D6 huiben \u6587\u4EF6\u5939\u6E05\u5355\uFF0C\u8BF7\u7A0D\u5019\u3002</p></div>'}`;
+  }
+  function renderActiveReading(item) {
+    const readerItem = item.type === "file-book" ? createImmediateFileBook(item) : item;
+    main.innerHTML = renderReader(readerItem);
+    if (readerItem.type === "file-book" && ["epub", "equb"].includes(String(readerItem.fileKind).toLowerCase()) && readerItem.fileAccessMode !== "local-file") {
+      void mountEpubReader(readerItem);
+    }
+    if (item.type === "file-book") void cacheFileBook(item);
   }
   function renderBookCard(item) {
     const badge = item.fileKind ? String(item.fileKind).toUpperCase() : item.type === "picture-book" ? "\u56FE\u7247" : "\u6587\u672C";
@@ -7897,27 +7910,28 @@ ${user}`);
     const body = localFileFallback ? localFileFallback : isEpub ? '<epub-reader class="epub-reader-frame" data-epub-reader aria-label="EPUB \u7ED8\u672C\u9605\u8BFB\u5668"></epub-reader>' : kind === "PDF" && source ? `<iframe class="book-file-frame" src="${sourceUrl}" title="${title}" loading="eager"></iframe>` : fallback;
     return `<article class="reader fullscreen-reader file-book-reader"><div class="reader-floating-toolbar"><strong>${title}</strong><span>${kind}</span>${openLink}<button class="primary" data-exit-reader>\u9000\u51FA\u9605\u8BFB</button></div>${body}</article>`;
   }
-  async function prepareFileBook(item) {
+  function createImmediateFileBook(item) {
     const sourceUrl = String(item.sourceUrl || "");
     const isLocalFileUrl = globalThis.location?.protocol === "file:" || sourceUrl.startsWith("file:");
-    let blob = item.sourceBlob instanceof Blob ? item.sourceBlob : null;
-    if (!blob && item.sourceUrl && !isLocalFileUrl) {
-      try {
-        const response = await fetch(item.sourceUrl, { cache: "force-cache" });
-        if (!response.ok) throw new Error(`\u7ED8\u672C\u6587\u4EF6\u8BFB\u53D6\u5931\u8D25\uFF1A${response.status}`);
-        blob = await response.blob();
-        await put("readings", { ...item, sourceBlob: blob, size: blob.size, updatedAt: Date.now() });
-      } catch (error) {
-        console.warn("\u7ED8\u672C\u79BB\u7EBF\u526F\u672C\u51C6\u5907\u5931\u8D25", error);
-      }
-    }
-    if (isLocalFileUrl) {
-      return { ...item, fileAccessMode: "local-file" };
-    }
-    if (!blob || typeof URL?.createObjectURL !== "function") return item;
+    if (isLocalFileUrl) return { ...item, fileAccessMode: "local-file" };
+    if (!(item.sourceBlob instanceof Blob) || typeof URL?.createObjectURL !== "function") return item;
     if (state.bookObjectUrl) URL.revokeObjectURL(state.bookObjectUrl);
-    state.bookObjectUrl = URL.createObjectURL(blob);
+    state.bookObjectUrl = URL.createObjectURL(item.sourceBlob);
     return { ...item, sourceUrl: state.bookObjectUrl };
+  }
+  async function cacheFileBook(item) {
+    const sourceUrl = String(item.sourceUrl || "");
+    const isLocalFileUrl = globalThis.location?.protocol === "file:" || sourceUrl.startsWith("file:");
+    const isInlineSource = /^(blob:|data:)/u.test(sourceUrl);
+    if (isLocalFileUrl || isInlineSource || item.sourceBlob instanceof Blob || !sourceUrl) return;
+    try {
+      const response = await fetch(sourceUrl, { cache: "force-cache" });
+      if (!response.ok) throw new Error(`\u7ED8\u672C\u6587\u4EF6\u8BFB\u53D6\u5931\u8D25\uFF1A${response.status}`);
+      const blob = await response.blob();
+      await put("readings", { ...item, sourceBlob: blob, size: blob.size, updatedAt: Date.now() });
+    } catch (error) {
+      console.warn("\u7ED8\u672C\u79BB\u7EBF\u526F\u672C\u51C6\u5907\u5931\u8D25", error);
+    }
   }
   async function mountEpubReader(item) {
     const reader = document.querySelector("[data-epub-reader]");

@@ -1,0 +1,107 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e8]:
+        - strong [ref=e9]: 光之进化
+        - text: 学习能量控制台
+      - navigation "主导航" [ref=e10]:
+        - button "⌂ 首页" [ref=e11] [cursor=pointer]:
+          - generic [ref=e12]: ⌂
+          - text: 首页
+        - button "▤ 试卷目录" [ref=e13] [cursor=pointer]:
+          - generic [ref=e14]: ▤
+          - text: 试卷目录
+        - button "✦ 生成试卷" [ref=e15] [cursor=pointer]:
+          - generic [ref=e16]: ✦
+          - text: 生成试卷
+        - button "▥ 阅读资料" [active] [ref=e17] [cursor=pointer]:
+          - generic [ref=e18]: ▥
+          - text: 阅读资料
+        - button "◇ 学习游戏" [ref=e19] [cursor=pointer]:
+          - generic [ref=e20]: ◇
+          - text: 学习游戏
+        - button "⌘ 配置模板" [ref=e21] [cursor=pointer]:
+          - generic [ref=e22]: ⌘
+          - text: 配置模板
+      - paragraph [ref=e25]:
+        - strong [ref=e26]: 本机离线保存
+        - text: 请勿清除 Safari 网站数据
+    - main [ref=e27]:
+      - generic [ref=e33]:
+        - generic [ref=e34]:
+          - generic [ref=e35]: 光之进化 / COMMAND DECK
+          - heading "你好，准备开始学习吧" [level=1] [ref=e36]
+          - paragraph [ref=e37]: 试卷、阅读和小游戏都保存在这台 iPad 上
+        - button "＋ 生成试卷" [ref=e44] [cursor=pointer]
+      - generic [ref=e45]:
+        - generic [ref=e46]:
+          - generic [ref=e47]: 8月8日星期六
+          - generic [ref=e48]: ULTRA LEARNING CONSOLE · 01
+          - heading "把每一次练习，变成看得见的成长" [level=2] [ref=e49]
+          - paragraph [ref=e50]: 家长配置内容，孩子专注作答。试卷、阅读与游戏都在这台设备上离线运行。
+          - generic [ref=e51]:
+            - button "开始生成" [ref=e52] [cursor=pointer]
+            - button "查看试卷目录" [ref=e53] [cursor=pointer]:
+              - text: 查看试卷目录
+              - generic [ref=e54]: →
+        - generic: 光能READY
+      - generic [ref=e55]:
+        - generic [ref=e56]:
+          - generic [ref=e57]: LIGHT CORE / LIVE
+          - heading "学习能量" [level=3] [ref=e58]
+          - paragraph [ref=e59]: 所有内容都保存在这台设备上，随时可以继续。
+        - generic [ref=e60]:
+          - generic [ref=e61]:
+            - generic [ref=e62]: 全部试卷
+            - strong [ref=e63]: "0"
+            - generic [ref=e64]: 本机已保存
+          - generic [ref=e65]:
+            - generic [ref=e66]: 待批改
+            - strong [ref=e67]: "0"
+            - generic [ref=e68]: 等待红笔标记
+          - generic [ref=e69]:
+            - generic [ref=e70]: 阅读资料
+            - strong [ref=e71]: "17"
+            - generic [ref=e72]: 书架与文字资料
+          - generic [ref=e73]:
+            - generic [ref=e74]: 游戏记录
+            - strong [ref=e75]: "0"
+            - generic [ref=e76]: 最近完成的练习
+      - generic [ref=e77]:
+        - generic [ref=e78]:
+          - generic [ref=e79]:
+            - generic [ref=e80]: MISSION ROUTES
+            - heading "今天从这里开始" [level=3] [ref=e81]
+          - generic [ref=e82]:
+            - text: BETA
+            - generic [ref=e83]: "01"
+        - generic [ref=e84]:
+          - button "01 ▤ 打开试卷目录 按状态和生成时间管理全部试卷。 →" [ref=e85] [cursor=pointer]:
+            - generic [ref=e86]: "01"
+            - generic [ref=e87]: ▤
+            - generic [ref=e88]:
+              - strong [ref=e89]: 打开试卷目录
+              - generic [ref=e90]: 按状态和生成时间管理全部试卷。
+            - generic [ref=e91]: →
+          - button "02 ✦ 配置生成试卷 数学、汉字和英语模板自由配置。 →" [ref=e92] [cursor=pointer]:
+            - generic [ref=e93]: "02"
+            - generic [ref=e94]: ✦
+            - generic [ref=e95]:
+              - strong [ref=e96]: 配置生成试卷
+              - generic [ref=e97]: 数学、汉字和英语模板自由配置。
+            - generic [ref=e98]: →
+          - button "03 ▥ 阅读与跟读 按段点读，中文逐字、英文逐词高亮。 →" [ref=e99] [cursor=pointer]:
+            - generic [ref=e100]: "03"
+            - generic [ref=e101]: ▥
+            - generic [ref=e102]:
+              - strong [ref=e103]: 阅读与跟读
+              - generic [ref=e104]: 按段点读，中文逐字、英文逐词高亮。
+            - generic [ref=e105]: →
+          - button "04 ◇ 学习游戏 汉字连线消消乐和英语实物配对。 →" [ref=e106] [cursor=pointer]:
+            - generic [ref=e107]: "04"
+            - generic [ref=e108]: ◇
+            - generic [ref=e109]:
+              - strong [ref=e110]: 学习游戏
+              - generic [ref=e111]: 汉字连线消消乐和英语实物配对。
+            - generic [ref=e112]: →
+  - status
