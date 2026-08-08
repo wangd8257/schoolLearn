@@ -112,18 +112,21 @@ async function renderHome() {
   const today = new Intl.DateTimeFormat('zh-CN', { month:'long', day:'numeric', weekday:'long' }).format(new Date());
   main.innerHTML = `
     ${pageHeader('你好，准备开始学习吧','试卷、阅读和小游戏都保存在这台 iPad 上','<button class="primary" data-route="generator">＋ 生成试卷</button>')}
-    <section class="hero-band"><div><span class="today-date">${today}</span><h2>把每一次练习，变成看得见的成长</h2><p>家长按需要生成试卷，孩子用 Apple Pencil 黑笔作答，提交后再用红笔批改。阅读与游戏也可以随时开始。</p></div></section>
+    <section class="hero-band">
+      <div class="hero-copy"><span class="today-date">${today}</span><span class="hero-kicker">ULTRA LEARNING CONSOLE · 01</span><h2>把每一次练习，变成看得见的成长</h2><p>家长配置内容，孩子专注作答。试卷、阅读与游戏都在这台设备上离线运行。</p><div class="hero-actions"><button class="primary" data-route="generator">开始生成</button><button class="hero-link" data-route="papers">查看试卷目录 <span aria-hidden="true">→</span></button></div></div>
+      <div class="hero-geometry" aria-hidden="true"><div class="hero-orbit hero-orbit-outer"></div><div class="hero-orbit hero-orbit-inner"></div><div class="hero-timer"><span></span></div><div class="hero-beam hero-beam-one"></div><div class="hero-beam hero-beam-two"></div><div class="hero-energy"><span></span></div><div class="hero-sticker">光能<br><b>READY</b></div></div>
+    </section>
     <section class="metric-grid">
-      <div class="metric"><strong>${papers.length}</strong><span>全部试卷</span></div>
-      <div class="metric"><strong>${statusCount('review')}</strong><span>待批改</span></div>
-      <div class="metric"><strong>${readings.length}</strong><span>阅读资料</span></div>
-      <div class="metric"><strong>${records.length}</strong><span>游戏记录</span></div>
+      <div class="metric"><span class="metric-label">全部试卷</span><strong>${papers.length}</strong><small>本机已保存</small></div>
+      <div class="metric metric-blue"><span class="metric-label">待批改</span><strong>${statusCount('review')}</strong><small>等待红笔标记</small></div>
+      <div class="metric"><span class="metric-label">阅读资料</span><strong>${readings.length}</strong><small>书架与文字资料</small></div>
+      <div class="metric"><span class="metric-label">游戏记录</span><strong>${records.length}</strong><small>最近完成的练习</small></div>
     </section>
     <section class="entry-grid">
-      <button class="entry-card" data-route="papers"><span class="emoji">📝</span><h3>打开试卷目录</h3><p>按状态和生成时间管理全部试卷。</p></button>
-      <button class="entry-card" data-route="generator"><span class="emoji">🪄</span><h3>配置生成试卷</h3><p>数学、汉字和英语模板自由配置。</p></button>
-      <button class="entry-card" data-route="reading"><span class="emoji">📚</span><h3>阅读与跟读</h3><p>按段点读，中文逐字、英文逐词高亮。</p></button>
-      <button class="entry-card" data-route="games"><span class="emoji">🎮</span><h3>学习游戏</h3><p>汉字连线消消乐和英语实物配对。</p></button>
+      <button class="entry-card" data-route="papers"><span class="entry-icon entry-icon-paper">▤</span><span class="entry-index">01</span><h3>打开试卷目录</h3><p>按状态和生成时间管理全部试卷。</p><span class="entry-arrow">→</span></button>
+      <button class="entry-card" data-route="generator"><span class="entry-icon entry-icon-generate">✦</span><span class="entry-index">02</span><h3>配置生成试卷</h3><p>数学、汉字和英语模板自由配置。</p><span class="entry-arrow">→</span></button>
+      <button class="entry-card" data-route="reading"><span class="entry-icon entry-icon-reading">▥</span><span class="entry-index">03</span><h3>阅读与跟读</h3><p>按段点读，中文逐字、英文逐词高亮。</p><span class="entry-arrow">→</span></button>
+      <button class="entry-card" data-route="games"><span class="entry-icon entry-icon-game">◇</span><span class="entry-index">04</span><h3>学习游戏</h3><p>汉字连线消消乐和英语实物配对。</p><span class="entry-arrow">→</span></button>
     </section>`;
 }
 
@@ -1226,10 +1229,16 @@ document.addEventListener('wheel', handleMainContentWheel, { passive: false });
 document.querySelector('#menuButton').addEventListener('click',()=>document.querySelector('#sidebar').classList.toggle('open'));
 
 async function init() {
-  await openDatabase();
-  await ensureDefaultTemplates();
-  await ensureReadingSeeds();
-  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('./sw.js').catch(console.warn);
-  await navigate('home');
+  const loading = document.querySelector('#appLoading');
+  try {
+    await openDatabase();
+    await ensureDefaultTemplates();
+    await ensureReadingSeeds();
+    if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('./sw.js').catch(console.warn);
+    await navigate('home');
+  } finally {
+    loading?.classList.add('is-hidden');
+    setTimeout(() => loading?.remove(), 360);
+  }
 }
 init();
