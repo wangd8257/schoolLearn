@@ -127,25 +127,26 @@ button { cursor: pointer; }
 .vertical-result-cells { grid-column: 2 / -1; display: grid; grid-template-columns: repeat(var(--digits, 2), var(--cell)); }
 .vertical-digit-box { min-width: 0; border: 1.5px solid #555; }
 .worksheet-layout-make-ten, .worksheet-layout-break-ten { gap: 30px 24px; align-items: start; }
-.ten-diagram { display: block; min-height: 190px; font: 20px "Times New Roman", serif; overflow: hidden; }
-.ten-expression, .ten-process { display: grid; grid-template-columns: 28px 24px 28px 24px 42px; justify-content: center; column-gap: clamp(7px, 1.25vw, 16px); }
+.ten-diagram { display: block; min-height: 166px; font: 20px "Times New Roman", serif; overflow: visible; }
+.ten-expression, .ten-process { display: grid; grid-template-columns: var(--ten-left-col, 2ch) var(--ten-operator-col, 18px) var(--ten-right-col, 2ch) var(--ten-operator-col, 18px) var(--ten-answer-col, 38px); justify-content: center; column-gap: clamp(7px, 1.25vw, 16px); }
 .ten-expression { align-items: center; min-height: 38px; white-space: nowrap; }
 .ten-operand, .ten-operator { display: grid; place-items: center; min-width: 18px; line-height: 1; }
-.ten-answer-box { width: 38px; min-width: 38px; height: 34px; }
-.ten-process { position: relative; min-height: 100px; margin-top: 7px; align-items: start; }
-.ten-split { grid-column: 3; width: 72px; justify-self: center; }
+.ten-answer-box { width: var(--ten-answer-col, 38px); min-width: var(--ten-answer-col, 38px); height: 34px; }
+.ten-process { position: relative; min-height: 108px; margin-top: 7px; align-items: start; }
+.ten-split { grid-column: 3; width: 100%; justify-self: stretch; }
 .ten-slashes { display: flex; justify-content: space-between; width: 52px; margin: 0 auto 5px; font-size: 23px; line-height: 1; }
 .ten-split-boxes { display: flex; justify-content: center; gap: 12px; }
 .ten-small-box { width: 34px; min-width: 34px; height: 30px; }
-.ten-anchor { grid-column: 1; position: relative; width: 52px; height: 83px; justify-self: center; }
-.ten-anchor::before { content: ""; position: absolute; left: 0; top: 0; width: 52px; height: 70px; border-left: 1px solid #1d2429; border-bottom: 1px solid #1d2429; }
+.ten-anchor { grid-column: 1 / 3; position: relative; width: 100%; height: 83px; justify-self: stretch; }
+.ten-anchor::before { content: ""; position: absolute; left: calc(var(--ten-left-col, 2ch) / 2); top: 0; width: calc(100% - (var(--ten-left-col, 2ch) / 2)); height: 70px; border-left: 1px solid #1d2429; border-bottom: 1px solid #1d2429; }
 .ten-anchor-line { position: absolute; left: auto; right: -1px; bottom: -1px; width: 13px; height: 13px; border-right: 1px solid #1d2429; }
 .ten-target-number { position: absolute; left: 0; right: 0; bottom: -27px; text-align: center; font-weight: 400; }
 .break-ten-process .ten-split { grid-column: 1; }
-.ten-result-tree { grid-column: 3; position: relative; width: 52px; height: 83px; justify-self: center; }
-.ten-result-tree::before { content: ""; position: absolute; left: auto; right: 0; top: 0; width: 52px; height: 70px; border-right: 1px solid #1d2429; border-bottom: 1px solid #1d2429; }
-.ten-result-operator { position: absolute; left: -18px; bottom: 15px; font-size: 18px; }
-.ten-result-box-wrap { position: absolute; left: auto; right: 0; bottom: -42px; }
+.ten-result-tree { grid-column: 3; position: relative; width: 100%; height: 83px; justify-self: stretch; }
+.ten-result-tree::before { content: ""; position: absolute; left: 0; top: 0; width: 50%; height: 70px; border-right: 1px solid #1d2429; border-bottom: 1px solid #1d2429; }
+.ten-result-number { position: absolute; left: 50%; bottom: -27px; transform: translateX(-50%); }
+.ten-result-operator { position: absolute; left: 50%; top: calc(clamp(44px, 11vw, 70px) - 2px); transform: translateX(-50%); font-size: 18px; }
+.ten-result-box-wrap { position: absolute; left: 50%; bottom: -42px; transform: translateX(-50%); }
 .ten-result-box { width: 38px; min-width: 38px; height: 34px; }
 .worksheet-layout-clock { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 26px 24px; align-items: start; }
 .clock-problem { min-height: 190px; display: grid; place-items: center; align-content: start; gap: 7px; text-align: center; overflow: hidden; }
@@ -193,14 +194,16 @@ button { cursor: pointer; }
 .stroke-order-row span { padding: 3px 7px; border: 1px dashed #b9b9b9; border-radius: 6px; background: #fafafa; }
 .stroke-order-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 .english-copybook-line { position: relative; display: flex; align-items: center; width: 100%; min-height: clamp(70px, 10vw, 88px); padding: 0; background: repeating-linear-gradient(to bottom, #9fb9d5 0 1px, transparent 1px 18px); font: clamp(22px, 3vw, 30px) "Comic Sans MS", "Trebuchet MS", sans-serif; }
-.english-copy-row { display: flex; align-items: center; width: 100%; min-width: 0; gap: clamp(5px, 1vw, 14px); }
-.english-sample { display: block; flex: 1 1 0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: clip; line-height: 1; text-align: left; }
-.english-sentence-writing .english-sample { flex: 1 1 auto; font-size: clamp(16px, 3vw, 30px); overflow: visible; }
+.english-copy-row { display: flex; flex-wrap: wrap; align-items: center; align-content: center; width: 100%; min-width: 0; gap: clamp(5px, 1vw, 14px); }
+.english-sample { display: block; min-width: 0; white-space: nowrap; line-height: 1; text-align: left; }
+.english-word-writing .english-sample { flex: 0 0 auto; max-width: 100%; }
+.english-sentence-writing .english-sample { flex: 1 1 auto; max-width: 100%; font-size: clamp(16px, 3vw, 30px); white-space: normal; overflow-wrap: anywhere; }
 .english-ghost { color: rgba(40, 40, 40, .18); }
-.english-font-comic .english-copybook-line { font-family: "Comic Sans MS", "Trebuchet MS", sans-serif; }
-.english-font-print .english-copybook-line { font-family: "Trebuchet MS", "Arial", sans-serif; }
-.english-font-serif .english-copybook-line { font-family: "Times New Roman", serif; }
-.english-font-cursive .english-copybook-line { font-family: "Segoe Script", "Comic Sans MS", cursive; }
+.english-loop-g { font-family: "Comic Sans MS", "Chalkboard SE", "Bradley Hand", cursive; font-size: 1.05em; }
+.english-font-comic .english-copybook-line { font-family: "Comic Sans MS", "Chalkboard SE", "Bradley Hand", cursive; }
+.english-font-print .english-copybook-line { font-family: "Trebuchet MS", "Comic Sans MS", "Chalkboard SE", sans-serif; }
+.english-font-serif .english-copybook-line { font-family: "Times New Roman", "Comic Sans MS", serif; }
+.english-font-cursive .english-copybook-line { font-family: "Segoe Script", "Comic Sans MS", "Chalkboard SE", cursive; }
 .ink-layer { position: absolute; inset: 0; z-index: 4; touch-action: none; }
 .ink-layer.disabled { pointer-events: none; }
 .ink-layer.eraser-mode { cursor: cell; }
@@ -394,11 +397,11 @@ body.paper-focus-active .main-content { height: 100dvh; padding: 0; overflow: hi
   .worksheet-lines { gap: 18px 14px; }
   .worksheet-lines .math-inline { font-size: clamp(15px, 4vw, 20px); }
   .worksheet-layout-make-ten, .worksheet-layout-break-ten { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 10px; }
-  .worksheet-lines .ten-diagram { min-height: clamp(108px, 24vw, 190px); overflow: visible; font-size: clamp(14px, 4vw, 20px); }
-  .ten-expression { gap: 4px; font-size: clamp(14px, 4vw, 18px); }
-  .ten-process { min-height: clamp(58px, 12vw, 100px); margin-top: 6px; margin-bottom: 0; transform: none; }
+  .worksheet-lines .ten-diagram { min-height: clamp(136px, 30vw, 166px); overflow: visible; font-size: clamp(14px, 4vw, 20px); }
+  .ten-expression, .ten-process { --ten-answer-col: clamp(28px, 8vw, 38px); gap: 4px; font-size: clamp(14px, 4vw, 18px); }
+  .ten-process { min-height: clamp(76px, 16vw, 108px); margin-top: 6px; margin-bottom: 0; transform: none; }
   .ten-anchor, .ten-result-tree { height: clamp(52px, 13vw, 83px); }
   .ten-anchor::before, .ten-result-tree::before { height: clamp(44px, 11vw, 70px); }
   .ten-small-box { width: clamp(24px, 7vw, 34px); min-width: clamp(24px, 7vw, 34px); height: clamp(22px, 6vw, 30px); }
-  .ten-answer-box, .ten-result-box { width: clamp(28px, 8vw, 38px); min-width: clamp(28px, 8vw, 38px); height: clamp(24px, 7vw, 34px); }
+  .ten-answer-box, .ten-result-box { width: var(--ten-answer-col, clamp(28px, 8vw, 38px)); min-width: var(--ten-answer-col, clamp(28px, 8vw, 38px)); height: clamp(24px, 7vw, 34px); }
 }

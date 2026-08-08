@@ -1,9 +1,6 @@
 (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropNames = Object.getOwnPropertyNames;
-  var __typeError = (msg) => {
-    throw TypeError(msg);
-  };
   var __esm = (fn, res, err) => function __init() {
     if (err) throw err[0];
     try {
@@ -16,19 +13,6 @@
     for (var name in all)
       __defProp(target, name, { get: all[name], enumerable: true });
   };
-  var __accessCheck = (obj, member, msg) => member.has(obj) || __typeError("Cannot " + msg);
-  var __privateGet = (obj, member, getter) => (__accessCheck(obj, member, "read from private field"), getter ? getter.call(obj) : member.get(obj));
-  var __privateAdd = (obj, member, value) => member.has(obj) ? __typeError("Cannot add the same private member more than once") : member instanceof WeakSet ? member.add(obj) : member.set(obj, value);
-  var __privateSet = (obj, member, value, setter) => (__accessCheck(obj, member, "write to private field"), setter ? setter.call(obj, value) : member.set(obj, value), value);
-  var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "access private method"), method);
-  var __privateWrapper = (obj, member, setter, getter) => ({
-    set _(value) {
-      __privateSet(obj, member, value, setter);
-    },
-    get _() {
-      return __privateGet(obj, member, getter);
-    }
-  });
 
   // src/db.js
   function openDatabase() {
@@ -3032,7 +3016,7 @@
     const next = structuredClone(book);
     const page = next.pages?.find((item) => item.id === pageId);
     if (!page) throw new Error("\u9875\u9762\u4E0D\u5B58\u5728");
-    page.textBoxes || (page.textBoxes = []);
+    page.textBoxes ||= [];
     page.textBoxes.push({ id: options.id || uid("text"), text: String(text || "").trim() || "\u8BF7\u8F93\u5165\u6587\u5B57", x: 8, y: 72, width: 84 });
     next.updatedAt = options.now ?? Date.now();
     return next;
@@ -3217,11 +3201,12 @@
   function renderTenDiagram(problem, operator, diagramClass) {
     const [left = "", right = ""] = problem.operands || [];
     const answer = `<span class="answer-box ten-answer-box"></span>`;
+    const columnStyle = `--ten-left-col:${Math.max(2, String(left).length)}ch;--ten-right-col:${Math.max(2, String(right).length)}ch;`;
     const expression = `<div class="ten-expression"><span class="ten-operand ten-left-operand">${escapeHtml(left)}</span><span class="ten-operator">${operator}</span><span class="ten-operand ten-right-operand">${escapeHtml(right)}</span><span class="ten-operator">=</span>${answer}</div>`;
     if (diagramClass === "make-ten-diagram") {
-      return `<div class="problem ten-diagram make-ten-diagram">${expression}<div class="ten-process make-ten-process"><div class="ten-anchor"><span class="ten-anchor-line"></span><span class="ten-target-number">10</span></div><div class="ten-split"><div class="ten-slashes"><span>/</span><span>\\</span></div><div class="ten-split-boxes"><span class="answer-box ten-small-box"></span><span class="answer-box ten-small-box"></span></div></div></div></div>`;
+      return `<div class="problem ten-diagram make-ten-diagram" style="${columnStyle}">${expression}<div class="ten-process make-ten-process"><div class="ten-anchor" data-ten-anchor="left-operand"><span class="ten-anchor-line"></span><span class="ten-target-number">10</span></div><div class="ten-split" data-ten-anchor="right-operand"><div class="ten-slashes"><span>/</span><span>\\</span></div><div class="ten-split-boxes"><span class="answer-box ten-small-box"></span><span class="answer-box ten-small-box"></span></div></div></div></div>`;
     }
-    return `<div class="problem ten-diagram break-ten-diagram">${expression}<div class="ten-process break-ten-process"><div class="ten-split"><div class="ten-slashes"><span>/</span><span>\\</span></div><div class="ten-split-boxes"><span class="answer-box ten-small-box"></span><span class="answer-box ten-small-box"></span></div></div><div class="ten-result-tree"><span class="ten-result-box-wrap"><span class="answer-box ten-result-box"></span></span></div></div></div>`;
+    return `<div class="problem ten-diagram break-ten-diagram" style="${columnStyle}">${expression}<div class="ten-process break-ten-process"><div class="ten-split" data-ten-anchor="left-operand"><div class="ten-slashes"><span>/</span><span>\\</span></div><div class="ten-split-boxes"><span class="answer-box ten-small-box"></span><span class="answer-box ten-small-box"></span></div></div><div class="ten-result-tree" data-ten-anchor="right-operand"><span class="ten-result-operator">\u2212</span><span class="ten-result-box-wrap"><span class="answer-box ten-result-box"></span></span></div></div></div>`;
   }
   function renderMakeTenDiagram(problem) {
     return renderTenDiagram(problem, "+", "make-ten-diagram");
@@ -3271,13 +3256,16 @@
   }
   function renderEnglishPractice(problem) {
     const kind = problem.kind || problem.type;
-    const text = escapeHtml(problem.prompt || "");
+    const text = renderEnglishText(problem.prompt || "");
     if (kind === "english-lines") {
       return `<div class="problem writing-practice english-writing english-blank-writing ${englishFontClass(problem)}"><div class="english-copybook-line" aria-label="\u7A7A\u767D\u56DB\u7EBF\u4E09\u683C"></div></div>`;
     }
-    const sampleCount = kind === "english-word" ? 5 : 1;
+    const sampleCount = kind === "english-word" ? 3 : 1;
     const samples = Array.from({ length: sampleCount }, () => `<span class="english-sample english-ghost">${text}</span>`).join("");
     return `<div class="problem writing-practice english-writing ${kind === "english-word" ? "english-word-writing" : "english-sentence-writing"} ${englishFontClass(problem)}"><div class="english-copybook-line"><div class="english-copy-row">${samples}</div></div></div>`;
+  }
+  function renderEnglishText(value) {
+    return Array.from(String(value)).map((character) => character === "g" ? '<span class="english-loop-g">g</span>' : escapeHtml(character)).join("");
   }
   function renderClockProblem(problem, index) {
     const number = `<span class="problem-number">${index + 1}.</span>`;
@@ -3343,25 +3331,39 @@
     return `<div class="problem math-inline">${number}${replaceSingleBlank(problem.prompt || "")}</div>`;
   }
 
+  // src/paper-controls.mjs
+  function paperMoveDelta(direction, step) {
+    const normalizedDirection = Number(direction);
+    const normalizedStep = Number(step);
+    if (![-1, 1].includes(normalizedDirection)) {
+      throw new RangeError("direction \u5FC5\u987B\u662F -1 \u6216 1");
+    }
+    if (!Number.isFinite(normalizedStep) || normalizedStep <= 0) {
+      throw new RangeError("step \u5FC5\u987B\u662F\u5927\u4E8E 0 \u7684\u6570\u5B57");
+    }
+    return normalizedDirection * normalizedStep;
+  }
+  function paperScrollDelta(direction, step) {
+    return -paperMoveDelta(direction, step);
+  }
+
   // src/vendor/epub-reader/zip.js
   var SIG_CDH = 33639248;
   var SIG_LFH = 67324752;
   var MAX_COMMENT = 65535;
   var EOCD_MIN = 22;
-  var _bytes, _view, _entries, _ZipArchive_instances, findEOCD_fn, parseCentralDirectory_fn, entryData_fn;
-  var _ZipArchive = class _ZipArchive {
+  var ZipArchive = class _ZipArchive {
+    /** @type {Uint8Array} */
+    #bytes;
+    /** @type {DataView} */
+    #view;
+    /** @type {Map<string, ZipEntry>} */
+    #entries;
     /** @param {ArrayBuffer} arrayBuffer */
     constructor(arrayBuffer) {
-      __privateAdd(this, _ZipArchive_instances);
-      /** @type {Uint8Array} */
-      __privateAdd(this, _bytes);
-      /** @type {DataView} */
-      __privateAdd(this, _view);
-      /** @type {Map<string, ZipEntry>} */
-      __privateAdd(this, _entries);
-      __privateSet(this, _bytes, new Uint8Array(arrayBuffer));
-      __privateSet(this, _view, new DataView(arrayBuffer));
-      __privateSet(this, _entries, /* @__PURE__ */ new Map());
+      this.#bytes = new Uint8Array(arrayBuffer);
+      this.#view = new DataView(arrayBuffer);
+      this.#entries = /* @__PURE__ */ new Map();
     }
     /**
      * Parse a ZIP archive from any binary source.
@@ -3369,7 +3371,6 @@
      * @returns {Promise<ZipArchive>}
      */
     static async from(source) {
-      var _a;
       let buf;
       if (source instanceof ArrayBuffer) {
         buf = source;
@@ -3382,19 +3383,82 @@
         throw new TypeError("ZipArchive.from expects ArrayBuffer, TypedArray, or Blob");
       }
       const zip = new _ZipArchive(buf);
-      __privateMethod(_a = zip, _ZipArchive_instances, parseCentralDirectory_fn).call(_a);
+      zip.#parseCentralDirectory();
       return zip;
     }
     /** @returns {string[]} All entry names in the archive. */
     get names() {
-      return [...__privateGet(this, _entries).keys()];
+      return [...this.#entries.keys()];
     }
     /**
      * @param {string} name
      * @returns {boolean}
      */
     has(name) {
-      return __privateGet(this, _entries).has(name);
+      return this.#entries.has(name);
+    }
+    #findEOCD() {
+      const bytes = this.#bytes;
+      const end = bytes.length;
+      const minStart = Math.max(0, end - EOCD_MIN - MAX_COMMENT);
+      for (let i = end - EOCD_MIN; i >= minStart; i--) {
+        if (bytes[i] === 80 && bytes[i + 1] === 75 && bytes[i + 2] === 5 && bytes[i + 3] === 6) {
+          return i;
+        }
+      }
+      throw new Error("Not a ZIP archive: End of Central Directory record not found");
+    }
+    #parseCentralDirectory() {
+      const view = this.#view;
+      const bytes = this.#bytes;
+      const eocd = this.#findEOCD();
+      const totalEntries = view.getUint16(eocd + 10, true);
+      const cdSize = view.getUint32(eocd + 12, true);
+      const cdOffset = view.getUint32(eocd + 16, true);
+      if (cdOffset === 4294967295 || cdSize === 4294967295 || totalEntries === 65535) {
+        throw new Error("ZIP64 archives are not supported");
+      }
+      let p = cdOffset;
+      const cdEnd = cdOffset + cdSize;
+      for (let i = 0; i < totalEntries && p < cdEnd; i++) {
+        const sig = view.getUint32(p, true);
+        if (sig !== SIG_CDH) {
+          throw new Error(`Invalid central directory header at ${p}`);
+        }
+        const flags = view.getUint16(p + 8, true);
+        const method = view.getUint16(p + 10, true);
+        const crc32 = view.getUint32(p + 16, true);
+        const compressedSize = view.getUint32(p + 20, true);
+        const uncompressedSize = view.getUint32(p + 24, true);
+        const nameLen = view.getUint16(p + 28, true);
+        const extraLen = view.getUint16(p + 30, true);
+        const commentLen = view.getUint16(p + 32, true);
+        const localHeader = view.getUint32(p + 42, true);
+        const nameBytes = bytes.subarray(p + 46, p + 46 + nameLen);
+        const name = decodeName(nameBytes, flags);
+        this.#entries.set(name, {
+          name,
+          method,
+          crc32,
+          compressedSize,
+          uncompressedSize,
+          localHeader
+        });
+        p += 46 + nameLen + extraLen + commentLen;
+      }
+    }
+    /** @param {ZipEntry} entry */
+    #entryData(entry) {
+      const view = this.#view;
+      const bytes = this.#bytes;
+      const p = entry.localHeader;
+      if (view.getUint32(p, true) !== SIG_LFH) {
+        throw new Error(`Invalid local file header for ${entry.name}`);
+      }
+      const nameLen = view.getUint16(p + 26, true);
+      const extraLen = view.getUint16(p + 28, true);
+      const dataStart = p + 30 + nameLen + extraLen;
+      return bytes.subarray(dataStart, dataStart + entry.compressedSize);
     }
     /**
      * Read and decompress an entry as raw bytes.
@@ -3402,9 +3466,9 @@
      * @returns {Promise<Uint8Array>}
      */
     async read(name) {
-      const entry = __privateGet(this, _entries).get(name);
+      const entry = this.#entries.get(name);
       if (!entry) throw new Error(`ZIP entry not found: ${name}`);
-      const raw = __privateMethod(this, _ZipArchive_instances, entryData_fn).call(this, entry);
+      const raw = this.#entryData(entry);
       if (entry.method === 0) {
         return new Uint8Array(raw);
       }
@@ -3437,74 +3501,6 @@
       ], { type });
     }
   };
-  _bytes = new WeakMap();
-  _view = new WeakMap();
-  _entries = new WeakMap();
-  _ZipArchive_instances = new WeakSet();
-  findEOCD_fn = function() {
-    const bytes = __privateGet(this, _bytes);
-    const end = bytes.length;
-    const minStart = Math.max(0, end - EOCD_MIN - MAX_COMMENT);
-    for (let i = end - EOCD_MIN; i >= minStart; i--) {
-      if (bytes[i] === 80 && bytes[i + 1] === 75 && bytes[i + 2] === 5 && bytes[i + 3] === 6) {
-        return i;
-      }
-    }
-    throw new Error("Not a ZIP archive: End of Central Directory record not found");
-  };
-  parseCentralDirectory_fn = function() {
-    const view = __privateGet(this, _view);
-    const bytes = __privateGet(this, _bytes);
-    const eocd = __privateMethod(this, _ZipArchive_instances, findEOCD_fn).call(this);
-    const totalEntries = view.getUint16(eocd + 10, true);
-    const cdSize = view.getUint32(eocd + 12, true);
-    const cdOffset = view.getUint32(eocd + 16, true);
-    if (cdOffset === 4294967295 || cdSize === 4294967295 || totalEntries === 65535) {
-      throw new Error("ZIP64 archives are not supported");
-    }
-    let p = cdOffset;
-    const cdEnd = cdOffset + cdSize;
-    for (let i = 0; i < totalEntries && p < cdEnd; i++) {
-      const sig = view.getUint32(p, true);
-      if (sig !== SIG_CDH) {
-        throw new Error(`Invalid central directory header at ${p}`);
-      }
-      const flags = view.getUint16(p + 8, true);
-      const method = view.getUint16(p + 10, true);
-      const crc32 = view.getUint32(p + 16, true);
-      const compressedSize = view.getUint32(p + 20, true);
-      const uncompressedSize = view.getUint32(p + 24, true);
-      const nameLen = view.getUint16(p + 28, true);
-      const extraLen = view.getUint16(p + 30, true);
-      const commentLen = view.getUint16(p + 32, true);
-      const localHeader = view.getUint32(p + 42, true);
-      const nameBytes = bytes.subarray(p + 46, p + 46 + nameLen);
-      const name = decodeName(nameBytes, flags);
-      __privateGet(this, _entries).set(name, {
-        name,
-        method,
-        crc32,
-        compressedSize,
-        uncompressedSize,
-        localHeader
-      });
-      p += 46 + nameLen + extraLen + commentLen;
-    }
-  };
-  /** @param {ZipEntry} entry */
-  entryData_fn = function(entry) {
-    const view = __privateGet(this, _view);
-    const bytes = __privateGet(this, _bytes);
-    const p = entry.localHeader;
-    if (view.getUint32(p, true) !== SIG_LFH) {
-      throw new Error(`Invalid local file header for ${entry.name}`);
-    }
-    const nameLen = view.getUint16(p + 26, true);
-    const extraLen = view.getUint16(p + 28, true);
-    const dataStart = p + 30 + nameLen + extraLen;
-    return bytes.subarray(dataStart, dataStart + entry.compressedSize);
-  };
-  var ZipArchive = _ZipArchive;
   function decodeName(bytes, flags) {
     const utf8 = (flags & 2048) !== 0;
     try {
@@ -3564,43 +3560,41 @@
     await book.load();
     return book;
   }
-  var _zip, _opfPath, _opfDir, _manifest, _spine, _toc, _metadata, _coverId, _navId, _blobUrls, _pending, _source, _cachedBookId, _EpubBook_instances, parseMetadata_fn, parseManifest_fn, parseSpine_fn, parseNav_fn, manifestByPath_fn, processHtml_fn, rewriteElement_fn, rewriteSrcset_fn, processCss_fn, rewriteCss_fn;
   var EpubBook = class {
+    /** @type {ZipArchive} */
+    #zip;
+    /** @type {string} */
+    #opfPath = "";
+    /** @type {string} */
+    #opfDir = "";
+    /** @type {Map<string, ManifestItem>} */
+    #manifest = /* @__PURE__ */ new Map();
+    /** @type {SpineItem[]} */
+    #spine = [];
+    /** @type {TocEntry[]} */
+    #toc = [];
+    /** @type {EpubMetadata} */
+    #metadata = blankMetadata();
+    /** @type {string | null} */
+    #coverId = null;
+    /** @type {string | null} */
+    #navId = null;
+    /** @type {Map<string, string>} */
+    #blobUrls = /* @__PURE__ */ new Map();
+    /** @type {Map<string, Promise<string>>} */
+    #pending = /* @__PURE__ */ new Map();
+    /** @type {Blob | null} */
+    #source = null;
+    /** @type {string | null} */
+    #cachedBookId = null;
     /**
      * @param {ZipArchive} zip
      * @param {Blob | null} [source]  Original EPUB blob — kept for SHA-256
      *                                fallback when dc:identifier is empty.
      */
     constructor(zip, source = null) {
-      __privateAdd(this, _EpubBook_instances);
-      /** @type {ZipArchive} */
-      __privateAdd(this, _zip);
-      /** @type {string} */
-      __privateAdd(this, _opfPath, "");
-      /** @type {string} */
-      __privateAdd(this, _opfDir, "");
-      /** @type {Map<string, ManifestItem>} */
-      __privateAdd(this, _manifest, /* @__PURE__ */ new Map());
-      /** @type {SpineItem[]} */
-      __privateAdd(this, _spine, []);
-      /** @type {TocEntry[]} */
-      __privateAdd(this, _toc, []);
-      /** @type {EpubMetadata} */
-      __privateAdd(this, _metadata, blankMetadata());
-      /** @type {string | null} */
-      __privateAdd(this, _coverId, null);
-      /** @type {string | null} */
-      __privateAdd(this, _navId, null);
-      /** @type {Map<string, string>} */
-      __privateAdd(this, _blobUrls, /* @__PURE__ */ new Map());
-      /** @type {Map<string, Promise<string>>} */
-      __privateAdd(this, _pending, /* @__PURE__ */ new Map());
-      /** @type {Blob | null} */
-      __privateAdd(this, _source, null);
-      /** @type {string | null} */
-      __privateAdd(this, _cachedBookId, null);
-      __privateSet(this, _zip, zip);
-      __privateSet(this, _source, source);
+      this.#zip = zip;
+      this.#source = source;
     }
     /**
      * Stable per-book identifier for persistence keys. Prefers
@@ -3611,49 +3605,167 @@
      * @returns {Promise<string>}
      */
     async bookId() {
-      if (__privateGet(this, _cachedBookId)) return __privateGet(this, _cachedBookId);
-      const id = (__privateGet(this, _metadata).identifier || "").trim();
-      if (id) return __privateSet(this, _cachedBookId, `id:${id}`);
-      if (!__privateGet(this, _source)) throw new Error("bookId: no dc:identifier and no source blob to hash");
-      const buf = await __privateGet(this, _source).arrayBuffer();
+      if (this.#cachedBookId) return this.#cachedBookId;
+      const id = (this.#metadata.identifier || "").trim();
+      if (id) return this.#cachedBookId = `id:${id}`;
+      if (!this.#source) throw new Error("bookId: no dc:identifier and no source blob to hash");
+      const buf = await this.#source.arrayBuffer();
       const digest = await crypto.subtle.digest("SHA-256", buf);
       const hex = Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
-      return __privateSet(this, _cachedBookId, `sha:${hex}`);
+      return this.#cachedBookId = `sha:${hex}`;
     }
     async load() {
-      if (!__privateGet(this, _zip).has(CONTAINER_PATH)) {
+      if (!this.#zip.has(CONTAINER_PATH)) {
         throw new Error("Not a valid EPUB: missing META-INF/container.xml");
       }
-      const containerXml = await __privateGet(this, _zip).readText(CONTAINER_PATH);
+      const containerXml = await this.#zip.readText(CONTAINER_PATH);
       const containerDoc = parseXml(containerXml, "application/xml");
       const rootfile = containerDoc.getElementsByTagName("rootfile")[0];
       if (!rootfile) throw new Error("container.xml: no <rootfile> element");
       const fullPath = rootfile.getAttribute("full-path");
       if (!fullPath) throw new Error("container.xml: rootfile missing full-path");
-      __privateSet(this, _opfPath, fullPath);
-      __privateSet(this, _opfDir, dirname(__privateGet(this, _opfPath)));
-      const opfXml = await __privateGet(this, _zip).readText(__privateGet(this, _opfPath));
+      this.#opfPath = fullPath;
+      this.#opfDir = dirname(this.#opfPath);
+      const opfXml = await this.#zip.readText(this.#opfPath);
       const opfDoc = parseXml(opfXml, "application/xml");
-      __privateMethod(this, _EpubBook_instances, parseMetadata_fn).call(this, opfDoc);
-      __privateMethod(this, _EpubBook_instances, parseManifest_fn).call(this, opfDoc);
-      __privateMethod(this, _EpubBook_instances, parseSpine_fn).call(this, opfDoc);
-      await __privateMethod(this, _EpubBook_instances, parseNav_fn).call(this);
+      this.#parseMetadata(opfDoc);
+      this.#parseManifest(opfDoc);
+      this.#parseSpine(opfDoc);
+      await this.#parseNav();
     }
     /** @returns {EpubMetadata} */
     get metadata() {
-      return { ...__privateGet(this, _metadata) };
+      return { ...this.#metadata };
     }
     /** @returns {SpineItem[]} */
     get spine() {
-      return __privateGet(this, _spine).map((x) => ({ ...x }));
+      return this.#spine.map((x) => ({ ...x }));
     }
     /** @returns {TocEntry[]} */
     get toc() {
-      return __privateGet(this, _toc);
+      return this.#toc;
     }
     /** @returns {ManifestItem[]} */
     get manifest() {
-      return [...__privateGet(this, _manifest).values()].map((x) => ({ ...x }));
+      return [...this.#manifest.values()].map((x) => ({ ...x }));
+    }
+    #parseMetadata(doc) {
+      const metadata = doc.getElementsByTagNameNS(NS.opf, "metadata")[0] || doc.getElementsByTagName("metadata")[0];
+      if (!metadata) return;
+      const pick = (name) => {
+        const el = metadata.getElementsByTagNameNS(NS.dc, name)[0] || metadata.getElementsByTagName("dc:" + name)[0];
+        return el ? el.textContent.trim() : "";
+      };
+      this.#metadata = {
+        title: pick("title"),
+        creator: pick("creator"),
+        language: pick("language"),
+        identifier: pick("identifier"),
+        publisher: pick("publisher"),
+        description: pick("description"),
+        date: pick("date"),
+        rights: pick("rights")
+      };
+      for (const m of childrenByLocalName(metadata, "meta")) {
+        if (m.getAttribute("name") === "cover") {
+          this.#coverId = m.getAttribute("content");
+        }
+      }
+    }
+    #parseManifest(doc) {
+      const manifest = doc.getElementsByTagNameNS(NS.opf, "manifest")[0] || doc.getElementsByTagName("manifest")[0];
+      if (!manifest) throw new Error("OPF: missing <manifest>");
+      for (const item of childrenByLocalName(manifest, "item")) {
+        const id = item.getAttribute("id");
+        const href = item.getAttribute("href");
+        const mediaType = item.getAttribute("media-type") || "";
+        const properties = item.getAttribute("properties") || "";
+        if (!id || !href) continue;
+        const resolved = resolveRelative(this.#opfPath, href);
+        if (!resolved) continue;
+        const entry = { id, href, path: resolved.path, mediaType, properties };
+        this.#manifest.set(id, entry);
+        if (properties.split(/\s+/).includes("nav")) this.#navId = id;
+        if (properties.split(/\s+/).includes("cover-image")) this.#coverId = id;
+      }
+    }
+    #parseSpine(doc) {
+      const spine = doc.getElementsByTagNameNS(NS.opf, "spine")[0] || doc.getElementsByTagName("spine")[0];
+      if (!spine) throw new Error("OPF: missing <spine>");
+      const pkg = doc.documentElement;
+      let bookLayout = "reflowable";
+      const layoutAttr = pkg.getAttribute("rendition:layout");
+      if (layoutAttr === "pre-paginated") bookLayout = "pre-paginated";
+      for (const m of pkg.getElementsByTagNameNS("*", "meta")) {
+        if (m.getAttribute("property") === "rendition:layout") {
+          const v = m.textContent?.trim();
+          if (v === "pre-paginated") bookLayout = "pre-paginated";
+        }
+      }
+      let i = 0;
+      for (const ref of childrenByLocalName(spine, "itemref")) {
+        const idref = ref.getAttribute("idref");
+        if (!idref) continue;
+        const item = this.#manifest.get(idref);
+        if (!item) continue;
+        const linear = (ref.getAttribute("linear") || "yes") !== "no";
+        const refProps = (ref.getAttribute("properties") || "").split(/\s+/);
+        let layout = bookLayout;
+        if (refProps.includes("rendition:layout-pre-paginated")) layout = "pre-paginated";
+        else if (refProps.includes("rendition:layout-reflowable")) layout = "reflowable";
+        this.#spine.push({
+          id: item.id,
+          href: item.href,
+          path: item.path,
+          mediaType: item.mediaType,
+          properties: item.properties,
+          linear,
+          layout,
+          index: i++
+        });
+      }
+      if (!this.#spine.length) throw new Error("OPF: empty spine");
+    }
+    async #parseNav() {
+      if (this.#navId) {
+        const item = this.#manifest.get(this.#navId);
+        if (item) {
+          try {
+            const text = await this.#zip.readText(item.path);
+            const doc = parseXml(text, "application/xhtml+xml");
+            const toc = findNavToc(doc);
+            if (toc) {
+              this.#toc = collectNavList(toc, item.path);
+              if (this.#toc.length) return;
+            }
+          } catch (err) {
+            console.warn("Failed to parse EPUB3 nav:", err);
+          }
+        }
+      }
+      const ncxItem = [...this.#manifest.values()].find(
+        (x) => x.mediaType === "application/x-dtbncx+xml"
+      );
+      if (ncxItem) {
+        try {
+          const text = await this.#zip.readText(ncxItem.path);
+          const doc = parseXml(text, "application/xml");
+          const navMap = doc.getElementsByTagNameNS(NS.ncx, "navMap")[0] || doc.getElementsByTagName("navMap")[0];
+          if (navMap) {
+            this.#toc = collectNcxPoints(navMap, ncxItem.path);
+            if (this.#toc.length) return;
+          }
+        } catch (err) {
+          console.warn("Failed to parse NCX:", err);
+        }
+      }
+      this.#toc = this.#spine.filter((s) => s.linear).map((s, i) => ({
+        label: `Chapter ${i + 1}`,
+        href: s.href,
+        path: s.path,
+        fragment: "",
+        children: []
+      }));
     }
     // ------- resource URLs -------
     /**
@@ -3661,8 +3773,8 @@
      * @returns {Promise<string | null>}
      */
     async coverUrl() {
-      if (!__privateGet(this, _coverId)) return null;
-      const item = __privateGet(this, _manifest).get(__privateGet(this, _coverId));
+      if (!this.#coverId) return null;
+      const item = this.#manifest.get(this.#coverId);
       if (!item) return null;
       return await this.resourceUrl(item.path);
     }
@@ -3672,11 +3784,11 @@
      * @returns {Promise<Blob | null>}
      */
     async coverBlob() {
-      if (!__privateGet(this, _coverId)) return null;
-      const item = __privateGet(this, _manifest).get(__privateGet(this, _coverId));
+      if (!this.#coverId) return null;
+      const item = this.#manifest.get(this.#coverId);
       if (!item) return null;
       try {
-        const bytes = await __privateGet(this, _zip).read(item.path);
+        const bytes = await this.#zip.read(item.path);
         return new Blob(
           [
             /** @type {BlobPart} */
@@ -3695,7 +3807,7 @@
      * @returns {Blob | null}
      */
     sourceBlob() {
-      return __privateGet(this, _source);
+      return this.#source;
     }
     /**
      * Lazily build a blob: URL for an archive resource. HTML/CSS resources
@@ -3704,34 +3816,34 @@
      * @returns {Promise<string>}
      */
     async resourceUrl(path) {
-      const cached = __privateGet(this, _blobUrls).get(path);
+      const cached = this.#blobUrls.get(path);
       if (cached) return cached;
-      const inflight = __privateGet(this, _pending).get(path);
+      const inflight = this.#pending.get(path);
       if (inflight) return inflight;
       const p = (async () => {
-        const item = __privateMethod(this, _EpubBook_instances, manifestByPath_fn).call(this, path);
+        const item = this.#manifestByPath(path);
         const mediaType = item?.mediaType || guessMime(path);
         let blob;
         if (isHtmlType(mediaType)) {
-          blob = await __privateMethod(this, _EpubBook_instances, processHtml_fn).call(this, path, mediaType);
+          blob = await this.#processHtml(path, mediaType);
         } else if (isCssType(mediaType)) {
-          blob = await __privateMethod(this, _EpubBook_instances, processCss_fn).call(this, path);
+          blob = await this.#processCss(path);
         } else {
-          const bytes = await __privateGet(this, _zip).read(path);
+          const bytes = await this.#zip.read(path);
           blob = new Blob([
             /** @type {BlobPart} */
             bytes
           ], { type: mediaType });
         }
         const url = URL.createObjectURL(blob);
-        __privateGet(this, _blobUrls).set(path, url);
+        this.#blobUrls.set(path, url);
         return url;
       })();
-      __privateGet(this, _pending).set(path, p);
+      this.#pending.set(path, p);
       try {
         return await p;
       } finally {
-        __privateGet(this, _pending).delete(path);
+        this.#pending.delete(path);
       }
     }
     /**
@@ -3740,7 +3852,7 @@
      * @returns {Promise<Chapter>}
      */
     async chapter(index) {
-      const item = __privateGet(this, _spine)[index];
+      const item = this.#spine[index];
       if (!item) throw new RangeError(`Spine index out of range: ${index}`);
       const url = await this.resourceUrl(item.path);
       return { url, path: item.path, index, linear: item.linear };
@@ -3751,269 +3863,136 @@
      * @returns {number}
      */
     spineIndexOf(path) {
-      for (let i = 0; i < __privateGet(this, _spine).length; i++) {
-        if (__privateGet(this, _spine)[i].path === path) return i;
+      for (let i = 0; i < this.#spine.length; i++) {
+        if (this.#spine[i].path === path) return i;
       }
       return -1;
     }
     /** Revoke all generated blob URLs. Call when the reader unloads a book. */
     destroy() {
-      for (const url of __privateGet(this, _blobUrls).values()) URL.revokeObjectURL(url);
-      __privateGet(this, _blobUrls).clear();
+      for (const url of this.#blobUrls.values()) URL.revokeObjectURL(url);
+      this.#blobUrls.clear();
     }
-  };
-  _zip = new WeakMap();
-  _opfPath = new WeakMap();
-  _opfDir = new WeakMap();
-  _manifest = new WeakMap();
-  _spine = new WeakMap();
-  _toc = new WeakMap();
-  _metadata = new WeakMap();
-  _coverId = new WeakMap();
-  _navId = new WeakMap();
-  _blobUrls = new WeakMap();
-  _pending = new WeakMap();
-  _source = new WeakMap();
-  _cachedBookId = new WeakMap();
-  _EpubBook_instances = new WeakSet();
-  parseMetadata_fn = function(doc) {
-    const metadata = doc.getElementsByTagNameNS(NS.opf, "metadata")[0] || doc.getElementsByTagName("metadata")[0];
-    if (!metadata) return;
-    const pick = (name) => {
-      const el = metadata.getElementsByTagNameNS(NS.dc, name)[0] || metadata.getElementsByTagName("dc:" + name)[0];
-      return el ? el.textContent.trim() : "";
-    };
-    __privateSet(this, _metadata, {
-      title: pick("title"),
-      creator: pick("creator"),
-      language: pick("language"),
-      identifier: pick("identifier"),
-      publisher: pick("publisher"),
-      description: pick("description"),
-      date: pick("date"),
-      rights: pick("rights")
-    });
-    for (const m of childrenByLocalName(metadata, "meta")) {
-      if (m.getAttribute("name") === "cover") {
-        __privateSet(this, _coverId, m.getAttribute("content"));
+    // ------- internals -------
+    #manifestByPath(path) {
+      for (const item of this.#manifest.values()) {
+        if (item.path === path) return item;
+      }
+      return null;
+    }
+    async #processHtml(path, mediaType) {
+      const raw = await this.#zip.readText(path);
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(raw, "text/html");
+      if (!doc || doc.getElementsByTagName("parsererror").length) {
+        return new Blob([raw], { type: mediaType || "text/html" });
+      }
+      const walker = doc.createTreeWalker(doc, NodeFilter.SHOW_ELEMENT);
+      const tasks = [];
+      let node;
+      while (node = walker.nextNode()) {
+        tasks.push(this.#rewriteElement(
+          /** @type {Element} */
+          node,
+          path
+        ));
+      }
+      await Promise.all(tasks);
+      for (const style of doc.getElementsByTagName("style")) {
+        style.textContent = await this.#rewriteCss(style.textContent || "", path);
+      }
+      const html = "<!DOCTYPE html>\n" + doc.documentElement.outerHTML;
+      return new Blob([html], { type: "text/html; charset=utf-8" });
+    }
+    async #rewriteElement(el, basePath) {
+      for (const attr of [...el.attributes]) {
+        const name = attr.name.toLowerCase();
+        const localName = name.includes(":") ? name.split(":").pop() : name;
+        if (name === "style") {
+          const rewritten = await this.#rewriteCss(attr.value, basePath);
+          if (rewritten !== attr.value) el.setAttribute("style", rewritten);
+          continue;
+        }
+        if (name === "srcset") {
+          el.setAttribute("srcset", await this.#rewriteSrcset(attr.value, basePath));
+          continue;
+        }
+        if (!REWRITE_ATTRS.has(name) && localName !== "href") continue;
+        const value = attr.value;
+        if (!value) continue;
+        if (isExternal(value) || value.startsWith("data:") || value.startsWith("blob:")) continue;
+        if (value.startsWith("#")) continue;
+        const resolved = resolveRelative(basePath, value);
+        if (!resolved) continue;
+        if (!this.#zip.has(resolved.path)) continue;
+        const tag = el.tagName.toLowerCase();
+        const isAnchor = tag === "a" || tag === "area";
+        const targetsHtml = isHtmlType(guessMime(resolved.path));
+        if (isAnchor && targetsHtml) {
+          const full = resolved.hash ? `${resolved.path}#${resolved.hash}` : resolved.path;
+          el.setAttribute("data-epub-href", full);
+          el.setAttribute("href", "#");
+        } else {
+          const url = await this.resourceUrl(resolved.path);
+          el.setAttribute(attr.name, resolved.hash ? `${url}#${resolved.hash}` : url);
+        }
       }
     }
-  };
-  parseManifest_fn = function(doc) {
-    const manifest = doc.getElementsByTagNameNS(NS.opf, "manifest")[0] || doc.getElementsByTagName("manifest")[0];
-    if (!manifest) throw new Error("OPF: missing <manifest>");
-    for (const item of childrenByLocalName(manifest, "item")) {
-      const id = item.getAttribute("id");
-      const href = item.getAttribute("href");
-      const mediaType = item.getAttribute("media-type") || "";
-      const properties = item.getAttribute("properties") || "";
-      if (!id || !href) continue;
-      const resolved = resolveRelative(__privateGet(this, _opfPath), href);
-      if (!resolved) continue;
-      const entry = { id, href, path: resolved.path, mediaType, properties };
-      __privateGet(this, _manifest).set(id, entry);
-      if (properties.split(/\s+/).includes("nav")) __privateSet(this, _navId, id);
-      if (properties.split(/\s+/).includes("cover-image")) __privateSet(this, _coverId, id);
-    }
-  };
-  parseSpine_fn = function(doc) {
-    const spine = doc.getElementsByTagNameNS(NS.opf, "spine")[0] || doc.getElementsByTagName("spine")[0];
-    if (!spine) throw new Error("OPF: missing <spine>");
-    const pkg = doc.documentElement;
-    let bookLayout = "reflowable";
-    const layoutAttr = pkg.getAttribute("rendition:layout");
-    if (layoutAttr === "pre-paginated") bookLayout = "pre-paginated";
-    for (const m of pkg.getElementsByTagNameNS("*", "meta")) {
-      if (m.getAttribute("property") === "rendition:layout") {
-        const v = m.textContent?.trim();
-        if (v === "pre-paginated") bookLayout = "pre-paginated";
+    async #rewriteSrcset(value, basePath) {
+      const parts = value.split(",").map((s) => s.trim()).filter(Boolean);
+      const out = [];
+      for (const part of parts) {
+        const tokens = part.split(/\s+/);
+        const ref = tokens.shift() || "";
+        const resolved = ref && !isExternal(ref) && !ref.startsWith("data:") ? resolveRelative(basePath, ref) : null;
+        if (resolved && this.#zip.has(resolved.path)) {
+          const url = await this.resourceUrl(resolved.path);
+          out.push([url, ...tokens].join(" "));
+        } else {
+          out.push(part);
+        }
       }
+      return out.join(", ");
     }
-    let i = 0;
-    for (const ref of childrenByLocalName(spine, "itemref")) {
-      const idref = ref.getAttribute("idref");
-      if (!idref) continue;
-      const item = __privateGet(this, _manifest).get(idref);
-      if (!item) continue;
-      const linear = (ref.getAttribute("linear") || "yes") !== "no";
-      const refProps = (ref.getAttribute("properties") || "").split(/\s+/);
-      let layout = bookLayout;
-      if (refProps.includes("rendition:layout-pre-paginated")) layout = "pre-paginated";
-      else if (refProps.includes("rendition:layout-reflowable")) layout = "reflowable";
-      __privateGet(this, _spine).push({
-        id: item.id,
-        href: item.href,
-        path: item.path,
-        mediaType: item.mediaType,
-        properties: item.properties,
-        linear,
-        layout,
-        index: i++
+    async #processCss(path) {
+      const text = await this.#zip.readText(path);
+      const rewritten = await this.#rewriteCss(text, path);
+      return new Blob([rewritten], { type: "text/css; charset=utf-8" });
+    }
+    async #rewriteCss(cssText, basePath) {
+      const urlRe = /url\(\s*(?:"([^"]*)"|'([^']*)'|([^)\s]+))\s*\)/g;
+      const importRe = /@import\s+(?:url\(\s*(?:"([^"]*)"|'([^']*)'|([^)\s]+))\s*\)|"([^"]*)"|'([^']*)')\s*([^;]*);/g;
+      const replacements = /* @__PURE__ */ new Map();
+      const collect = async (ref) => {
+        if (!ref || isExternal(ref) || ref.startsWith("data:") || ref.startsWith("blob:") || ref.startsWith("#")) return;
+        if (replacements.has(ref)) return;
+        const resolved = resolveRelative(basePath, ref);
+        if (!resolved || !this.#zip.has(resolved.path)) return;
+        const url = await this.resourceUrl(resolved.path);
+        replacements.set(ref, resolved.hash ? `${url}#${resolved.hash}` : url);
+      };
+      const refs = [];
+      cssText.replace(urlRe, (_, a, b, c) => {
+        refs.push(a || b || c);
+        return "";
+      });
+      cssText.replace(importRe, (_, a, b, c, d, e) => {
+        refs.push(a || b || c || d || e);
+        return "";
+      });
+      await Promise.all([...new Set(refs)].map(collect));
+      const rewriteRef = (ref) => replacements.get(ref) || ref;
+      return cssText.replace(urlRe, (_match, a, b, c) => {
+        const ref = a || b || c;
+        const out = rewriteRef(ref);
+        return `url("${out}")`;
+      }).replace(importRe, (match, a, b, c, d, e, media) => {
+        const ref = a || b || c || d || e;
+        const out = rewriteRef(ref);
+        const tail = media ? " " + media.trim() : "";
+        return `@import url("${out}")${tail};`;
       });
     }
-    if (!__privateGet(this, _spine).length) throw new Error("OPF: empty spine");
-  };
-  parseNav_fn = async function() {
-    if (__privateGet(this, _navId)) {
-      const item = __privateGet(this, _manifest).get(__privateGet(this, _navId));
-      if (item) {
-        try {
-          const text = await __privateGet(this, _zip).readText(item.path);
-          const doc = parseXml(text, "application/xhtml+xml");
-          const toc = findNavToc(doc);
-          if (toc) {
-            __privateSet(this, _toc, collectNavList(toc, item.path));
-            if (__privateGet(this, _toc).length) return;
-          }
-        } catch (err) {
-          console.warn("Failed to parse EPUB3 nav:", err);
-        }
-      }
-    }
-    const ncxItem = [...__privateGet(this, _manifest).values()].find(
-      (x) => x.mediaType === "application/x-dtbncx+xml"
-    );
-    if (ncxItem) {
-      try {
-        const text = await __privateGet(this, _zip).readText(ncxItem.path);
-        const doc = parseXml(text, "application/xml");
-        const navMap = doc.getElementsByTagNameNS(NS.ncx, "navMap")[0] || doc.getElementsByTagName("navMap")[0];
-        if (navMap) {
-          __privateSet(this, _toc, collectNcxPoints(navMap, ncxItem.path));
-          if (__privateGet(this, _toc).length) return;
-        }
-      } catch (err) {
-        console.warn("Failed to parse NCX:", err);
-      }
-    }
-    __privateSet(this, _toc, __privateGet(this, _spine).filter((s) => s.linear).map((s, i) => ({
-      label: `Chapter ${i + 1}`,
-      href: s.href,
-      path: s.path,
-      fragment: "",
-      children: []
-    })));
-  };
-  // ------- internals -------
-  manifestByPath_fn = function(path) {
-    for (const item of __privateGet(this, _manifest).values()) {
-      if (item.path === path) return item;
-    }
-    return null;
-  };
-  processHtml_fn = async function(path, mediaType) {
-    const raw = await __privateGet(this, _zip).readText(path);
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(raw, "text/html");
-    if (!doc || doc.getElementsByTagName("parsererror").length) {
-      return new Blob([raw], { type: mediaType || "text/html" });
-    }
-    const walker = doc.createTreeWalker(doc, NodeFilter.SHOW_ELEMENT);
-    const tasks = [];
-    let node;
-    while (node = walker.nextNode()) {
-      tasks.push(__privateMethod(this, _EpubBook_instances, rewriteElement_fn).call(
-        this,
-        /** @type {Element} */
-        node,
-        path
-      ));
-    }
-    await Promise.all(tasks);
-    for (const style of doc.getElementsByTagName("style")) {
-      style.textContent = await __privateMethod(this, _EpubBook_instances, rewriteCss_fn).call(this, style.textContent || "", path);
-    }
-    const html = "<!DOCTYPE html>\n" + doc.documentElement.outerHTML;
-    return new Blob([html], { type: "text/html; charset=utf-8" });
-  };
-  rewriteElement_fn = async function(el, basePath) {
-    for (const attr of [...el.attributes]) {
-      const name = attr.name.toLowerCase();
-      const localName = name.includes(":") ? name.split(":").pop() : name;
-      if (name === "style") {
-        const rewritten = await __privateMethod(this, _EpubBook_instances, rewriteCss_fn).call(this, attr.value, basePath);
-        if (rewritten !== attr.value) el.setAttribute("style", rewritten);
-        continue;
-      }
-      if (name === "srcset") {
-        el.setAttribute("srcset", await __privateMethod(this, _EpubBook_instances, rewriteSrcset_fn).call(this, attr.value, basePath));
-        continue;
-      }
-      if (!REWRITE_ATTRS.has(name) && localName !== "href") continue;
-      const value = attr.value;
-      if (!value) continue;
-      if (isExternal(value) || value.startsWith("data:") || value.startsWith("blob:")) continue;
-      if (value.startsWith("#")) continue;
-      const resolved = resolveRelative(basePath, value);
-      if (!resolved) continue;
-      if (!__privateGet(this, _zip).has(resolved.path)) continue;
-      const tag = el.tagName.toLowerCase();
-      const isAnchor = tag === "a" || tag === "area";
-      const targetsHtml = isHtmlType(guessMime(resolved.path));
-      if (isAnchor && targetsHtml) {
-        const full = resolved.hash ? `${resolved.path}#${resolved.hash}` : resolved.path;
-        el.setAttribute("data-epub-href", full);
-        el.setAttribute("href", "#");
-      } else {
-        const url = await this.resourceUrl(resolved.path);
-        el.setAttribute(attr.name, resolved.hash ? `${url}#${resolved.hash}` : url);
-      }
-    }
-  };
-  rewriteSrcset_fn = async function(value, basePath) {
-    const parts = value.split(",").map((s) => s.trim()).filter(Boolean);
-    const out = [];
-    for (const part of parts) {
-      const tokens = part.split(/\s+/);
-      const ref = tokens.shift() || "";
-      const resolved = ref && !isExternal(ref) && !ref.startsWith("data:") ? resolveRelative(basePath, ref) : null;
-      if (resolved && __privateGet(this, _zip).has(resolved.path)) {
-        const url = await this.resourceUrl(resolved.path);
-        out.push([url, ...tokens].join(" "));
-      } else {
-        out.push(part);
-      }
-    }
-    return out.join(", ");
-  };
-  processCss_fn = async function(path) {
-    const text = await __privateGet(this, _zip).readText(path);
-    const rewritten = await __privateMethod(this, _EpubBook_instances, rewriteCss_fn).call(this, text, path);
-    return new Blob([rewritten], { type: "text/css; charset=utf-8" });
-  };
-  rewriteCss_fn = async function(cssText, basePath) {
-    const urlRe = /url\(\s*(?:"([^"]*)"|'([^']*)'|([^)\s]+))\s*\)/g;
-    const importRe = /@import\s+(?:url\(\s*(?:"([^"]*)"|'([^']*)'|([^)\s]+))\s*\)|"([^"]*)"|'([^']*)')\s*([^;]*);/g;
-    const replacements = /* @__PURE__ */ new Map();
-    const collect = async (ref) => {
-      if (!ref || isExternal(ref) || ref.startsWith("data:") || ref.startsWith("blob:") || ref.startsWith("#")) return;
-      if (replacements.has(ref)) return;
-      const resolved = resolveRelative(basePath, ref);
-      if (!resolved || !__privateGet(this, _zip).has(resolved.path)) return;
-      const url = await this.resourceUrl(resolved.path);
-      replacements.set(ref, resolved.hash ? `${url}#${resolved.hash}` : url);
-    };
-    const refs = [];
-    cssText.replace(urlRe, (_, a, b, c) => {
-      refs.push(a || b || c);
-      return "";
-    });
-    cssText.replace(importRe, (_, a, b, c, d, e) => {
-      refs.push(a || b || c || d || e);
-      return "";
-    });
-    await Promise.all([...new Set(refs)].map(collect));
-    const rewriteRef = (ref) => replacements.get(ref) || ref;
-    return cssText.replace(urlRe, (_match, a, b, c) => {
-      const ref = a || b || c;
-      const out = rewriteRef(ref);
-      return `url("${out}")`;
-    }).replace(importRe, (match, a, b, c, d, e, media) => {
-      const ref = a || b || c || d || e;
-      const out = rewriteRef(ref);
-      const tail = media ? " " + media.trim() : "";
-      return `@import url("${out}")${tail};`;
-    });
   };
   function blankMetadata() {
     return { title: "", creator: "", language: "", identifier: "", publisher: "", description: "", date: "", rights: "" };
@@ -5345,64 +5324,21 @@ ${user}`);
   </div>
 </div>
 `;
-  var _els, _book, _typography, _currentIndex, _loadToken, _stylesInjected, _EpubReaderElement_static, injectStylesOnce_fn, _EpubReaderElement_instances, updateSandbox_fn, _bookId, _saveTimer, _suppressSave, applyRestoredScroll_fn, schedulePositionSave_fn, savePositionNow_fn, _findQuery, _findIndex, _findTotal, refreshFind_fn, findClearMarks_fn, findStep_fn, findFocusCurrent_fn, _searchIndex, _searchIndexPromise, _searchQuery, buildSearchIndex_fn, toggleSearchPanel_fn, runSearch_fn, goToSearchHit_fn, highlightSearchInChapter_fn, _highlights, loadHighlights_fn, saveHighlights_fn, addHighlightFromSelection_fn, applyHighlightsTo_fn, wireHighlightSelection_fn, updateHighlightPopover_fn, hideHighlightPopover_fn, toggleHighlightsPanel_fn, renderHighlights_fn, _bookmarks, loadBookmarks_fn, saveBookmarks_fn, bookmarkAtCurrent_fn, currentScrollFraction_fn, captureSnippet_fn, renderBookmarks_fn, updateBookmarkButton_fn, toggleBookmarksPanel_fn, emitBookmarksChange_fn, persistLibraryEntry_fn, toggleLibraryPanel_fn, renderLibrary_fn, updateChrome_fn, renderToc_fn, highlightToc_fn, tocLabelForPath_fn, onIframeLoad_fn, scrollToFragment_fn, applyTypographyTo_fn, onKeyDown_fn, toggleToc_fn, stepFontSize_fn, applyChapterThemingTo_fn, applyLayoutTo_fn, applyPaginatedTo_fn, pageInfo_fn, pageNext_fn, pagePrev_fn, wirePagination_fn, updateChapterProgress_fn, _enterFromBack, wireChapterScroll_fn, toggleSettings_fn, wireSettingsControls_fn, syncSettingsControls_fn, setOverlay_fn, hideOverlay_fn;
-  var _EpubReaderElement = class _EpubReaderElement extends HTMLElement {
+  var EpubReaderElement = class _EpubReaderElement extends HTMLElement {
+    static get observedAttributes() {
+      return ["src", "start", "hide-toc", "allow-scripts"];
+    }
+    /** @type {ReaderElements} */
+    #els;
+    /** @type {EpubBook | null} */
+    #book = null;
+    /** @type {TypographySettings} */
+    #typography = loadTypography();
+    #currentIndex = -1;
+    #loadToken = 0;
     constructor() {
-      var _a;
       super();
-      __privateAdd(this, _EpubReaderElement_instances);
-      /** @type {ReaderElements} */
-      __privateAdd(this, _els);
-      /** @type {EpubBook | null} */
-      __privateAdd(this, _book, null);
-      /** @type {TypographySettings} */
-      __privateAdd(this, _typography, loadTypography());
-      __privateAdd(this, _currentIndex, -1);
-      __privateAdd(this, _loadToken, 0);
-      /** Most recent book identifier (used as the IndexedDB key for persistence). */
-      /** @type {string | null} */
-      __privateAdd(this, _bookId, null);
-      /** @type {ReturnType<typeof setTimeout> | null} */
-      __privateAdd(this, _saveTimer, null);
-      /** Suppress saves while we're applying a restored position. */
-      __privateAdd(this, _suppressSave, false);
-      // ------- find in chapter (#17) -------
-      /** Current query string in the find bar. */
-      __privateAdd(this, _findQuery, "");
-      /** Index of the focused match within the current chapter. */
-      __privateAdd(this, _findIndex, 0);
-      /** Cached count of matches in the current chapter. */
-      __privateAdd(this, _findTotal, 0);
-      // ------- full-text search (#16) -------
-      /**
-       * Lazy index of all reflowable spine items, built on first search.
-       * Cleared on book close so reopening rebuilds. Pre-paginated chapters
-       * are skipped — they're images, not text.
-       *
-       * @typedef {{spineIndex: number, path: string, title: string, text: string, lower: string}} SearchChapter
-       * @type {SearchChapter[] | null}
-       */
-      __privateAdd(this, _searchIndex, null);
-      /** @type {Promise<SearchChapter[]> | null} */
-      __privateAdd(this, _searchIndexPromise, null);
-      /** Current search query — propagated to chapter highlighting on nav. */
-      __privateAdd(this, _searchQuery, "");
-      // ------- highlights (#15) -------
-      /** @type {Highlight[]} */
-      __privateAdd(this, _highlights, []);
-      // ------- bookmarks -------
-      /**
-       * In-memory cache of the current book's bookmarks. The persisted shape
-       * in IndexedDB is `{ id: bookId, items: Bookmark[] }` — one record per
-       * book, list-of-items inside, so add/remove are simple put-the-record
-       * round-trips and listing for a single book is a single get.
-       *
-       * @type {Bookmark[]}
-       */
-      __privateAdd(this, _bookmarks, []);
-      /** True when the next chapter load should land at the end (back-paging spillover). */
-      __privateAdd(this, _enterFromBack, false);
-      __privateMethod(_a = _EpubReaderElement, _EpubReaderElement_static, injectStylesOnce_fn).call(_a);
+      _EpubReaderElement.#injectStylesOnce();
       this.innerHTML = TEMPLATE;
       const $ = (
         /** @type {<T extends Element>(sel: string) => T} */
@@ -5411,7 +5347,7 @@ ${user}`);
           this.querySelector(sel)
         ))
       );
-      __privateSet(this, _els, {
+      this.#els = {
         shell: this,
         title: $(".title"),
         progress: $(".progress"),
@@ -5470,76 +5406,84 @@ ${user}`);
         hlList: $(".hl-list"),
         hlPanelClose: $(".hl-close"),
         hlPopover: $(".hl-popover")
-      });
-      __privateGet(this, _els).prev.addEventListener("click", () => this.prev());
-      __privateGet(this, _els).next.addEventListener("click", () => this.next());
-      __privateGet(this, _els).toggle.addEventListener("click", () => __privateMethod(this, _EpubReaderElement_instances, toggleToc_fn).call(this));
-      __privateGet(this, _els).settingsToggle.addEventListener("click", () => __privateMethod(this, _EpubReaderElement_instances, toggleSettings_fn).call(this));
-      __privateGet(this, _els).fontDecrease.addEventListener("click", () => __privateMethod(this, _EpubReaderElement_instances, stepFontSize_fn).call(this, -10));
-      __privateGet(this, _els).fontIncrease.addEventListener("click", () => __privateMethod(this, _EpubReaderElement_instances, stepFontSize_fn).call(this, 10));
-      __privateGet(this, _els).bookmarksToggle.addEventListener("click", () => __privateMethod(this, _EpubReaderElement_instances, toggleBookmarksPanel_fn).call(this));
-      __privateGet(this, _els).bmAdd.addEventListener("click", () => this.toggleBookmark());
-      __privateGet(this, _els).bmClose.addEventListener("click", () => __privateMethod(this, _EpubReaderElement_instances, toggleBookmarksPanel_fn).call(this, false));
-      __privateGet(this, _els).libraryToggle.addEventListener("click", () => __privateMethod(this, _EpubReaderElement_instances, toggleLibraryPanel_fn).call(this));
-      __privateGet(this, _els).libClose.addEventListener("click", () => __privateMethod(this, _EpubReaderElement_instances, toggleLibraryPanel_fn).call(this, false));
-      __privateGet(this, _els).libClear.addEventListener("click", async () => {
+      };
+      this.#els.prev.addEventListener("click", () => this.prev());
+      this.#els.next.addEventListener("click", () => this.next());
+      this.#els.toggle.addEventListener("click", () => this.#toggleToc());
+      this.#els.settingsToggle.addEventListener("click", () => this.#toggleSettings());
+      this.#els.fontDecrease.addEventListener("click", () => this.#stepFontSize(-10));
+      this.#els.fontIncrease.addEventListener("click", () => this.#stepFontSize(10));
+      this.#els.bookmarksToggle.addEventListener("click", () => this.#toggleBookmarksPanel());
+      this.#els.bmAdd.addEventListener("click", () => this.toggleBookmark());
+      this.#els.bmClose.addEventListener("click", () => this.#toggleBookmarksPanel(false));
+      this.#els.libraryToggle.addEventListener("click", () => this.#toggleLibraryPanel());
+      this.#els.libClose.addEventListener("click", () => this.#toggleLibraryPanel(false));
+      this.#els.libClear.addEventListener("click", async () => {
         if (!confirm("Remove all books, bookmarks, and reading positions?")) return;
         await this.clearLibrary();
-        await __privateMethod(this, _EpubReaderElement_instances, renderLibrary_fn).call(this);
+        await this.#renderLibrary();
       });
-      __privateGet(this, _els).findInput.addEventListener("input", () => __privateMethod(this, _EpubReaderElement_instances, refreshFind_fn).call(this));
-      __privateGet(this, _els).findInput.addEventListener("keydown", (e) => {
+      this.#els.findInput.addEventListener("input", () => this.#refreshFind());
+      this.#els.findInput.addEventListener("keydown", (e) => {
         if (e.key === "Enter") {
-          if (e.shiftKey) __privateMethod(this, _EpubReaderElement_instances, findStep_fn).call(this, -1);
-          else __privateMethod(this, _EpubReaderElement_instances, findStep_fn).call(this, 1);
+          if (e.shiftKey) this.#findStep(-1);
+          else this.#findStep(1);
           e.preventDefault();
         } else if (e.key === "Escape") {
           this.find(false);
           e.preventDefault();
         }
       });
-      __privateGet(this, _els).findPrev.addEventListener("click", () => __privateMethod(this, _EpubReaderElement_instances, findStep_fn).call(this, -1));
-      __privateGet(this, _els).findNext.addEventListener("click", () => __privateMethod(this, _EpubReaderElement_instances, findStep_fn).call(this, 1));
-      __privateGet(this, _els).findClose.addEventListener("click", () => this.find(false));
-      __privateGet(this, _els).searchToggle.addEventListener("click", () => __privateMethod(this, _EpubReaderElement_instances, toggleSearchPanel_fn).call(this));
-      __privateGet(this, _els).searchClose.addEventListener("click", () => __privateMethod(this, _EpubReaderElement_instances, toggleSearchPanel_fn).call(this, false));
+      this.#els.findPrev.addEventListener("click", () => this.#findStep(-1));
+      this.#els.findNext.addEventListener("click", () => this.#findStep(1));
+      this.#els.findClose.addEventListener("click", () => this.find(false));
+      this.#els.searchToggle.addEventListener("click", () => this.#toggleSearchPanel());
+      this.#els.searchClose.addEventListener("click", () => this.#toggleSearchPanel(false));
       let searchTimer = 0;
-      __privateGet(this, _els).searchInput.addEventListener("input", () => {
+      this.#els.searchInput.addEventListener("input", () => {
         clearTimeout(searchTimer);
-        searchTimer = setTimeout(() => __privateMethod(this, _EpubReaderElement_instances, runSearch_fn).call(this, __privateGet(this, _els).searchInput.value), 200);
+        searchTimer = setTimeout(() => this.#runSearch(this.#els.searchInput.value), 200);
       });
-      __privateGet(this, _els).searchInput.addEventListener("keydown", (e) => {
+      this.#els.searchInput.addEventListener("keydown", (e) => {
         if (e.key === "Escape") {
-          __privateMethod(this, _EpubReaderElement_instances, toggleSearchPanel_fn).call(this, false);
+          this.#toggleSearchPanel(false);
           e.preventDefault();
         }
       });
-      __privateGet(this, _els).highlightsToggle.addEventListener("click", () => __privateMethod(this, _EpubReaderElement_instances, toggleHighlightsPanel_fn).call(this));
-      __privateGet(this, _els).hlPanelClose.addEventListener("click", () => __privateMethod(this, _EpubReaderElement_instances, toggleHighlightsPanel_fn).call(this, false));
-      __privateGet(this, _els).hlPopover.addEventListener("click", (ev) => {
+      this.#els.highlightsToggle.addEventListener("click", () => this.#toggleHighlightsPanel());
+      this.#els.hlPanelClose.addEventListener("click", () => this.#toggleHighlightsPanel(false));
+      this.#els.hlPopover.addEventListener("click", (ev) => {
         const target = (
           /** @type {HTMLElement} */
           ev.target
         );
         const colorBtn = target.closest(".hl-color");
         const noteBtn = target.closest(".hl-note");
-        if (colorBtn) __privateMethod(this, _EpubReaderElement_instances, addHighlightFromSelection_fn).call(this, colorBtn.getAttribute("data-color") || "#fde68a");
-        else if (noteBtn) __privateMethod(this, _EpubReaderElement_instances, addHighlightFromSelection_fn).call(
-          this,
+        if (colorBtn) this.#addHighlightFromSelection(colorBtn.getAttribute("data-color") || "#fde68a");
+        else if (noteBtn) this.#addHighlightFromSelection(
           "#fde68a",
           /* withNote */
           true
         );
       });
-      __privateGet(this, _els).iframe.addEventListener("load", () => __privateMethod(this, _EpubReaderElement_instances, onIframeLoad_fn).call(this));
-      this.addEventListener("keydown", (e) => __privateMethod(this, _EpubReaderElement_instances, onKeyDown_fn).call(this, e));
-      __privateMethod(this, _EpubReaderElement_instances, wireSettingsControls_fn).call(this);
-      __privateMethod(this, _EpubReaderElement_instances, syncSettingsControls_fn).call(this);
-      __privateMethod(this, _EpubReaderElement_instances, updateSandbox_fn).call(this);
+      this.#els.iframe.addEventListener("load", () => this.#onIframeLoad());
+      this.addEventListener("keydown", (e) => this.#onKeyDown(e));
+      this.#wireSettingsControls();
+      this.#syncSettingsControls();
+      this.#updateSandbox();
       this.tabIndex = 0;
     }
-    static get observedAttributes() {
-      return ["src", "start", "hide-toc", "allow-scripts"];
+    // Component CSS injected once into <head>, scoped via @scope
+    // (epub-reader) so it never leaks. Avoids duplicate <style> blocks
+    // when a page hosts multiple readers.
+    static #stylesInjected = false;
+    static #injectStylesOnce() {
+      if (_EpubReaderElement.#stylesInjected) return;
+      _EpubReaderElement.#stylesInjected = true;
+      const style = document.createElement("style");
+      style.id = "__epub_reader_component_css";
+      style.textContent = COMPONENT_CSS;
+      document.head.append(style);
     }
     connectedCallback() {
       const src = this.getAttribute("src");
@@ -5551,7 +5495,26 @@ ${user}`);
     attributeChangedCallback(name, oldValue, newValue) {
       if (oldValue === newValue) return;
       if (name === "src" && this.isConnected && newValue) this.open(newValue);
-      if (name === "allow-scripts") __privateMethod(this, _EpubReaderElement_instances, updateSandbox_fn).call(this);
+      if (name === "allow-scripts") this.#updateSandbox();
+    }
+    /**
+     * Build the iframe `sandbox` attribute from the current host attributes.
+     *
+     * Default — `sandbox="allow-same-origin"` — blocks all scripts but lets
+     * us reach into the chapter document from the parent (fragment scroll,
+     * link interception, theme/typography injection). Setting `allow-scripts`
+     * on the host adds `allow-scripts` so interactive EPUBs (quizzes,
+     * bindings, scripted carousels) work.
+     *
+     * NB: `allow-same-origin` + `allow-scripts` together lets sandboxed
+     * scripts escape via the parent — only enable for content you trust.
+     */
+    #updateSandbox() {
+      const iframe = this.#els?.iframe;
+      if (!iframe) return;
+      const tokens = ["allow-same-origin"];
+      if (this.hasAttribute("allow-scripts")) tokens.push("allow-scripts");
+      iframe.setAttribute("sandbox", tokens.join(" "));
     }
     // ------- public API -------
     /**
@@ -5561,22 +5524,22 @@ ${user}`);
      * @returns {Promise<void>}
      */
     async open(source) {
-      const token = ++__privateWrapper(this, _loadToken)._;
+      const token = ++this.#loadToken;
       this.close();
-      __privateMethod(this, _EpubReaderElement_instances, setOverlay_fn).call(this, "Loading\u2026");
+      this.#setOverlay("Loading\u2026");
       try {
         const book = await openEpub(source);
-        if (token !== __privateGet(this, _loadToken)) {
+        if (token !== this.#loadToken) {
           book.destroy();
           return;
         }
-        __privateSet(this, _book, book);
-        __privateSet(this, _bookId, null);
-        __privateMethod(this, _EpubReaderElement_instances, renderToc_fn).call(this);
-        __privateSet(this, _bookId, await book.bookId().catch(() => null));
-        const stored = __privateGet(this, _bookId) ? await dbGet("positions", __privateGet(this, _bookId)) : null;
-        await __privateMethod(this, _EpubReaderElement_instances, loadBookmarks_fn).call(this);
-        await __privateMethod(this, _EpubReaderElement_instances, loadHighlights_fn).call(this);
+        this.#book = book;
+        this.#bookId = null;
+        this.#renderToc();
+        this.#bookId = await book.bookId().catch(() => null);
+        const stored = this.#bookId ? await dbGet("positions", this.#bookId) : null;
+        await this.#loadBookmarks();
+        await this.#loadHighlights();
         const startAttr = Number(this.getAttribute("start") || 0) || 0;
         const startIndex = Math.max(0, Math.min(book.spine.length - 1, startAttr));
         this.dispatchEvent(new CustomEvent("epub-loaded", {
@@ -5591,12 +5554,12 @@ ${user}`);
         const restoreIdx = stored && stored.spineIndex >= 0 && stored.spineIndex < book.spine.length ? stored.spineIndex : -1;
         if (restoreIdx >= 0) {
           await this.goToIndex(restoreIdx);
-          __privateMethod(this, _EpubReaderElement_instances, applyRestoredScroll_fn).call(this, stored.scrollFraction);
+          this.#applyRestoredScroll(stored.scrollFraction);
           this.dispatchEvent(new CustomEvent("epub-position-restored", {
             detail: {
               spineIndex: stored.spineIndex,
               scrollFraction: stored.scrollFraction,
-              bookId: __privateGet(this, _bookId)
+              bookId: this.#bookId
             },
             bubbles: true,
             composed: true
@@ -5604,12 +5567,12 @@ ${user}`);
         } else {
           await this.goToIndex(startIndex);
         }
-        __privateMethod(this, _EpubReaderElement_instances, hideOverlay_fn).call(this);
-        __privateMethod(this, _EpubReaderElement_instances, persistLibraryEntry_fn).call(this, book).catch(() => {
+        this.#hideOverlay();
+        this.#persistLibraryEntry(book).catch(() => {
         });
       } catch (err) {
-        if (token !== __privateGet(this, _loadToken)) return;
-        __privateMethod(this, _EpubReaderElement_instances, setOverlay_fn).call(this, String(err?.message || err), true);
+        if (token !== this.#loadToken) return;
+        this.#setOverlay(String(err?.message || err), true);
         this.dispatchEvent(new CustomEvent("epub-error", {
           detail: { error: err },
           bubbles: true,
@@ -5617,6 +5580,75 @@ ${user}`);
         }));
       }
     }
+    /** Most recent book identifier (used as the IndexedDB key for persistence). */
+    /** @type {string | null} */
+    #bookId = null;
+    /** @type {ReturnType<typeof setTimeout> | null} */
+    #saveTimer = null;
+    /** Suppress saves while we're applying a restored position. */
+    #suppressSave = false;
+    /**
+     * Re-apply a stored scroll fraction once the chapter iframe finishes
+     * loading. Skipped in paginated mode (scrollFraction has no meaning
+     * across columns) and for fixed-layout chapters (no scroll).
+     * @param {number} scrollFraction
+     */
+    #applyRestoredScroll(scrollFraction) {
+      if (!Number.isFinite(scrollFraction) || scrollFraction <= 0) return;
+      if (this.#typography.layoutMode === "paginated") return;
+      const item = this.#book?.spine[this.#currentIndex];
+      if (item?.layout === "pre-paginated") return;
+      this.#suppressSave = true;
+      const apply = () => {
+        const doc = this.#els.iframe.contentDocument;
+        const se = doc?.scrollingElement || doc?.documentElement;
+        if (!se) return;
+        const max = se.scrollHeight - se.clientHeight;
+        if (max > 0) se.scrollTop = scrollFraction * max;
+      };
+      requestAnimationFrame(apply);
+      this.#els.iframe.contentWindow?.addEventListener("load", () => {
+        apply();
+        this.#suppressSave = false;
+      }, { once: true });
+      setTimeout(() => {
+        this.#suppressSave = false;
+      }, 1500);
+    }
+    /**
+     * Persist current position. Throttled — caller-side scroll handlers
+     * fire every frame; we batch up to one save per ~500 ms.
+     */
+    #schedulePositionSave() {
+      if (this.#suppressSave || !this.#book || !this.#bookId) return;
+      if (this.#saveTimer) clearTimeout(this.#saveTimer);
+      this.#saveTimer = setTimeout(() => this.#savePositionNow(), 500);
+    }
+    async #savePositionNow() {
+      this.#saveTimer = null;
+      if (!this.#book || !this.#bookId) return;
+      const doc = this.#els.iframe.contentDocument;
+      const se = doc?.scrollingElement || doc?.documentElement;
+      let scrollFraction = 0;
+      if (se && this.#typography.layoutMode === "scroll") {
+        const max = se.scrollHeight - se.clientHeight;
+        if (max > 0) scrollFraction = Math.min(1, Math.max(0, se.scrollTop / max));
+      }
+      const record = {
+        id: this.#bookId,
+        spineIndex: this.#currentIndex,
+        scrollFraction,
+        updatedAt: Date.now()
+      };
+      await dbPut("positions", record);
+    }
+    // ------- find in chapter (#17) -------
+    /** Current query string in the find bar. */
+    #findQuery = "";
+    /** Index of the focused match within the current chapter. */
+    #findIndex = 0;
+    /** Cached count of matches in the current chapter. */
+    #findTotal = 0;
     /**
      * Open or close the find-in-chapter bar. When opening, focuses the
      * input and seeds it with the current selection (if any).
@@ -5624,26 +5656,154 @@ ${user}`);
      * @param {boolean} open
      */
     find(open) {
-      const bar = __privateGet(this, _els).findBar;
+      const bar = this.#els.findBar;
       if (open) {
         bar.hidden = false;
-        const sel = __privateGet(this, _els).iframe.contentDocument?.getSelection?.()?.toString();
+        const sel = this.#els.iframe.contentDocument?.getSelection?.()?.toString();
         if (sel) {
-          __privateGet(this, _els).findInput.value = sel;
+          this.#els.findInput.value = sel;
         }
-        __privateGet(this, _els).findInput.focus();
-        __privateGet(this, _els).findInput.select();
-        __privateMethod(this, _EpubReaderElement_instances, refreshFind_fn).call(this);
+        this.#els.findInput.focus();
+        this.#els.findInput.select();
+        this.#refreshFind();
       } else {
         bar.hidden = true;
-        __privateSet(this, _findQuery, "");
-        __privateSet(this, _findIndex, 0);
-        __privateSet(this, _findTotal, 0);
-        __privateGet(this, _els).findInput.value = "";
-        __privateGet(this, _els).findCount.textContent = "";
-        const doc = __privateGet(this, _els).iframe.contentDocument;
-        if (doc) __privateMethod(this, _EpubReaderElement_instances, findClearMarks_fn).call(this, doc);
+        this.#findQuery = "";
+        this.#findIndex = 0;
+        this.#findTotal = 0;
+        this.#els.findInput.value = "";
+        this.#els.findCount.textContent = "";
+        const doc = this.#els.iframe.contentDocument;
+        if (doc) this.#findClearMarks(doc);
       }
+    }
+    #refreshFind() {
+      const doc = this.#els.iframe.contentDocument;
+      if (!doc?.body) return;
+      this.#findClearMarks(doc);
+      const q = this.#els.findInput.value;
+      this.#findQuery = q;
+      if (!q || q.length < 2) {
+        this.#findTotal = 0;
+        this.#findIndex = 0;
+        this.#els.findCount.textContent = "";
+        return;
+      }
+      const offsets = findOffsets(doc.body, q);
+      this.#findTotal = offsets.length;
+      this.#findIndex = offsets.length > 0 ? 0 : -1;
+      if (offsets.length === 0) {
+        this.#els.findCount.textContent = "0 / 0";
+        return;
+      }
+      let i = 0;
+      for (const { start, end } of offsets) {
+        const range = rangeFromOffsets(doc.body, start, end);
+        if (!range) continue;
+        const idx = i++;
+        wrapRange(range, () => {
+          const m = doc.createElement("mark");
+          m.setAttribute("data-reader-mark", "find");
+          m.dataset.findIndex = String(idx);
+          return m;
+        });
+      }
+      this.#findFocusCurrent();
+    }
+    /** @param {Document} doc */
+    #findClearMarks(doc) {
+      if (!doc.body) return;
+      unwrapAll(doc.body, '[data-reader-mark="find"]');
+    }
+    /** @param {1 | -1} dir */
+    #findStep(dir) {
+      if (this.#findTotal === 0) return;
+      this.#findIndex = (this.#findIndex + dir + this.#findTotal) % this.#findTotal;
+      this.#findFocusCurrent();
+    }
+    #findFocusCurrent() {
+      const doc = this.#els.iframe.contentDocument;
+      if (!doc) return;
+      for (
+        const el of
+        /** @type {NodeListOf<HTMLElement>} */
+        doc.querySelectorAll('[data-reader-mark="find"].current')
+      ) {
+        el.classList.remove("current");
+      }
+      const wraps = (
+        /** @type {NodeListOf<HTMLElement>} */
+        doc.querySelectorAll(`[data-reader-mark="find"][data-find-index="${this.#findIndex}"]`)
+      );
+      let scrolled = false;
+      for (const el of wraps) {
+        el.classList.add("current");
+        if (!scrolled) {
+          el.scrollIntoView({ block: "center" });
+          scrolled = true;
+        }
+      }
+      this.#els.findCount.textContent = `${this.#findIndex + 1} / ${this.#findTotal}`;
+    }
+    // ------- full-text search (#16) -------
+    /**
+     * Lazy index of all reflowable spine items, built on first search.
+     * Cleared on book close so reopening rebuilds. Pre-paginated chapters
+     * are skipped — they're images, not text.
+     *
+     * @typedef {{spineIndex: number, path: string, title: string, text: string, lower: string}} SearchChapter
+     * @type {SearchChapter[] | null}
+     */
+    #searchIndex = null;
+    /** @type {Promise<SearchChapter[]> | null} */
+    #searchIndexPromise = null;
+    /** Current search query — propagated to chapter highlighting on nav. */
+    #searchQuery = "";
+    /**
+     * Build (or return cached) full-text index for the open book. The
+     * index pulls each chapter through a fresh fetch + DOMParser so the
+     * text matches what the user actually sees, with whitespace
+     * normalised to single spaces for predictable offsets.
+     *
+     * @returns {Promise<SearchChapter[]>}
+     */
+    #buildSearchIndex() {
+      if (this.#searchIndex) return Promise.resolve(this.#searchIndex);
+      if (this.#searchIndexPromise) return this.#searchIndexPromise;
+      if (!this.#book) return Promise.resolve([]);
+      const book = this.#book;
+      const status = this.#els.searchStatus;
+      const out = [];
+      const total = book.spine.length;
+      this.#searchIndexPromise = (async () => {
+        for (let i = 0; i < book.spine.length; i++) {
+          if (this.#book !== book) return [];
+          if (status) status.textContent = `Indexing\u2026 ${i + 1} / ${total}`;
+          const item = book.spine[i];
+          if (item.layout === "pre-paginated") continue;
+          try {
+            const url = await book.resourceUrl(item.path);
+            const res = await fetch(url);
+            const html = await res.text();
+            const doc = new DOMParser().parseFromString(html, "text/html");
+            const text = (doc.body?.textContent || "").replace(/\s+/g, " ").trim();
+            if (!text) continue;
+            out.push({
+              spineIndex: i,
+              path: item.path,
+              title: this.#tocLabelForPath(item.path) || `Chapter ${i + 1}`,
+              text,
+              lower: text.toLowerCase()
+            });
+          } catch {
+          }
+        }
+        this.#searchIndex = out;
+        this.#searchIndexPromise = null;
+        if (status) status.textContent = "";
+        return out;
+      })();
+      return this.#searchIndexPromise;
     }
     /**
      * Public search API. Returns hits across the whole book without
@@ -5659,7 +5819,7 @@ ${user}`);
       const q = (query || "").trim();
       if (q.length < 2) return [];
       const maxHits = opts.maxHits ?? 500;
-      const idx = await __privateMethod(this, _EpubReaderElement_instances, buildSearchIndex_fn).call(this);
+      const idx = await this.#buildSearchIndex();
       const lower = q.toLowerCase();
       const hits = [];
       for (const ch of idx) {
@@ -5686,9 +5846,201 @@ ${user}`);
       }
       return hits;
     }
+    async #toggleSearchPanel(force) {
+      const open = typeof force === "boolean" ? force : this.#els.searchPanel.hidden;
+      this.#els.searchPanel.hidden = !open;
+      this.#els.searchToggle.setAttribute("aria-expanded", String(open));
+      if (open) {
+        this.#els.bookmarksPanel.hidden = true;
+        this.#els.bookmarksToggle.setAttribute("aria-expanded", "false");
+        this.#els.libraryPanel.hidden = true;
+        this.#els.libraryToggle.setAttribute("aria-expanded", "false");
+        this.#els.settingsPanel.hidden = true;
+        this.#els.settingsToggle.setAttribute("aria-expanded", "false");
+        this.#els.searchInput.focus();
+        this.#els.searchInput.select();
+      }
+    }
+    async #runSearch(query) {
+      const q = (query || "").trim();
+      this.#searchQuery = q;
+      const ol = this.#els.searchResults;
+      const status = this.#els.searchStatus;
+      ol.innerHTML = "";
+      if (q.length < 2) {
+        status.textContent = q.length === 0 ? "" : "Type at least 2 characters.";
+        return;
+      }
+      status.textContent = "Searching\u2026";
+      const hits = await this.search(q);
+      if (this.#searchQuery !== q) return;
+      if (hits.length === 0) {
+        status.textContent = `No results for \u201C${q}\u201D.`;
+        return;
+      }
+      const byChap = /* @__PURE__ */ new Map();
+      for (const h of hits) {
+        const arr = byChap.get(h.spineIndex) || [];
+        arr.push(h);
+        byChap.set(h.spineIndex, arr);
+      }
+      status.textContent = `${hits.length} result${hits.length === 1 ? "" : "s"} in ${byChap.size} chapter${byChap.size === 1 ? "" : "s"}.`;
+      const frag = document.createDocumentFragment();
+      for (const [, group] of byChap) {
+        for (const h of group) {
+          const li = document.createElement("li");
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "srch-jump";
+          const chap = document.createElement("span");
+          chap.className = "srch-chap";
+          chap.textContent = h.title;
+          const snip = document.createElement("span");
+          snip.className = "srch-snippet";
+          snip.append(document.createTextNode(h.contextBefore));
+          const m = document.createElement("mark");
+          m.textContent = h.match;
+          snip.append(m);
+          snip.append(document.createTextNode(h.contextAfter));
+          btn.append(chap, snip);
+          btn.addEventListener("click", () => this.#goToSearchHit(h));
+          li.append(btn);
+          frag.append(li);
+        }
+      }
+      ol.append(frag);
+    }
+    /**
+     * Jump from a search hit to the corresponding place in the chapter.
+     * After the iframe finishes loading, scroll to the matched offset
+     * and wrap every match for the active query in a search-mark so the
+     * reader sees them all in context.
+     *
+     * @param {{spineIndex: number, matchOrdinal: number}} hit
+     */
+    async #goToSearchHit(hit) {
+      await this.#toggleSearchPanel(false);
+      const settle = () => {
+        const doc = this.#els.iframe.contentDocument;
+        if (!doc?.body) return;
+        this.#highlightSearchInChapter(doc, this.#searchQuery);
+        const marks = (
+          /** @type {NodeListOf<HTMLElement>} */
+          doc.querySelectorAll('[data-reader-mark="search"]')
+        );
+        if (marks.length === 0) return;
+        const target = marks[hit.matchOrdinal] || marks[0];
+        target.scrollIntoView({ block: "center" });
+      };
+      if (this.#currentIndex === hit.spineIndex) {
+        settle();
+        return;
+      }
+      this.goToIndex(hit.spineIndex);
+      this.#els.iframe.addEventListener("load", settle, { once: true });
+    }
+    /**
+     * Wrap every match for `query` in the chapter doc with a
+     * `[data-reader-mark="search"]`. Idempotent — clears previous
+     * search marks first.
+     *
+     * @param {Document} doc
+     * @param {string} query
+     */
+    #highlightSearchInChapter(doc, query) {
+      if (!doc.body) return;
+      unwrapAll(doc.body, '[data-reader-mark="search"]');
+      if (!query || query.length < 2) return;
+      const offsets = findOffsets(doc.body, query);
+      let i = 0;
+      for (const { start, end } of offsets) {
+        const range = rangeFromOffsets(doc.body, start, end);
+        if (!range) continue;
+        const idx = i++;
+        wrapRange(range, () => {
+          const m = doc.createElement("mark");
+          m.setAttribute("data-reader-mark", "search");
+          m.dataset.searchIndex = String(idx);
+          return m;
+        });
+      }
+    }
+    // ------- highlights (#15) -------
+    /** @type {Highlight[]} */
+    #highlights = [];
+    /** @returns {Promise<void>} */
+    async #loadHighlights() {
+      this.#highlights = [];
+      if (!this.#bookId) {
+        this.#renderHighlights();
+        return;
+      }
+      const rec = await dbGet("highlights", this.#bookId);
+      if (rec && Array.isArray(rec.items)) this.#highlights = rec.items;
+      this.#renderHighlights();
+    }
+    async #saveHighlights() {
+      if (!this.#bookId) return;
+      await dbPut("highlights", {
+        id: this.#bookId,
+        items: this.#highlights,
+        updatedAt: Date.now()
+      });
+    }
     /** Read-only snapshot of the current book's highlights. */
     get highlights() {
-      return __privateGet(this, _highlights).map((h) => ({ ...h }));
+      return this.#highlights.map((h) => ({ ...h }));
+    }
+    /**
+     * Capture the selection in the chapter iframe as a new highlight.
+     * @param {string} color
+     * @param {boolean} [withNote]  If true, prompt the user for a note.
+     * @returns {Promise<Highlight | null>}
+     */
+    async #addHighlightFromSelection(color, withNote = false) {
+      const doc = this.#els.iframe.contentDocument;
+      const sel = doc?.getSelection?.();
+      if (!doc?.body || !sel || sel.rangeCount === 0 || sel.isCollapsed) {
+        this.#hideHighlightPopover();
+        return null;
+      }
+      const range = sel.getRangeAt(0);
+      const offsets = offsetsFromRange(doc.body, range);
+      if (!offsets) {
+        this.#hideHighlightPopover();
+        return null;
+      }
+      const text = range.toString().trim().slice(0, 200);
+      let note = "";
+      if (withNote) {
+        const win = this.ownerDocument?.defaultView;
+        note = (win?.prompt("Note for this highlight (optional):", "") || "").trim();
+      }
+      const hl = (
+        /** @type {Highlight} */
+        {
+          id: "hl_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8),
+          spineIndex: this.#currentIndex,
+          startOffset: offsets.start,
+          endOffset: offsets.end,
+          text,
+          color,
+          note,
+          createdAt: Date.now()
+        }
+      );
+      this.#highlights = [...this.#highlights, hl].sort((a, b) => a.spineIndex - b.spineIndex || a.startOffset - b.startOffset);
+      await this.#saveHighlights();
+      this.#applyHighlightsTo(doc);
+      this.#renderHighlights();
+      sel.removeAllRanges();
+      this.#hideHighlightPopover();
+      this.dispatchEvent(new CustomEvent("epub-highlights-change", {
+        detail: { highlights: this.highlights },
+        bubbles: true,
+        composed: true
+      }));
+      return hl;
     }
     /**
      * Public removal API — used by the panel × button.
@@ -5696,13 +6048,13 @@ ${user}`);
      * @returns {Promise<boolean>}
      */
     async removeHighlight(id) {
-      const before = __privateGet(this, _highlights).length;
-      __privateSet(this, _highlights, __privateGet(this, _highlights).filter((h) => h.id !== id));
-      if (__privateGet(this, _highlights).length === before) return false;
-      await __privateMethod(this, _EpubReaderElement_instances, saveHighlights_fn).call(this);
-      const doc = __privateGet(this, _els).iframe.contentDocument;
-      if (doc) __privateMethod(this, _EpubReaderElement_instances, applyHighlightsTo_fn).call(this, doc);
-      __privateMethod(this, _EpubReaderElement_instances, renderHighlights_fn).call(this);
+      const before = this.#highlights.length;
+      this.#highlights = this.#highlights.filter((h) => h.id !== id);
+      if (this.#highlights.length === before) return false;
+      await this.#saveHighlights();
+      const doc = this.#els.iframe.contentDocument;
+      if (doc) this.#applyHighlightsTo(doc);
+      this.#renderHighlights();
       this.dispatchEvent(new CustomEvent("epub-highlights-change", {
         detail: { highlights: this.highlights },
         bubbles: true,
@@ -5715,23 +6067,192 @@ ${user}`);
      * @param {string} id
      */
     async goToHighlight(id) {
-      const hl = __privateGet(this, _highlights).find((h) => h.id === id);
-      if (!hl || !__privateGet(this, _book)) return;
-      if (hl.spineIndex < 0 || hl.spineIndex >= __privateGet(this, _book).spine.length) return;
-      if (__privateGet(this, _currentIndex) !== hl.spineIndex) {
+      const hl = this.#highlights.find((h) => h.id === id);
+      if (!hl || !this.#book) return;
+      if (hl.spineIndex < 0 || hl.spineIndex >= this.#book.spine.length) return;
+      if (this.#currentIndex !== hl.spineIndex) {
         await this.goToIndex(hl.spineIndex);
-        await new Promise((r) => __privateGet(this, _els).iframe.addEventListener("load", () => r(void 0), { once: true }));
+        await new Promise((r) => this.#els.iframe.addEventListener("load", () => r(void 0), { once: true }));
       }
-      const doc = __privateGet(this, _els).iframe.contentDocument;
+      const doc = this.#els.iframe.contentDocument;
       const target = (
         /** @type {HTMLElement | null} */
         doc?.querySelector(`[data-reader-mark="highlight"][data-id="${CSS.escape(id)}"]`)
       );
       target?.scrollIntoView({ block: "center" });
     }
+    /**
+     * Apply (or refresh) the highlight wrappers in the chapter doc.
+     * Always wraps from the offsets (not the prior wrappers) so DOM
+     * mutations between chapter loads can't drift.
+     * @param {Document} doc
+     */
+    #applyHighlightsTo(doc) {
+      if (!doc.body) return;
+      unwrapAll(doc.body, '[data-reader-mark="highlight"]');
+      const here = this.#highlights.filter((h) => h.spineIndex === this.#currentIndex);
+      for (const h of here) {
+        const range = rangeFromOffsets(doc.body, h.startOffset, h.endOffset);
+        if (!range) continue;
+        wrapRange(range, () => {
+          const m = doc.createElement("mark");
+          m.setAttribute("data-reader-mark", "highlight");
+          m.dataset.id = h.id;
+          m.style.setProperty("--reader-hl-color", h.color);
+          if (h.note) m.title = h.note;
+          return m;
+        });
+      }
+    }
+    /**
+     * Selection-popover lifecycle. Listens for selection changes inside
+     * the iframe, positions the popover above the selection (translated
+     * from iframe coordinates to host coordinates).
+     * @param {HTMLIFrameElement} iframe
+     */
+    #wireHighlightSelection(iframe) {
+      const doc = iframe.contentDocument;
+      if (!doc) return;
+      const update = () => this.#updateHighlightPopover();
+      doc.addEventListener("mouseup", update);
+      doc.addEventListener("keyup", update);
+      doc.addEventListener("selectionchange", update);
+    }
+    #updateHighlightPopover() {
+      const iframe = this.#els.iframe;
+      const doc = iframe.contentDocument;
+      const sel = doc?.getSelection?.();
+      if (!doc || !sel || sel.rangeCount === 0 || sel.isCollapsed) {
+        this.#hideHighlightPopover();
+        return;
+      }
+      const range = sel.getRangeAt(0);
+      const rect = range.getBoundingClientRect();
+      if (rect.width === 0 && rect.height === 0) {
+        this.#hideHighlightPopover();
+        return;
+      }
+      const ifr = iframe.getBoundingClientRect();
+      const host = this.getBoundingClientRect();
+      const popover = this.#els.hlPopover;
+      popover.hidden = false;
+      popover.style.left = ifr.left - host.left + rect.left + rect.width / 2 + "px";
+      popover.style.top = ifr.top - host.top + rect.top - 8 + "px";
+    }
+    #hideHighlightPopover() {
+      this.#els.hlPopover.hidden = true;
+    }
+    #toggleHighlightsPanel(force) {
+      const open = typeof force === "boolean" ? force : this.#els.highlightsPanel.hidden;
+      this.#els.highlightsPanel.hidden = !open;
+      this.#els.highlightsToggle.setAttribute("aria-expanded", String(open));
+      if (open) {
+        this.#els.bookmarksPanel.hidden = true;
+        this.#els.bookmarksToggle.setAttribute("aria-expanded", "false");
+        this.#els.libraryPanel.hidden = true;
+        this.#els.libraryToggle.setAttribute("aria-expanded", "false");
+        this.#els.settingsPanel.hidden = true;
+        this.#els.settingsToggle.setAttribute("aria-expanded", "false");
+        this.#els.searchPanel.hidden = true;
+        this.#els.searchToggle.setAttribute("aria-expanded", "false");
+        this.#renderHighlights();
+      }
+    }
+    #renderHighlights() {
+      const ol = this.#els.hlList;
+      const panel = this.#els.highlightsPanel;
+      panel.dataset.empty = String(this.#highlights.length === 0);
+      ol.innerHTML = "";
+      for (const h of this.#highlights) {
+        const li = document.createElement("li");
+        li.dataset.id = h.id;
+        const swatch = document.createElement("span");
+        swatch.className = "hl-swatch";
+        swatch.style.setProperty("--c", h.color);
+        const jump = document.createElement("button");
+        jump.type = "button";
+        jump.className = "hl-jump";
+        const text = document.createElement("span");
+        text.className = "hl-text";
+        text.textContent = `\u201C${h.text}\u201D`;
+        const meta = document.createElement("span");
+        meta.className = "hl-meta";
+        const chapter = this.#book?.spine[h.spineIndex];
+        const chapterTitle = chapter ? this.#tocLabelForPath(chapter.path) : "";
+        meta.textContent = chapterTitle || `Chapter ${h.spineIndex + 1}`;
+        jump.append(text, meta);
+        if (h.note) {
+          const noteEl = document.createElement("span");
+          noteEl.className = "hl-note-text";
+          noteEl.textContent = h.note;
+          jump.append(noteEl);
+        }
+        jump.addEventListener("click", () => this.goToHighlight(h.id));
+        const remove2 = document.createElement("button");
+        remove2.type = "button";
+        remove2.className = "hl-remove";
+        remove2.setAttribute("aria-label", "Remove highlight");
+        remove2.textContent = "\xD7";
+        remove2.addEventListener("click", (ev) => {
+          ev.stopPropagation();
+          this.removeHighlight(h.id);
+        });
+        li.append(swatch, jump, remove2);
+        ol.append(li);
+      }
+    }
+    // ------- bookmarks -------
+    /**
+     * In-memory cache of the current book's bookmarks. The persisted shape
+     * in IndexedDB is `{ id: bookId, items: Bookmark[] }` — one record per
+     * book, list-of-items inside, so add/remove are simple put-the-record
+     * round-trips and listing for a single book is a single get.
+     *
+     * @type {Bookmark[]}
+     */
+    #bookmarks = [];
+    /** @returns {Promise<void>} */
+    async #loadBookmarks() {
+      this.#bookmarks = [];
+      if (!this.#bookId) {
+        this.#renderBookmarks();
+        return;
+      }
+      const rec = await dbGet("bookmarks", this.#bookId);
+      if (rec && Array.isArray(rec.items)) this.#bookmarks = rec.items;
+      this.#renderBookmarks();
+      this.#updateBookmarkButton();
+    }
+    /** @returns {Promise<void>} */
+    async #saveBookmarks() {
+      if (!this.#bookId) return;
+      await dbPut("bookmarks", {
+        id: this.#bookId,
+        items: this.#bookmarks,
+        updatedAt: Date.now()
+      });
+    }
     /** Read-only snapshot of the current book's bookmarks. */
     get bookmarks() {
-      return __privateGet(this, _bookmarks).map((b) => ({ ...b }));
+      return this.#bookmarks.map((b) => ({ ...b }));
+    }
+    /** True if a bookmark exists at (close to) the current position. */
+    #bookmarkAtCurrent() {
+      return this.#bookmarks.find(
+        (b) => b.spineIndex === this.#currentIndex && Math.abs(b.scrollFraction - this.#currentScrollFraction()) < 0.05
+      ) || null;
+    }
+    /** @returns {number} */
+    #currentScrollFraction() {
+      if (this.#typography.layoutMode === "paginated") {
+        const info = this.#pageInfo();
+        return info ? (info.current - 1) / Math.max(1, info.total) : 0;
+      }
+      const doc = this.#els.iframe.contentDocument;
+      const se = doc?.scrollingElement || doc?.documentElement;
+      if (!se) return 0;
+      const max = se.scrollHeight - se.clientHeight;
+      return max > 0 ? Math.min(1, Math.max(0, se.scrollTop / max)) : 0;
     }
     /**
      * Add or remove a bookmark at the current position. Used by both the
@@ -5741,30 +6262,30 @@ ${user}`);
      *   The newly created bookmark, or null if a bookmark was removed.
      */
     async toggleBookmark(label) {
-      if (!__privateGet(this, _book) || !__privateGet(this, _bookId)) return null;
-      const existing = __privateMethod(this, _EpubReaderElement_instances, bookmarkAtCurrent_fn).call(this);
+      if (!this.#book || !this.#bookId) return null;
+      const existing = this.#bookmarkAtCurrent();
       if (existing) {
-        __privateSet(this, _bookmarks, __privateGet(this, _bookmarks).filter((b) => b.id !== existing.id));
-        await __privateMethod(this, _EpubReaderElement_instances, saveBookmarks_fn).call(this);
-        __privateMethod(this, _EpubReaderElement_instances, renderBookmarks_fn).call(this);
-        __privateMethod(this, _EpubReaderElement_instances, updateBookmarkButton_fn).call(this);
-        __privateMethod(this, _EpubReaderElement_instances, emitBookmarksChange_fn).call(this);
+        this.#bookmarks = this.#bookmarks.filter((b) => b.id !== existing.id);
+        await this.#saveBookmarks();
+        this.#renderBookmarks();
+        this.#updateBookmarkButton();
+        this.#emitBookmarksChange();
         return null;
       }
       const bm = {
         id: "bm_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8),
-        spineIndex: __privateGet(this, _currentIndex),
-        scrollFraction: __privateMethod(this, _EpubReaderElement_instances, currentScrollFraction_fn).call(this),
-        chapterTitle: __privateMethod(this, _EpubReaderElement_instances, tocLabelForPath_fn).call(this, __privateGet(this, _book).spine[__privateGet(this, _currentIndex)]?.path || ""),
+        spineIndex: this.#currentIndex,
+        scrollFraction: this.#currentScrollFraction(),
+        chapterTitle: this.#tocLabelForPath(this.#book.spine[this.#currentIndex]?.path || ""),
         label: label || "",
-        snippet: __privateMethod(this, _EpubReaderElement_instances, captureSnippet_fn).call(this),
+        snippet: this.#captureSnippet(),
         createdAt: Date.now()
       };
-      __privateSet(this, _bookmarks, [...__privateGet(this, _bookmarks), bm].sort((a, b) => a.spineIndex - b.spineIndex || a.scrollFraction - b.scrollFraction));
-      await __privateMethod(this, _EpubReaderElement_instances, saveBookmarks_fn).call(this);
-      __privateMethod(this, _EpubReaderElement_instances, renderBookmarks_fn).call(this);
-      __privateMethod(this, _EpubReaderElement_instances, updateBookmarkButton_fn).call(this);
-      __privateMethod(this, _EpubReaderElement_instances, emitBookmarksChange_fn).call(this);
+      this.#bookmarks = [...this.#bookmarks, bm].sort((a, b) => a.spineIndex - b.spineIndex || a.scrollFraction - b.scrollFraction);
+      await this.#saveBookmarks();
+      this.#renderBookmarks();
+      this.#updateBookmarkButton();
+      this.#emitBookmarksChange();
       return bm;
     }
     /**
@@ -5773,13 +6294,13 @@ ${user}`);
      * @returns {Promise<boolean>} true if a bookmark was removed.
      */
     async removeBookmark(id) {
-      const before = __privateGet(this, _bookmarks).length;
-      __privateSet(this, _bookmarks, __privateGet(this, _bookmarks).filter((b) => b.id !== id));
-      if (__privateGet(this, _bookmarks).length === before) return false;
-      await __privateMethod(this, _EpubReaderElement_instances, saveBookmarks_fn).call(this);
-      __privateMethod(this, _EpubReaderElement_instances, renderBookmarks_fn).call(this);
-      __privateMethod(this, _EpubReaderElement_instances, updateBookmarkButton_fn).call(this);
-      __privateMethod(this, _EpubReaderElement_instances, emitBookmarksChange_fn).call(this);
+      const before = this.#bookmarks.length;
+      this.#bookmarks = this.#bookmarks.filter((b) => b.id !== id);
+      if (this.#bookmarks.length === before) return false;
+      await this.#saveBookmarks();
+      this.#renderBookmarks();
+      this.#updateBookmarkButton();
+      this.#emitBookmarksChange();
       return true;
     }
     /**
@@ -5788,11 +6309,120 @@ ${user}`);
      * @param {string} id
      */
     async goToBookmark(id) {
-      const bm = __privateGet(this, _bookmarks).find((b) => b.id === id);
-      if (!bm || !__privateGet(this, _book)) return;
-      if (bm.spineIndex < 0 || bm.spineIndex >= __privateGet(this, _book).spine.length) return;
+      const bm = this.#bookmarks.find((b) => b.id === id);
+      if (!bm || !this.#book) return;
+      if (bm.spineIndex < 0 || bm.spineIndex >= this.#book.spine.length) return;
       await this.goToIndex(bm.spineIndex);
-      __privateMethod(this, _EpubReaderElement_instances, applyRestoredScroll_fn).call(this, bm.scrollFraction);
+      this.#applyRestoredScroll(bm.scrollFraction);
+    }
+    /**
+     * Capture ~120 chars of visible chapter text near the current scroll
+     * position, for the bookmark snippet.
+     * @returns {string}
+     */
+    #captureSnippet() {
+      const doc = this.#els.iframe.contentDocument;
+      const text = (doc?.body?.textContent || "").trim().replace(/\s+/g, " ");
+      if (!text) return "";
+      const frac = this.#currentScrollFraction();
+      const start = Math.max(0, Math.floor(text.length * frac) - 20);
+      return text.slice(start, start + 120).trim();
+    }
+    #renderBookmarks() {
+      const ol = this.#els.bmList;
+      ol.innerHTML = "";
+      const panel = this.#els.bookmarksPanel;
+      panel.dataset.empty = String(this.#bookmarks.length === 0);
+      for (const bm of this.#bookmarks) {
+        const li = document.createElement("li");
+        li.dataset.bookmarkId = bm.id;
+        const jump = document.createElement("button");
+        jump.type = "button";
+        jump.className = "bm-jump";
+        const labelEl = document.createElement("span");
+        labelEl.className = "bm-label";
+        labelEl.textContent = bm.label || bm.chapterTitle || "(unnamed)";
+        const meta = document.createElement("span");
+        meta.className = "bm-meta";
+        const pct = Math.round((bm.scrollFraction || 0) * 100);
+        meta.textContent = `${bm.chapterTitle || `Chapter ${bm.spineIndex + 1}`} \xB7 ${pct}%`;
+        const snippet = document.createElement("span");
+        snippet.className = "bm-snippet";
+        snippet.textContent = bm.snippet || "";
+        jump.append(labelEl, document.createElement("br"), meta);
+        if (bm.snippet) jump.append(document.createElement("br"), snippet);
+        jump.addEventListener("click", () => this.goToBookmark(bm.id));
+        const remove2 = document.createElement("button");
+        remove2.type = "button";
+        remove2.className = "bm-remove";
+        remove2.setAttribute("aria-label", "Remove bookmark");
+        remove2.textContent = "\xD7";
+        remove2.addEventListener("click", (e) => {
+          e.stopPropagation();
+          this.removeBookmark(bm.id);
+        });
+        li.append(jump, remove2);
+        ol.append(li);
+      }
+    }
+    #updateBookmarkButton() {
+      const active = !!this.#bookmarkAtCurrent();
+      this.#els.bookmarksToggle.setAttribute("aria-pressed", String(active));
+      this.#els.bookmarksToggle.textContent = active ? "\u2605" : "\u2606";
+      this.toggleAttribute("data-bookmark-active", active);
+    }
+    #toggleBookmarksPanel(force) {
+      const open = typeof force === "boolean" ? force : this.#els.bookmarksPanel.hidden;
+      this.#els.bookmarksPanel.hidden = !open;
+      this.#els.bookmarksToggle.setAttribute("aria-expanded", String(open));
+      if (open) {
+        this.#els.settingsPanel.hidden = true;
+        this.#els.settingsToggle.setAttribute("aria-expanded", "false");
+        this.#els.libraryPanel.hidden = true;
+        this.#els.libraryToggle.setAttribute("aria-expanded", "false");
+      }
+    }
+    #emitBookmarksChange() {
+      this.dispatchEvent(new CustomEvent("epub-bookmarks-change", {
+        detail: { bookmarks: this.bookmarks },
+        bubbles: true,
+        composed: true
+      }));
+    }
+    // ------- library -------
+    /**
+     * Persist the just-opened book into the library store: source blob
+     * (so we can re-open it later without re-fetching), metadata
+     * (title/creator/identifier), cover thumbnail blob, addedAt /
+     * lastOpenedAt timestamps. Idempotent — re-opening the same book
+     * just bumps lastOpenedAt.
+     *
+     * @param {EpubBook} book
+     */
+    async #persistLibraryEntry(book) {
+      if (!this.#bookId) return;
+      const source = book.sourceBlob();
+      if (!source) return;
+      const existing = await dbGet("library", this.#bookId);
+      const cover = existing?.cover || await book.coverBlob();
+      const meta = book.metadata;
+      const record = {
+        id: this.#bookId,
+        title: meta.title || "(untitled)",
+        creator: meta.creator || "",
+        identifier: meta.identifier || "",
+        blob: source,
+        cover,
+        size: source.size,
+        addedAt: existing?.addedAt || Date.now(),
+        lastOpenedAt: Date.now()
+      };
+      await dbPut("library", record);
+      this.dispatchEvent(new CustomEvent("epub-library-change", {
+        detail: { reason: "added", id: this.#bookId },
+        bubbles: true,
+        composed: true
+      }));
     }
     /**
      * Read-only snapshot of all books in the library, sorted by most
@@ -5837,12 +6467,12 @@ ${user}`);
       await dbClear("positions");
       await dbClear("bookmarks");
       await dbClear("highlights");
-      __privateSet(this, _bookmarks, []);
-      __privateMethod(this, _EpubReaderElement_instances, renderBookmarks_fn).call(this);
-      __privateMethod(this, _EpubReaderElement_instances, updateBookmarkButton_fn).call(this);
-      __privateSet(this, _highlights, []);
-      __privateMethod(this, _EpubReaderElement_instances, renderHighlights_fn).call(this);
-      const doc = __privateGet(this, _els).iframe.contentDocument;
+      this.#bookmarks = [];
+      this.#renderBookmarks();
+      this.#updateBookmarkButton();
+      this.#highlights = [];
+      this.#renderHighlights();
+      const doc = this.#els.iframe.contentDocument;
       if (doc?.body) unwrapAll(doc.body, '[data-reader-mark="highlight"]');
       this.dispatchEvent(new CustomEvent("epub-library-change", {
         detail: { reason: "cleared", id: null },
@@ -5867,45 +6497,125 @@ ${user}`);
         return null;
       }
     }
+    async #toggleLibraryPanel(force) {
+      const wasOpen = !this.#els.libraryPanel.hidden;
+      const open = typeof force === "boolean" ? force : !wasOpen;
+      this.#els.libraryPanel.hidden = !open;
+      this.#els.libraryToggle.setAttribute("aria-expanded", String(open));
+      if (open) {
+        this.#els.bookmarksPanel.hidden = true;
+        this.#els.bookmarksToggle.setAttribute("aria-expanded", "false");
+        this.#els.settingsPanel.hidden = true;
+        this.#els.settingsToggle.setAttribute("aria-expanded", "false");
+        await this.#renderLibrary();
+      }
+    }
+    async #renderLibrary() {
+      const entries = await this.getLibrary();
+      const ol = this.#els.libList;
+      const panel = this.#els.libraryPanel;
+      panel.dataset.empty = String(entries.length === 0);
+      ol.innerHTML = "";
+      const transientUrls = [];
+      for (const entry of entries) {
+        const li = document.createElement("li");
+        li.dataset.bookId = entry.id;
+        const open = document.createElement("button");
+        open.type = "button";
+        open.className = "lib-open";
+        open.setAttribute("aria-label", `Open ${entry.title}`);
+        const cover = document.createElement("div");
+        cover.className = "lib-cover";
+        if (entry.cover) {
+          const url = URL.createObjectURL(entry.cover);
+          transientUrls.push(url);
+          const img = document.createElement("img");
+          img.src = url;
+          img.alt = "";
+          img.loading = "lazy";
+          cover.append(img);
+        } else {
+          cover.textContent = "no cover";
+        }
+        const title = document.createElement("span");
+        title.className = "lib-title";
+        title.textContent = entry.title;
+        const meta = document.createElement("span");
+        meta.className = "lib-meta";
+        const parts = [];
+        if (entry.creator) parts.push(entry.creator);
+        parts.push(formatBytes(entry.size));
+        meta.textContent = parts.join(" \xB7 ");
+        open.append(cover, title, meta);
+        open.addEventListener("click", async () => {
+          await this.#toggleLibraryPanel(false);
+          await this.openFromLibrary(entry.id);
+        });
+        const remove2 = document.createElement("button");
+        remove2.type = "button";
+        remove2.className = "lib-remove";
+        remove2.setAttribute("aria-label", `Remove ${entry.title} from library`);
+        remove2.textContent = "\xD7";
+        remove2.addEventListener("click", async (e) => {
+          e.stopPropagation();
+          if (!confirm(`Remove "${entry.title}" from the library?`)) return;
+          await this.removeFromLibrary(entry.id);
+          await this.#renderLibrary();
+        });
+        li.append(open, remove2);
+        ol.append(li);
+      }
+      if (transientUrls.length) {
+        setTimeout(() => transientUrls.forEach(URL.revokeObjectURL), 5e3);
+      }
+      const est = await this.getStorageEstimate();
+      if (est && est.quota > 0) {
+        this.#els.libQuota.textContent = `${formatBytes(est.usage)} of ${formatBytes(est.quota)} used (${est.percent}%)`;
+        this.#els.libQuota.dataset.warn = String(est.percent >= 80);
+      } else {
+        this.#els.libQuota.textContent = "";
+        delete this.#els.libQuota.dataset.warn;
+      }
+    }
     /** Unload the current book and revoke any blob URLs it created. */
     close() {
-      __privateSet(this, _currentIndex, -1);
-      if (__privateGet(this, _book)) {
-        __privateGet(this, _book).destroy();
-        __privateSet(this, _book, null);
+      this.#currentIndex = -1;
+      if (this.#book) {
+        this.#book.destroy();
+        this.#book = null;
       }
-      __privateSet(this, _bookId, null);
-      __privateSet(this, _bookmarks, []);
-      __privateMethod(this, _EpubReaderElement_instances, renderBookmarks_fn).call(this);
-      __privateMethod(this, _EpubReaderElement_instances, updateBookmarkButton_fn).call(this);
-      __privateSet(this, _highlights, []);
-      __privateMethod(this, _EpubReaderElement_instances, renderHighlights_fn).call(this);
-      __privateMethod(this, _EpubReaderElement_instances, hideHighlightPopover_fn).call(this);
-      __privateGet(this, _els).highlightsPanel.hidden = true;
-      __privateGet(this, _els).highlightsToggle.setAttribute("aria-expanded", "false");
+      this.#bookId = null;
+      this.#bookmarks = [];
+      this.#renderBookmarks();
+      this.#updateBookmarkButton();
+      this.#highlights = [];
+      this.#renderHighlights();
+      this.#hideHighlightPopover();
+      this.#els.highlightsPanel.hidden = true;
+      this.#els.highlightsToggle.setAttribute("aria-expanded", "false");
       this.find(false);
-      __privateSet(this, _searchIndex, null);
-      __privateSet(this, _searchIndexPromise, null);
-      __privateSet(this, _searchQuery, "");
-      __privateGet(this, _els).searchInput.value = "";
-      __privateGet(this, _els).searchStatus.textContent = "";
-      __privateGet(this, _els).searchResults.innerHTML = "";
-      __privateGet(this, _els).searchPanel.hidden = true;
-      __privateGet(this, _els).searchToggle.setAttribute("aria-expanded", "false");
-      __privateGet(this, _els).iframe.removeAttribute("src");
-      __privateGet(this, _els).toc.innerHTML = "";
-      __privateGet(this, _els).title.textContent = "";
-      __privateGet(this, _els).progress.textContent = "";
-      __privateGet(this, _els).prev.disabled = __privateGet(this, _els).next.disabled = true;
-      __privateMethod(this, _EpubReaderElement_instances, setOverlay_fn).call(this, "Drop an EPUB file here or choose one to begin.");
+      this.#searchIndex = null;
+      this.#searchIndexPromise = null;
+      this.#searchQuery = "";
+      this.#els.searchInput.value = "";
+      this.#els.searchStatus.textContent = "";
+      this.#els.searchResults.innerHTML = "";
+      this.#els.searchPanel.hidden = true;
+      this.#els.searchToggle.setAttribute("aria-expanded", "false");
+      this.#els.iframe.removeAttribute("src");
+      this.#els.toc.innerHTML = "";
+      this.#els.title.textContent = "";
+      this.#els.progress.textContent = "";
+      this.#els.prev.disabled = this.#els.next.disabled = true;
+      this.#setOverlay("Drop an EPUB file here or choose one to begin.");
     }
     /** Advance to the next spine item. No-op if already at the last. */
     async next() {
-      if (__privateGet(this, _book) && __privateGet(this, _currentIndex) + 1 < __privateGet(this, _book).spine.length) await this.goToIndex(__privateGet(this, _currentIndex) + 1);
+      if (this.#book && this.#currentIndex + 1 < this.#book.spine.length) await this.goToIndex(this.#currentIndex + 1);
     }
     /** Move to the previous spine item. No-op if already at the first. */
     async prev() {
-      if (__privateGet(this, _book) && __privateGet(this, _currentIndex) > 0) await this.goToIndex(__privateGet(this, _currentIndex) - 1);
+      if (this.#book && this.#currentIndex > 0) await this.goToIndex(this.#currentIndex - 1);
     }
     /**
      * @param {number} index
@@ -5913,28 +6623,28 @@ ${user}`);
      * @returns {Promise<void>}
      */
     async goToIndex(index, fragment = "") {
-      if (!__privateGet(this, _book)) return;
-      const spine = __privateGet(this, _book).spine;
+      if (!this.#book) return;
+      const spine = this.#book.spine;
       if (index < 0 || index >= spine.length) return;
-      __privateSet(this, _currentIndex, index);
-      const chapter = await __privateGet(this, _book).chapter(index);
-      __privateGet(this, _els).iframe.dataset.fragment = fragment;
-      __privateGet(this, _els).iframe.src = chapter.url;
-      __privateMethod(this, _EpubReaderElement_instances, updateChrome_fn).call(this);
+      this.#currentIndex = index;
+      const chapter = await this.#book.chapter(index);
+      this.#els.iframe.dataset.fragment = fragment;
+      this.#els.iframe.src = chapter.url;
+      this.#updateChrome();
       this.dispatchEvent(new CustomEvent("epub-navigate", {
         detail: {
           index,
           path: chapter.path,
-          title: __privateMethod(this, _EpubReaderElement_instances, tocLabelForPath_fn).call(this, chapter.path)
+          title: this.#tocLabelForPath(chapter.path)
         },
         bubbles: true,
         composed: true
       }));
-      __privateMethod(this, _EpubReaderElement_instances, schedulePositionSave_fn).call(this);
+      this.#schedulePositionSave();
     }
     /** @param {string} pathOrHref */
     async goToPath(pathOrHref) {
-      if (!__privateGet(this, _book)) return;
+      if (!this.#book) return;
       const [rawPath, fragmentRaw] = pathOrHref.split("#");
       const fragment = fragmentRaw ?? "";
       let path = rawPath;
@@ -5942,12 +6652,12 @@ ${user}`);
         path = decodeURIComponent(rawPath);
       } catch {
       }
-      let idx = __privateGet(this, _book).spineIndexOf(path);
+      let idx = this.#book.spineIndexOf(path);
       if (idx < 0) {
         try {
-          const url = await __privateGet(this, _book).resourceUrl(path);
-          __privateGet(this, _els).iframe.dataset.fragment = fragment;
-          __privateGet(this, _els).iframe.src = url;
+          const url = await this.#book.resourceUrl(path);
+          this.#els.iframe.dataset.fragment = fragment;
+          this.#els.iframe.src = url;
         } catch (err) {
           console.warn("goToPath failed", err);
         }
@@ -5955,10 +6665,219 @@ ${user}`);
       }
       await this.goToIndex(idx, fragment);
     }
+    // ------- internals -------
+    #updateChrome() {
+      if (!this.#book) return;
+      const meta = this.#book.metadata;
+      this.#els.title.textContent = meta.title || "(untitled)";
+      this.#els.progress.textContent = `${this.#currentIndex + 1} / ${this.#book.spine.length}`;
+      this.#els.prev.disabled = this.#currentIndex <= 0;
+      this.#els.next.disabled = this.#currentIndex >= this.#book.spine.length - 1;
+      this.#highlightToc();
+      this.#updateBookmarkButton();
+    }
+    #renderToc() {
+      const ol = this.#els.toc;
+      ol.innerHTML = "";
+      if (!this.#book) return;
+      const buildList = (items) => {
+        const frag = document.createDocumentFragment();
+        for (const item of items) {
+          const li = document.createElement("li");
+          if (item.path) {
+            const a = document.createElement("a");
+            a.textContent = item.label;
+            a.href = "#";
+            a.dataset.path = item.path;
+            a.dataset.fragment = item.fragment || "";
+            a.addEventListener("click", (e) => {
+              e.preventDefault();
+              if (!this.#book) return;
+              const idx = this.#book.spineIndexOf(item.path);
+              if (idx >= 0) this.goToIndex(idx, item.fragment);
+              else this.goToPath(item.path + (item.fragment ? "#" + item.fragment : ""));
+            });
+            li.append(a);
+          } else {
+            const heading = document.createElement("strong");
+            heading.className = "toc-heading";
+            heading.textContent = item.label;
+            li.append(heading);
+          }
+          if (item.children && item.children.length) {
+            const sub = document.createElement("ol");
+            sub.append(buildList(item.children));
+            li.append(sub);
+          }
+          frag.append(li);
+        }
+        return frag;
+      };
+      ol.append(buildList(this.#book.toc));
+    }
+    #highlightToc() {
+      const path = this.#book?.spine[this.#currentIndex]?.path;
+      for (const a of this.#els.toc.querySelectorAll("a")) {
+        a.classList.toggle("current", !!path && a.dataset.path === path);
+      }
+    }
+    #tocLabelForPath(path) {
+      const found = findInToc(this.#book?.toc || [], path);
+      return found ? found.label : this.#book?.metadata?.title || "";
+    }
+    #onIframeLoad() {
+      const iframe = this.#els.iframe;
+      const doc = iframe.contentDocument;
+      if (!doc) return;
+      this.#applyChapterThemingTo(doc);
+      this.#applyTypographyTo(doc);
+      this.#applyLayoutTo(doc);
+      this.#applyPaginatedTo(doc);
+      this.#wireChapterScroll(iframe);
+      this.#wirePagination(iframe);
+      doc.addEventListener("click", (e) => {
+        const target = (
+          /** @type {Element | null} */
+          e.target
+        );
+        const a = target?.closest?.("[data-epub-href]");
+        if (!a) return;
+        e.preventDefault();
+        const href = a.getAttribute("data-epub-href");
+        if (href) this.goToPath(href);
+      });
+      doc.addEventListener("keydown", (e) => {
+        if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === "f" || e.key === "F")) {
+          e.preventDefault();
+          this.find(true);
+        } else if (e.key === "Escape" && !this.#els.findBar.hidden) {
+          e.preventDefault();
+          this.find(false);
+        }
+      });
+      if (!this.#els.findBar.hidden && this.#findQuery) {
+        this.#refreshFind();
+      } else {
+        this.#findClearMarks(doc);
+      }
+      if (this.#searchQuery && doc.body) {
+        this.#highlightSearchInChapter(doc, this.#searchQuery);
+      }
+      this.#applyHighlightsTo(doc);
+      this.#wireHighlightSelection(iframe);
+      const frag = iframe.dataset.fragment;
+      if (frag) {
+        this.#scrollToFragment(iframe, frag);
+      } else {
+        doc.documentElement.scrollTop = 0;
+        if (doc.body) doc.body.scrollTop = 0;
+      }
+    }
+    /**
+     * Reliably scroll to a fragment in the chapter iframe, handling the
+     * common race conditions:
+     *   1. The element isn't in the DOM yet when `iframe.load` fires
+     *      (deferred parsing). MutationObserver retries until it appears
+     *      or a budget elapses.
+     *   2. The element is in the DOM but layout hasn't settled because
+     *      images are still loading. After the initial scroll, we wait
+     *      for the iframe window's `load` event and scroll again so the
+     *      final layout lands on the right anchor.
+     *
+     * @param {HTMLIFrameElement} iframe
+     * @param {string} frag    Fragment identifier without leading `#`.
+     */
+    #scrollToFragment(iframe, frag) {
+      const doc = iframe.contentDocument;
+      const win = iframe.contentWindow;
+      if (!doc || !win) return;
+      const tryScroll = () => {
+        const el = doc.getElementById(frag) || doc.querySelector(`[name="${CSS.escape(frag)}"]`);
+        if (el) el.scrollIntoView({ block: "start" });
+        return !!el;
+      };
+      if (tryScroll()) {
+        const onLoaded = () => {
+          tryScroll();
+          win.removeEventListener("load", onLoaded);
+        };
+        if (doc.readyState === "complete") queueMicrotask(onLoaded);
+        else win.addEventListener("load", onLoaded, { once: true });
+        return;
+      }
+      const observer = new MutationObserver(() => {
+        if (tryScroll()) {
+          observer.disconnect();
+          cleanup();
+        }
+      });
+      observer.observe(doc.documentElement, { childList: true, subtree: true });
+      const timer = setTimeout(() => {
+        observer.disconnect();
+      }, 1500);
+      const cleanup = () => clearTimeout(timer);
+    }
+    /**
+     * Inject (or update) the typography override <style> in a chapter doc.
+     * @param {Document} doc
+     */
+    #applyTypographyTo(doc) {
+      if (doc.documentElement?.localName === "svg") return;
+      const head = doc.head || doc.documentElement;
+      if (!head) return;
+      const id = "__epub_reader_typography";
+      let style = (
+        /** @type {HTMLStyleElement | null} */
+        doc.getElementById(id)
+      );
+      if (!style) {
+        style = doc.createElement("style");
+        style.id = id;
+        head.append(style);
+      }
+      style.textContent = buildTypographyCss(this.#typography);
+      if (!doc.getElementById("__epub_reader_marks")) {
+        const m = doc.createElement("style");
+        m.id = "__epub_reader_marks";
+        m.textContent = MARKS_CSS;
+        head.append(m);
+      }
+    }
+    #onKeyDown(e) {
+      if (!this.#book) return;
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === "f" || e.key === "F")) {
+        this.find(true);
+        e.preventDefault();
+        return;
+      }
+      if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key === "Escape" && !this.#els.findBar.hidden) {
+        this.find(false);
+        e.preventDefault();
+        return;
+      }
+      const paginated = this.#typography.layoutMode === "paginated";
+      if (e.key === "ArrowRight" || e.key === "PageDown" || e.key === " ") {
+        if (paginated) this.#pageNext();
+        else this.next();
+        e.preventDefault();
+      } else if (e.key === "ArrowLeft" || e.key === "PageUp") {
+        if (paginated) this.#pagePrev();
+        else this.prev();
+        e.preventDefault();
+      } else if (e.key === "b" || e.key === "B") {
+        this.toggleBookmark();
+        e.preventDefault();
+      }
+    }
+    #toggleToc() {
+      this.#els.shell.classList.toggle("toc-open");
+      this.#els.shell.classList.toggle("toc-hidden");
+    }
     // ------- typography -------
     /** Current typography overrides. Returns a clone so external mutation can't leak. */
     get typography() {
-      return { ...__privateGet(this, _typography) };
+      return { ...this.#typography };
     }
     /**
      * Replace the current typography overrides. Persists to localStorage,
@@ -5966,17 +6885,17 @@ ${user}`);
      * @param {Partial<TypographySettings>} value
      */
     set typography(value) {
-      __privateSet(this, _typography, { ...defaultTypography(), ...__privateGet(this, _typography), ...value });
-      saveTypography(__privateGet(this, _typography));
-      __privateMethod(this, _EpubReaderElement_instances, syncSettingsControls_fn).call(this);
-      const doc = __privateGet(this, _els).iframe.contentDocument;
+      this.#typography = { ...defaultTypography(), ...this.#typography, ...value };
+      saveTypography(this.#typography);
+      this.#syncSettingsControls();
+      const doc = this.#els.iframe.contentDocument;
       if (doc) {
-        __privateMethod(this, _EpubReaderElement_instances, applyTypographyTo_fn).call(this, doc);
-        __privateMethod(this, _EpubReaderElement_instances, applyPaginatedTo_fn).call(this, doc);
-        __privateMethod(this, _EpubReaderElement_instances, updateChapterProgress_fn).call(this);
+        this.#applyTypographyTo(doc);
+        this.#applyPaginatedTo(doc);
+        this.#updateChapterProgress();
       }
       this.dispatchEvent(new CustomEvent("epub-typography-change", {
-        detail: { typography: { ...__privateGet(this, _typography) } },
+        detail: { typography: { ...this.#typography } },
         bubbles: true,
         composed: true
       }));
@@ -5985,1296 +6904,359 @@ ${user}`);
     resetTypography() {
       this.typography = defaultTypography();
     }
-  };
-  _els = new WeakMap();
-  _book = new WeakMap();
-  _typography = new WeakMap();
-  _currentIndex = new WeakMap();
-  _loadToken = new WeakMap();
-  _stylesInjected = new WeakMap();
-  _EpubReaderElement_static = new WeakSet();
-  injectStylesOnce_fn = function() {
-    if (__privateGet(_EpubReaderElement, _stylesInjected)) return;
-    __privateSet(_EpubReaderElement, _stylesInjected, true);
-    const style = document.createElement("style");
-    style.id = "__epub_reader_component_css";
-    style.textContent = COMPONENT_CSS;
-    document.head.append(style);
-  };
-  _EpubReaderElement_instances = new WeakSet();
-  /**
-   * Build the iframe `sandbox` attribute from the current host attributes.
-   *
-   * Default — `sandbox="allow-same-origin"` — blocks all scripts but lets
-   * us reach into the chapter document from the parent (fragment scroll,
-   * link interception, theme/typography injection). Setting `allow-scripts`
-   * on the host adds `allow-scripts` so interactive EPUBs (quizzes,
-   * bindings, scripted carousels) work.
-   *
-   * NB: `allow-same-origin` + `allow-scripts` together lets sandboxed
-   * scripts escape via the parent — only enable for content you trust.
-   */
-  updateSandbox_fn = function() {
-    const iframe = __privateGet(this, _els)?.iframe;
-    if (!iframe) return;
-    const tokens = ["allow-same-origin"];
-    if (this.hasAttribute("allow-scripts")) tokens.push("allow-scripts");
-    iframe.setAttribute("sandbox", tokens.join(" "));
-  };
-  _bookId = new WeakMap();
-  _saveTimer = new WeakMap();
-  _suppressSave = new WeakMap();
-  /**
-   * Re-apply a stored scroll fraction once the chapter iframe finishes
-   * loading. Skipped in paginated mode (scrollFraction has no meaning
-   * across columns) and for fixed-layout chapters (no scroll).
-   * @param {number} scrollFraction
-   */
-  applyRestoredScroll_fn = function(scrollFraction) {
-    if (!Number.isFinite(scrollFraction) || scrollFraction <= 0) return;
-    if (__privateGet(this, _typography).layoutMode === "paginated") return;
-    const item = __privateGet(this, _book)?.spine[__privateGet(this, _currentIndex)];
-    if (item?.layout === "pre-paginated") return;
-    __privateSet(this, _suppressSave, true);
-    const apply = () => {
-      const doc = __privateGet(this, _els).iframe.contentDocument;
-      const se = doc?.scrollingElement || doc?.documentElement;
-      if (!se) return;
-      const max = se.scrollHeight - se.clientHeight;
-      if (max > 0) se.scrollTop = scrollFraction * max;
-    };
-    requestAnimationFrame(apply);
-    __privateGet(this, _els).iframe.contentWindow?.addEventListener("load", () => {
-      apply();
-      __privateSet(this, _suppressSave, false);
-    }, { once: true });
-    setTimeout(() => {
-      __privateSet(this, _suppressSave, false);
-    }, 1500);
-  };
-  /**
-   * Persist current position. Throttled — caller-side scroll handlers
-   * fire every frame; we batch up to one save per ~500 ms.
-   */
-  schedulePositionSave_fn = function() {
-    if (__privateGet(this, _suppressSave) || !__privateGet(this, _book) || !__privateGet(this, _bookId)) return;
-    if (__privateGet(this, _saveTimer)) clearTimeout(__privateGet(this, _saveTimer));
-    __privateSet(this, _saveTimer, setTimeout(() => __privateMethod(this, _EpubReaderElement_instances, savePositionNow_fn).call(this), 500));
-  };
-  savePositionNow_fn = async function() {
-    __privateSet(this, _saveTimer, null);
-    if (!__privateGet(this, _book) || !__privateGet(this, _bookId)) return;
-    const doc = __privateGet(this, _els).iframe.contentDocument;
-    const se = doc?.scrollingElement || doc?.documentElement;
-    let scrollFraction = 0;
-    if (se && __privateGet(this, _typography).layoutMode === "scroll") {
-      const max = se.scrollHeight - se.clientHeight;
-      if (max > 0) scrollFraction = Math.min(1, Math.max(0, se.scrollTop / max));
+    /** Adjust font size by `delta` percent, clamped to the slider range. */
+    #stepFontSize(delta) {
+      const next = Math.min(200, Math.max(80, this.#typography.fontSize + delta));
+      if (next !== this.#typography.fontSize) this.typography = { fontSize: next };
     }
-    const record = {
-      id: __privateGet(this, _bookId),
-      spineIndex: __privateGet(this, _currentIndex),
-      scrollFraction,
-      updatedAt: Date.now()
-    };
-    await dbPut("positions", record);
-  };
-  _findQuery = new WeakMap();
-  _findIndex = new WeakMap();
-  _findTotal = new WeakMap();
-  refreshFind_fn = function() {
-    const doc = __privateGet(this, _els).iframe.contentDocument;
-    if (!doc?.body) return;
-    __privateMethod(this, _EpubReaderElement_instances, findClearMarks_fn).call(this, doc);
-    const q = __privateGet(this, _els).findInput.value;
-    __privateSet(this, _findQuery, q);
-    if (!q || q.length < 2) {
-      __privateSet(this, _findTotal, 0);
-      __privateSet(this, _findIndex, 0);
-      __privateGet(this, _els).findCount.textContent = "";
-      return;
-    }
-    const offsets = findOffsets(doc.body, q);
-    __privateSet(this, _findTotal, offsets.length);
-    __privateSet(this, _findIndex, offsets.length > 0 ? 0 : -1);
-    if (offsets.length === 0) {
-      __privateGet(this, _els).findCount.textContent = "0 / 0";
-      return;
-    }
-    let i = 0;
-    for (const { start, end } of offsets) {
-      const range = rangeFromOffsets(doc.body, start, end);
-      if (!range) continue;
-      const idx = i++;
-      wrapRange(range, () => {
-        const m = doc.createElement("mark");
-        m.setAttribute("data-reader-mark", "find");
-        m.dataset.findIndex = String(idx);
-        return m;
-      });
-    }
-    __privateMethod(this, _EpubReaderElement_instances, findFocusCurrent_fn).call(this);
-  };
-  /** @param {Document} doc */
-  findClearMarks_fn = function(doc) {
-    if (!doc.body) return;
-    unwrapAll(doc.body, '[data-reader-mark="find"]');
-  };
-  /** @param {1 | -1} dir */
-  findStep_fn = function(dir) {
-    if (__privateGet(this, _findTotal) === 0) return;
-    __privateSet(this, _findIndex, (__privateGet(this, _findIndex) + dir + __privateGet(this, _findTotal)) % __privateGet(this, _findTotal));
-    __privateMethod(this, _EpubReaderElement_instances, findFocusCurrent_fn).call(this);
-  };
-  findFocusCurrent_fn = function() {
-    const doc = __privateGet(this, _els).iframe.contentDocument;
-    if (!doc) return;
-    for (
-      const el of
-      /** @type {NodeListOf<HTMLElement>} */
-      doc.querySelectorAll('[data-reader-mark="find"].current')
-    ) {
-      el.classList.remove("current");
-    }
-    const wraps = (
-      /** @type {NodeListOf<HTMLElement>} */
-      doc.querySelectorAll(`[data-reader-mark="find"][data-find-index="${__privateGet(this, _findIndex)}"]`)
-    );
-    let scrolled = false;
-    for (const el of wraps) {
-      el.classList.add("current");
-      if (!scrolled) {
-        el.scrollIntoView({ block: "center" });
-        scrolled = true;
-      }
-    }
-    __privateGet(this, _els).findCount.textContent = `${__privateGet(this, _findIndex) + 1} / ${__privateGet(this, _findTotal)}`;
-  };
-  _searchIndex = new WeakMap();
-  _searchIndexPromise = new WeakMap();
-  _searchQuery = new WeakMap();
-  /**
-   * Build (or return cached) full-text index for the open book. The
-   * index pulls each chapter through a fresh fetch + DOMParser so the
-   * text matches what the user actually sees, with whitespace
-   * normalised to single spaces for predictable offsets.
-   *
-   * @returns {Promise<SearchChapter[]>}
-   */
-  buildSearchIndex_fn = function() {
-    if (__privateGet(this, _searchIndex)) return Promise.resolve(__privateGet(this, _searchIndex));
-    if (__privateGet(this, _searchIndexPromise)) return __privateGet(this, _searchIndexPromise);
-    if (!__privateGet(this, _book)) return Promise.resolve([]);
-    const book = __privateGet(this, _book);
-    const status = __privateGet(this, _els).searchStatus;
-    const out = [];
-    const total = book.spine.length;
-    __privateSet(this, _searchIndexPromise, (async () => {
-      for (let i = 0; i < book.spine.length; i++) {
-        if (__privateGet(this, _book) !== book) return [];
-        if (status) status.textContent = `Indexing\u2026 ${i + 1} / ${total}`;
-        const item = book.spine[i];
-        if (item.layout === "pre-paginated") continue;
-        try {
-          const url = await book.resourceUrl(item.path);
-          const res = await fetch(url);
-          const html = await res.text();
-          const doc = new DOMParser().parseFromString(html, "text/html");
-          const text = (doc.body?.textContent || "").replace(/\s+/g, " ").trim();
-          if (!text) continue;
-          out.push({
-            spineIndex: i,
-            path: item.path,
-            title: __privateMethod(this, _EpubReaderElement_instances, tocLabelForPath_fn).call(this, item.path) || `Chapter ${i + 1}`,
-            text,
-            lower: text.toLowerCase()
-          });
-        } catch {
-        }
-      }
-      __privateSet(this, _searchIndex, out);
-      __privateSet(this, _searchIndexPromise, null);
-      if (status) status.textContent = "";
-      return out;
-    })());
-    return __privateGet(this, _searchIndexPromise);
-  };
-  toggleSearchPanel_fn = async function(force) {
-    const open = typeof force === "boolean" ? force : __privateGet(this, _els).searchPanel.hidden;
-    __privateGet(this, _els).searchPanel.hidden = !open;
-    __privateGet(this, _els).searchToggle.setAttribute("aria-expanded", String(open));
-    if (open) {
-      __privateGet(this, _els).bookmarksPanel.hidden = true;
-      __privateGet(this, _els).bookmarksToggle.setAttribute("aria-expanded", "false");
-      __privateGet(this, _els).libraryPanel.hidden = true;
-      __privateGet(this, _els).libraryToggle.setAttribute("aria-expanded", "false");
-      __privateGet(this, _els).settingsPanel.hidden = true;
-      __privateGet(this, _els).settingsToggle.setAttribute("aria-expanded", "false");
-      __privateGet(this, _els).searchInput.focus();
-      __privateGet(this, _els).searchInput.select();
-    }
-  };
-  runSearch_fn = async function(query) {
-    const q = (query || "").trim();
-    __privateSet(this, _searchQuery, q);
-    const ol = __privateGet(this, _els).searchResults;
-    const status = __privateGet(this, _els).searchStatus;
-    ol.innerHTML = "";
-    if (q.length < 2) {
-      status.textContent = q.length === 0 ? "" : "Type at least 2 characters.";
-      return;
-    }
-    status.textContent = "Searching\u2026";
-    const hits = await this.search(q);
-    if (__privateGet(this, _searchQuery) !== q) return;
-    if (hits.length === 0) {
-      status.textContent = `No results for \u201C${q}\u201D.`;
-      return;
-    }
-    const byChap = /* @__PURE__ */ new Map();
-    for (const h of hits) {
-      const arr = byChap.get(h.spineIndex) || [];
-      arr.push(h);
-      byChap.set(h.spineIndex, arr);
-    }
-    status.textContent = `${hits.length} result${hits.length === 1 ? "" : "s"} in ${byChap.size} chapter${byChap.size === 1 ? "" : "s"}.`;
-    const frag = document.createDocumentFragment();
-    for (const [, group] of byChap) {
-      for (const h of group) {
-        const li = document.createElement("li");
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "srch-jump";
-        const chap = document.createElement("span");
-        chap.className = "srch-chap";
-        chap.textContent = h.title;
-        const snip = document.createElement("span");
-        snip.className = "srch-snippet";
-        snip.append(document.createTextNode(h.contextBefore));
-        const m = document.createElement("mark");
-        m.textContent = h.match;
-        snip.append(m);
-        snip.append(document.createTextNode(h.contextAfter));
-        btn.append(chap, snip);
-        btn.addEventListener("click", () => __privateMethod(this, _EpubReaderElement_instances, goToSearchHit_fn).call(this, h));
-        li.append(btn);
-        frag.append(li);
-      }
-    }
-    ol.append(frag);
-  };
-  goToSearchHit_fn = async function(hit) {
-    await __privateMethod(this, _EpubReaderElement_instances, toggleSearchPanel_fn).call(this, false);
-    const settle = () => {
-      const doc = __privateGet(this, _els).iframe.contentDocument;
-      if (!doc?.body) return;
-      __privateMethod(this, _EpubReaderElement_instances, highlightSearchInChapter_fn).call(this, doc, __privateGet(this, _searchQuery));
-      const marks = (
-        /** @type {NodeListOf<HTMLElement>} */
-        doc.querySelectorAll('[data-reader-mark="search"]')
+    // ------- chapter theming -------
+    /**
+     * Inject (or update) a tiny stylesheet in the chapter doc that pulls
+     * Vanilla Breeze tokens off the host's computed style and applies them
+     * to the chapter body. This keeps EPUB content visually coherent with
+     * whatever VB theme the host page has active — no reader-side theme
+     * preset list, no theme picker, no localStorage. The host page owns
+     * theming via VB's own theme switcher.
+     *
+     * @param {Document} doc
+     */
+    #applyChapterThemingTo(doc) {
+      if (doc.documentElement?.localName === "svg") return;
+      const head = doc.head || doc.documentElement;
+      if (!head) return;
+      const id = "__epub_reader_theme";
+      let style = (
+        /** @type {HTMLStyleElement | null} */
+        doc.getElementById(id)
       );
-      if (marks.length === 0) return;
-      const target = marks[hit.matchOrdinal] || marks[0];
-      target.scrollIntoView({ block: "center" });
-    };
-    if (__privateGet(this, _currentIndex) === hit.spineIndex) {
-      settle();
-      return;
-    }
-    this.goToIndex(hit.spineIndex);
-    __privateGet(this, _els).iframe.addEventListener("load", settle, { once: true });
-  };
-  /**
-   * Wrap every match for `query` in the chapter doc with a
-   * `[data-reader-mark="search"]`. Idempotent — clears previous
-   * search marks first.
-   *
-   * @param {Document} doc
-   * @param {string} query
-   */
-  highlightSearchInChapter_fn = function(doc, query) {
-    if (!doc.body) return;
-    unwrapAll(doc.body, '[data-reader-mark="search"]');
-    if (!query || query.length < 2) return;
-    const offsets = findOffsets(doc.body, query);
-    let i = 0;
-    for (const { start, end } of offsets) {
-      const range = rangeFromOffsets(doc.body, start, end);
-      if (!range) continue;
-      const idx = i++;
-      wrapRange(range, () => {
-        const m = doc.createElement("mark");
-        m.setAttribute("data-reader-mark", "search");
-        m.dataset.searchIndex = String(idx);
-        return m;
-      });
-    }
-  };
-  _highlights = new WeakMap();
-  loadHighlights_fn = async function() {
-    __privateSet(this, _highlights, []);
-    if (!__privateGet(this, _bookId)) {
-      __privateMethod(this, _EpubReaderElement_instances, renderHighlights_fn).call(this);
-      return;
-    }
-    const rec = await dbGet("highlights", __privateGet(this, _bookId));
-    if (rec && Array.isArray(rec.items)) __privateSet(this, _highlights, rec.items);
-    __privateMethod(this, _EpubReaderElement_instances, renderHighlights_fn).call(this);
-  };
-  saveHighlights_fn = async function() {
-    if (!__privateGet(this, _bookId)) return;
-    await dbPut("highlights", {
-      id: __privateGet(this, _bookId),
-      items: __privateGet(this, _highlights),
-      updatedAt: Date.now()
-    });
-  };
-  addHighlightFromSelection_fn = async function(color, withNote = false) {
-    const doc = __privateGet(this, _els).iframe.contentDocument;
-    const sel = doc?.getSelection?.();
-    if (!doc?.body || !sel || sel.rangeCount === 0 || sel.isCollapsed) {
-      __privateMethod(this, _EpubReaderElement_instances, hideHighlightPopover_fn).call(this);
-      return null;
-    }
-    const range = sel.getRangeAt(0);
-    const offsets = offsetsFromRange(doc.body, range);
-    if (!offsets) {
-      __privateMethod(this, _EpubReaderElement_instances, hideHighlightPopover_fn).call(this);
-      return null;
-    }
-    const text = range.toString().trim().slice(0, 200);
-    let note = "";
-    if (withNote) {
-      const win = this.ownerDocument?.defaultView;
-      note = (win?.prompt("Note for this highlight (optional):", "") || "").trim();
-    }
-    const hl = (
-      /** @type {Highlight} */
-      {
-        id: "hl_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8),
-        spineIndex: __privateGet(this, _currentIndex),
-        startOffset: offsets.start,
-        endOffset: offsets.end,
-        text,
-        color,
-        note,
-        createdAt: Date.now()
+      if (!style) {
+        style = doc.createElement("style");
+        style.id = id;
+        head.insertBefore(style, head.firstChild);
       }
-    );
-    __privateSet(this, _highlights, [...__privateGet(this, _highlights), hl].sort((a, b) => a.spineIndex - b.spineIndex || a.startOffset - b.startOffset));
-    await __privateMethod(this, _EpubReaderElement_instances, saveHighlights_fn).call(this);
-    __privateMethod(this, _EpubReaderElement_instances, applyHighlightsTo_fn).call(this, doc);
-    __privateMethod(this, _EpubReaderElement_instances, renderHighlights_fn).call(this);
-    sel.removeAllRanges();
-    __privateMethod(this, _EpubReaderElement_instances, hideHighlightPopover_fn).call(this);
-    this.dispatchEvent(new CustomEvent("epub-highlights-change", {
-      detail: { highlights: this.highlights },
-      bubbles: true,
-      composed: true
-    }));
-    return hl;
-  };
-  /**
-   * Apply (or refresh) the highlight wrappers in the chapter doc.
-   * Always wraps from the offsets (not the prior wrappers) so DOM
-   * mutations between chapter loads can't drift.
-   * @param {Document} doc
-   */
-  applyHighlightsTo_fn = function(doc) {
-    if (!doc.body) return;
-    unwrapAll(doc.body, '[data-reader-mark="highlight"]');
-    const here = __privateGet(this, _highlights).filter((h) => h.spineIndex === __privateGet(this, _currentIndex));
-    for (const h of here) {
-      const range = rangeFromOffsets(doc.body, h.startOffset, h.endOffset);
-      if (!range) continue;
-      wrapRange(range, () => {
-        const m = doc.createElement("mark");
-        m.setAttribute("data-reader-mark", "highlight");
-        m.dataset.id = h.id;
-        m.style.setProperty("--reader-hl-color", h.color);
-        if (h.note) m.title = h.note;
-        return m;
-      });
+      const cs = this.ownerDocument?.defaultView?.getComputedStyle(this);
+      const pick = (name, fallback) => cs?.getPropertyValue(name).trim() || fallback;
+      const bg = pick("--color-background", "#ffffff");
+      const fg = pick("--color-text", "#1f1f1f");
+      const link = pick("--color-interactive", "#2d6cdf");
+      const border = pick("--color-border", "#e4e4e7");
+      style.textContent = [
+        `html, body { background-color: ${bg} !important; color: ${fg} !important; }`,
+        `a, a:link { color: ${link} !important; }`,
+        `a:visited { color: color-mix(in srgb, ${link} 70%, ${fg}) !important; }`,
+        `hr { border-color: ${border} !important; }`
+      ].join("\n");
     }
-  };
-  /**
-   * Selection-popover lifecycle. Listens for selection changes inside
-   * the iframe, positions the popover above the selection (translated
-   * from iframe coordinates to host coordinates).
-   * @param {HTMLIFrameElement} iframe
-   */
-  wireHighlightSelection_fn = function(iframe) {
-    const doc = iframe.contentDocument;
-    if (!doc) return;
-    const update = () => __privateMethod(this, _EpubReaderElement_instances, updateHighlightPopover_fn).call(this);
-    doc.addEventListener("mouseup", update);
-    doc.addEventListener("keyup", update);
-    doc.addEventListener("selectionchange", update);
-  };
-  updateHighlightPopover_fn = function() {
-    const iframe = __privateGet(this, _els).iframe;
-    const doc = iframe.contentDocument;
-    const sel = doc?.getSelection?.();
-    if (!doc || !sel || sel.rangeCount === 0 || sel.isCollapsed) {
-      __privateMethod(this, _EpubReaderElement_instances, hideHighlightPopover_fn).call(this);
-      return;
-    }
-    const range = sel.getRangeAt(0);
-    const rect = range.getBoundingClientRect();
-    if (rect.width === 0 && rect.height === 0) {
-      __privateMethod(this, _EpubReaderElement_instances, hideHighlightPopover_fn).call(this);
-      return;
-    }
-    const ifr = iframe.getBoundingClientRect();
-    const host = this.getBoundingClientRect();
-    const popover = __privateGet(this, _els).hlPopover;
-    popover.hidden = false;
-    popover.style.left = ifr.left - host.left + rect.left + rect.width / 2 + "px";
-    popover.style.top = ifr.top - host.top + rect.top - 8 + "px";
-  };
-  hideHighlightPopover_fn = function() {
-    __privateGet(this, _els).hlPopover.hidden = true;
-  };
-  toggleHighlightsPanel_fn = function(force) {
-    const open = typeof force === "boolean" ? force : __privateGet(this, _els).highlightsPanel.hidden;
-    __privateGet(this, _els).highlightsPanel.hidden = !open;
-    __privateGet(this, _els).highlightsToggle.setAttribute("aria-expanded", String(open));
-    if (open) {
-      __privateGet(this, _els).bookmarksPanel.hidden = true;
-      __privateGet(this, _els).bookmarksToggle.setAttribute("aria-expanded", "false");
-      __privateGet(this, _els).libraryPanel.hidden = true;
-      __privateGet(this, _els).libraryToggle.setAttribute("aria-expanded", "false");
-      __privateGet(this, _els).settingsPanel.hidden = true;
-      __privateGet(this, _els).settingsToggle.setAttribute("aria-expanded", "false");
-      __privateGet(this, _els).searchPanel.hidden = true;
-      __privateGet(this, _els).searchToggle.setAttribute("aria-expanded", "false");
-      __privateMethod(this, _EpubReaderElement_instances, renderHighlights_fn).call(this);
-    }
-  };
-  renderHighlights_fn = function() {
-    const ol = __privateGet(this, _els).hlList;
-    const panel = __privateGet(this, _els).highlightsPanel;
-    panel.dataset.empty = String(__privateGet(this, _highlights).length === 0);
-    ol.innerHTML = "";
-    for (const h of __privateGet(this, _highlights)) {
-      const li = document.createElement("li");
-      li.dataset.id = h.id;
-      const swatch = document.createElement("span");
-      swatch.className = "hl-swatch";
-      swatch.style.setProperty("--c", h.color);
-      const jump = document.createElement("button");
-      jump.type = "button";
-      jump.className = "hl-jump";
-      const text = document.createElement("span");
-      text.className = "hl-text";
-      text.textContent = `\u201C${h.text}\u201D`;
-      const meta = document.createElement("span");
-      meta.className = "hl-meta";
-      const chapter = __privateGet(this, _book)?.spine[h.spineIndex];
-      const chapterTitle = chapter ? __privateMethod(this, _EpubReaderElement_instances, tocLabelForPath_fn).call(this, chapter.path) : "";
-      meta.textContent = chapterTitle || `Chapter ${h.spineIndex + 1}`;
-      jump.append(text, meta);
-      if (h.note) {
-        const noteEl = document.createElement("span");
-        noteEl.className = "hl-note-text";
-        noteEl.textContent = h.note;
-        jump.append(noteEl);
-      }
-      jump.addEventListener("click", () => this.goToHighlight(h.id));
-      const remove2 = document.createElement("button");
-      remove2.type = "button";
-      remove2.className = "hl-remove";
-      remove2.setAttribute("aria-label", "Remove highlight");
-      remove2.textContent = "\xD7";
-      remove2.addEventListener("click", (ev) => {
-        ev.stopPropagation();
-        this.removeHighlight(h.id);
-      });
-      li.append(swatch, jump, remove2);
-      ol.append(li);
-    }
-  };
-  _bookmarks = new WeakMap();
-  loadBookmarks_fn = async function() {
-    __privateSet(this, _bookmarks, []);
-    if (!__privateGet(this, _bookId)) {
-      __privateMethod(this, _EpubReaderElement_instances, renderBookmarks_fn).call(this);
-      return;
-    }
-    const rec = await dbGet("bookmarks", __privateGet(this, _bookId));
-    if (rec && Array.isArray(rec.items)) __privateSet(this, _bookmarks, rec.items);
-    __privateMethod(this, _EpubReaderElement_instances, renderBookmarks_fn).call(this);
-    __privateMethod(this, _EpubReaderElement_instances, updateBookmarkButton_fn).call(this);
-  };
-  saveBookmarks_fn = async function() {
-    if (!__privateGet(this, _bookId)) return;
-    await dbPut("bookmarks", {
-      id: __privateGet(this, _bookId),
-      items: __privateGet(this, _bookmarks),
-      updatedAt: Date.now()
-    });
-  };
-  /** True if a bookmark exists at (close to) the current position. */
-  bookmarkAtCurrent_fn = function() {
-    return __privateGet(this, _bookmarks).find(
-      (b) => b.spineIndex === __privateGet(this, _currentIndex) && Math.abs(b.scrollFraction - __privateMethod(this, _EpubReaderElement_instances, currentScrollFraction_fn).call(this)) < 0.05
-    ) || null;
-  };
-  /** @returns {number} */
-  currentScrollFraction_fn = function() {
-    if (__privateGet(this, _typography).layoutMode === "paginated") {
-      const info = __privateMethod(this, _EpubReaderElement_instances, pageInfo_fn).call(this);
-      return info ? (info.current - 1) / Math.max(1, info.total) : 0;
-    }
-    const doc = __privateGet(this, _els).iframe.contentDocument;
-    const se = doc?.scrollingElement || doc?.documentElement;
-    if (!se) return 0;
-    const max = se.scrollHeight - se.clientHeight;
-    return max > 0 ? Math.min(1, Math.max(0, se.scrollTop / max)) : 0;
-  };
-  /**
-   * Capture ~120 chars of visible chapter text near the current scroll
-   * position, for the bookmark snippet.
-   * @returns {string}
-   */
-  captureSnippet_fn = function() {
-    const doc = __privateGet(this, _els).iframe.contentDocument;
-    const text = (doc?.body?.textContent || "").trim().replace(/\s+/g, " ");
-    if (!text) return "";
-    const frac = __privateMethod(this, _EpubReaderElement_instances, currentScrollFraction_fn).call(this);
-    const start = Math.max(0, Math.floor(text.length * frac) - 20);
-    return text.slice(start, start + 120).trim();
-  };
-  renderBookmarks_fn = function() {
-    const ol = __privateGet(this, _els).bmList;
-    ol.innerHTML = "";
-    const panel = __privateGet(this, _els).bookmarksPanel;
-    panel.dataset.empty = String(__privateGet(this, _bookmarks).length === 0);
-    for (const bm of __privateGet(this, _bookmarks)) {
-      const li = document.createElement("li");
-      li.dataset.bookmarkId = bm.id;
-      const jump = document.createElement("button");
-      jump.type = "button";
-      jump.className = "bm-jump";
-      const labelEl = document.createElement("span");
-      labelEl.className = "bm-label";
-      labelEl.textContent = bm.label || bm.chapterTitle || "(unnamed)";
-      const meta = document.createElement("span");
-      meta.className = "bm-meta";
-      const pct = Math.round((bm.scrollFraction || 0) * 100);
-      meta.textContent = `${bm.chapterTitle || `Chapter ${bm.spineIndex + 1}`} \xB7 ${pct}%`;
-      const snippet = document.createElement("span");
-      snippet.className = "bm-snippet";
-      snippet.textContent = bm.snippet || "";
-      jump.append(labelEl, document.createElement("br"), meta);
-      if (bm.snippet) jump.append(document.createElement("br"), snippet);
-      jump.addEventListener("click", () => this.goToBookmark(bm.id));
-      const remove2 = document.createElement("button");
-      remove2.type = "button";
-      remove2.className = "bm-remove";
-      remove2.setAttribute("aria-label", "Remove bookmark");
-      remove2.textContent = "\xD7";
-      remove2.addEventListener("click", (e) => {
-        e.stopPropagation();
-        this.removeBookmark(bm.id);
-      });
-      li.append(jump, remove2);
-      ol.append(li);
-    }
-  };
-  updateBookmarkButton_fn = function() {
-    const active = !!__privateMethod(this, _EpubReaderElement_instances, bookmarkAtCurrent_fn).call(this);
-    __privateGet(this, _els).bookmarksToggle.setAttribute("aria-pressed", String(active));
-    __privateGet(this, _els).bookmarksToggle.textContent = active ? "\u2605" : "\u2606";
-    this.toggleAttribute("data-bookmark-active", active);
-  };
-  toggleBookmarksPanel_fn = function(force) {
-    const open = typeof force === "boolean" ? force : __privateGet(this, _els).bookmarksPanel.hidden;
-    __privateGet(this, _els).bookmarksPanel.hidden = !open;
-    __privateGet(this, _els).bookmarksToggle.setAttribute("aria-expanded", String(open));
-    if (open) {
-      __privateGet(this, _els).settingsPanel.hidden = true;
-      __privateGet(this, _els).settingsToggle.setAttribute("aria-expanded", "false");
-      __privateGet(this, _els).libraryPanel.hidden = true;
-      __privateGet(this, _els).libraryToggle.setAttribute("aria-expanded", "false");
-    }
-  };
-  emitBookmarksChange_fn = function() {
-    this.dispatchEvent(new CustomEvent("epub-bookmarks-change", {
-      detail: { bookmarks: this.bookmarks },
-      bubbles: true,
-      composed: true
-    }));
-  };
-  persistLibraryEntry_fn = async function(book) {
-    if (!__privateGet(this, _bookId)) return;
-    const source = book.sourceBlob();
-    if (!source) return;
-    const existing = await dbGet("library", __privateGet(this, _bookId));
-    const cover = existing?.cover || await book.coverBlob();
-    const meta = book.metadata;
-    const record = {
-      id: __privateGet(this, _bookId),
-      title: meta.title || "(untitled)",
-      creator: meta.creator || "",
-      identifier: meta.identifier || "",
-      blob: source,
-      cover,
-      size: source.size,
-      addedAt: existing?.addedAt || Date.now(),
-      lastOpenedAt: Date.now()
-    };
-    await dbPut("library", record);
-    this.dispatchEvent(new CustomEvent("epub-library-change", {
-      detail: { reason: "added", id: __privateGet(this, _bookId) },
-      bubbles: true,
-      composed: true
-    }));
-  };
-  toggleLibraryPanel_fn = async function(force) {
-    const wasOpen = !__privateGet(this, _els).libraryPanel.hidden;
-    const open = typeof force === "boolean" ? force : !wasOpen;
-    __privateGet(this, _els).libraryPanel.hidden = !open;
-    __privateGet(this, _els).libraryToggle.setAttribute("aria-expanded", String(open));
-    if (open) {
-      __privateGet(this, _els).bookmarksPanel.hidden = true;
-      __privateGet(this, _els).bookmarksToggle.setAttribute("aria-expanded", "false");
-      __privateGet(this, _els).settingsPanel.hidden = true;
-      __privateGet(this, _els).settingsToggle.setAttribute("aria-expanded", "false");
-      await __privateMethod(this, _EpubReaderElement_instances, renderLibrary_fn).call(this);
-    }
-  };
-  renderLibrary_fn = async function() {
-    const entries = await this.getLibrary();
-    const ol = __privateGet(this, _els).libList;
-    const panel = __privateGet(this, _els).libraryPanel;
-    panel.dataset.empty = String(entries.length === 0);
-    ol.innerHTML = "";
-    const transientUrls = [];
-    for (const entry of entries) {
-      const li = document.createElement("li");
-      li.dataset.bookId = entry.id;
-      const open = document.createElement("button");
-      open.type = "button";
-      open.className = "lib-open";
-      open.setAttribute("aria-label", `Open ${entry.title}`);
-      const cover = document.createElement("div");
-      cover.className = "lib-cover";
-      if (entry.cover) {
-        const url = URL.createObjectURL(entry.cover);
-        transientUrls.push(url);
-        const img = document.createElement("img");
-        img.src = url;
-        img.alt = "";
-        img.loading = "lazy";
-        cover.append(img);
-      } else {
-        cover.textContent = "no cover";
-      }
-      const title = document.createElement("span");
-      title.className = "lib-title";
-      title.textContent = entry.title;
-      const meta = document.createElement("span");
-      meta.className = "lib-meta";
-      const parts = [];
-      if (entry.creator) parts.push(entry.creator);
-      parts.push(formatBytes(entry.size));
-      meta.textContent = parts.join(" \xB7 ");
-      open.append(cover, title, meta);
-      open.addEventListener("click", async () => {
-        await __privateMethod(this, _EpubReaderElement_instances, toggleLibraryPanel_fn).call(this, false);
-        await this.openFromLibrary(entry.id);
-      });
-      const remove2 = document.createElement("button");
-      remove2.type = "button";
-      remove2.className = "lib-remove";
-      remove2.setAttribute("aria-label", `Remove ${entry.title} from library`);
-      remove2.textContent = "\xD7";
-      remove2.addEventListener("click", async (e) => {
-        e.stopPropagation();
-        if (!confirm(`Remove "${entry.title}" from the library?`)) return;
-        await this.removeFromLibrary(entry.id);
-        await __privateMethod(this, _EpubReaderElement_instances, renderLibrary_fn).call(this);
-      });
-      li.append(open, remove2);
-      ol.append(li);
-    }
-    if (transientUrls.length) {
-      setTimeout(() => transientUrls.forEach(URL.revokeObjectURL), 5e3);
-    }
-    const est = await this.getStorageEstimate();
-    if (est && est.quota > 0) {
-      __privateGet(this, _els).libQuota.textContent = `${formatBytes(est.usage)} of ${formatBytes(est.quota)} used (${est.percent}%)`;
-      __privateGet(this, _els).libQuota.dataset.warn = String(est.percent >= 80);
-    } else {
-      __privateGet(this, _els).libQuota.textContent = "";
-      delete __privateGet(this, _els).libQuota.dataset.warn;
-    }
-  };
-  // ------- internals -------
-  updateChrome_fn = function() {
-    if (!__privateGet(this, _book)) return;
-    const meta = __privateGet(this, _book).metadata;
-    __privateGet(this, _els).title.textContent = meta.title || "(untitled)";
-    __privateGet(this, _els).progress.textContent = `${__privateGet(this, _currentIndex) + 1} / ${__privateGet(this, _book).spine.length}`;
-    __privateGet(this, _els).prev.disabled = __privateGet(this, _currentIndex) <= 0;
-    __privateGet(this, _els).next.disabled = __privateGet(this, _currentIndex) >= __privateGet(this, _book).spine.length - 1;
-    __privateMethod(this, _EpubReaderElement_instances, highlightToc_fn).call(this);
-    __privateMethod(this, _EpubReaderElement_instances, updateBookmarkButton_fn).call(this);
-  };
-  renderToc_fn = function() {
-    const ol = __privateGet(this, _els).toc;
-    ol.innerHTML = "";
-    if (!__privateGet(this, _book)) return;
-    const buildList = (items) => {
-      const frag = document.createDocumentFragment();
-      for (const item of items) {
-        const li = document.createElement("li");
-        if (item.path) {
-          const a = document.createElement("a");
-          a.textContent = item.label;
-          a.href = "#";
-          a.dataset.path = item.path;
-          a.dataset.fragment = item.fragment || "";
-          a.addEventListener("click", (e) => {
-            e.preventDefault();
-            if (!__privateGet(this, _book)) return;
-            const idx = __privateGet(this, _book).spineIndexOf(item.path);
-            if (idx >= 0) this.goToIndex(idx, item.fragment);
-            else this.goToPath(item.path + (item.fragment ? "#" + item.fragment : ""));
-          });
-          li.append(a);
-        } else {
-          const heading = document.createElement("strong");
-          heading.className = "toc-heading";
-          heading.textContent = item.label;
-          li.append(heading);
-        }
-        if (item.children && item.children.length) {
-          const sub = document.createElement("ol");
-          sub.append(buildList(item.children));
-          li.append(sub);
-        }
-        frag.append(li);
-      }
-      return frag;
-    };
-    ol.append(buildList(__privateGet(this, _book).toc));
-  };
-  highlightToc_fn = function() {
-    const path = __privateGet(this, _book)?.spine[__privateGet(this, _currentIndex)]?.path;
-    for (const a of __privateGet(this, _els).toc.querySelectorAll("a")) {
-      a.classList.toggle("current", !!path && a.dataset.path === path);
-    }
-  };
-  tocLabelForPath_fn = function(path) {
-    const found = findInToc(__privateGet(this, _book)?.toc || [], path);
-    return found ? found.label : __privateGet(this, _book)?.metadata?.title || "";
-  };
-  onIframeLoad_fn = function() {
-    const iframe = __privateGet(this, _els).iframe;
-    const doc = iframe.contentDocument;
-    if (!doc) return;
-    __privateMethod(this, _EpubReaderElement_instances, applyChapterThemingTo_fn).call(this, doc);
-    __privateMethod(this, _EpubReaderElement_instances, applyTypographyTo_fn).call(this, doc);
-    __privateMethod(this, _EpubReaderElement_instances, applyLayoutTo_fn).call(this, doc);
-    __privateMethod(this, _EpubReaderElement_instances, applyPaginatedTo_fn).call(this, doc);
-    __privateMethod(this, _EpubReaderElement_instances, wireChapterScroll_fn).call(this, iframe);
-    __privateMethod(this, _EpubReaderElement_instances, wirePagination_fn).call(this, iframe);
-    doc.addEventListener("click", (e) => {
-      const target = (
-        /** @type {Element | null} */
-        e.target
+    /**
+     * Inject layout overrides for pre-paginated (image-page) chapters so
+     * the primary image fits the viewport instead of overflowing at native
+     * size. Reflowable chapters get no layout rules (publisher CSS wins).
+     * @param {Document} doc
+     */
+    #applyLayoutTo(doc) {
+      if (doc.documentElement?.localName === "svg") return;
+      const head = doc.head || doc.documentElement;
+      if (!head) return;
+      const id = "__epub_reader_layout";
+      let style = (
+        /** @type {HTMLStyleElement | null} */
+        doc.getElementById(id)
       );
-      const a = target?.closest?.("[data-epub-href]");
-      if (!a) return;
-      e.preventDefault();
-      const href = a.getAttribute("data-epub-href");
-      if (href) this.goToPath(href);
-    });
-    doc.addEventListener("keydown", (e) => {
-      if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === "f" || e.key === "F")) {
-        e.preventDefault();
-        this.find(true);
-      } else if (e.key === "Escape" && !__privateGet(this, _els).findBar.hidden) {
-        e.preventDefault();
-        this.find(false);
-      }
-    });
-    if (!__privateGet(this, _els).findBar.hidden && __privateGet(this, _findQuery)) {
-      __privateMethod(this, _EpubReaderElement_instances, refreshFind_fn).call(this);
-    } else {
-      __privateMethod(this, _EpubReaderElement_instances, findClearMarks_fn).call(this, doc);
-    }
-    if (__privateGet(this, _searchQuery) && doc.body) {
-      __privateMethod(this, _EpubReaderElement_instances, highlightSearchInChapter_fn).call(this, doc, __privateGet(this, _searchQuery));
-    }
-    __privateMethod(this, _EpubReaderElement_instances, applyHighlightsTo_fn).call(this, doc);
-    __privateMethod(this, _EpubReaderElement_instances, wireHighlightSelection_fn).call(this, iframe);
-    const frag = iframe.dataset.fragment;
-    if (frag) {
-      __privateMethod(this, _EpubReaderElement_instances, scrollToFragment_fn).call(this, iframe, frag);
-    } else {
-      doc.documentElement.scrollTop = 0;
-      if (doc.body) doc.body.scrollTop = 0;
-    }
-  };
-  /**
-   * Reliably scroll to a fragment in the chapter iframe, handling the
-   * common race conditions:
-   *   1. The element isn't in the DOM yet when `iframe.load` fires
-   *      (deferred parsing). MutationObserver retries until it appears
-   *      or a budget elapses.
-   *   2. The element is in the DOM but layout hasn't settled because
-   *      images are still loading. After the initial scroll, we wait
-   *      for the iframe window's `load` event and scroll again so the
-   *      final layout lands on the right anchor.
-   *
-   * @param {HTMLIFrameElement} iframe
-   * @param {string} frag    Fragment identifier without leading `#`.
-   */
-  scrollToFragment_fn = function(iframe, frag) {
-    const doc = iframe.contentDocument;
-    const win = iframe.contentWindow;
-    if (!doc || !win) return;
-    const tryScroll = () => {
-      const el = doc.getElementById(frag) || doc.querySelector(`[name="${CSS.escape(frag)}"]`);
-      if (el) el.scrollIntoView({ block: "start" });
-      return !!el;
-    };
-    if (tryScroll()) {
-      const onLoaded = () => {
-        tryScroll();
-        win.removeEventListener("load", onLoaded);
-      };
-      if (doc.readyState === "complete") queueMicrotask(onLoaded);
-      else win.addEventListener("load", onLoaded, { once: true });
-      return;
-    }
-    const observer = new MutationObserver(() => {
-      if (tryScroll()) {
-        observer.disconnect();
-        cleanup();
-      }
-    });
-    observer.observe(doc.documentElement, { childList: true, subtree: true });
-    const timer = setTimeout(() => {
-      observer.disconnect();
-    }, 1500);
-    const cleanup = () => clearTimeout(timer);
-  };
-  /**
-   * Inject (or update) the typography override <style> in a chapter doc.
-   * @param {Document} doc
-   */
-  applyTypographyTo_fn = function(doc) {
-    if (doc.documentElement?.localName === "svg") return;
-    const head = doc.head || doc.documentElement;
-    if (!head) return;
-    const id = "__epub_reader_typography";
-    let style = (
-      /** @type {HTMLStyleElement | null} */
-      doc.getElementById(id)
-    );
-    if (!style) {
-      style = doc.createElement("style");
-      style.id = id;
-      head.append(style);
-    }
-    style.textContent = buildTypographyCss(__privateGet(this, _typography));
-    if (!doc.getElementById("__epub_reader_marks")) {
-      const m = doc.createElement("style");
-      m.id = "__epub_reader_marks";
-      m.textContent = MARKS_CSS;
-      head.append(m);
-    }
-  };
-  onKeyDown_fn = function(e) {
-    if (!__privateGet(this, _book)) return;
-    if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === "f" || e.key === "F")) {
-      this.find(true);
-      e.preventDefault();
-      return;
-    }
-    if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
-    if (e.key === "Escape" && !__privateGet(this, _els).findBar.hidden) {
-      this.find(false);
-      e.preventDefault();
-      return;
-    }
-    const paginated = __privateGet(this, _typography).layoutMode === "paginated";
-    if (e.key === "ArrowRight" || e.key === "PageDown" || e.key === " ") {
-      if (paginated) __privateMethod(this, _EpubReaderElement_instances, pageNext_fn).call(this);
-      else this.next();
-      e.preventDefault();
-    } else if (e.key === "ArrowLeft" || e.key === "PageUp") {
-      if (paginated) __privateMethod(this, _EpubReaderElement_instances, pagePrev_fn).call(this);
-      else this.prev();
-      e.preventDefault();
-    } else if (e.key === "b" || e.key === "B") {
-      this.toggleBookmark();
-      e.preventDefault();
-    }
-  };
-  toggleToc_fn = function() {
-    __privateGet(this, _els).shell.classList.toggle("toc-open");
-    __privateGet(this, _els).shell.classList.toggle("toc-hidden");
-  };
-  /** Adjust font size by `delta` percent, clamped to the slider range. */
-  stepFontSize_fn = function(delta) {
-    const next = Math.min(200, Math.max(80, __privateGet(this, _typography).fontSize + delta));
-    if (next !== __privateGet(this, _typography).fontSize) this.typography = { fontSize: next };
-  };
-  // ------- chapter theming -------
-  /**
-   * Inject (or update) a tiny stylesheet in the chapter doc that pulls
-   * Vanilla Breeze tokens off the host's computed style and applies them
-   * to the chapter body. This keeps EPUB content visually coherent with
-   * whatever VB theme the host page has active — no reader-side theme
-   * preset list, no theme picker, no localStorage. The host page owns
-   * theming via VB's own theme switcher.
-   *
-   * @param {Document} doc
-   */
-  applyChapterThemingTo_fn = function(doc) {
-    if (doc.documentElement?.localName === "svg") return;
-    const head = doc.head || doc.documentElement;
-    if (!head) return;
-    const id = "__epub_reader_theme";
-    let style = (
-      /** @type {HTMLStyleElement | null} */
-      doc.getElementById(id)
-    );
-    if (!style) {
-      style = doc.createElement("style");
-      style.id = id;
-      head.insertBefore(style, head.firstChild);
-    }
-    const cs = this.ownerDocument?.defaultView?.getComputedStyle(this);
-    const pick = (name, fallback) => cs?.getPropertyValue(name).trim() || fallback;
-    const bg = pick("--color-background", "#ffffff");
-    const fg = pick("--color-text", "#1f1f1f");
-    const link = pick("--color-interactive", "#2d6cdf");
-    const border = pick("--color-border", "#e4e4e7");
-    style.textContent = [
-      `html, body { background-color: ${bg} !important; color: ${fg} !important; }`,
-      `a, a:link { color: ${link} !important; }`,
-      `a:visited { color: color-mix(in srgb, ${link} 70%, ${fg}) !important; }`,
-      `hr { border-color: ${border} !important; }`
-    ].join("\n");
-  };
-  /**
-   * Inject layout overrides for pre-paginated (image-page) chapters so
-   * the primary image fits the viewport instead of overflowing at native
-   * size. Reflowable chapters get no layout rules (publisher CSS wins).
-   * @param {Document} doc
-   */
-  applyLayoutTo_fn = function(doc) {
-    if (doc.documentElement?.localName === "svg") return;
-    const head = doc.head || doc.documentElement;
-    if (!head) return;
-    const id = "__epub_reader_layout";
-    let style = (
-      /** @type {HTMLStyleElement | null} */
-      doc.getElementById(id)
-    );
-    const item = __privateGet(this, _book)?.spine[__privateGet(this, _currentIndex)];
-    const isFixed = item?.layout === "pre-paginated";
-    if (!isFixed) {
-      style?.remove();
-      return;
-    }
-    if (!style) {
-      style = doc.createElement("style");
-      style.id = id;
-      head.append(style);
-    }
-    style.textContent = [
-      `html, body { margin: 0 !important; padding: 0 !important; height: 100vh !important; width: 100vw !important; overflow: hidden !important; }`,
-      `body { display: flex !important; align-items: center !important; justify-content: center !important; }`,
-      `body img, body svg { max-inline-size: 100vw !important; max-block-size: 100vh !important; inline-size: auto !important; block-size: auto !important; object-fit: contain !important; }`
-    ].join("\n");
-  };
-  /**
-   * Inject (or remove) the paginated-columns stylesheet. Active only
-   * when `typography.layoutMode === 'paginated'` AND the chapter is
-   * reflowable (pre-paginated chapters are already image-page-fitted).
-   * @param {Document} doc
-   */
-  applyPaginatedTo_fn = function(doc) {
-    if (doc.documentElement?.localName === "svg") return;
-    const head = doc.head || doc.documentElement;
-    if (!head) return;
-    const id = "__epub_reader_paginated";
-    let style = (
-      /** @type {HTMLStyleElement | null} */
-      doc.getElementById(id)
-    );
-    const item = __privateGet(this, _book)?.spine[__privateGet(this, _currentIndex)];
-    const reflowable = !item || item.layout !== "pre-paginated";
-    const wantPaginated = __privateGet(this, _typography).layoutMode === "paginated" && reflowable;
-    if (!wantPaginated) {
-      style?.remove();
-      return;
-    }
-    if (!style) {
-      style = doc.createElement("style");
-      style.id = id;
-      head.append(style);
-    }
-    style.textContent = [
-      // Lock the document to the viewport, lay children out as columns
-      // exactly the viewport's width, and let body horizontally scroll
-      // through them. scroll-snap keeps page-turns crisp.
-      `html { height: 100vh !important; overflow: hidden !important; margin: 0 !important; }`,
-      `body { margin: 0 !important; height: 100vh !important; column-width: 100vw !important; column-gap: 0 !important; column-fill: auto !important; overflow-x: auto !important; overflow-y: hidden !important; scroll-snap-type: x mandatory !important; scrollbar-width: none !important; overscroll-behavior-x: contain !important; }`,
-      `body::-webkit-scrollbar { display: none !important; }`,
-      // Most chapter children are paragraphs and headings; snapping at
-      // the body level is enough, but anchors at column starts help RTL.
-      `body > * { scroll-snap-align: start; }`,
-      // Tame oversized media so it never overflows a column.
-      `body img, body svg, body video, body iframe { max-inline-size: 100% !important; max-block-size: 100% !important; block-size: auto !important; }`,
-      // Avoid splitting figures/blockquotes across page boundaries
-      // when possible — readability win.
-      `figure, blockquote, pre, table { break-inside: avoid; }`
-    ].join("\n");
-  };
-  /**
-   * Compute current/total pages of the visible chapter (paginated mode).
-   * Returns null if not in paginated mode or the iframe doc isn't ready.
-   * @returns {{current: number, total: number, atStart: boolean, atEnd: boolean} | null}
-   */
-  pageInfo_fn = function() {
-    if (__privateGet(this, _typography).layoutMode !== "paginated") return null;
-    const doc = __privateGet(this, _els).iframe.contentDocument;
-    if (!doc?.body) return null;
-    const item = __privateGet(this, _book)?.spine[__privateGet(this, _currentIndex)];
-    if (item?.layout === "pre-paginated") return null;
-    const body = doc.body;
-    const pageW = body.clientWidth;
-    if (pageW <= 0) return null;
-    const total = Math.max(1, Math.round(body.scrollWidth / pageW));
-    const cur = Math.round(Math.abs(body.scrollLeft) / pageW);
-    return {
-      current: cur + 1,
-      total,
-      atStart: cur <= 0,
-      atEnd: cur >= total - 1
-    };
-  };
-  pageNext_fn = async function() {
-    const info = __privateMethod(this, _EpubReaderElement_instances, pageInfo_fn).call(this);
-    if (!info) {
-      return this.next();
-    }
-    if (info.atEnd) {
-      __privateSet(this, _enterFromBack, false);
-      return this.next();
-    }
-    const body = __privateGet(this, _els).iframe.contentDocument?.body;
-    if (!body) return;
-    body.scrollBy({ left: body.clientWidth, behavior: "instant" });
-    __privateMethod(this, _EpubReaderElement_instances, updateChapterProgress_fn).call(this);
-  };
-  pagePrev_fn = async function() {
-    const info = __privateMethod(this, _EpubReaderElement_instances, pageInfo_fn).call(this);
-    if (!info) {
-      return this.prev();
-    }
-    if (info.atStart) {
-      __privateSet(this, _enterFromBack, true);
-      return this.prev();
-    }
-    const body = __privateGet(this, _els).iframe.contentDocument?.body;
-    if (!body) return;
-    body.scrollBy({ left: -body.clientWidth, behavior: "instant" });
-    __privateMethod(this, _EpubReaderElement_instances, updateChapterProgress_fn).call(this);
-  };
-  /**
-   * Wire pagination affordances: scroll-to-end on backward chapter
-   * spillover, edge clicks (prev/next page), touch-swipe page-turn.
-   * @param {HTMLIFrameElement} iframe
-   */
-  wirePagination_fn = function(iframe) {
-    const doc = iframe.contentDocument;
-    const body = doc?.body;
-    if (!doc || !body) return;
-    const paginated = __privateGet(this, _typography).layoutMode === "paginated" && __privateGet(this, _book)?.spine[__privateGet(this, _currentIndex)]?.layout !== "pre-paginated";
-    if (!paginated) return;
-    if (__privateGet(this, _enterFromBack)) {
-      const after = () => {
-        const pageW = body.clientWidth;
-        const last = Math.max(0, Math.floor(body.scrollWidth / pageW) - 0) - 1;
-        body.scrollLeft = Math.max(0, last) * pageW;
-        __privateMethod(this, _EpubReaderElement_instances, updateChapterProgress_fn).call(this);
-      };
-      requestAnimationFrame(after);
-      iframe.contentWindow?.addEventListener("load", after, { once: true });
-      __privateSet(this, _enterFromBack, false);
-    }
-    let downX = 0, downY = 0, downT = 0;
-    doc.addEventListener("pointerdown", (ev) => {
-      downX = ev.clientX;
-      downY = ev.clientY;
-      downT = Date.now();
-    });
-    doc.addEventListener("pointerup", (ev) => {
-      const dx = ev.clientX - downX, dy = ev.clientY - downY;
-      const dt = Date.now() - downT;
-      const insideAnchor = (
-        /** @type {Element | null} */
-        ev.target?.closest?.("a, button, [data-epub-href]")
-      );
-      if (insideAnchor) return;
-      if (dt < 600 && Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-        if (dx < 0) __privateMethod(this, _EpubReaderElement_instances, pageNext_fn).call(this);
-        else __privateMethod(this, _EpubReaderElement_instances, pagePrev_fn).call(this);
+      const item = this.#book?.spine[this.#currentIndex];
+      const isFixed = item?.layout === "pre-paginated";
+      if (!isFixed) {
+        style?.remove();
         return;
       }
-      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) {
-        const w = body.clientWidth;
-        if (ev.clientX < Math.min(120, w * 0.15)) __privateMethod(this, _EpubReaderElement_instances, pagePrev_fn).call(this);
-        else if (ev.clientX > w - Math.min(120, w * 0.15)) __privateMethod(this, _EpubReaderElement_instances, pageNext_fn).call(this);
+      if (!style) {
+        style = doc.createElement("style");
+        style.id = id;
+        head.append(style);
       }
-    });
-  };
-  /** Recompute and write the chapter-progress display. */
-  updateChapterProgress_fn = function() {
-    const display = __privateGet(this, _els).chapterProgress;
-    const info = __privateMethod(this, _EpubReaderElement_instances, pageInfo_fn).call(this);
-    if (info) {
+      style.textContent = [
+        `html, body { margin: 0 !important; padding: 0 !important; height: 100vh !important; width: 100vw !important; overflow: hidden !important; }`,
+        `body { display: flex !important; align-items: center !important; justify-content: center !important; }`,
+        `body img, body svg { max-inline-size: 100vw !important; max-block-size: 100vh !important; inline-size: auto !important; block-size: auto !important; object-fit: contain !important; }`
+      ].join("\n");
+    }
+    /**
+     * Inject (or remove) the paginated-columns stylesheet. Active only
+     * when `typography.layoutMode === 'paginated'` AND the chapter is
+     * reflowable (pre-paginated chapters are already image-page-fitted).
+     * @param {Document} doc
+     */
+    #applyPaginatedTo(doc) {
+      if (doc.documentElement?.localName === "svg") return;
+      const head = doc.head || doc.documentElement;
+      if (!head) return;
+      const id = "__epub_reader_paginated";
+      let style = (
+        /** @type {HTMLStyleElement | null} */
+        doc.getElementById(id)
+      );
+      const item = this.#book?.spine[this.#currentIndex];
+      const reflowable = !item || item.layout !== "pre-paginated";
+      const wantPaginated = this.#typography.layoutMode === "paginated" && reflowable;
+      if (!wantPaginated) {
+        style?.remove();
+        return;
+      }
+      if (!style) {
+        style = doc.createElement("style");
+        style.id = id;
+        head.append(style);
+      }
+      style.textContent = [
+        // Lock the document to the viewport, lay children out as columns
+        // exactly the viewport's width, and let body horizontally scroll
+        // through them. scroll-snap keeps page-turns crisp.
+        `html { height: 100vh !important; overflow: hidden !important; margin: 0 !important; }`,
+        `body { margin: 0 !important; height: 100vh !important; column-width: 100vw !important; column-gap: 0 !important; column-fill: auto !important; overflow-x: auto !important; overflow-y: hidden !important; scroll-snap-type: x mandatory !important; scrollbar-width: none !important; overscroll-behavior-x: contain !important; }`,
+        `body::-webkit-scrollbar { display: none !important; }`,
+        // Most chapter children are paragraphs and headings; snapping at
+        // the body level is enough, but anchors at column starts help RTL.
+        `body > * { scroll-snap-align: start; }`,
+        // Tame oversized media so it never overflows a column.
+        `body img, body svg, body video, body iframe { max-inline-size: 100% !important; max-block-size: 100% !important; block-size: auto !important; }`,
+        // Avoid splitting figures/blockquotes across page boundaries
+        // when possible — readability win.
+        `figure, blockquote, pre, table { break-inside: avoid; }`
+      ].join("\n");
+    }
+    /**
+     * Compute current/total pages of the visible chapter (paginated mode).
+     * Returns null if not in paginated mode or the iframe doc isn't ready.
+     * @returns {{current: number, total: number, atStart: boolean, atEnd: boolean} | null}
+     */
+    #pageInfo() {
+      if (this.#typography.layoutMode !== "paginated") return null;
+      const doc = this.#els.iframe.contentDocument;
+      if (!doc?.body) return null;
+      const item = this.#book?.spine[this.#currentIndex];
+      if (item?.layout === "pre-paginated") return null;
+      const body = doc.body;
+      const pageW = body.clientWidth;
+      if (pageW <= 0) return null;
+      const total = Math.max(1, Math.round(body.scrollWidth / pageW));
+      const cur = Math.round(Math.abs(body.scrollLeft) / pageW);
+      return {
+        current: cur + 1,
+        total,
+        atStart: cur <= 0,
+        atEnd: cur >= total - 1
+      };
+    }
+    /** Advance one page within the current chapter; spill over to next chapter at end. */
+    async #pageNext() {
+      const info = this.#pageInfo();
+      if (!info) {
+        return this.next();
+      }
+      if (info.atEnd) {
+        this.#enterFromBack = false;
+        return this.next();
+      }
+      const body = this.#els.iframe.contentDocument?.body;
+      if (!body) return;
+      body.scrollBy({ left: body.clientWidth, behavior: "instant" });
+      this.#updateChapterProgress();
+    }
+    /** Step back one page within the current chapter; spill over to prev chapter at start. */
+    async #pagePrev() {
+      const info = this.#pageInfo();
+      if (!info) {
+        return this.prev();
+      }
+      if (info.atStart) {
+        this.#enterFromBack = true;
+        return this.prev();
+      }
+      const body = this.#els.iframe.contentDocument?.body;
+      if (!body) return;
+      body.scrollBy({ left: -body.clientWidth, behavior: "instant" });
+      this.#updateChapterProgress();
+    }
+    /**
+     * Wire pagination affordances: scroll-to-end on backward chapter
+     * spillover, edge clicks (prev/next page), touch-swipe page-turn.
+     * @param {HTMLIFrameElement} iframe
+     */
+    #wirePagination(iframe) {
+      const doc = iframe.contentDocument;
+      const body = doc?.body;
+      if (!doc || !body) return;
+      const paginated = this.#typography.layoutMode === "paginated" && this.#book?.spine[this.#currentIndex]?.layout !== "pre-paginated";
+      if (!paginated) return;
+      if (this.#enterFromBack) {
+        const after = () => {
+          const pageW = body.clientWidth;
+          const last = Math.max(0, Math.floor(body.scrollWidth / pageW) - 0) - 1;
+          body.scrollLeft = Math.max(0, last) * pageW;
+          this.#updateChapterProgress();
+        };
+        requestAnimationFrame(after);
+        iframe.contentWindow?.addEventListener("load", after, { once: true });
+        this.#enterFromBack = false;
+      }
+      let downX = 0, downY = 0, downT = 0;
+      doc.addEventListener("pointerdown", (ev) => {
+        downX = ev.clientX;
+        downY = ev.clientY;
+        downT = Date.now();
+      });
+      doc.addEventListener("pointerup", (ev) => {
+        const dx = ev.clientX - downX, dy = ev.clientY - downY;
+        const dt = Date.now() - downT;
+        const insideAnchor = (
+          /** @type {Element | null} */
+          ev.target?.closest?.("a, button, [data-epub-href]")
+        );
+        if (insideAnchor) return;
+        if (dt < 600 && Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+          if (dx < 0) this.#pageNext();
+          else this.#pagePrev();
+          return;
+        }
+        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) {
+          const w = body.clientWidth;
+          if (ev.clientX < Math.min(120, w * 0.15)) this.#pagePrev();
+          else if (ev.clientX > w - Math.min(120, w * 0.15)) this.#pageNext();
+        }
+      });
+    }
+    /** Recompute and write the chapter-progress display. */
+    #updateChapterProgress() {
+      const display = this.#els.chapterProgress;
+      const info = this.#pageInfo();
+      if (info) {
+        display.hidden = false;
+        display.textContent = `Page ${info.current} of ${info.total}`;
+        return;
+      }
+    }
+    /** True when the next chapter load should land at the end (back-paging spillover). */
+    #enterFromBack = false;
+    /**
+     * Track scroll position inside the chapter iframe and update the
+     * `.chapter-progress` span. Reflowable chapters get a percentage,
+     * fixed-layout (image-page) chapters get nothing — there's no scroll.
+     * @param {HTMLIFrameElement} iframe
+     */
+    #wireChapterScroll(iframe) {
+      const win = iframe.contentWindow;
+      const doc = iframe.contentDocument;
+      if (!win || !doc) return;
+      const item = this.#book?.spine[this.#currentIndex];
+      const isFixed = item?.layout === "pre-paginated";
+      const display = this.#els.chapterProgress;
+      if (isFixed) {
+        display.hidden = true;
+        display.textContent = "";
+        return;
+      }
+      const paginated = this.#typography.layoutMode === "paginated";
       display.hidden = false;
-      display.textContent = `Page ${info.current} of ${info.total}`;
-      return;
-    }
-  };
-  _enterFromBack = new WeakMap();
-  /**
-   * Track scroll position inside the chapter iframe and update the
-   * `.chapter-progress` span. Reflowable chapters get a percentage,
-   * fixed-layout (image-page) chapters get nothing — there's no scroll.
-   * @param {HTMLIFrameElement} iframe
-   */
-  wireChapterScroll_fn = function(iframe) {
-    const win = iframe.contentWindow;
-    const doc = iframe.contentDocument;
-    if (!win || !doc) return;
-    const item = __privateGet(this, _book)?.spine[__privateGet(this, _currentIndex)];
-    const isFixed = item?.layout === "pre-paginated";
-    const display = __privateGet(this, _els).chapterProgress;
-    if (isFixed) {
-      display.hidden = true;
-      display.textContent = "";
-      return;
-    }
-    const paginated = __privateGet(this, _typography).layoutMode === "paginated";
-    display.hidden = false;
-    const update = () => {
-      if (__privateGet(this, _typography).layoutMode === "paginated") {
-        __privateMethod(this, _EpubReaderElement_instances, updateChapterProgress_fn).call(this);
-        return;
-      }
-      const se = doc.scrollingElement || doc.documentElement;
-      const max = se.scrollHeight - se.clientHeight;
-      const pct = max > 0 ? Math.round(se.scrollTop / max * 100) : 100;
-      display.textContent = `${pct}%`;
-    };
-    update();
-    const onScroll = () => {
+      const update = () => {
+        if (this.#typography.layoutMode === "paginated") {
+          this.#updateChapterProgress();
+          return;
+        }
+        const se = doc.scrollingElement || doc.documentElement;
+        const max = se.scrollHeight - se.clientHeight;
+        const pct = max > 0 ? Math.round(se.scrollTop / max * 100) : 100;
+        display.textContent = `${pct}%`;
+      };
       update();
-      __privateMethod(this, _EpubReaderElement_instances, schedulePositionSave_fn).call(this);
-      __privateMethod(this, _EpubReaderElement_instances, updateBookmarkButton_fn).call(this);
-    };
-    win.addEventListener("scroll", onScroll, { passive: true });
-    doc.body?.addEventListener("scroll", onScroll, { passive: true });
-    win.addEventListener("load", update, { once: true });
+      const onScroll = () => {
+        update();
+        this.#schedulePositionSave();
+        this.#updateBookmarkButton();
+      };
+      win.addEventListener("scroll", onScroll, { passive: true });
+      doc.body?.addEventListener("scroll", onScroll, { passive: true });
+      win.addEventListener("load", update, { once: true });
+    }
+    #toggleSettings(force) {
+      const open = typeof force === "boolean" ? force : this.#els.settingsPanel.hidden;
+      this.#els.settingsPanel.hidden = !open;
+      this.#els.settingsToggle.setAttribute("aria-expanded", String(open));
+      if (open) this.#els.sFontFamily.focus();
+    }
+    #wireSettingsControls() {
+      const e = this.#els;
+      const update = (patch) => {
+        this.typography = patch;
+      };
+      e.sFontFamily.addEventListener("change", () => update({ fontFamily: e.sFontFamily.value }));
+      e.sFontSize.addEventListener("input", () => update({ fontSize: Number(e.sFontSize.value) }));
+      e.sLineHeight.addEventListener("input", () => {
+        const v = Number(e.sLineHeight.value);
+        update({ lineHeight: v <= 100 ? 0 : v });
+      });
+      e.sParagraphSpacing.addEventListener("input", () => {
+        const v = Number(e.sParagraphSpacing.value);
+        update({ paragraphSpacing: v < 0 ? -1 : v });
+      });
+      e.sJustify.addEventListener("change", () => update({ justify: e.sJustify.checked }));
+      e.sReadingWidth.addEventListener("input", () => update({ readingWidth: Number(e.sReadingWidth.value) }));
+      e.sLayoutScroll.addEventListener("click", () => update({ layoutMode: "scroll" }));
+      e.sLayoutPaginated.addEventListener("click", () => update({ layoutMode: "paginated" }));
+      e.sUserCss.addEventListener("input", () => update({ userCss: e.sUserCss.value }));
+      e.sReset.addEventListener("click", () => this.resetTypography());
+      e.sClose.addEventListener("click", () => this.#toggleSettings(false));
+      this.addEventListener("pointerdown", (ev) => {
+        const path = ev.composedPath();
+        if (!e.settingsPanel.hidden && !path.includes(e.settingsPanel) && !path.includes(e.settingsToggle)) {
+          this.#toggleSettings(false);
+        }
+        if (!e.bookmarksPanel.hidden && !path.includes(e.bookmarksPanel) && !path.includes(e.bookmarksToggle)) {
+          this.#toggleBookmarksPanel(false);
+        }
+        if (!e.libraryPanel.hidden && !path.includes(e.libraryPanel) && !path.includes(e.libraryToggle)) {
+          this.#toggleLibraryPanel(false);
+        }
+        if (!e.searchPanel.hidden && !path.includes(e.searchPanel) && !path.includes(e.searchToggle)) {
+          this.#toggleSearchPanel(false);
+        }
+        if (!e.highlightsPanel.hidden && !path.includes(e.highlightsPanel) && !path.includes(e.highlightsToggle)) {
+          this.#toggleHighlightsPanel(false);
+        }
+      });
+    }
+    /** Sync the panel inputs to reflect the current typography + theme state. */
+    #syncSettingsControls() {
+      const e = this.#els;
+      if (!e?.sFontFamily) return;
+      const t = this.#typography;
+      e.sFontFamily.value = t.fontFamily;
+      e.sFontSize.value = String(t.fontSize);
+      e.sFontSizeV.textContent = `${t.fontSize}%`;
+      e.sLineHeight.value = String(t.lineHeight || 100);
+      e.sLineHeightV.textContent = t.lineHeight ? (t.lineHeight / 100).toFixed(2) : "default";
+      e.sParagraphSpacing.value = String(t.paragraphSpacing);
+      e.sParagraphSpacingV.textContent = t.paragraphSpacing < 0 ? "default" : `${(t.paragraphSpacing / 10).toFixed(1)}em`;
+      e.sJustify.checked = !!t.justify;
+      e.sJustify.indeterminate = t.justify === null;
+      e.sReadingWidth.value = String(t.readingWidth);
+      e.sReadingWidthV.textContent = t.readingWidth === 0 ? "unlimited" : `${t.readingWidth} ch`;
+      const paginated = t.layoutMode === "paginated";
+      e.sLayoutScroll.dataset.readerState = paginated ? "" : "active";
+      e.sLayoutPaginated.dataset.readerState = paginated ? "active" : "";
+      e.sLayoutScroll.setAttribute("aria-checked", String(!paginated));
+      e.sLayoutPaginated.setAttribute("aria-checked", String(paginated));
+      if (e.sUserCss.value !== t.userCss) e.sUserCss.value = t.userCss;
+    }
+    #setOverlay(message, isError = false) {
+      const ov = this.#els.overlay;
+      ov.classList.toggle("error", isError);
+      const messageEl = ov.querySelector(".message");
+      if (messageEl) messageEl.textContent = message;
+      ov.hidden = false;
+    }
+    #hideOverlay() {
+      this.#els.overlay.hidden = true;
+    }
   };
-  toggleSettings_fn = function(force) {
-    const open = typeof force === "boolean" ? force : __privateGet(this, _els).settingsPanel.hidden;
-    __privateGet(this, _els).settingsPanel.hidden = !open;
-    __privateGet(this, _els).settingsToggle.setAttribute("aria-expanded", String(open));
-    if (open) __privateGet(this, _els).sFontFamily.focus();
-  };
-  wireSettingsControls_fn = function() {
-    const e = __privateGet(this, _els);
-    const update = (patch) => {
-      this.typography = patch;
-    };
-    e.sFontFamily.addEventListener("change", () => update({ fontFamily: e.sFontFamily.value }));
-    e.sFontSize.addEventListener("input", () => update({ fontSize: Number(e.sFontSize.value) }));
-    e.sLineHeight.addEventListener("input", () => {
-      const v = Number(e.sLineHeight.value);
-      update({ lineHeight: v <= 100 ? 0 : v });
-    });
-    e.sParagraphSpacing.addEventListener("input", () => {
-      const v = Number(e.sParagraphSpacing.value);
-      update({ paragraphSpacing: v < 0 ? -1 : v });
-    });
-    e.sJustify.addEventListener("change", () => update({ justify: e.sJustify.checked }));
-    e.sReadingWidth.addEventListener("input", () => update({ readingWidth: Number(e.sReadingWidth.value) }));
-    e.sLayoutScroll.addEventListener("click", () => update({ layoutMode: "scroll" }));
-    e.sLayoutPaginated.addEventListener("click", () => update({ layoutMode: "paginated" }));
-    e.sUserCss.addEventListener("input", () => update({ userCss: e.sUserCss.value }));
-    e.sReset.addEventListener("click", () => this.resetTypography());
-    e.sClose.addEventListener("click", () => __privateMethod(this, _EpubReaderElement_instances, toggleSettings_fn).call(this, false));
-    this.addEventListener("pointerdown", (ev) => {
-      const path = ev.composedPath();
-      if (!e.settingsPanel.hidden && !path.includes(e.settingsPanel) && !path.includes(e.settingsToggle)) {
-        __privateMethod(this, _EpubReaderElement_instances, toggleSettings_fn).call(this, false);
-      }
-      if (!e.bookmarksPanel.hidden && !path.includes(e.bookmarksPanel) && !path.includes(e.bookmarksToggle)) {
-        __privateMethod(this, _EpubReaderElement_instances, toggleBookmarksPanel_fn).call(this, false);
-      }
-      if (!e.libraryPanel.hidden && !path.includes(e.libraryPanel) && !path.includes(e.libraryToggle)) {
-        __privateMethod(this, _EpubReaderElement_instances, toggleLibraryPanel_fn).call(this, false);
-      }
-      if (!e.searchPanel.hidden && !path.includes(e.searchPanel) && !path.includes(e.searchToggle)) {
-        __privateMethod(this, _EpubReaderElement_instances, toggleSearchPanel_fn).call(this, false);
-      }
-      if (!e.highlightsPanel.hidden && !path.includes(e.highlightsPanel) && !path.includes(e.highlightsToggle)) {
-        __privateMethod(this, _EpubReaderElement_instances, toggleHighlightsPanel_fn).call(this, false);
-      }
-    });
-  };
-  /** Sync the panel inputs to reflect the current typography + theme state. */
-  syncSettingsControls_fn = function() {
-    const e = __privateGet(this, _els);
-    if (!e?.sFontFamily) return;
-    const t = __privateGet(this, _typography);
-    e.sFontFamily.value = t.fontFamily;
-    e.sFontSize.value = String(t.fontSize);
-    e.sFontSizeV.textContent = `${t.fontSize}%`;
-    e.sLineHeight.value = String(t.lineHeight || 100);
-    e.sLineHeightV.textContent = t.lineHeight ? (t.lineHeight / 100).toFixed(2) : "default";
-    e.sParagraphSpacing.value = String(t.paragraphSpacing);
-    e.sParagraphSpacingV.textContent = t.paragraphSpacing < 0 ? "default" : `${(t.paragraphSpacing / 10).toFixed(1)}em`;
-    e.sJustify.checked = !!t.justify;
-    e.sJustify.indeterminate = t.justify === null;
-    e.sReadingWidth.value = String(t.readingWidth);
-    e.sReadingWidthV.textContent = t.readingWidth === 0 ? "unlimited" : `${t.readingWidth} ch`;
-    const paginated = t.layoutMode === "paginated";
-    e.sLayoutScroll.dataset.readerState = paginated ? "" : "active";
-    e.sLayoutPaginated.dataset.readerState = paginated ? "active" : "";
-    e.sLayoutScroll.setAttribute("aria-checked", String(!paginated));
-    e.sLayoutPaginated.setAttribute("aria-checked", String(paginated));
-    if (e.sUserCss.value !== t.userCss) e.sUserCss.value = t.userCss;
-  };
-  setOverlay_fn = function(message, isError = false) {
-    const ov = __privateGet(this, _els).overlay;
-    ov.classList.toggle("error", isError);
-    const messageEl = ov.querySelector(".message");
-    if (messageEl) messageEl.textContent = message;
-    ov.hidden = false;
-  };
-  hideOverlay_fn = function() {
-    __privateGet(this, _els).overlay.hidden = true;
-  };
-  __privateAdd(_EpubReaderElement, _EpubReaderElement_static);
-  // Component CSS injected once into <head>, scoped via @scope
-  // (epub-reader) so it never leaks. Avoids duplicate <style> blocks
-  // when a page hosts multiple readers.
-  __privateAdd(_EpubReaderElement, _stylesInjected, false);
-  var EpubReaderElement = _EpubReaderElement;
   function formatBytes(bytes) {
     if (!bytes || bytes < 1024) return `${bytes || 0} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
@@ -7296,7 +7278,7 @@ ${user}`);
   }
 
   // src/app.js
-  var state = { route: "home", paperFilter: "all", activeReadingId: null, activePaperId: null, pictureBookDraft: null, paperTransform: null, paperStatus: null };
+  var state = { route: "home", paperFilter: "all", activeReadingId: null, activePaperId: null, pictureBookDraft: null, paperTransform: null, paperStatus: null, bookObjectUrl: null };
   var main = document.querySelector("#mainContent");
   var toast = document.querySelector("#toast");
   var modalRoot = document.querySelector("#modalRoot");
@@ -7323,6 +7305,10 @@ ${user}`);
   }
   async function navigate(route, detail = null) {
     stopSpeaking();
+    if (route !== "reading" && state.bookObjectUrl) {
+      URL.revokeObjectURL(state.bookObjectUrl);
+      state.bookObjectUrl = null;
+    }
     const nextPaperId = detail?.paperId || null;
     if (route === "paper" && state.activePaperId !== nextPaperId) {
       state.paperTransform = { paperId: nextPaperId, scale: 1, x: 0, y: 0, panMode: false };
@@ -7487,7 +7473,7 @@ ${user}`);
     if (template === "composition") return paper.orientation === "landscape" ? 8 : 12;
     if (template === "english-lines") return paper.orientation === "landscape" ? 8 : 10;
     if (layout.includes("vertical")) return 12;
-    if (layout.includes("make-ten") || layout.includes("break-ten")) return 8;
+    if (layout.includes("make-ten") || layout.includes("break-ten")) return paper.orientation === "landscape" ? 4 : 6;
     if (layout.includes("clock")) return 8;
     if (layout.includes("word-problem")) return 2;
     if (layout.includes("equation")) return 3;
@@ -7497,19 +7483,23 @@ ${user}`);
     if (layout.includes("chain-add") || layout.includes("chain-sub") || layout.includes("mixed")) return 30;
     return paper.orientation === "landscape" ? 36 : 36;
   }
-  function paginateProblems(problems, size, layout = "") {
+  function paginateProblems(problems, size, layout = "", orientation = "portrait") {
     const pages = [];
     let currentPage = [];
     let currentUnits = 0;
     for (const problem of problems) {
       const strokeUnits = layout.includes("hanzi-practice") && (problem.kind || problem.type) === "hanzi-stroke" ? Math.max(1, Math.ceil((problem.strokePaths?.length || 1) / 11)) : 1;
-      if (currentPage.length && currentUnits + strokeUnits > size) {
+      const kind = problem.kind || problem.type;
+      const textLength = String(problem.prompt || "").trim().length;
+      const englishUnits = ["english-word", "english-sentence"].includes(kind) ? Math.max(1, Math.ceil(textLength / (orientation === "landscape" ? 24 : 18))) : 1;
+      const problemUnits = Math.max(strokeUnits, englishUnits);
+      if (currentPage.length && currentUnits + problemUnits > size) {
         pages.push(currentPage);
         currentPage = [];
         currentUnits = 0;
       }
       currentPage.push(problem);
-      currentUnits += strokeUnits;
+      currentUnits += problemUnits;
     }
     if (currentPage.length) {
       pages.push(currentPage);
@@ -7520,7 +7510,7 @@ ${user}`);
     const layoutClass = worksheetLayoutClass(paper);
     const columns = worksheetColumns(paper);
     const metaLine = renderWorksheetMetaHtml(paper);
-    const pages = paginateProblems(paper.problems || [], worksheetProblemsPerPage(paper), layoutClass);
+    const pages = paginateProblems(paper.problems || [], worksheetProblemsPerPage(paper), layoutClass, paper.orientation);
     let offset = 0;
     return pages.map((pageProblems, pageIndex) => {
       const pageOffset = offset;
@@ -7807,7 +7797,7 @@ ${user}`);
   async function renderPaper() {
     const paper = await get("papers", state.activePaperId);
     if (!paper) return navigate("papers");
-    state.paperTransform || (state.paperTransform = { paperId: paper.id, scale: 1, x: 0, y: 0, panMode: false, focusMode: false });
+    state.paperTransform ||= { paperId: paper.id, scale: 1, x: 0, y: 0, panMode: false, focusMode: false };
     if (state.paperTransform.paperId !== paper.id) state.paperTransform = { paperId: paper.id, scale: 1, x: 0, y: 0, panMode: false, focusMode: false };
     state.paperStatus = paper.status;
     const mode = paper.status === "review" || paper.status === "done" ? "red" : "black";
@@ -7855,11 +7845,16 @@ ${user}`);
     const readings = (await ensureReadingSeeds()).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
     const active = readings.find((item) => item.id === state.activeReadingId);
     if (active) {
-      main.innerHTML = renderReader(active);
-      if (active.type === "file-book" && ["epub", "equb"].includes(active.fileKind)) {
-        void mountEpubReader(active);
+      const readerItem = active.type === "file-book" ? await prepareFileBook(active) : active;
+      main.innerHTML = renderReader(readerItem);
+      if (readerItem.type === "file-book" && ["epub", "equb"].includes(readerItem.fileKind)) {
+        void mountEpubReader(readerItem);
       }
       return;
+    }
+    if (state.bookObjectUrl) {
+      URL.revokeObjectURL(state.bookObjectUrl);
+      state.bookObjectUrl = null;
     }
     const categories = [...new Set(readings.map((item) => item.category || "\u7ED8\u672C"))];
     main.innerHTML = `${pageHeader("\u7ED8\u672C\u4E66\u67B6", "\u8BFB\u53D6 huiben \u6587\u4EF6\u5939\u548C\u5DF2\u5BFC\u5165\u4E66\u7C4D", '<button class="primary" data-new-picture-book>\uFF0B \u5BFC\u5165\u4E66\u7C4D</button><button class="secondary" data-new-text-reading>\uFF0B \u65B0\u5EFA\u6587\u5B57</button>')}
@@ -7889,8 +7884,25 @@ ${user}`);
     const isEpub = ["EPUB", "EQUB"].includes(kind);
     const openLink = source && !isEpub ? `<a class="secondary book-open-link" href="${sourceUrl}" target="_blank" rel="noopener">\u5728\u65B0\u7A97\u53E3\u6253\u5F00</a>` : "";
     const fallback = source ? `<div class="book-file-fallback"><h2>${title}</h2><p>${kind === "PDF" ? "PDF \u6587\u4EF6\u5DF2\u8F7D\u5165\u3002\u82E5\u5185\u7F6E\u67E5\u770B\u5668\u6CA1\u6709\u663E\u793A\uFF0C\u8BF7\u70B9\u51FB\u201C\u6253\u5F00\u539F\u6587\u4EF6\u201D\u3002" : `${kind} \u6587\u4EF6\u5DF2\u8F7D\u5165\u3002\u6D4F\u89C8\u5668\u4E0D\u4FDD\u8BC1\u76F4\u63A5\u6392\u7248\u663E\u793A\u6B64\u683C\u5F0F\uFF0C\u8BF7\u4F7F\u7528\u7CFB\u7EDF\u9605\u8BFB\u5668\u6253\u5F00\u3002`}</p><a class="primary" href="${sourceUrl}" target="_blank" rel="noopener">\u6253\u5F00\u539F\u6587\u4EF6</a></div>` : `<div class="book-file-fallback"><h2>${title}</h2><p>\u6CA1\u6709\u627E\u5230\u4E66\u7C4D\u6587\u4EF6\u5730\u5740\uFF0C\u8BF7\u91CD\u65B0\u5BFC\u5165\u6216\u68C0\u67E5 huiben/manifest.json\u3002</p></div>`;
-    const body = isEpub ? '<epub-reader class="epub-reader-frame" data-epub-reader aria-label="EPUB \u7ED8\u672C\u9605\u8BFB\u5668"></epub-reader>' : item.fileKind === "pdf" && source ? `<object class="book-file-frame" data="${sourceUrl}" type="application/pdf" aria-label="${title}">${fallback}</object>` : fallback;
+    const body = isEpub ? '<epub-reader class="epub-reader-frame" data-epub-reader aria-label="EPUB \u7ED8\u672C\u9605\u8BFB\u5668"></epub-reader>' : item.fileKind === "pdf" && source ? `<iframe class="book-file-frame" src="${sourceUrl}" title="${title}" loading="eager"></iframe><div class="book-file-fallback book-file-fallback-link"><p>\u5982\u679C\u5F53\u524D\u9875\u9762\u6CA1\u6709\u663E\u793A PDF\uFF0C\u8BF7\u70B9\u51FB\u4E0B\u65B9\u6309\u94AE\u5728 Safari \u4E2D\u6253\u5F00\u3002</p><a class="primary" href="${sourceUrl}" target="_blank" rel="noopener">\u6253\u5F00 PDF</a></div>` : fallback;
     return `<article class="reader fullscreen-reader file-book-reader"><div class="reader-floating-toolbar"><strong>${title}</strong><span>${kind}</span>${openLink}<button class="primary" data-exit-reader>\u9000\u51FA\u9605\u8BFB</button></div>${body}</article>`;
+  }
+  async function prepareFileBook(item) {
+    let blob = item.sourceBlob instanceof Blob ? item.sourceBlob : null;
+    if (!blob && item.sourceUrl) {
+      try {
+        const response = await fetch(item.sourceUrl, { cache: "force-cache" });
+        if (!response.ok) throw new Error(`\u7ED8\u672C\u6587\u4EF6\u8BFB\u53D6\u5931\u8D25\uFF1A${response.status}`);
+        blob = await response.blob();
+        await put("readings", { ...item, sourceBlob: blob, size: blob.size, updatedAt: Date.now() });
+      } catch (error) {
+        console.warn("\u7ED8\u672C\u79BB\u7EBF\u526F\u672C\u51C6\u5907\u5931\u8D25", error);
+      }
+    }
+    if (!blob || typeof URL?.createObjectURL !== "function") return item;
+    if (state.bookObjectUrl) URL.revokeObjectURL(state.bookObjectUrl);
+    state.bookObjectUrl = URL.createObjectURL(blob);
+    return { ...item, sourceUrl: state.bookObjectUrl };
   }
   async function mountEpubReader(item) {
     const reader = document.querySelector("[data-epub-reader]");
@@ -8341,11 +8353,11 @@ ${user}`);
     const wrap = document.querySelector(".paper-writing-view .worksheet-wrap, .paper-view .worksheet-wrap");
     if (!wrap) return;
     if (document.body.classList.contains("paper-focus-active") && state.paperTransform) {
-      state.paperTransform.y += Number(direction) * 90;
+      state.paperTransform.y += paperMoveDelta(direction, 90);
       applyPaperTransform(state.paperTransform);
       return;
     }
-    wrap.scrollBy({ top: Number(direction) * 90, behavior: "auto" });
+    wrap.scrollBy({ top: paperScrollDelta(direction, 90), behavior: "auto" });
   }
   function stopPaperScrollTimer() {
     if (paperScrollTimer) clearInterval(paperScrollTimer);

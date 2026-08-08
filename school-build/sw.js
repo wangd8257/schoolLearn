@@ -1,6 +1,28 @@
-const CACHE_NAME = 'growth-desk-v9-20260807';
-const CORE = ['./','./index.html','./styles.css','./manifest.webmanifest','./assets/icon.svg','./dist/app.bundle.js','./src/app.js','./src/db.js','./src/drawing.js','./src/papers.js','./src/templates.js','./src/reading.js','./src/worksheet-render.js','./src/games.js','./src/data/readings.js','./src/data/word-lists.js','./src/data/huiben-manifest.mjs','./src/vendor/epub-reader/epub-reader.js','./src/vendor/epub-reader/epub.js','./src/vendor/epub-reader/range-utils.js','./src/vendor/epub-reader/storage.js','./src/vendor/epub-reader/zip.js','./src/games/chinese-word-game.js','./src/games/english-match-game.js','./src/games/game-session.js','./src/games/random.js','./src/math/index.mjs','./src/math/constants.mjs','./src/math/generators.mjs','./src/math/random.mjs','./src/math/validator.mjs','./src/math/worksheet.mjs','./huiben/manifest.json'];
-self.addEventListener('install', (event) => event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(CORE)).then(() => self.skipWaiting())));
+const CACHE_NAME = 'growth-desk-v10-20260808';
+const CORE = ['./','./index.html','./styles.css','./manifest.webmanifest','./assets/icon.svg','./dist/app.bundle.js','./src/app.js','./src/db.js','./src/drawing.js','./src/papers.js','./src/templates.js','./src/reading.js','./src/worksheet-render.js','./src/paper-controls.mjs','./src/games.js','./src/data/readings.js','./src/data/word-lists.js','./src/data/huiben-manifest.mjs','./src/vendor/epub-reader/epub-reader.js','./src/vendor/epub-reader/epub.js','./src/vendor/epub-reader/range-utils.js','./src/vendor/epub-reader/storage.js','./src/vendor/epub-reader/zip.js','./src/games/chinese-word-game.js','./src/games/english-match-game.js','./src/games/game-session.js','./src/games/random.js','./src/math/index.mjs','./src/math/constants.mjs','./src/math/generators.mjs','./src/math/random.mjs','./src/math/validator.mjs','./src/math/worksheet.mjs','./huiben/manifest.json'];
+
+/**
+ * 尽力预缓存 huiben 目录中的绘本文件，单本失败不影响应用安装。
+ * @returns {Promise<void>} 预缓存完成。
+ */
+async function cacheHuibenBooks() {
+  const cache = await caches.open(CACHE_NAME);
+  let response = await fetch('./huiben/manifest.json', { cache: 'no-store' }).catch(() => null);
+  if (!response?.ok) response = await cache.match('./huiben/manifest.json');
+  if (!response) return;
+  const manifest = await response.json().catch(() => null);
+  const urls = Array.isArray(manifest?.books)
+    ? manifest.books.map((book) => book.url).filter(Boolean)
+    : [];
+  await Promise.allSettled(urls.map((url) => cache.add(new URL(url, self.location.href).href)));
+}
+
+self.addEventListener('install', (event) => event.waitUntil(
+  caches.open(CACHE_NAME)
+    .then((cache) => cache.addAll(CORE))
+    .then(() => cacheHuibenBooks().catch(() => {}))
+    .then(() => self.skipWaiting()),
+));
 self.addEventListener('activate', (event) => event.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)))).then(() => self.clients.claim())));
 
 /**
@@ -13,7 +35,7 @@ async function fetchFreshThenCache(request) {
   try {
     // 线上部署后优先拿 GitHub Pages 最新文件，避免旧缓存继续盖住新试卷样式。
     const response = await fetch(request);
-    if (response.ok) await cache.put(request, response.clone());
+    if (response.ok) await cache.put(request, response.clone()).catch(() => {});
     return response;
   } catch (error) {
     // 离线时再回退到本机缓存，保留 PWA 可用性。

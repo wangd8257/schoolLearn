@@ -50,7 +50,7 @@ test('英语短句描红只展示一遍完整示范文本', () => {
 
   assert.equal((sentence.match(/english-sample/g) || []).length, 1);
   assert.equal((sentence.match(/english-ghost/g) || []).length, 1);
-  assert.match(sentence, /Good morning, teacher\./);
+  assert.match(sentence, /Good mornin[\s\S]*class="english-loop-g">g[\s\S]*, teacher\./);
 });
 
 test('列式计算和应用题按整行排版，填写框撑满剩余宽度', () => {
@@ -82,9 +82,9 @@ test('小屏作答工具栏不裁剪控制按钮，填写框改为整行且页�
   assert.match(stylesheet, /\.worksheet-wrap\s*\{[^}]*overflow-x:\s*hidden/s);
   assert.match(stylesheet, /\.tabs\s*\{[^}]*flex-wrap:\s*wrap[^}]*overflow-x:\s*hidden/s);
   assert.match(stylesheet, /\.comparison-circle\s*\{[^}]*width:\s*1\.45em/s);
-  assert.match(stylesheet, /\.english-sentence-writing \.english-sample\s*\{[^}]*overflow:\s*visible/s);
+  assert.match(stylesheet, /\.english-sentence-writing \.english-sample\s*\{[^}]*white-space:\s*normal/s);
   assert.match(stylesheet, /\.paper-zoom-controls\s*\{/);
-  assert.match(stylesheet, /@media \(max-width:\s*760px\)[\s\S]*\.worksheet-lines \.ten-diagram\s*\{[^}]*min-height:\s*clamp\(108px,\s*24vw,\s*190px\)[^}]*overflow:\s*visible/s);
+  assert.match(stylesheet, /@media \(max-width:\s*760px\)[\s\S]*\.worksheet-lines \.ten-diagram\s*\{[^}]*min-height:\s*clamp\(136px,\s*30vw,\s*166px\)[^}]*overflow:\s*visible/s);
   assert.match(stylesheet, /@media \(max-width:\s*760px\)[\s\S]*\.worksheet-layout-make-ten,\s*\.worksheet-layout-break-ten\s*\{[^}]*grid-template-columns:\s*repeat\(2/s);
   assert.match(stylesheet, /@media \(max-width:\s*760px\)[\s\S]*\.ten-process\s*\{[^}]*transform:\s*none/s);
 });
@@ -120,6 +120,7 @@ test('凑十破十和练字题使用图片样式需要的专属格线', () => {
   assert.equal((makeTen.match(/ten-small-box/g) || []).length, 2);
   assert.equal((breakTen.match(/ten-small-box/g) || []).length, 2);
   assert.doesNotMatch(makeTen, /<strong>10<\/strong>/);
+  assert.doesNotMatch(breakTen, /ten-result-number/);
   assert.doesNotMatch(breakTen, /ten-final-box/);
   assert.equal((hanzi.match(/mizi-row/g) || []).length, 1);
   assert.equal((hanzi.match(/mizi-sample-cell/g) || []).length, 2);

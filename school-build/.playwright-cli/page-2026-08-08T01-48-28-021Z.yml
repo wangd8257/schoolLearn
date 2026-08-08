@@ -1,0 +1,106 @@
+- generic [ref=f2e1]:
+  - generic [ref=f2e2]:
+    - banner [ref=f2e3]:
+      - button "打开导航" [ref=f2e4] [cursor=pointer]: ☰
+      - generic [ref=f2e5]: 成长小桌
+      - button "新建" [ref=f2e6] [cursor=pointer]: ＋
+    - complementary [ref=f2e7]:
+      - generic [ref=f2e8]:
+        - generic [ref=f2e9]: ✦
+        - generic [ref=f2e10]:
+          - strong [ref=f2e11]: 成长小桌
+          - text: 每天进步一点点
+      - navigation "主导航" [ref=f2e12]:
+        - button "🏠 首页" [ref=f2e13] [cursor=pointer]:
+          - generic [ref=f2e14]: 🏠
+          - text: 首页
+        - button "📝 试卷目录" [ref=f2e15] [cursor=pointer]:
+          - generic [ref=f2e16]: 📝
+          - text: 试卷目录
+        - button "🪄 生成试卷" [ref=f2e17] [cursor=pointer]:
+          - generic [ref=f2e18]: 🪄
+          - text: 生成试卷
+        - button "📚 阅读资料" [ref=f2e19] [cursor=pointer]:
+          - generic [ref=f2e20]: 📚
+          - text: 阅读资料
+        - button "🎮 学习游戏" [ref=f2e21] [cursor=pointer]:
+          - generic [ref=f2e22]: 🎮
+          - text: 学习游戏
+        - button "🧩 配置模板" [ref=f2e23] [cursor=pointer]:
+          - generic [ref=f2e24]: 🧩
+          - text: 配置模板
+      - generic [ref=f2e25]:
+        - generic [ref=f2e26]: ☁️
+        - paragraph [ref=f2e27]:
+          - strong [ref=f2e28]: 数据只在本机
+          - text: 请勿清除 Safari 网站数据
+    - main [active] [ref=f2e29]:
+      - generic [ref=f2e64]:
+        - heading "生成试卷" [level=1] [ref=f2e65]
+        - paragraph [ref=f2e66]: 选择模板和参数，生成后作为独立快照保存
+      - generic [ref=f2e67]:
+        - generic [ref=f2e68]:
+          - generic [ref=f2e69]:
+            - generic [ref=f2e70]: 学科
+            - combobox [ref=f2e71]:
+              - option "数学" [selected]
+              - option "语文"
+              - option "英语"
+          - generic [ref=f2e72]:
+            - generic [ref=f2e73]: 模板
+            - combobox [ref=f2e74]:
+              - option "横式计算" [selected]
+              - option "缺项填数"
+              - option "竖式计算"
+              - option "比较大小"
+              - option "列式计算"
+              - option "应用题"
+              - option "连加"
+              - option "连减"
+              - option "连续加减"
+              - option "凑十法"
+              - option "破十法"
+              - option "进位加法"
+              - option "退位减法"
+              - option "乘法"
+              - option "除法"
+              - option "人民币换算"
+              - option "单位换算"
+              - option "钟表认知"
+          - generic [ref=f2e75]:
+            - generic [ref=f2e76]: 试卷名称
+            - textbox "留空则自动命名" [ref=f2e77]
+          - generic [ref=f2e78]:
+            - generic [ref=f2e79]: A4 方向
+            - generic [ref=f2e80]:
+              - generic [ref=f2e81]:
+                - radio "纵向" [checked] [ref=f2e82]
+                - generic [ref=f2e83]: 纵向
+              - generic [ref=f2e84]:
+                - radio "横向" [ref=f2e85]
+                - generic [ref=f2e86]: 横向
+          - generic [ref=f2e87]:
+            - generic [ref=f2e88]:
+              - generic [ref=f2e89]:
+                - generic [ref=f2e90]: 题目数量
+                - spinbutton [ref=f2e91]: "30"
+              - generic [ref=f2e92]:
+                - generic [ref=f2e93]: 数值上限
+                - spinbutton [ref=f2e94]: "20"
+            - generic [ref=f2e95]:
+              - generic [ref=f2e96]: 运算类型
+              - combobox [ref=f2e97]:
+                - option "纯加" [selected]
+                - option "纯减"
+                - option "混合加减"
+          - button "生成并保存试卷" [ref=f2e98] [cursor=pointer]
+          - button "生成预览" [ref=f2e99] [cursor=pointer]
+          - button "保存为配置模板" [ref=f2e100] [cursor=pointer]
+        - generic [ref=f2e101]:
+          - heading "配置生成预览" [level=2] [ref=f2e102]
+          - paragraph [ref=f2e103]: 调整左侧配置后点击生成预览，预览不会保存试卷。
+          - generic [ref=f2e105]:
+            - generic [ref=f2e106]: 📄
+            - heading "数学·horizontal" [level=2] [ref=f2e107]
+            - paragraph [ref=f2e108]: 点击“生成预览”查看当前配置会生成的试卷样式。
+  - status

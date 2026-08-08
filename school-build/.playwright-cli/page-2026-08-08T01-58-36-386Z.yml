@@ -1,0 +1,51 @@
+- generic [active] [ref=f4e1]:
+  - generic [ref=f4e2]:
+    - banner [ref=f4e3]:
+      - button "打开导航" [ref=f4e4] [cursor=pointer]: ☰
+      - generic [ref=f4e5]: 成长小桌
+      - button "新建" [ref=f4e6] [cursor=pointer]: ＋
+    - complementary [ref=f4e7]:
+      - generic [ref=f4e8]:
+        - generic [ref=f4e9]: ✦
+        - generic [ref=f4e10]:
+          - strong [ref=f4e11]: 成长小桌
+          - text: 每天进步一点点
+      - navigation "主导航" [ref=f4e12]:
+        - button "🏠 首页" [ref=f4e13] [cursor=pointer]:
+          - generic [ref=f4e14]: 🏠
+          - text: 首页
+        - button "📝 试卷目录" [ref=f4e15] [cursor=pointer]:
+          - generic [ref=f4e16]: 📝
+          - text: 试卷目录
+        - button "🪄 生成试卷" [ref=f4e17] [cursor=pointer]:
+          - generic [ref=f4e18]: 🪄
+          - text: 生成试卷
+        - button "📚 阅读资料" [ref=f4e19] [cursor=pointer]:
+          - generic [ref=f4e20]: 📚
+          - text: 阅读资料
+        - button "🎮 学习游戏" [ref=f4e21] [cursor=pointer]:
+          - generic [ref=f4e22]: 🎮
+          - text: 学习游戏
+        - button "🧩 配置模板" [ref=f4e23] [cursor=pointer]:
+          - generic [ref=f4e24]: 🧩
+          - text: 配置模板
+      - generic [ref=f4e25]:
+        - generic [ref=f4e26]: ☁️
+        - paragraph [ref=f4e27]:
+          - strong [ref=f4e28]: 数据只在本机
+          - text: 请勿清除 Safari 网站数据
+    - main [ref=f4e29]:
+      - article [ref=f4e988]:
+        - generic [ref=f4e989]:
+          - strong [ref=f4e990]: 发现与培养儿童职业启蒙绘本 第6辑 我要当汽车工程师 (刘香英著；幸福猫儿童文学工作室绘)
+          - generic [ref=f4e991]: PDF
+          - link "在新窗口打开" [ref=f4e992] [cursor=pointer]:
+            - /url: blob:http://127.0.0.1:4173/8f8bf8ea-e181-4b19-b3ff-966de58c4a0f
+          - button "退出阅读" [ref=f4e993] [cursor=pointer]
+        - iframe [ref=f4e994]:
+          
+        - generic [ref=f4e995]:
+          - paragraph [ref=f4e996]: 如果当前页面没有显示 PDF，请点击下方按钮在 Safari 中打开。
+          - link "打开 PDF" [ref=f4e997] [cursor=pointer]:
+            - /url: blob:http://127.0.0.1:4173/8f8bf8ea-e181-4b19-b3ff-966de58c4a0f
+  - status

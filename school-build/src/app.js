@@ -32,9 +32,10 @@ import {
   renameTemplateSnapshot,
 } from './templates.js';
 import { renderProblemHtml, renderWorksheetMetaHtml, worksheetColumns, worksheetLayoutClass } from './worksheet-render.js';
+import { paperMoveDelta, paperScrollDelta } from './paper-controls.mjs';
 import './vendor/epub-reader/epub-reader.js';
 
-const state = { route: 'home', paperFilter: 'all', activeReadingId: null, activePaperId: null, pictureBookDraft: null, paperTransform: null, paperStatus: null };
+const state = { route: 'home', paperFilter: 'all', activeReadingId: null, activePaperId: null, pictureBookDraft: null, paperTransform: null, paperStatus: null, bookObjectUrl: null };
 const main = document.querySelector('#mainContent');
 const toast = document.querySelector('#toast');
 const modalRoot = document.querySelector('#modalRoot');
@@ -74,6 +75,10 @@ function pageHeader(title, subtitle, actions = '') {
 /** 切换工作区并同步侧栏状态。 */
 export async function navigate(route, detail = null) {
   stopSpeaking();
+  if (route !== 'reading' && state.bookObjectUrl) {
+    URL.revokeObjectURL(state.bookObjectUrl);
+    state.bookObjectUrl = null;
+  }
   const nextPaperId = detail?.paperId || null;
   if (route === 'paper' && state.activePaperId !== nextPaperId) {
     state.paperTransform = { paperId: nextPaperId, scale: 1, x: 0, y: 0, panMode: false };
@@ -272,7 +277,7 @@ function worksheetProblemsPerPage(paper) {
   if (template === 'composition') return paper.orientation === 'landscape' ? 8 : 12;
   if (template === 'english-lines') return paper.orientation === 'landscape' ? 8 : 10;
   if (layout.includes('vertical')) return 12;
-  if (layout.includes('make-ten') || layout.includes('break-ten')) return 8;
+  if (layout.includes('make-ten') || layout.includes('break-ten')) return paper.orientation === 'landscape' ? 4 : 6;
   if (layout.includes('clock')) return 8;
   if (layout.includes('word-problem')) return 2;
   if (layout.includes('equation')) return 3;
@@ -290,7 +295,7 @@ function worksheetProblemsPerPage(paper) {
  * @param {string} layout 当前试卷版式。
  * @returns {Array<Array<Record<string, unknown>>>} 分页后的题目。
  */
-function paginateProblems(problems, size, layout = '') {
+function paginateProblems(problems, size, layout = '', orientation = 'portrait') {
   const pages = [];
   let currentPage = [];
   let currentUnits = 0;
@@ -299,13 +304,19 @@ function paginateProblems(problems, size, layout = '') {
     const strokeUnits = layout.includes('hanzi-practice') && (problem.kind || problem.type) === 'hanzi-stroke'
       ? Math.max(1, Math.ceil((problem.strokePaths?.length || 1) / 11))
       : 1;
-    if (currentPage.length && currentUnits + strokeUnits > size) {
+    const kind = problem.kind || problem.type;
+    const textLength = String(problem.prompt || '').trim().length;
+    const englishUnits = ['english-word', 'english-sentence'].includes(kind)
+      ? Math.max(1, Math.ceil(textLength / (orientation === 'landscape' ? 24 : 18)))
+      : 1;
+    const problemUnits = Math.max(strokeUnits, englishUnits);
+    if (currentPage.length && currentUnits + problemUnits > size) {
       pages.push(currentPage);
       currentPage = [];
       currentUnits = 0;
     }
     currentPage.push(problem);
-    currentUnits += strokeUnits;
+    currentUnits += problemUnits;
   }
   if (currentPage.length) {
     pages.push(currentPage);
@@ -322,7 +333,7 @@ function renderWorksheetPagesHtml(paper) {
   const layoutClass = worksheetLayoutClass(paper);
   const columns = worksheetColumns(paper);
   const metaLine = renderWorksheetMetaHtml(paper);
-  const pages = paginateProblems(paper.problems || [], worksheetProblemsPerPage(paper), layoutClass);
+  const pages = paginateProblems(paper.problems || [], worksheetProblemsPerPage(paper), layoutClass, paper.orientation);
   let offset = 0;
   return pages.map((pageProblems, pageIndex) => {
     const pageOffset = offset;
@@ -686,11 +697,16 @@ async function renderReading() {
   const readings = (await ensureReadingSeeds()).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
   const active = readings.find((item)=>item.id === state.activeReadingId);
   if (active) {
-    main.innerHTML = renderReader(active);
-    if (active.type === 'file-book' && ['epub', 'equb'].includes(active.fileKind)) {
-      void mountEpubReader(active);
+    const readerItem = active.type === 'file-book' ? await prepareFileBook(active) : active;
+    main.innerHTML = renderReader(readerItem);
+    if (readerItem.type === 'file-book' && ['epub', 'equb'].includes(readerItem.fileKind)) {
+      void mountEpubReader(readerItem);
     }
     return;
+  }
+  if (state.bookObjectUrl) {
+    URL.revokeObjectURL(state.bookObjectUrl);
+    state.bookObjectUrl = null;
   }
   const categories = [...new Set(readings.map((item)=>item.category || '绘本'))];
   main.innerHTML = `${pageHeader('绘本书架','读取 huiben 文件夹和已导入书籍','<button class="primary" data-new-picture-book>＋ 导入书籍</button><button class="secondary" data-new-text-reading>＋ 新建文字</button>')}
@@ -730,9 +746,32 @@ function renderFileBookReader(item) {
   const body = isEpub
     ? '<epub-reader class="epub-reader-frame" data-epub-reader aria-label="EPUB 绘本阅读器"></epub-reader>'
     : item.fileKind === 'pdf' && source
-    ? `<object class="book-file-frame" data="${sourceUrl}" type="application/pdf" aria-label="${title}">${fallback}</object>`
+    ? `<iframe class="book-file-frame" src="${sourceUrl}" title="${title}" loading="eager"></iframe><div class="book-file-fallback book-file-fallback-link"><p>如果当前页面没有显示 PDF，请点击下方按钮在 Safari 中打开。</p><a class="primary" href="${sourceUrl}" target="_blank" rel="noopener">打开 PDF</a></div>`
     : fallback;
   return `<article class="reader fullscreen-reader file-book-reader"><div class="reader-floating-toolbar"><strong>${title}</strong><span>${kind}</span>${openLink}<button class="primary" data-exit-reader>退出阅读</button></div>${body}</article>`;
+}
+
+/**
+ * 准备绘本文件的离线 Blob 来源。
+ * @param {Record<string, unknown>} item 书架中的文件绘本记录。
+ * @returns {Promise<Record<string, unknown>>} 使用 Blob URL 或原始 URL 的绘本记录。
+ */
+async function prepareFileBook(item) {
+  let blob = item.sourceBlob instanceof Blob ? item.sourceBlob : null;
+  if (!blob && item.sourceUrl) {
+    try {
+      const response = await fetch(item.sourceUrl, { cache: 'force-cache' });
+      if (!response.ok) throw new Error(`绘本文件读取失败：${response.status}`);
+      blob = await response.blob();
+      await put('readings', { ...item, sourceBlob: blob, size: blob.size, updatedAt: Date.now() });
+    } catch (error) {
+      console.warn('绘本离线副本准备失败', error);
+    }
+  }
+  if (!blob || typeof URL?.createObjectURL !== 'function') return item;
+  if (state.bookObjectUrl) URL.revokeObjectURL(state.bookObjectUrl);
+  state.bookObjectUrl = URL.createObjectURL(blob);
+  return { ...item, sourceUrl: state.bookObjectUrl };
 }
 
 /**
@@ -1072,11 +1111,11 @@ function scrollActiveWorksheet(direction) {
   if (!wrap) return;
   if (document.body.classList.contains('paper-focus-active') && state.paperTransform) {
     // 全屏作答时外层禁止自然滚动，使用受边界约束的纸张平移保持笔迹坐标一致。
-    state.paperTransform.y += Number(direction) * 90;
+    state.paperTransform.y += paperMoveDelta(direction, 90);
     applyPaperTransform(state.paperTransform);
     return;
   }
-  wrap.scrollBy({ top: Number(direction) * 90, behavior: 'auto' });
+  wrap.scrollBy({ top: paperScrollDelta(direction, 90), behavior: 'auto' });
 }
 
 function stopPaperScrollTimer() {

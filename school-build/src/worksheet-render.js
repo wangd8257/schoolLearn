@@ -92,11 +92,12 @@ export function renderWorksheetMetaHtml(paper = {}) {
 function renderTenDiagram(problem, operator, diagramClass) {
   const [left = '', right = ''] = problem.operands || [];
   const answer = `<span class="answer-box ten-answer-box"></span>`;
+  const columnStyle = `--ten-left-col:${Math.max(2, String(left).length)}ch;--ten-right-col:${Math.max(2, String(right).length)}ch;`;
   const expression = `<div class="ten-expression"><span class="ten-operand ten-left-operand">${escapeHtml(left)}</span><span class="ten-operator">${operator}</span><span class="ten-operand ten-right-operand">${escapeHtml(right)}</span><span class="ten-operator">=</span>${answer}</div>`;
   if (diagramClass === 'make-ten-diagram') {
-    return `<div class="problem ten-diagram make-ten-diagram">${expression}<div class="ten-process make-ten-process"><div class="ten-anchor"><span class="ten-anchor-line"></span><span class="ten-target-number">10</span></div><div class="ten-split"><div class="ten-slashes"><span>/</span><span>\\</span></div><div class="ten-split-boxes"><span class="answer-box ten-small-box"></span><span class="answer-box ten-small-box"></span></div></div></div></div>`;
+    return `<div class="problem ten-diagram make-ten-diagram" style="${columnStyle}">${expression}<div class="ten-process make-ten-process"><div class="ten-anchor" data-ten-anchor="left-operand"><span class="ten-anchor-line"></span><span class="ten-target-number">10</span></div><div class="ten-split" data-ten-anchor="right-operand"><div class="ten-slashes"><span>/</span><span>\\</span></div><div class="ten-split-boxes"><span class="answer-box ten-small-box"></span><span class="answer-box ten-small-box"></span></div></div></div></div>`;
   }
-  return `<div class="problem ten-diagram break-ten-diagram">${expression}<div class="ten-process break-ten-process"><div class="ten-split"><div class="ten-slashes"><span>/</span><span>\\</span></div><div class="ten-split-boxes"><span class="answer-box ten-small-box"></span><span class="answer-box ten-small-box"></span></div></div><div class="ten-result-tree"><span class="ten-result-box-wrap"><span class="answer-box ten-result-box"></span></span></div></div></div>`;
+  return `<div class="problem ten-diagram break-ten-diagram" style="${columnStyle}">${expression}<div class="ten-process break-ten-process"><div class="ten-split" data-ten-anchor="left-operand"><div class="ten-slashes"><span>/</span><span>\\</span></div><div class="ten-split-boxes"><span class="answer-box ten-small-box"></span><span class="answer-box ten-small-box"></span></div></div><div class="ten-result-tree" data-ten-anchor="right-operand"><span class="ten-result-operator">−</span><span class="ten-result-box-wrap"><span class="answer-box ten-result-box"></span></span></div></div></div>`;
 }
 /** 渲染凑十法过程图，拆分框固定对准第二个数字。 */
 function renderMakeTenDiagram(problem) {
@@ -165,13 +166,26 @@ function renderHanziStrokePractice(problem) {
 /** 渲染英文四线三格练习行。 */
 function renderEnglishPractice(problem) {
   const kind = problem.kind || problem.type;
-  const text = escapeHtml(problem.prompt || '');
+  const text = renderEnglishText(problem.prompt || '');
   if (kind === 'english-lines') {
     return `<div class="problem writing-practice english-writing english-blank-writing ${englishFontClass(problem)}"><div class="english-copybook-line" aria-label="空白四线三格"></div></div>`;
   }
-  const sampleCount = kind === 'english-word' ? 5 : 1;
+  const sampleCount = kind === 'english-word' ? 3 : 1;
   const samples = Array.from({ length: sampleCount }, () => `<span class="english-sample english-ghost">${text}</span>`).join('');
   return `<div class="problem writing-practice english-writing ${kind === 'english-word' ? 'english-word-writing' : 'english-sentence-writing'} ${englishFontClass(problem)}"><div class="english-copybook-line"><div class="english-copy-row">${samples}</div></div></div>`;
+}
+
+/**
+ * 将英语文本转换为可保持环形 g 字形的描红 HTML。
+ * @param {string} value 待渲染的英语文本。
+ * @returns {string} 已转义且对小写 g 添加专用字体类的 HTML。
+ */
+function renderEnglishText(value) {
+  return Array.from(String(value)).map((character) => (
+    character === 'g'
+      ? '<span class="english-loop-g">g</span>'
+      : escapeHtml(character)
+  )).join('');
 }
 
 /**
