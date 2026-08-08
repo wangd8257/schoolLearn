@@ -14,7 +14,7 @@
       __defProp(target, name, { get: all[name], enumerable: true });
   };
 
-  // school-build/src/db.js
+  // src/db.js
   function openDatabase() {
     if (connection) return connection;
     connection = new Promise((resolve, reject) => {
@@ -67,17 +67,17 @@
   }
   var DB_NAME, DB_VERSION, STORES, connection;
   var init_db = __esm({
-    "school-build/src/db.js"() {
+    "src/db.js"() {
       DB_NAME = "growth-desk-db";
       DB_VERSION = 1;
       STORES = ["papers", "templates", "readings", "gameRecords", "settings"];
     }
   });
 
-  // school-build/src/math/constants.mjs
+  // src/math/constants.mjs
   var TEMPLATE_TYPES, UNIT_CATEGORIES, ORIENTATIONS, BINARY_OPERATIONS;
   var init_constants = __esm({
-    "school-build/src/math/constants.mjs"() {
+    "src/math/constants.mjs"() {
       TEMPLATE_TYPES = Object.freeze({
         HORIZONTAL: "horizontal",
         MISSING_TERM: "missing-term",
@@ -110,7 +110,7 @@
     }
   });
 
-  // school-build/src/math/random.mjs
+  // src/math/random.mjs
   function createSeededRandom(seed) {
     if (!Number.isInteger(seed)) {
       throw new TypeError("seed \u5FC5\u987B\u662F\u6574\u6570");
@@ -138,11 +138,11 @@
     return values[randomInteger(random, 0, values.length - 1)];
   }
   var init_random = __esm({
-    "school-build/src/math/random.mjs"() {
+    "src/math/random.mjs"() {
     }
   });
 
-  // school-build/src/math/generators.mjs
+  // src/math/generators.mjs
   function normalizeOptions(options) {
     const limit = options.limit ?? DEFAULT_LIMIT;
     const maxAttempts = options.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
@@ -635,7 +635,7 @@
   }
   var DEFAULT_LIMIT, DEFAULT_MAX_ATTEMPTS, CURRENCY_CONVERSIONS, UNIT_CONVERSIONS, GENERATORS;
   var init_generators = __esm({
-    "school-build/src/math/generators.mjs"() {
+    "src/math/generators.mjs"() {
       init_constants();
       init_random();
       DEFAULT_LIMIT = 20;
@@ -690,7 +690,7 @@
     }
   });
 
-  // school-build/src/math/validator.mjs
+  // src/math/validator.mjs
   function evaluateAddSubtract(operands, operators) {
     if (operands.length === 0) {
       return [];
@@ -836,12 +836,12 @@
     return { valid: errors.length === 0, errors };
   }
   var init_validator = __esm({
-    "school-build/src/math/validator.mjs"() {
+    "src/math/validator.mjs"() {
       init_constants();
     }
   });
 
-  // school-build/src/math/worksheet.mjs
+  // src/math/worksheet.mjs
   function snapshotOptions(options) {
     return JSON.parse(JSON.stringify(options, (key, value) => typeof value === "function" || value === void 0 ? void 0 : value));
   }
@@ -901,13 +901,13 @@
     };
   }
   var init_worksheet = __esm({
-    "school-build/src/math/worksheet.mjs"() {
+    "src/math/worksheet.mjs"() {
       init_constants();
       init_generators();
     }
   });
 
-  // school-build/src/math/index.mjs
+  // src/math/index.mjs
   var math_exports = {};
   __export(math_exports, {
     BINARY_OPERATIONS: () => BINARY_OPERATIONS,
@@ -920,7 +920,7 @@
     validateProblem: () => validateProblem
   });
   var init_math = __esm({
-    "school-build/src/math/index.mjs"() {
+    "src/math/index.mjs"() {
       init_constants();
       init_generators();
       init_random();
@@ -929,7 +929,7 @@
     }
   });
 
-  // school-build/src/data/word-lists.js
+  // src/data/word-lists.js
   function hashText(text) {
     let hash = 2166136261;
     for (let index = 0; index < text.length; index += 1) {
@@ -979,7 +979,7 @@
   }
   var CHINESE_WORDS, CATEGORY_DATA, ENGLISH_CATEGORIES, CARD_COLORS, CARD_SHAPES, WORD_EMOJI, WORD_LABELS, COLOR_SWATCHES, NUMBER_SYMBOLS, ENGLISH_WORDS;
   var init_word_lists = __esm({
-    "school-build/src/data/word-lists.js"() {
+    "src/data/word-lists.js"() {
       CHINESE_WORDS = Object.freeze([
         "\u7231\u5FC3",
         "\u5B89\u5168",
@@ -1891,7 +1891,7 @@
     }
   });
 
-  // school-build/src/games/game-session.js
+  // src/games/game-session.js
   function toTimestamp(value) {
     const timestamp = value instanceof Date ? value.getTime() : new Date(value).getTime();
     if (!Number.isFinite(timestamp)) throw new TypeError("\u6E38\u620F\u65F6\u949F\u5FC5\u987B\u8FD4\u56DE\u6709\u6548\u65F6\u95F4");
@@ -1926,11 +1926,11 @@
     return session;
   }
   var init_game_session = __esm({
-    "school-build/src/games/game-session.js"() {
+    "src/games/game-session.js"() {
     }
   });
 
-  // school-build/src/games/random.js
+  // src/games/random.js
   function createSeededRandom2(seed = Date.now()) {
     const text = String(seed);
     let state2 = 2166136261;
@@ -1955,11 +1955,11 @@
     return result;
   }
   var init_random2 = __esm({
-    "school-build/src/games/random.js"() {
+    "src/games/random.js"() {
     }
   });
 
-  // school-build/src/games/chinese-word-game.js
+  // src/games/chinese-word-game.js
   function normalizeLengths(lengths) {
     const normalized = [...new Set(lengths)].sort((left, right) => left - right);
     if (normalized.length === 0 || normalized.some((length) => !Number.isInteger(length) || length < 2 || length > 4)) {
@@ -2223,7 +2223,7 @@
   }
   var BOARD_SIDE, BOARD_SIZE;
   var init_chinese_word_game = __esm({
-    "school-build/src/games/chinese-word-game.js"() {
+    "src/games/chinese-word-game.js"() {
       init_word_lists();
       init_game_session();
       init_random2();
@@ -2232,7 +2232,7 @@
     }
   });
 
-  // school-build/src/games/english-match-game.js
+  // src/games/english-match-game.js
   function createEnglishMatchGame(options = {}) {
     const count = options.count ?? 10;
     if (!Number.isInteger(count) || count < 2 || count > 20) {
@@ -2283,14 +2283,14 @@
     return { correct: true, returnedToOrigin: false, reason: null };
   }
   var init_english_match_game = __esm({
-    "school-build/src/games/english-match-game.js"() {
+    "src/games/english-match-game.js"() {
       init_word_lists();
       init_game_session();
       init_random2();
     }
   });
 
-  // school-build/src/games.js
+  // src/games.js
   var games_exports = {};
   __export(games_exports, {
     findDropTargetId: () => findDropTargetId,
@@ -2493,17 +2493,17 @@
     start();
   }
   var init_games = __esm({
-    "school-build/src/games.js"() {
+    "src/games.js"() {
       init_db();
       init_chinese_word_game();
       init_english_match_game();
     }
   });
 
-  // school-build/src/app.js
+  // src/app.js
   init_db();
 
-  // school-build/src/drawing.js
+  // src/drawing.js
   function shouldHandleDrawingPointer(event, enabled) {
     return Boolean(enabled && ["pen", "mouse"].includes(event?.pointerType));
   }
@@ -2642,7 +2642,7 @@
     };
   }
 
-  // school-build/src/papers.js
+  // src/papers.js
   init_db();
   var PAPER_STATUS = {
     unstarted: "\u672A\u4F5C\u7B54",
@@ -2792,10 +2792,10 @@
     return (await getAll("papers")).sort((a2, b2) => b2.createdAt - a2.createdAt);
   }
 
-  // school-build/src/reading.js
+  // src/reading.js
   init_db();
 
-  // school-build/src/data/huiben-manifest.mjs
+  // src/data/huiben-manifest.mjs
   var FILE_NAMES = Object.freeze([
     "\u4E0D\u4E00\u6837\u7684\u5361\u6885\u62C9\u52A8\u6F2B\u7ED8\u672C \u6211\u4E0B\u4E86\u4E2A\u91D1\u9E21\u86CB (\uFF08\u6CD5\uFF09\u7EA6\u91CC\u6CE2\u74E6\u6587, \u636E[\u6CD5]\u514B\u5229\u65AF\u63D0\u6602\xB7\u7EA6\u91CC\u6CE2\u74E6\u540C\u540D\u7ED8\u672C\u52A8\u753B\u7247\u6539\u7F16 , \u90D1\u8FEA\u851A \u7F16\u8BD1 etc.) (z-library.sk, 1lib.sk, z-lib.sk).pdf",
     "\u4E0D\u4E00\u6837\u7684\u5361\u6885\u62C9\u52A8\u6F2B\u7ED8\u672C \u6211\u662F\u4FA0\u76D7\u7F57\u5BBE\u6C49 (\uFF08\u6CD5\uFF09\u514B\u5229\u65AF\u63D0\u6602\xB7\u7EA6\u91CC\u6CE2\u74E6\u6539\u7F16\uFF1B\u90D1\u8FEA\u851A\u7F16\u8BD1 etc.) (z-library.sk, 1lib.sk, z-lib.sk).pdf",
@@ -2830,7 +2830,7 @@
     });
   }
 
-  // school-build/src/reading.js
+  // src/reading.js
   var speechRun = 0;
   async function ensureReadingSeeds() {
     const existing = await getAll("readings");
@@ -3057,7 +3057,7 @@
     return next;
   }
 
-  // school-build/src/templates.js
+  // src/templates.js
   init_db();
   var DEFAULT_TEMPLATE_MARKER_ID = "default-templates-initialized-v1";
   var DEFAULT_TEMPLATES = [
@@ -3136,7 +3136,7 @@
     return inserted;
   }
 
-  // school-build/src/worksheet-render.js
+  // src/worksheet-render.js
   function escapeHtml(value = "") {
     return String(value).replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]);
   }
@@ -3343,7 +3343,7 @@
     return `<div class="problem math-inline">${number}${replaceSingleBlank(problem.prompt || "")}</div>`;
   }
 
-  // school-build/src/paper-controls.mjs
+  // src/paper-controls.mjs
   function paperMoveDelta(direction, step) {
     const normalizedDirection = Number(direction);
     const normalizedStep = Number(step);
@@ -3359,7 +3359,7 @@
     return -paperMoveDelta(direction, step);
   }
 
-  // school-build/src/vendor/pdfjs/pdf.min.mjs
+  // src/vendor/pdfjs/pdf.min.mjs
   var import_meta = {};
   var t = { 9306(t2, e2, i2) {
     var n2 = i2(4901), s2 = i2(6823), r2 = TypeError;
@@ -23728,7 +23728,7 @@
   globalThis._pdfjsTestingUtils = { HighlightOutliner };
   globalThis.pdfjsLib = { AbortException, AnnotationEditorLayer, AnnotationEditorParamsType: v, AnnotationEditorType: y, AnnotationEditorUIManager, AnnotationLayer, AnnotationMode: m, AnnotationType: k, applyOpacity, build: zt, ColorPicker, createValidAbsoluteUrl, CSSConstants, DOMSVGFactory, DrawLayer, FeatureTest, fetchData, findContrastColor, getDocument, getFilenameFromUrl, getPdfFilenameFromUrl, getRGB, getRGBA, getUuid, GlobalWorkerOptions, ImageKind: _, InvalidPDFException, isDataScheme, isPdfFile, isValidExplicitDest: gt, makeArr, makeMap, makeObj, makeSet, MathClamp, noContextMenu, normalizeUnicode, OPS: B, OutputScale, PasswordException, PasswordResponses: G, PDFDataRangeTransport, PDFDateString, PDFWorker, PermissionFlag: w, PixelsPerInch, RenderingCancelledException, renderRichText, ResponseException, setLayerDimensions, shadow, SignatureExtractor, stopEvent, SupportedImageMimeTypes: X, TextLayer, TextLayerImages, TouchManager, updateUrlHash, Util, VerbosityLevel: R, version: Ht, XfaLayer };
 
-  // school-build/src/app.js
+  // src/app.js
   var state = { route: "home", paperFilter: "all", activeReadingId: null, activePaperId: null, pictureBookDraft: null, paperTransform: null, paperStatus: null, bookObjectUrl: null, fileReader: null, fileReaderToken: 0, pdfZoom: 1 };
   var main = document.querySelector("#mainContent");
   var toast = document.querySelector("#toast");
@@ -23739,6 +23739,28 @@
     cMapPacked: true,
     standardFontDataUrl: "./src/vendor/pdfjs/standard_fonts/"
   });
+  var READER_LOAD_TIMEOUT_MS = 6e4;
+  function reportReaderRuntimeError(error, source) {
+    if (state.route !== "reading" || !state.activeReadingId) return;
+    const message = error instanceof Error ? error.message : String(error || "\u672A\u77E5\u9519\u8BEF");
+    const reader = document.querySelector("[data-pdf-reader], [data-epubjs-reader]");
+    const status = reader?.querySelector("[data-pdf-progress], [data-epub-status]");
+    if (status && /正在|准备/u.test(status.textContent || "")) {
+      status.textContent = `${source}\u52A0\u8F7D\u5931\u8D25\uFF1A${message}`;
+    }
+    console.error(`[${source}] \u9605\u8BFB\u5668\u8FD0\u884C\u65F6\u5F02\u5E38`, error);
+    showToast(`${source}\u52A0\u8F7D\u5931\u8D25\uFF0C\u8BF7\u91CD\u8BD5`);
+  }
+  function installReaderDiagnostics() {
+    if (globalThis.__growthDeskReaderDiagnosticsInstalled) return;
+    globalThis.__growthDeskReaderDiagnosticsInstalled = true;
+    window.addEventListener("error", (event) => {
+      reportReaderRuntimeError(event.error || event.message, "\u9605\u8BFB\u5668");
+    }, true);
+    window.addEventListener("unhandledrejection", (event) => {
+      reportReaderRuntimeError(event.reason, "\u9605\u8BFB\u5668");
+    });
+  }
   function escapeHtml2(value = "") {
     return String(value).replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]);
   }
@@ -24386,7 +24408,7 @@
     const sourceUrl = String(item.sourceUrl || "");
     const isLocalFileUrl = globalThis.location?.protocol === "file:" || sourceUrl.startsWith("file:");
     const isInlineSource = /^(blob:|data:)/u.test(sourceUrl);
-    if (isLocalFileUrl || isInlineSource || item.sourceBlob instanceof Blob || !sourceUrl) return;
+    if (isLocalFileUrl || isInlineSource || item.sourceBlob instanceof Blob || item.source === "huiben" || !sourceUrl) return;
     try {
       const response = await fetch(sourceUrl, { cache: "force-cache" });
       if (!response.ok) throw new Error(`\u7ED8\u672C\u6587\u4EF6\u8BFB\u53D6\u5931\u8D25\uFF1A${response.status}`);
@@ -24395,6 +24417,17 @@
     } catch (error) {
       console.warn("\u7ED8\u672C\u79BB\u7EBF\u526F\u672C\u51C6\u5907\u5931\u8D25", error);
     }
+  }
+  function canReaderRequestUrl(item) {
+    const sourceUrl = String(item.sourceUrl || "").trim();
+    return Boolean(sourceUrl) && !/^(blob:|data:|file:)/u.test(sourceUrl);
+  }
+  function withReaderTimeout(promise, message, timeoutMs = READER_LOAD_TIMEOUT_MS) {
+    let timer;
+    const timeout = new Promise((resolve, reject) => {
+      timer = setTimeout(() => reject(new Error(message)), timeoutMs);
+    });
+    return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
   }
   async function readBookArrayBuffer(item) {
     if (item.sourceBlob instanceof Blob) return item.sourceBlob.arrayBuffer();
@@ -24512,11 +24545,11 @@
     const viewportElement = reader?.querySelector("[data-pdf-viewport]");
     if (!reader || !viewportElement) return;
     try {
-      setFileReaderStatus(reader, "\u6B63\u5728\u8BFB\u53D6 PDF\u2026");
-      const buffer = await readBookArrayBuffer(item);
+      setFileReaderStatus(reader, canReaderRequestUrl(item) ? "\u6B63\u5728\u8FDE\u63A5 PDF\u2026" : "\u6B63\u5728\u8BFB\u53D6 PDF\u2026");
       if (token !== state.fileReaderToken) return;
-      const loadingTask = getDocument({ data: new Uint8Array(buffer), ...PDF_JS_OPTIONS });
-      const pdf = await loadingTask.promise;
+      const source = item.sourceBlob instanceof Blob ? { data: new Uint8Array(await item.sourceBlob.arrayBuffer()) } : canReaderRequestUrl(item) ? { url: String(item.sourceUrl).trim() } : { data: new Uint8Array(await readBookArrayBuffer(item)) };
+      const loadingTask = getDocument({ ...source, ...PDF_JS_OPTIONS, disableStream: false, disableAutoFetch: false });
+      const pdf = await withReaderTimeout(loadingTask.promise, "PDF \u8FDE\u63A5\u8D85\u65F6\uFF0C\u8BF7\u68C0\u67E5\u7F51\u7EDC\u540E\u91CD\u8BD5");
       if (token !== state.fileReaderToken || !reader.isConnected) {
         await loadingTask.destroy();
         return;
@@ -24548,12 +24581,11 @@
     if (!reader || !viewport) return;
     try {
       setFileReaderStatus(reader, "\u6B63\u5728\u52A0\u8F7D EPUB \u9605\u8BFB\u5668\u2026");
-      await loadScriptOnce("./src/vendor/epubjs/jszip.min.js", "JSZip");
-      const ePub = await loadScriptOnce("./src/vendor/epubjs/epub.min.js", "ePub");
+      await withReaderTimeout(loadScriptOnce("./src/vendor/epubjs/jszip.min.js", "JSZip"), "EPUB \u89E3\u538B\u7EC4\u4EF6\u52A0\u8F7D\u8D85\u65F6");
+      const ePub = await withReaderTimeout(loadScriptOnce("./src/vendor/epubjs/epub.min.js", "ePub"), "EPUB \u9605\u8BFB\u5668\u52A0\u8F7D\u8D85\u65F6");
       if (token !== state.fileReaderToken) return;
-      const buffer = await readBookArrayBuffer(item);
-      if (token !== state.fileReaderToken) return;
-      const book = ePub(buffer);
+      const source = item.sourceBlob instanceof Blob ? await item.sourceBlob.arrayBuffer() : canReaderRequestUrl(item) ? String(item.sourceUrl).trim() : await withReaderTimeout(readBookArrayBuffer(item), "EPUB \u6587\u4EF6\u8BFB\u53D6\u8D85\u65F6\uFF0C\u8BF7\u68C0\u67E5\u7F51\u7EDC\u540E\u91CD\u8BD5");
+      const book = ePub(source);
       const rendition = book.renderTo(viewport, {
         width: "100%",
         height: "100%",
@@ -24564,7 +24596,7 @@
       });
       const readerState = { kind: "epub", token, book, rendition };
       state.fileReader = readerState;
-      await rendition.display();
+      await withReaderTimeout(rendition.display(), "EPUB \u9996\u7AE0\u6E32\u67D3\u8D85\u65F6\uFF0C\u8BF7\u68C0\u67E5\u6587\u4EF6\u6216\u7F51\u7EDC");
       if (token !== state.fileReaderToken || !reader.isConnected) return;
       setFileReaderStatus(reader, "EPUB \u5DF2\u6253\u5F00\uFF0C\u53EF\u5728\u5F53\u524D\u9875\u9762\u4E0A\u4E0B\u6EDA\u52A8\u9605\u8BFB");
     } catch (error) {
@@ -25165,10 +25197,11 @@
   async function init() {
     const loading = document.querySelector("#appLoading");
     try {
+      installReaderDiagnostics();
       await openDatabase();
       await ensureDefaultTemplates();
       await ensureReadingSeeds();
-      if ("serviceWorker" in navigator && location.protocol.startsWith("http")) navigator.serviceWorker.register("./sw.js").catch(console.warn);
+      if ("serviceWorker" in navigator && location.protocol.startsWith("http")) navigator.serviceWorker.register("./sw.js?v=20260808-7").catch(console.warn);
       await navigate("home");
     } finally {
       loading?.classList.add("is-hidden");

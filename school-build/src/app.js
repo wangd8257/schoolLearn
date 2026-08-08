@@ -47,6 +47,42 @@ const PDF_JS_OPTIONS = Object.freeze({
   cMapPacked: true,
   standardFontDataUrl: './src/vendor/pdfjs/standard_fonts/',
 });
+const READER_LOAD_TIMEOUT_MS = 60000;
+
+/**
+ * 把阅读器异常转换为用户可理解的短消息，并同步到当前阅读界面。
+ * @param {unknown} error 浏览器事件或阅读器抛出的异常对象。
+ * @param {string} source 发生异常的组件名称。
+ * @returns {void}
+ */
+function reportReaderRuntimeError(error, source) {
+  if (state.route !== 'reading' || !state.activeReadingId) return;
+  const message = error instanceof Error ? error.message : String(error || '未知错误');
+  const reader = document.querySelector('[data-pdf-reader], [data-epubjs-reader]');
+
+  // 只在阅读器仍显示加载状态时覆盖状态栏，避免覆盖已经成功打开的阅读内容。
+  const status = reader?.querySelector('[data-pdf-progress], [data-epub-status]');
+  if (status && /正在|准备/u.test(status.textContent || '')) {
+    status.textContent = `${source}加载失败：${message}`;
+  }
+  console.error(`[${source}] 阅读器运行时异常`, error);
+  showToast(`${source}加载失败，请重试`);
+}
+
+/**
+ * 安装 Safari/PWA 下的全局异常监听，避免异步渲染失败时只留下空白页面。
+ * @returns {void}
+ */
+function installReaderDiagnostics() {
+  if (globalThis.__growthDeskReaderDiagnosticsInstalled) return;
+  globalThis.__growthDeskReaderDiagnosticsInstalled = true;
+  window.addEventListener('error', (event) => {
+    reportReaderRuntimeError(event.error || event.message, '阅读器');
+  }, true);
+  window.addEventListener('unhandledrejection', (event) => {
+    reportReaderRuntimeError(event.reason, '阅读器');
+  });
+}
 
 /** 将用户文本转为可安全插入页面的 HTML。 */
 function escapeHtml(value = '') {
@@ -833,7 +869,7 @@ async function cacheFileBook(item) {
   const sourceUrl = String(item.sourceUrl || '');
   const isLocalFileUrl = globalThis.location?.protocol === 'file:' || sourceUrl.startsWith('file:');
   const isInlineSource = /^(blob:|data:)/u.test(sourceUrl);
-  if (isLocalFileUrl || isInlineSource || item.sourceBlob instanceof Blob || !sourceUrl) return;
+  if (isLocalFileUrl || isInlineSource || item.sourceBlob instanceof Blob || item.source === 'huiben' || !sourceUrl) return;
   try {
     const response = await fetch(sourceUrl, { cache: 'force-cache' });
     if (!response.ok) throw new Error(`绘本文件读取失败：${response.status}`);
@@ -843,6 +879,31 @@ async function cacheFileBook(item) {
     // 阅读器已经使用原始 URL 尝试打开，后台缓存失败不应阻断当前阅读。
     console.warn('绘本离线副本准备失败', error);
   }
+}
+
+/**
+ * 判断绘本是否可以直接交给阅读器按 URL/Range 请求读取。
+ * @param {Record<string, unknown>} item 书架中的文件绘本记录。
+ * @returns {boolean} 是否为可直接请求的 HTTP(S) 地址。
+ */
+function canReaderRequestUrl(item) {
+  const sourceUrl = String(item.sourceUrl || '').trim();
+  return Boolean(sourceUrl) && !/^(blob:|data:|file:)/u.test(sourceUrl);
+}
+
+/**
+ * 为异步阅读器增加明确的超时边界，避免网络或 Safari 内核异常时永久停留在加载提示。
+ * @param {Promise<unknown>} promise 待读取的异步任务。
+ * @param {string} message 超时后展示给用户的错误信息。
+ * @param {number} timeoutMs 超时时间，单位为毫秒。
+ * @returns {Promise<unknown>} 原任务结果或超时错误。
+ */
+function withReaderTimeout(promise, message, timeoutMs = READER_LOAD_TIMEOUT_MS) {
+  let timer;
+  const timeout = new Promise((resolve, reject) => {
+    timer = setTimeout(() => reject(new Error(message)), timeoutMs);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
 /**
@@ -1011,11 +1072,15 @@ async function mountPdfJsReader(item, token) {
   const viewportElement = reader?.querySelector('[data-pdf-viewport]');
   if (!reader || !viewportElement) return;
   try {
-    setFileReaderStatus(reader, '正在读取 PDF…');
-    const buffer = await readBookArrayBuffer(item);
+    setFileReaderStatus(reader, canReaderRequestUrl(item) ? '正在连接 PDF…' : '正在读取 PDF…');
     if (token !== state.fileReaderToken) return;
-    const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(buffer), ...PDF_JS_OPTIONS });
-    const pdf = await loadingTask.promise;
+    const source = item.sourceBlob instanceof Blob
+      ? { data: new Uint8Array(await item.sourceBlob.arrayBuffer()) }
+      : canReaderRequestUrl(item)
+      ? { url: String(item.sourceUrl).trim() }
+      : { data: new Uint8Array(await readBookArrayBuffer(item)) };
+    const loadingTask = pdfjsLib.getDocument({ ...source, ...PDF_JS_OPTIONS, disableStream: false, disableAutoFetch: false });
+    const pdf = await withReaderTimeout(loadingTask.promise, 'PDF 连接超时，请检查网络后重试');
     if (token !== state.fileReaderToken || !reader.isConnected) {
       await loadingTask.destroy();
       return;
@@ -1053,12 +1118,15 @@ async function mountEpubJsReader(item, token) {
   if (!reader || !viewport) return;
   try {
     setFileReaderStatus(reader, '正在加载 EPUB 阅读器…');
-    await loadScriptOnce('./src/vendor/epubjs/jszip.min.js', 'JSZip');
-    const ePub = await loadScriptOnce('./src/vendor/epubjs/epub.min.js', 'ePub');
+    await withReaderTimeout(loadScriptOnce('./src/vendor/epubjs/jszip.min.js', 'JSZip'), 'EPUB 解压组件加载超时');
+    const ePub = await withReaderTimeout(loadScriptOnce('./src/vendor/epubjs/epub.min.js', 'ePub'), 'EPUB 阅读器加载超时');
     if (token !== state.fileReaderToken) return;
-    const buffer = await readBookArrayBuffer(item);
-    if (token !== state.fileReaderToken) return;
-    const book = ePub(buffer);
+    const source = item.sourceBlob instanceof Blob
+      ? await item.sourceBlob.arrayBuffer()
+      : canReaderRequestUrl(item)
+      ? String(item.sourceUrl).trim()
+      : await withReaderTimeout(readBookArrayBuffer(item), 'EPUB 文件读取超时，请检查网络后重试');
+    const book = ePub(source);
     const rendition = book.renderTo(viewport, {
       width: '100%',
       height: '100%',
@@ -1069,7 +1137,7 @@ async function mountEpubJsReader(item, token) {
     });
     const readerState = { kind: 'epub', token, book, rendition };
     state.fileReader = readerState;
-    await rendition.display();
+    await withReaderTimeout(rendition.display(), 'EPUB 首章渲染超时，请检查文件或网络');
     if (token !== state.fileReaderToken || !reader.isConnected) return;
     setFileReaderStatus(reader, 'EPUB 已打开，可在当前页面上下滚动阅读');
   } catch (error) {
@@ -1527,10 +1595,11 @@ document.querySelector('#menuButton').addEventListener('click',()=>document.quer
 async function init() {
   const loading = document.querySelector('#appLoading');
   try {
+    installReaderDiagnostics();
     await openDatabase();
     await ensureDefaultTemplates();
     await ensureReadingSeeds();
-    if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('./sw.js').catch(console.warn);
+    if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('./sw.js?v=20260808-7').catch(console.warn);
     await navigate('home');
   } finally {
     loading?.classList.add('is-hidden');
