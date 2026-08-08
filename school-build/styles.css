@@ -1249,6 +1249,140 @@ textarea:focus-visible,
   }
 }
 
+/* 当前页面阅读器：内容由解析器写入容器，不使用外层 iframe 或新窗口。 */
+.file-book-reader .file-reader-surface {
+  position: absolute;
+  inset: 58px 0 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: #fff;
+}
+
+.pdfjs-toolbar {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 8px 12px;
+  color: var(--ink);
+  background: #f5f7fa;
+  box-shadow: 0 4px 14px rgba(23, 35, 56, .08);
+}
+
+.pdfjs-toolbar [data-pdf-progress] {
+  min-width: 110px;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.pdfjs-viewport,
+.epubjs-viewport {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  background: #eef2f7;
+}
+
+.pdfjs-viewport {
+  padding: 16px 12px 32px;
+}
+
+.pdfjs-page {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+  margin: 0 auto 16px;
+}
+
+.pdfjs-canvas {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(23, 35, 56, .12);
+}
+
+.epubjs-reader-surface {
+  background: #fff;
+}
+
+.epubjs-status {
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 8px 16px;
+  color: var(--muted);
+  background: #f5f7fa;
+  font-size: 12px;
+  text-align: center;
+}
+
+.epubjs-viewport {
+  background: #fff;
+}
+
+.epubjs-viewport > div {
+  width: 100% !important;
+  min-height: 100%;
+}
+
+.epubjs-viewport iframe {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  border: 0;
+  background: #fff;
+}
+
+@media (max-width: 760px) {
+  .file-book-reader .file-reader-surface {
+    inset: 52px 0 0;
+  }
+
+  .pdfjs-toolbar {
+    gap: 4px;
+    min-height: 44px;
+    padding: 6px 8px;
+  }
+
+  .pdfjs-toolbar .primary,
+  .pdfjs-toolbar .secondary {
+    min-height: 32px;
+    padding-inline: 8px;
+    font-size: 12px;
+  }
+
+  .pdfjs-toolbar [data-pdf-progress] {
+    min-width: 78px;
+    font-size: 11px;
+  }
+
+  .pdfjs-viewport {
+    padding: 10px 6px 24px;
+  }
+
+  .pdfjs-page {
+    margin-bottom: 10px;
+  }
+
+  .epubjs-status {
+    min-height: 28px;
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+}
+
 .segmented input:checked + span {
   background: var(--blue);
 }

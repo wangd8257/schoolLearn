@@ -11,9 +11,23 @@ export async function ensureReadingSeeds() {
   if (builtinItems.length) await Promise.all(builtinItems.map((item) => remove('readings', item.id)));
 
   const keptItems = existing.filter((item) => !item.builtin);
-  const knownIds = new Set(keptItems.map((item) => item.id));
   const knownHuibenFiles = new Set(keptItems.filter((item) => item.source === 'huiben').map((item) => item.fileName));
   const localBooks = await loadHuibenBooks();
+  const localBooksByFileName = new Map(localBooks.map((book) => [book.fileName, book]));
+  const migratedItems = keptItems
+    .filter((item) => item.source === 'huiben' && localBooksByFileName.has(item.fileName))
+    .map((item) => {
+      const currentBook = localBooksByFileName.get(item.fileName);
+      return {
+        ...item,
+        ...currentBook,
+        id: item.id,
+        createdAt: item.createdAt || currentBook.createdAt,
+        updatedAt: currentBook.updatedAt,
+      };
+    });
+  if (migratedItems.length) await Promise.all(migratedItems.map((book) => put('readings', book)));
+  const knownIds = new Set(keptItems.map((item) => item.id));
   const newBooks = localBooks.filter((book) => !knownIds.has(book.id) && !knownHuibenFiles.has(book.fileName));
   if (newBooks.length) await Promise.all(newBooks.map((book) => put('readings', book)));
   return getAll('readings');

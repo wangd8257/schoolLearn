@@ -33,12 +33,20 @@ import {
 } from './templates.js';
 import { renderProblemHtml, renderWorksheetMetaHtml, worksheetColumns, worksheetLayoutClass } from './worksheet-render.js';
 import { paperMoveDelta, paperScrollDelta } from './paper-controls.mjs';
-import './vendor/epub-reader/epub-reader.js';
+import * as pdfjsLib from './vendor/pdfjs/pdf.min.mjs';
 
-const state = { route: 'home', paperFilter: 'all', activeReadingId: null, activePaperId: null, pictureBookDraft: null, paperTransform: null, paperStatus: null, bookObjectUrl: null };
+const state = { route: 'home', paperFilter: 'all', activeReadingId: null, activePaperId: null, pictureBookDraft: null, paperTransform: null, paperStatus: null, bookObjectUrl: null, fileReader: null, fileReaderToken: 0, pdfZoom: 1 };
 const main = document.querySelector('#mainContent');
 const toast = document.querySelector('#toast');
 const modalRoot = document.querySelector('#modalRoot');
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = './src/vendor/pdfjs/pdf.worker.min.mjs';
+
+const PDF_JS_OPTIONS = Object.freeze({
+  cMapUrl: './src/vendor/pdfjs/cmaps/',
+  cMapPacked: true,
+  standardFontDataUrl: './src/vendor/pdfjs/standard_fonts/',
+});
 
 /** 将用户文本转为可安全插入页面的 HTML。 */
 function escapeHtml(value = '') {
@@ -75,6 +83,7 @@ function pageHeader(title, subtitle, actions = '') {
 /** 切换工作区并同步侧栏状态。 */
 export async function navigate(route, detail = null) {
   stopSpeaking();
+  destroyActiveFileReader();
   if (route !== 'reading' && state.bookObjectUrl) {
     URL.revokeObjectURL(state.bookObjectUrl);
     state.bookObjectUrl = null;
@@ -746,10 +755,15 @@ function renderReadingShelf(readings) {
  * @returns {void}
  */
 function renderActiveReading(item) {
+  destroyActiveFileReader();
+  state.fileReaderToken += 1;
+  state.pdfZoom = 1;
   const readerItem = item.type === 'file-book' ? createImmediateFileBook(item) : item;
   main.innerHTML = renderReader(readerItem);
-  if (readerItem.type === 'file-book' && ['epub', 'equb'].includes(String(readerItem.fileKind).toLowerCase()) && readerItem.fileAccessMode !== 'local-file') {
-    void mountEpubReader(readerItem);
+  if (readerItem.type === 'file-book' && readerItem.fileAccessMode !== 'local-file') {
+    const kind = String(readerItem.fileKind || '').toLowerCase();
+    if (kind === 'pdf') void mountPdfJsReader(readerItem, state.fileReaderToken);
+    if (['epub', 'equb'].includes(kind)) void mountEpubJsReader(readerItem, state.fileReaderToken);
   }
   if (item.type === 'file-book') void cacheFileBook(item);
 }
@@ -772,25 +786,12 @@ function renderReader(item) {
   return `<article class="reader fullscreen-reader text-reader"><div class="reader-floating-toolbar"><button class="primary" data-speak-all>▶ 连续朗读</button><button class="secondary" data-stop-speech>■ 停止</button><select id="traceMode"><option value="none">普通阅读</option><option value="overlay">覆盖原文描红</option><option value="practice">描红 + 仿写</option></select><button class="primary" data-exit-reader>退出阅读</button></div><h2>${escapeHtml(item.title)}</h2>${paragraphs.map((paragraph,index)=>`<div class="paragraph-wrap"><p class="reading-paragraph" data-paragraph-index="${index}" data-text="${escapeHtml(paragraph)}">${tokenHtml(paragraph,item.language)}</p><div class="trace-extra"></div></div>`).join('')}</article>`;
 }
 
-/**
- * 判断当前是否为触屏 Apple 移动设备。
- * @returns {boolean} iPhone、iPad 或 iPad 桌面模式返回 true。
- */
-function isAppleMobileDevice() {
-  return /iPad|iPhone|iPod/u.test(navigator.userAgent)
-    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-}
-
 function renderFileBookReader(item) {
   const source = String(item.sourceUrl || '').trim();
   const sourceUrl = escapeHtml(source);
   const title = escapeHtml(item.title);
   const kind = String(item.fileKind || 'file').toUpperCase();
   const isEpub = ['EPUB', 'EQUB'].includes(kind);
-  const isApplePdf = kind === 'PDF' && isAppleMobileDevice();
-  const openLink = source && !isEpub
-    ? `<a class="secondary book-open-link" href="${sourceUrl}" target="_blank" rel="noopener">在新窗口打开</a>`
-    : '';
   const localFileFallback = item.fileAccessMode === 'local-file'
     ? `<div class="book-file-fallback local-file-notice"><span class="ultra-notice-mark" aria-hidden="true"></span><h2>${title}</h2><p>${isEpub ? 'EPUB/EQUB' : 'PDF'} 不能在 file:// 页面内嵌阅读，浏览器会阻止本地资源加载。</p><p class="book-file-hint">请启动本地服务后打开本应用；也可以直接打开原文件，由系统阅读器负责显示。</p><div class="local-file-actions"><a class="primary" href="http://127.0.0.1:4173/" target="_blank" rel="noopener">打开本地阅读服务</a>${source ? `<a class="secondary" href="${sourceUrl}" target="_blank" rel="noopener">直接打开原文件</a>` : ''}</div></div>`
     : '';
@@ -800,13 +801,11 @@ function renderFileBookReader(item) {
   const body = localFileFallback
     ? localFileFallback
     : isEpub
-    ? '<epub-reader class="epub-reader-frame" data-epub-reader aria-label="EPUB 绘本阅读器"></epub-reader>'
-    : isApplePdf && source
-    ? `<div class="book-file-fallback apple-pdf-notice"><h2>${title}</h2><p>iPad 使用系统阅读器打开 PDF，阅读和缩放更稳定。</p><a class="primary" href="${sourceUrl}" target="_blank" rel="noopener">打开 PDF</a></div>`
+    ? `<div class="file-reader-surface epubjs-reader-surface" data-epubjs-reader><div class="epubjs-status" data-epub-status>正在准备 EPUB 阅读器…</div><div class="epubjs-viewport" data-epub-viewport></div></div>`
     : kind === 'PDF' && source
-    ? `<iframe class="book-file-frame" src="${sourceUrl}" title="${title}" loading="eager"></iframe>`
+    ? `<div class="file-reader-surface pdfjs-reader-surface" data-pdf-reader><div class="pdfjs-toolbar"><button class="secondary" data-pdf-page="-1" disabled>← 上一页</button><span data-pdf-progress>正在加载 PDF…</span><button class="secondary" data-pdf-page="1" disabled>下一页 →</button><button class="secondary" data-reader-zoom="-1" aria-label="缩小 PDF">−</button><button class="secondary" data-reader-zoom="1" aria-label="放大 PDF">＋</button></div><div class="pdfjs-viewport" data-pdf-viewport></div></div>`
     : fallback;
-  return `<article class="reader fullscreen-reader file-book-reader"><div class="reader-floating-toolbar"><strong>${title}</strong><span>${kind}</span>${openLink}<button class="primary" data-exit-reader>退出阅读</button></div>${body}</article>`;
+  return `<article class="reader fullscreen-reader file-book-reader"><div class="reader-floating-toolbar"><strong>${title}</strong><span>${kind}</span><button class="primary" data-exit-reader>退出阅读</button></div>${body}</article>`;
 }
 
 /**
@@ -847,32 +846,237 @@ async function cacheFileBook(item) {
 }
 
 /**
- * 打开当前 EPUB/EQUB 书籍的本地阅读组件。
- * @param {Record<string, unknown>} item 书架中的 EPUB/EQUB 书籍记录。
- * @returns {Promise<void>} 组件加载完成或显示错误提示。
+ * 读取绘本文件的二进制内容，统一兼容 IndexedDB Blob、Data URL 和静态 URL。
+ * @param {Record<string, unknown>} item 书架中的文件绘本记录。
+ * @returns {Promise<ArrayBuffer>} 解析器使用的文件字节。
  */
-async function mountEpubReader(item) {
-  const reader = document.querySelector('[data-epub-reader]');
-  const source = item.sourceBlob instanceof Blob ? item.sourceBlob : String(item.sourceUrl || '');
-  if (!reader || !source) return;
-  const fallback = (message) => {
-    if (!reader.isConnected) return;
-    const source = String(item.sourceUrl || '');
-    const directLink = source && !/^(blob:|data:|file:)/u.test(source)
-      ? `<a class="secondary" href="${escapeHtml(source)}" target="_blank" rel="noopener">尝试用系统打开</a>`
-      : '';
-    reader.outerHTML = `<div class="book-file-fallback"><h2>${escapeHtml(item.title)}</h2><p>当前设备无法在网页内解压此 EPUB/EQUB 文件，请选择其他打开方式。${message ? ` ${escapeHtml(message)}` : ''}</p><div class="local-file-actions">${directLink}<label class="primary file-button">选择文件阅读<input type="file" accept=".epub,.equb,application/epub+zip" data-local-book-picker></label></div></div>`;
-    showToast('绘本加载失败，请在当前页面选择文件');
-  };
-  if (typeof DecompressionStream === 'undefined') console.info('当前浏览器没有 DecompressionStream，将使用本地 ZIP 解压兼容路径');
-  reader.addEventListener('epub-error', (event) => {
-    const detail = event.detail?.error;
-    fallback(detail?.message || '');
-  }, { once: true });
+async function readBookArrayBuffer(item) {
+  if (item.sourceBlob instanceof Blob) return item.sourceBlob.arrayBuffer();
+  const sourceUrl = String(item.sourceUrl || '').trim();
+  if (!sourceUrl) throw new Error('没有找到绘本文件地址');
+  const response = await fetch(sourceUrl, { cache: 'force-cache' });
+  if (!response.ok) throw new Error(`绘本文件读取失败：${response.status}`);
+  return response.arrayBuffer();
+}
+
+/**
+ * 在当前页面内按需加载本地 UMD 阅读器脚本，并复用已加载的脚本 Promise。
+ * @param {string} sourceUrl 本地脚本相对地址。
+ * @param {string} globalName 脚本加载后应提供的全局变量名。
+ * @returns {Promise<unknown>} 脚本提供的全局对象。
+ */
+function loadScriptOnce(sourceUrl, globalName) {
+  const globalObject = globalThis[globalName];
+  if (globalObject) return Promise.resolve(globalObject);
+  const cacheKey = `__growthDeskScript_${globalName}`;
+  if (globalThis[cacheKey]) return globalThis[cacheKey];
+  globalThis[cacheKey] = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = sourceUrl;
+    script.async = true;
+    script.onload = () => {
+      const loaded = globalThis[globalName];
+      if (!loaded) {
+        reject(new Error(`${globalName} 脚本已加载但没有提供阅读器对象`));
+        return;
+      }
+      resolve(loaded);
+    };
+    script.onerror = () => reject(new Error(`阅读器脚本加载失败：${sourceUrl}`));
+    document.head.appendChild(script);
+  }).catch((error) => {
+    delete globalThis[cacheKey];
+    throw error;
+  });
+  return globalThis[cacheKey];
+}
+
+/**
+ * 更新文件阅读器的状态提示。
+ * @param {Element|null} reader 当前阅读器根节点。
+ * @param {string} message 要显示的状态文本。
+ * @returns {void}
+ */
+function setFileReaderStatus(reader, message) {
+  const status = reader?.querySelector('[data-pdf-progress], [data-epub-status]');
+  if (status) status.textContent = message;
+}
+
+/**
+ * 销毁当前 PDF.js 或 epub.js 实例，防止退出阅读后异步任务回写旧页面。
+ * @returns {void}
+ */
+function destroyActiveFileReader() {
+  state.fileReaderToken += 1;
+  const activeReader = state.fileReader;
+  state.fileReader = null;
+  if (!activeReader) return;
   try {
-    await reader.open(source);
+    if (activeReader.kind === 'pdf') {
+      activeReader.loadingTask?.destroy?.();
+      activeReader.pdf?.cleanup?.();
+    }
+    if (activeReader.kind === 'epub') {
+      activeReader.rendition?.destroy?.();
+      activeReader.book?.destroy?.();
+    }
   } catch (error) {
-    fallback(error?.message || '');
+    console.warn('阅读器销毁失败', error);
+  }
+}
+
+/**
+ * 更新 PDF.js 阅读器分页按钮和当前页提示。
+ * @param {Record<string, unknown>} readerState 当前 PDF.js 状态。
+ * @returns {void}
+ */
+function updatePdfReaderControls(readerState) {
+  const reader = document.querySelector('[data-pdf-reader]');
+  if (!reader || !readerState?.pdf) return;
+  const page = Math.max(1, Math.min(readerState.pdf.numPages, readerState.currentPage || 1));
+  readerState.currentPage = page;
+  const progress = reader.querySelector('[data-pdf-progress]');
+  if (progress) progress.textContent = `第 ${page} / ${readerState.pdf.numPages} 页`;
+  reader.querySelector('[data-pdf-page="-1"]')?.toggleAttribute('disabled', page <= 1);
+  reader.querySelector('[data-pdf-page="1"]')?.toggleAttribute('disabled', page >= readerState.pdf.numPages);
+}
+
+/**
+ * 按当前阅读容器宽度渲染一个 PDF 页面。
+ * @param {Record<string, unknown>} readerState 当前 PDF.js 状态。
+ * @param {number} pageNumber 待渲染的页码，从 1 开始。
+ * @returns {Promise<void>} 页面渲染完成。
+ */
+async function renderPdfPage(readerState, pageNumber, renderRun = readerState.renderRun) {
+  const reader = document.querySelector('[data-pdf-reader]');
+  const viewportElement = reader?.querySelector('[data-pdf-viewport]');
+  if (!reader || !viewportElement || readerState.token !== state.fileReaderToken || renderRun !== readerState.renderRun) return;
+  const page = await readerState.pdf.getPage(pageNumber);
+  if (readerState.token !== state.fileReaderToken || renderRun !== readerState.renderRun || !reader.isConnected) return;
+  const baseViewport = page.getViewport({ scale: 1 });
+  const availableWidth = Math.max(240, viewportElement.clientWidth - 24);
+  const scale = Math.max(.5, Math.min(3, availableWidth / baseViewport.width * state.pdfZoom));
+  const viewport = page.getViewport({ scale });
+  const pageElement = document.createElement('section');
+  pageElement.className = 'pdfjs-page';
+  pageElement.dataset.pdfPageNumber = String(pageNumber);
+  const canvas = document.createElement('canvas');
+  canvas.className = 'pdfjs-canvas';
+  const deviceScale = Math.min(2, window.devicePixelRatio || 1);
+  canvas.width = Math.floor(viewport.width * deviceScale);
+  canvas.height = Math.floor(viewport.height * deviceScale);
+  canvas.style.width = `${viewport.width}px`;
+  canvas.style.height = `${viewport.height}px`;
+  pageElement.appendChild(canvas);
+  viewportElement.appendChild(pageElement);
+  await page.render({
+    canvasContext: canvas.getContext('2d', { alpha: false }),
+    viewport,
+    transform: deviceScale === 1 ? undefined : [deviceScale, 0, 0, deviceScale, 0, 0],
+  }).promise;
+  page.cleanup();
+}
+
+/**
+ * 按当前缩放比例重新渲染 PDF 全部页面。
+ * @param {Record<string, unknown>} readerState 当前 PDF.js 状态。
+ * @returns {Promise<void>} 所有页面重绘完成。
+ */
+async function rerenderPdfDocument(readerState) {
+  const reader = document.querySelector('[data-pdf-reader]');
+  const viewportElement = reader?.querySelector('[data-pdf-viewport]');
+  if (!reader || !viewportElement || readerState.kind !== 'pdf') return;
+  readerState.renderRun += 1;
+  const renderRun = readerState.renderRun;
+  viewportElement.replaceChildren();
+  setFileReaderStatus(reader, '正在调整页面…');
+  for (let pageNumber = 1; pageNumber <= readerState.pdf.numPages; pageNumber += 1) {
+    if (renderRun !== readerState.renderRun || readerState.token !== state.fileReaderToken) return;
+    await renderPdfPage(readerState, pageNumber, renderRun);
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+  }
+  updatePdfReaderControls(readerState);
+  const currentPage = viewportElement.querySelector(`[data-pdf-page-number="${readerState.currentPage}"]`);
+  currentPage?.scrollIntoView({ block: 'start' });
+}
+
+/**
+ * 使用 Mozilla PDF.js 在当前页面内渲染 PDF，并渐进式生成可滚动页面。
+ * @param {Record<string, unknown>} item 书架中的 PDF 书籍记录。
+ * @param {number} token 本次打开动作的令牌。
+ * @returns {Promise<void>} PDF 首屏和后续页面渲染完成或显示错误。
+ */
+async function mountPdfJsReader(item, token) {
+  const reader = document.querySelector('[data-pdf-reader]');
+  const viewportElement = reader?.querySelector('[data-pdf-viewport]');
+  if (!reader || !viewportElement) return;
+  try {
+    setFileReaderStatus(reader, '正在读取 PDF…');
+    const buffer = await readBookArrayBuffer(item);
+    if (token !== state.fileReaderToken) return;
+    const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(buffer), ...PDF_JS_OPTIONS });
+    const pdf = await loadingTask.promise;
+    if (token !== state.fileReaderToken || !reader.isConnected) {
+      await loadingTask.destroy();
+      return;
+    }
+    const readerState = { kind: 'pdf', token, loadingTask, pdf, currentPage: 1, renderRun: 0 };
+    state.fileReader = readerState;
+    setFileReaderStatus(reader, `共 ${pdf.numPages} 页`);
+    reader.querySelectorAll('[data-pdf-page], [data-reader-zoom]').forEach((button) => { button.disabled = false; });
+    // 先渲染第一页，让 iPad 首屏尽快出现，再顺序渲染其余页面。
+    await renderPdfPage(readerState, 1, readerState.renderRun);
+    updatePdfReaderControls(readerState);
+    for (let pageNumber = 2; pageNumber <= pdf.numPages; pageNumber += 1) {
+      if (token !== state.fileReaderToken) return;
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      await renderPdfPage(readerState, pageNumber, readerState.renderRun);
+    }
+    setFileReaderStatus(reader, `第 1 / ${pdf.numPages} 页`);
+  } catch (error) {
+    if (token !== state.fileReaderToken || !reader.isConnected) return;
+    setFileReaderStatus(reader, `PDF 加载失败：${error?.message || '未知错误'}`);
+    showToast('PDF 无法在当前页面打开');
+    console.error('PDF.js 阅读失败', error);
+  }
+}
+
+/**
+ * 使用 epub.js 在当前页面内渲染 EPUB/EQUB，并把章节内容放入同一个滚动容器。
+ * @param {Record<string, unknown>} item 书架中的 EPUB/EQUB 书籍记录。
+ * @param {number} token 本次打开动作的令牌。
+ * @returns {Promise<void>} EPUB 首章渲染完成或显示错误。
+ */
+async function mountEpubJsReader(item, token) {
+  const reader = document.querySelector('[data-epubjs-reader]');
+  const viewport = reader?.querySelector('[data-epub-viewport]');
+  if (!reader || !viewport) return;
+  try {
+    setFileReaderStatus(reader, '正在加载 EPUB 阅读器…');
+    await loadScriptOnce('./src/vendor/epubjs/jszip.min.js', 'JSZip');
+    const ePub = await loadScriptOnce('./src/vendor/epubjs/epub.min.js', 'ePub');
+    if (token !== state.fileReaderToken) return;
+    const buffer = await readBookArrayBuffer(item);
+    if (token !== state.fileReaderToken) return;
+    const book = ePub(buffer);
+    const rendition = book.renderTo(viewport, {
+      width: '100%',
+      height: '100%',
+      flow: 'scrolled-doc',
+      manager: 'continuous',
+      method: 'write',
+      spread: 'none',
+    });
+    const readerState = { kind: 'epub', token, book, rendition };
+    state.fileReader = readerState;
+    await rendition.display();
+    if (token !== state.fileReaderToken || !reader.isConnected) return;
+    setFileReaderStatus(reader, 'EPUB 已打开，可在当前页面上下滚动阅读');
+  } catch (error) {
+    if (token !== state.fileReaderToken || !reader.isConnected) return;
+    setFileReaderStatus(reader, `EPUB 加载失败：${error?.message || '未知错误'}`);
+    showToast('EPUB 无法在当前页面打开');
+    console.error('epub.js 阅读失败', error);
   }
 }
 function tokenHtml(text, language) {
@@ -1134,6 +1338,23 @@ async function handleGlobalClick(event) {
   }
   if (event.target.closest('[data-stop-speech]')) return stopSpeaking();
   const paragraph=event.target.closest('[data-paragraph-index]'); if(paragraph){const item=(await getAll('readings')).find((entry)=>entry.id===state.activeReadingId); return speakParagraph(paragraph,item);}
+  if (event.target.closest('[data-pdf-page]')) {
+    const button = event.target.closest('[data-pdf-page]');
+    const readerState = state.fileReader;
+    if (readerState?.kind !== 'pdf') return;
+    const nextPage = Math.max(1, Math.min(readerState.pdf.numPages, readerState.currentPage + Number(button.dataset.pdfPage || 0)));
+    readerState.currentPage = nextPage;
+    document.querySelector(`[data-pdf-page-number="${nextPage}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    updatePdfReaderControls(readerState);
+    return;
+  }
+  if (event.target.closest('[data-reader-zoom]')) {
+    const readerState = state.fileReader;
+    if (readerState?.kind !== 'pdf') return;
+    state.pdfZoom = Math.max(.75, Math.min(1.5, state.pdfZoom + Number(event.target.closest('[data-reader-zoom]').dataset.readerZoom || 0) * .1));
+    await rerenderPdfDocument(readerState);
+    return;
+  }
   if (event.target.closest('[data-book-prev]')) { state.bookPage=Math.max(0,(state.bookPage||0)-1); return renderReading(); }
   if (event.target.closest('[data-book-next]')) { const item=(await getAll('readings')).find((entry)=>entry.id===state.activeReadingId); state.bookPage=Math.min(item.pages.length-1,(state.bookPage||0)+1); return renderReading(); }
   if (event.target.closest('[data-speak-book]')) { const item=(await getAll('readings')).find((entry)=>entry.id===state.activeReadingId); return speakPictureBookPage(item); }

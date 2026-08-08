@@ -32,7 +32,7 @@ test('入口资源带版本参数，避免线上旧缓存继续加载旧文件',
 test('Service Worker 升级缓存名并优先读取网络文件', () => {
   const source = readFileSync(new URL('../../sw.js', import.meta.url), 'utf8');
 
-  assert.match(source, /growth-desk-v12-20260808/);
+  assert.match(source, /growth-desk-v14-20260808/);
   assert.match(source, /dist\/app\.bundle\.js/);
   assert.match(source, /async function fetchFreshThenCache/);
   assert.match(source, /const response = await fetch\(request\)/);
@@ -40,5 +40,8 @@ test('Service Worker 升级缓存名并优先读取网络文件', () => {
   assert.match(source, /cacheHuibenBooks/);
   assert.match(source, /\.\/huiben\/manifest\.json/);
   assert.match(source, /\.\/src\/data\/huiben-manifest\.mjs/);
-  assert.match(source, /\.\/src\/vendor\/epub-reader\/epub-reader\.js/);
+  assert.match(source, /\.\/src\/vendor\/pdfjs\/pdf\.min\.mjs/);
+  assert.match(source, /\.\/src\/vendor\/pdfjs\/pdf\.worker\.min\.mjs/);
+  assert.match(source, /\.\/src\/vendor\/epubjs\/jszip\.min\.js/);
+  assert.match(source, /\.\/src\/vendor\/epubjs\/epub\.min\.js/);
 });
