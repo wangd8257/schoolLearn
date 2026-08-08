@@ -3206,7 +3206,7 @@
     if (diagramClass === "make-ten-diagram") {
       return `<div class="problem ten-diagram make-ten-diagram" style="${columnStyle}">${expression}<div class="ten-process make-ten-process"><div class="ten-anchor" data-ten-anchor="left-operand"><span class="ten-anchor-line"></span><span class="ten-target-number">10</span></div><div class="ten-split" data-ten-anchor="right-operand"><div class="ten-slashes"><span>/</span><span>\\</span></div><div class="ten-split-boxes"><span class="answer-box ten-small-box"></span><span class="answer-box ten-small-box"></span></div></div></div></div>`;
     }
-    return `<div class="problem ten-diagram break-ten-diagram" style="${columnStyle}">${expression}<div class="ten-process break-ten-process"><div class="ten-split" data-ten-anchor="left-operand"><div class="ten-slashes"><span>/</span><span>\\</span></div><div class="ten-split-boxes"><span class="answer-box ten-small-box"></span><span class="answer-box ten-small-box"></span></div></div><div class="ten-result-tree" data-ten-anchor="right-operand"><span class="ten-result-operator">\u2212</span><span class="ten-result-box-wrap"><span class="answer-box ten-result-box"></span></span></div></div></div>`;
+    return `<div class="problem ten-diagram break-ten-diagram" style="${columnStyle}">${expression}<div class="ten-process break-ten-process"><div class="ten-split" data-ten-anchor="left-operand"><div class="ten-slashes"><span>/</span><span>\\</span></div><div class="ten-split-boxes"><span class="answer-box ten-small-box"></span><span class="answer-box ten-small-box"></span></div></div><div class="ten-result-tree" data-ten-anchor="right-operand"><span class="ten-result-operator">|</span><span class="ten-result-box-wrap"><span class="answer-box ten-result-box"></span></span></div></div></div>`;
   }
   function renderMakeTenDiagram(problem) {
     return renderTenDiagram(problem, "+", "make-ten-diagram");
@@ -7301,7 +7301,7 @@ ${user}`);
     modalRoot.innerHTML = "";
   }
   function pageHeader(title, subtitle, actions = "") {
-    return `<div class="page-header"><div><h1>${title}</h1><p>${subtitle}</p></div><div class="header-actions">${actions}</div></div>`;
+    return `<div class="page-header"><div class="page-header-copy"><span class="page-kicker">\u5149\u4E4B\u8FDB\u5316 / COMMAND DECK</span><h1>${title}</h1><p>${subtitle}</p></div><div class="page-header-side"><div class="page-header-signal" aria-hidden="true"><span class="signal-ring"></span><span class="signal-core"></span><span class="signal-beam"></span></div><div class="header-actions">${actions}</div></div></div>`;
   }
   async function navigate(route, detail = null) {
     stopSpeaking();
@@ -7340,18 +7340,27 @@ ${user}`);
     const today = new Intl.DateTimeFormat("zh-CN", { month: "long", day: "numeric", weekday: "long" }).format(/* @__PURE__ */ new Date());
     main.innerHTML = `
     ${pageHeader("\u4F60\u597D\uFF0C\u51C6\u5907\u5F00\u59CB\u5B66\u4E60\u5427", "\u8BD5\u5377\u3001\u9605\u8BFB\u548C\u5C0F\u6E38\u620F\u90FD\u4FDD\u5B58\u5728\u8FD9\u53F0 iPad \u4E0A", '<button class="primary" data-route="generator">\uFF0B \u751F\u6210\u8BD5\u5377</button>')}
-    <section class="hero-band"><div><span class="today-date">${today}</span><h2>\u628A\u6BCF\u4E00\u6B21\u7EC3\u4E60\uFF0C\u53D8\u6210\u770B\u5F97\u89C1\u7684\u6210\u957F</h2><p>\u5BB6\u957F\u6309\u9700\u8981\u751F\u6210\u8BD5\u5377\uFF0C\u5B69\u5B50\u7528 Apple Pencil \u9ED1\u7B14\u4F5C\u7B54\uFF0C\u63D0\u4EA4\u540E\u518D\u7528\u7EA2\u7B14\u6279\u6539\u3002\u9605\u8BFB\u4E0E\u6E38\u620F\u4E5F\u53EF\u4EE5\u968F\u65F6\u5F00\u59CB\u3002</p></div></section>
-    <section class="metric-grid">
-      <div class="metric"><strong>${papers.length}</strong><span>\u5168\u90E8\u8BD5\u5377</span></div>
-      <div class="metric"><strong>${statusCount("review")}</strong><span>\u5F85\u6279\u6539</span></div>
-      <div class="metric"><strong>${readings.length}</strong><span>\u9605\u8BFB\u8D44\u6599</span></div>
-      <div class="metric"><strong>${records.length}</strong><span>\u6E38\u620F\u8BB0\u5F55</span></div>
+    <section class="hero-band">
+      <div class="hero-copy"><span class="today-date">${today}</span><span class="hero-kicker">ULTRA LEARNING CONSOLE \xB7 01</span><h2>\u628A\u6BCF\u4E00\u6B21\u7EC3\u4E60\uFF0C\u53D8\u6210\u770B\u5F97\u89C1\u7684\u6210\u957F</h2><p>\u5BB6\u957F\u914D\u7F6E\u5185\u5BB9\uFF0C\u5B69\u5B50\u4E13\u6CE8\u4F5C\u7B54\u3002\u8BD5\u5377\u3001\u9605\u8BFB\u4E0E\u6E38\u620F\u90FD\u5728\u8FD9\u53F0\u8BBE\u5907\u4E0A\u79BB\u7EBF\u8FD0\u884C\u3002</p><div class="hero-actions"><button class="primary" data-route="generator">\u5F00\u59CB\u751F\u6210</button><button class="hero-link" data-route="papers">\u67E5\u770B\u8BD5\u5377\u76EE\u5F55 <span aria-hidden="true">\u2192</span></button></div></div>
+      <div class="hero-geometry" aria-hidden="true"><div class="hero-orbit hero-orbit-outer"></div><div class="hero-orbit hero-orbit-inner"></div><div class="hero-timer"><span></span></div><div class="hero-beam hero-beam-one"></div><div class="hero-beam hero-beam-two"></div><div class="hero-energy"><span></span></div><div class="hero-sticker">\u5149\u80FD<br><b>READY</b></div></div>
     </section>
-    <section class="entry-grid">
-      <button class="entry-card" data-route="papers"><span class="emoji">\u{1F4DD}</span><h3>\u6253\u5F00\u8BD5\u5377\u76EE\u5F55</h3><p>\u6309\u72B6\u6001\u548C\u751F\u6210\u65F6\u95F4\u7BA1\u7406\u5168\u90E8\u8BD5\u5377\u3002</p></button>
-      <button class="entry-card" data-route="generator"><span class="emoji">\u{1FA84}</span><h3>\u914D\u7F6E\u751F\u6210\u8BD5\u5377</h3><p>\u6570\u5B66\u3001\u6C49\u5B57\u548C\u82F1\u8BED\u6A21\u677F\u81EA\u7531\u914D\u7F6E\u3002</p></button>
-      <button class="entry-card" data-route="reading"><span class="emoji">\u{1F4DA}</span><h3>\u9605\u8BFB\u4E0E\u8DDF\u8BFB</h3><p>\u6309\u6BB5\u70B9\u8BFB\uFF0C\u4E2D\u6587\u9010\u5B57\u3001\u82F1\u6587\u9010\u8BCD\u9AD8\u4EAE\u3002</p></button>
-      <button class="entry-card" data-route="games"><span class="emoji">\u{1F3AE}</span><h3>\u5B66\u4E60\u6E38\u620F</h3><p>\u6C49\u5B57\u8FDE\u7EBF\u6D88\u6D88\u4E50\u548C\u82F1\u8BED\u5B9E\u7269\u914D\u5BF9\u3002</p></button>
+    <section class="metric-rail">
+      <div class="rail-intro"><span class="section-kicker">LIGHT CORE / LIVE</span><h3>\u5B66\u4E60\u80FD\u91CF</h3><p>\u6240\u6709\u5185\u5BB9\u90FD\u4FDD\u5B58\u5728\u8FD9\u53F0\u8BBE\u5907\u4E0A\uFF0C\u968F\u65F6\u53EF\u4EE5\u7EE7\u7EED\u3002</p></div>
+      <div class="rail-metrics">
+        <div class="metric"><span class="metric-label">\u5168\u90E8\u8BD5\u5377</span><strong>${papers.length}</strong><small>\u672C\u673A\u5DF2\u4FDD\u5B58</small></div>
+        <div class="metric metric-blue"><span class="metric-label">\u5F85\u6279\u6539</span><strong>${statusCount("review")}</strong><small>\u7B49\u5F85\u7EA2\u7B14\u6807\u8BB0</small></div>
+        <div class="metric"><span class="metric-label">\u9605\u8BFB\u8D44\u6599</span><strong>${readings.length}</strong><small>\u4E66\u67B6\u4E0E\u6587\u5B57\u8D44\u6599</small></div>
+        <div class="metric"><span class="metric-label">\u6E38\u620F\u8BB0\u5F55</span><strong>${records.length}</strong><small>\u6700\u8FD1\u5B8C\u6210\u7684\u7EC3\u4E60</small></div>
+      </div>
+    </section>
+    <section class="mission-routes">
+      <div class="section-heading"><div><span class="section-kicker">MISSION ROUTES</span><h3>\u4ECA\u5929\u4ECE\u8FD9\u91CC\u5F00\u59CB</h3></div><span class="route-sticker" aria-hidden="true">BETA<br><b>01</b></span></div>
+      <div class="mission-list">
+        <button class="mission-entry" data-route="papers"><span class="mission-index">01</span><span class="mission-icon">\u25A4</span><span class="mission-copy"><strong>\u6253\u5F00\u8BD5\u5377\u76EE\u5F55</strong><small>\u6309\u72B6\u6001\u548C\u751F\u6210\u65F6\u95F4\u7BA1\u7406\u5168\u90E8\u8BD5\u5377\u3002</small></span><span class="mission-arrow">\u2192</span></button>
+        <button class="mission-entry" data-route="generator"><span class="mission-index">02</span><span class="mission-icon">\u2726</span><span class="mission-copy"><strong>\u914D\u7F6E\u751F\u6210\u8BD5\u5377</strong><small>\u6570\u5B66\u3001\u6C49\u5B57\u548C\u82F1\u8BED\u6A21\u677F\u81EA\u7531\u914D\u7F6E\u3002</small></span><span class="mission-arrow">\u2192</span></button>
+        <button class="mission-entry" data-route="reading"><span class="mission-index">03</span><span class="mission-icon">\u25A5</span><span class="mission-copy"><strong>\u9605\u8BFB\u4E0E\u8DDF\u8BFB</strong><small>\u6309\u6BB5\u70B9\u8BFB\uFF0C\u4E2D\u6587\u9010\u5B57\u3001\u82F1\u6587\u9010\u8BCD\u9AD8\u4EAE\u3002</small></span><span class="mission-arrow">\u2192</span></button>
+        <button class="mission-entry" data-route="games"><span class="mission-index">04</span><span class="mission-icon">\u25C7</span><span class="mission-copy"><strong>\u5B66\u4E60\u6E38\u620F</strong><small>\u6C49\u5B57\u8FDE\u7EBF\u6D88\u6D88\u4E50\u548C\u82F1\u8BED\u5B9E\u7269\u914D\u5BF9\u3002</small></span><span class="mission-arrow">\u2192</span></button>
+      </div>
     </section>`;
   }
   function paperStatusClass(status) {
@@ -7847,7 +7856,7 @@ ${user}`);
     if (active) {
       const readerItem = active.type === "file-book" ? await prepareFileBook(active) : active;
       main.innerHTML = renderReader(readerItem);
-      if (readerItem.type === "file-book" && ["epub", "equb"].includes(readerItem.fileKind)) {
+      if (readerItem.type === "file-book" && ["epub", "equb"].includes(readerItem.fileKind) && readerItem.fileAccessMode !== "local-file") {
         void mountEpubReader(readerItem);
       }
       return;
@@ -7883,13 +7892,16 @@ ${user}`);
     const kind = String(item.fileKind || "file").toUpperCase();
     const isEpub = ["EPUB", "EQUB"].includes(kind);
     const openLink = source && !isEpub ? `<a class="secondary book-open-link" href="${sourceUrl}" target="_blank" rel="noopener">\u5728\u65B0\u7A97\u53E3\u6253\u5F00</a>` : "";
+    const localFileFallback = item.fileAccessMode === "local-file" ? `<div class="book-file-fallback local-file-notice"><span class="ultra-notice-mark" aria-hidden="true"></span><h2>${title}</h2><p>${isEpub ? "EPUB/EQUB" : "PDF"} \u4E0D\u80FD\u5728 file:// \u9875\u9762\u5185\u5D4C\u9605\u8BFB\uFF0C\u6D4F\u89C8\u5668\u4F1A\u963B\u6B62\u672C\u5730\u8D44\u6E90\u52A0\u8F7D\u3002</p><p class="book-file-hint">\u8BF7\u542F\u52A8\u672C\u5730\u670D\u52A1\u540E\u6253\u5F00\u672C\u5E94\u7528\uFF1B\u4E5F\u53EF\u4EE5\u76F4\u63A5\u6253\u5F00\u539F\u6587\u4EF6\uFF0C\u7531\u7CFB\u7EDF\u9605\u8BFB\u5668\u8D1F\u8D23\u663E\u793A\u3002</p><div class="local-file-actions"><a class="primary" href="http://127.0.0.1:4173/" target="_blank" rel="noopener">\u6253\u5F00\u672C\u5730\u9605\u8BFB\u670D\u52A1</a>${source ? `<a class="secondary" href="${sourceUrl}" target="_blank" rel="noopener">\u76F4\u63A5\u6253\u5F00\u539F\u6587\u4EF6</a>` : ""}</div></div>` : "";
     const fallback = source ? `<div class="book-file-fallback"><h2>${title}</h2><p>${kind === "PDF" ? "PDF \u6587\u4EF6\u5DF2\u8F7D\u5165\u3002\u82E5\u5185\u7F6E\u67E5\u770B\u5668\u6CA1\u6709\u663E\u793A\uFF0C\u8BF7\u70B9\u51FB\u201C\u6253\u5F00\u539F\u6587\u4EF6\u201D\u3002" : `${kind} \u6587\u4EF6\u5DF2\u8F7D\u5165\u3002\u6D4F\u89C8\u5668\u4E0D\u4FDD\u8BC1\u76F4\u63A5\u6392\u7248\u663E\u793A\u6B64\u683C\u5F0F\uFF0C\u8BF7\u4F7F\u7528\u7CFB\u7EDF\u9605\u8BFB\u5668\u6253\u5F00\u3002`}</p><a class="primary" href="${sourceUrl}" target="_blank" rel="noopener">\u6253\u5F00\u539F\u6587\u4EF6</a></div>` : `<div class="book-file-fallback"><h2>${title}</h2><p>\u6CA1\u6709\u627E\u5230\u4E66\u7C4D\u6587\u4EF6\u5730\u5740\uFF0C\u8BF7\u91CD\u65B0\u5BFC\u5165\u6216\u68C0\u67E5 huiben/manifest.json\u3002</p></div>`;
-    const body = isEpub ? '<epub-reader class="epub-reader-frame" data-epub-reader aria-label="EPUB \u7ED8\u672C\u9605\u8BFB\u5668"></epub-reader>' : item.fileKind === "pdf" && source ? `<iframe class="book-file-frame" src="${sourceUrl}" title="${title}" loading="eager"></iframe><div class="book-file-fallback book-file-fallback-link"><p>\u5982\u679C\u5F53\u524D\u9875\u9762\u6CA1\u6709\u663E\u793A PDF\uFF0C\u8BF7\u70B9\u51FB\u4E0B\u65B9\u6309\u94AE\u5728 Safari \u4E2D\u6253\u5F00\u3002</p><a class="primary" href="${sourceUrl}" target="_blank" rel="noopener">\u6253\u5F00 PDF</a></div>` : fallback;
+    const body = localFileFallback ? localFileFallback : isEpub ? '<epub-reader class="epub-reader-frame" data-epub-reader aria-label="EPUB \u7ED8\u672C\u9605\u8BFB\u5668"></epub-reader>' : kind === "PDF" && source ? `<iframe class="book-file-frame" src="${sourceUrl}" title="${title}" loading="eager"></iframe>` : fallback;
     return `<article class="reader fullscreen-reader file-book-reader"><div class="reader-floating-toolbar"><strong>${title}</strong><span>${kind}</span>${openLink}<button class="primary" data-exit-reader>\u9000\u51FA\u9605\u8BFB</button></div>${body}</article>`;
   }
   async function prepareFileBook(item) {
+    const sourceUrl = String(item.sourceUrl || "");
+    const isLocalFileUrl = globalThis.location?.protocol === "file:" || sourceUrl.startsWith("file:");
     let blob = item.sourceBlob instanceof Blob ? item.sourceBlob : null;
-    if (!blob && item.sourceUrl) {
+    if (!blob && item.sourceUrl && !isLocalFileUrl) {
       try {
         const response = await fetch(item.sourceUrl, { cache: "force-cache" });
         if (!response.ok) throw new Error(`\u7ED8\u672C\u6587\u4EF6\u8BFB\u53D6\u5931\u8D25\uFF1A${response.status}`);
@@ -7898,6 +7910,9 @@ ${user}`);
       } catch (error) {
         console.warn("\u7ED8\u672C\u79BB\u7EBF\u526F\u672C\u51C6\u5907\u5931\u8D25", error);
       }
+    }
+    if (isLocalFileUrl) {
+      return { ...item, fileAccessMode: "local-file" };
     }
     if (!blob || typeof URL?.createObjectURL !== "function") return item;
     if (state.bookObjectUrl) URL.revokeObjectURL(state.bookObjectUrl);
@@ -8494,11 +8509,17 @@ ${user}`);
   document.addEventListener("wheel", handleMainContentWheel, { passive: false });
   document.querySelector("#menuButton").addEventListener("click", () => document.querySelector("#sidebar").classList.toggle("open"));
   async function init() {
-    await openDatabase();
-    await ensureDefaultTemplates();
-    await ensureReadingSeeds();
-    if ("serviceWorker" in navigator && location.protocol.startsWith("http")) navigator.serviceWorker.register("./sw.js").catch(console.warn);
-    await navigate("home");
+    const loading = document.querySelector("#appLoading");
+    try {
+      await openDatabase();
+      await ensureDefaultTemplates();
+      await ensureReadingSeeds();
+      if ("serviceWorker" in navigator && location.protocol.startsWith("http")) navigator.serviceWorker.register("./sw.js").catch(console.warn);
+      await navigate("home");
+    } finally {
+      loading?.classList.add("is-hidden");
+      setTimeout(() => loading?.remove(), 360);
+    }
   }
   init();
 })();

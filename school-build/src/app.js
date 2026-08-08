@@ -69,7 +69,7 @@ function openModal(content, className = '') {
 function closeModal() { modalRoot.innerHTML = ''; }
 
 function pageHeader(title, subtitle, actions = '') {
-  return `<div class="page-header"><div><h1>${title}</h1><p>${subtitle}</p></div><div class="header-actions">${actions}</div></div>`;
+  return `<div class="page-header"><div class="page-header-copy"><span class="page-kicker">光之进化 / COMMAND DECK</span><h1>${title}</h1><p>${subtitle}</p></div><div class="page-header-side"><div class="page-header-signal" aria-hidden="true"><span class="signal-ring"></span><span class="signal-core"></span><span class="signal-beam"></span></div><div class="header-actions">${actions}</div></div></div>`;
 }
 
 /** 切换工作区并同步侧栏状态。 */
@@ -116,17 +116,23 @@ async function renderHome() {
       <div class="hero-copy"><span class="today-date">${today}</span><span class="hero-kicker">ULTRA LEARNING CONSOLE · 01</span><h2>把每一次练习，变成看得见的成长</h2><p>家长配置内容，孩子专注作答。试卷、阅读与游戏都在这台设备上离线运行。</p><div class="hero-actions"><button class="primary" data-route="generator">开始生成</button><button class="hero-link" data-route="papers">查看试卷目录 <span aria-hidden="true">→</span></button></div></div>
       <div class="hero-geometry" aria-hidden="true"><div class="hero-orbit hero-orbit-outer"></div><div class="hero-orbit hero-orbit-inner"></div><div class="hero-timer"><span></span></div><div class="hero-beam hero-beam-one"></div><div class="hero-beam hero-beam-two"></div><div class="hero-energy"><span></span></div><div class="hero-sticker">光能<br><b>READY</b></div></div>
     </section>
-    <section class="metric-grid">
-      <div class="metric"><span class="metric-label">全部试卷</span><strong>${papers.length}</strong><small>本机已保存</small></div>
-      <div class="metric metric-blue"><span class="metric-label">待批改</span><strong>${statusCount('review')}</strong><small>等待红笔标记</small></div>
-      <div class="metric"><span class="metric-label">阅读资料</span><strong>${readings.length}</strong><small>书架与文字资料</small></div>
-      <div class="metric"><span class="metric-label">游戏记录</span><strong>${records.length}</strong><small>最近完成的练习</small></div>
+    <section class="metric-rail">
+      <div class="rail-intro"><span class="section-kicker">LIGHT CORE / LIVE</span><h3>学习能量</h3><p>所有内容都保存在这台设备上，随时可以继续。</p></div>
+      <div class="rail-metrics">
+        <div class="metric"><span class="metric-label">全部试卷</span><strong>${papers.length}</strong><small>本机已保存</small></div>
+        <div class="metric metric-blue"><span class="metric-label">待批改</span><strong>${statusCount('review')}</strong><small>等待红笔标记</small></div>
+        <div class="metric"><span class="metric-label">阅读资料</span><strong>${readings.length}</strong><small>书架与文字资料</small></div>
+        <div class="metric"><span class="metric-label">游戏记录</span><strong>${records.length}</strong><small>最近完成的练习</small></div>
+      </div>
     </section>
-    <section class="entry-grid">
-      <button class="entry-card" data-route="papers"><span class="entry-icon entry-icon-paper">▤</span><span class="entry-index">01</span><h3>打开试卷目录</h3><p>按状态和生成时间管理全部试卷。</p><span class="entry-arrow">→</span></button>
-      <button class="entry-card" data-route="generator"><span class="entry-icon entry-icon-generate">✦</span><span class="entry-index">02</span><h3>配置生成试卷</h3><p>数学、汉字和英语模板自由配置。</p><span class="entry-arrow">→</span></button>
-      <button class="entry-card" data-route="reading"><span class="entry-icon entry-icon-reading">▥</span><span class="entry-index">03</span><h3>阅读与跟读</h3><p>按段点读，中文逐字、英文逐词高亮。</p><span class="entry-arrow">→</span></button>
-      <button class="entry-card" data-route="games"><span class="entry-icon entry-icon-game">◇</span><span class="entry-index">04</span><h3>学习游戏</h3><p>汉字连线消消乐和英语实物配对。</p><span class="entry-arrow">→</span></button>
+    <section class="mission-routes">
+      <div class="section-heading"><div><span class="section-kicker">MISSION ROUTES</span><h3>今天从这里开始</h3></div><span class="route-sticker" aria-hidden="true">BETA<br><b>01</b></span></div>
+      <div class="mission-list">
+        <button class="mission-entry" data-route="papers"><span class="mission-index">01</span><span class="mission-icon">▤</span><span class="mission-copy"><strong>打开试卷目录</strong><small>按状态和生成时间管理全部试卷。</small></span><span class="mission-arrow">→</span></button>
+        <button class="mission-entry" data-route="generator"><span class="mission-index">02</span><span class="mission-icon">✦</span><span class="mission-copy"><strong>配置生成试卷</strong><small>数学、汉字和英语模板自由配置。</small></span><span class="mission-arrow">→</span></button>
+        <button class="mission-entry" data-route="reading"><span class="mission-index">03</span><span class="mission-icon">▥</span><span class="mission-copy"><strong>阅读与跟读</strong><small>按段点读，中文逐字、英文逐词高亮。</small></span><span class="mission-arrow">→</span></button>
+        <button class="mission-entry" data-route="games"><span class="mission-index">04</span><span class="mission-icon">◇</span><span class="mission-copy"><strong>学习游戏</strong><small>汉字连线消消乐和英语实物配对。</small></span><span class="mission-arrow">→</span></button>
+      </div>
     </section>`;
 }
 
@@ -702,7 +708,7 @@ async function renderReading() {
   if (active) {
     const readerItem = active.type === 'file-book' ? await prepareFileBook(active) : active;
     main.innerHTML = renderReader(readerItem);
-    if (readerItem.type === 'file-book' && ['epub', 'equb'].includes(readerItem.fileKind)) {
+    if (readerItem.type === 'file-book' && ['epub', 'equb'].includes(readerItem.fileKind) && readerItem.fileAccessMode !== 'local-file') {
       void mountEpubReader(readerItem);
     }
     return;
@@ -743,13 +749,18 @@ function renderFileBookReader(item) {
   const openLink = source && !isEpub
     ? `<a class="secondary book-open-link" href="${sourceUrl}" target="_blank" rel="noopener">在新窗口打开</a>`
     : '';
+  const localFileFallback = item.fileAccessMode === 'local-file'
+    ? `<div class="book-file-fallback local-file-notice"><span class="ultra-notice-mark" aria-hidden="true"></span><h2>${title}</h2><p>${isEpub ? 'EPUB/EQUB' : 'PDF'} 不能在 file:// 页面内嵌阅读，浏览器会阻止本地资源加载。</p><p class="book-file-hint">请启动本地服务后打开本应用；也可以直接打开原文件，由系统阅读器负责显示。</p><div class="local-file-actions"><a class="primary" href="http://127.0.0.1:4173/" target="_blank" rel="noopener">打开本地阅读服务</a>${source ? `<a class="secondary" href="${sourceUrl}" target="_blank" rel="noopener">直接打开原文件</a>` : ''}</div></div>`
+    : '';
   const fallback = source
     ? `<div class="book-file-fallback"><h2>${title}</h2><p>${kind === 'PDF' ? 'PDF 文件已载入。若内置查看器没有显示，请点击“打开原文件”。' : `${kind} 文件已载入。浏览器不保证直接排版显示此格式，请使用系统阅读器打开。`}</p><a class="primary" href="${sourceUrl}" target="_blank" rel="noopener">打开原文件</a></div>`
     : `<div class="book-file-fallback"><h2>${title}</h2><p>没有找到书籍文件地址，请重新导入或检查 huiben/manifest.json。</p></div>`;
-  const body = isEpub
+  const body = localFileFallback
+    ? localFileFallback
+    : isEpub
     ? '<epub-reader class="epub-reader-frame" data-epub-reader aria-label="EPUB 绘本阅读器"></epub-reader>'
-    : item.fileKind === 'pdf' && source
-    ? `<iframe class="book-file-frame" src="${sourceUrl}" title="${title}" loading="eager"></iframe><div class="book-file-fallback book-file-fallback-link"><p>如果当前页面没有显示 PDF，请点击下方按钮在 Safari 中打开。</p><a class="primary" href="${sourceUrl}" target="_blank" rel="noopener">打开 PDF</a></div>`
+    : kind === 'PDF' && source
+    ? `<iframe class="book-file-frame" src="${sourceUrl}" title="${title}" loading="eager"></iframe>`
     : fallback;
   return `<article class="reader fullscreen-reader file-book-reader"><div class="reader-floating-toolbar"><strong>${title}</strong><span>${kind}</span>${openLink}<button class="primary" data-exit-reader>退出阅读</button></div>${body}</article>`;
 }
@@ -760,8 +771,11 @@ function renderFileBookReader(item) {
  * @returns {Promise<Record<string, unknown>>} 使用 Blob URL 或原始 URL 的绘本记录。
  */
 async function prepareFileBook(item) {
+  const sourceUrl = String(item.sourceUrl || '');
+  const isLocalFileUrl = globalThis.location?.protocol === 'file:' || sourceUrl.startsWith('file:');
   let blob = item.sourceBlob instanceof Blob ? item.sourceBlob : null;
-  if (!blob && item.sourceUrl) {
+  // file:// 页面无法安全读取同目录文件，必须绕过 fetch 和 Blob URL，交给本地服务或系统阅读器。
+  if (!blob && item.sourceUrl && !isLocalFileUrl) {
     try {
       const response = await fetch(item.sourceUrl, { cache: 'force-cache' });
       if (!response.ok) throw new Error(`绘本文件读取失败：${response.status}`);
@@ -770,6 +784,9 @@ async function prepareFileBook(item) {
     } catch (error) {
       console.warn('绘本离线副本准备失败', error);
     }
+  }
+  if (isLocalFileUrl) {
+    return { ...item, fileAccessMode: 'local-file' };
   }
   if (!blob || typeof URL?.createObjectURL !== 'function') return item;
   if (state.bookObjectUrl) URL.revokeObjectURL(state.bookObjectUrl);
