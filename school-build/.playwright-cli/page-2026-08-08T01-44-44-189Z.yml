@@ -1,0 +1,38 @@
+- generic [active] [ref=f1e1]:
+  - generic [ref=f1e2]:
+    - banner [ref=f1e3]:
+      - button "打开导航" [ref=f1e4] [cursor=pointer]: ☰
+      - generic [ref=f1e5]: 成长小桌
+      - button "新建" [ref=f1e6] [cursor=pointer]: ＋
+    - complementary [ref=f1e7]:
+      - generic [ref=f1e8]:
+        - generic [ref=f1e9]: ✦
+        - generic [ref=f1e10]:
+          - strong [ref=f1e11]: 成长小桌
+          - text: 每天进步一点点
+      - navigation "主导航" [ref=f1e12]:
+        - button "🏠 首页" [ref=f1e13] [cursor=pointer]:
+          - generic [ref=f1e14]: 🏠
+          - text: 首页
+        - button "📝 试卷目录" [ref=f1e15] [cursor=pointer]:
+          - generic [ref=f1e16]: 📝
+          - text: 试卷目录
+        - button "🪄 生成试卷" [ref=f1e17] [cursor=pointer]:
+          - generic [ref=f1e18]: 🪄
+          - text: 生成试卷
+        - button "📚 阅读资料" [ref=f1e19] [cursor=pointer]:
+          - generic [ref=f1e20]: 📚
+          - text: 阅读资料
+        - button "🎮 学习游戏" [ref=f1e21] [cursor=pointer]:
+          - generic [ref=f1e22]: 🎮
+          - text: 学习游戏
+        - button "🧩 配置模板" [ref=f1e23] [cursor=pointer]:
+          - generic [ref=f1e24]: 🧩
+          - text: 配置模板
+      - generic [ref=f1e25]:
+        - generic [ref=f1e26]: ☁️
+        - paragraph [ref=f1e27]:
+          - strong [ref=f1e28]: 数据只在本机
+          - text: 请勿清除 Safari 网站数据
+    - main [ref=f1e29]
+  - status

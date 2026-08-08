@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#F5F7FA">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="光之进化">
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/icon.svg">
+  <link rel="stylesheet" href="styles.css?v=20260808-8">
+  <script>
+    if (location.protocol !== 'file:') {
+      const manifest = document.createElement('link');
+      manifest.rel = 'manifest';
+      manifest.href = 'manifest.webmanifest?v=20260808-8';
+      document.head.appendChild(manifest);
+    }
+  </script>
+  <title>成长小桌 · 幼小衔接工作台</title>
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <header class="mobile-header">
+      <button id="menuButton" class="icon-button" aria-label="打开导航">☰</button>
+      <span class="mobile-brand"><span class="brand-mini-core" aria-hidden="true"></span>光之进化</span>
+      <button class="icon-button" data-route="generator" aria-label="新建试卷">＋</button>
+    </header>
+
+    <aside id="sidebar" class="sidebar">
+      <div class="brand">
+        <div class="brand-mascot" aria-hidden="true"><span class="brand-core"></span><span class="brand-beam"></span></div>
+        <div><strong>光之进化</strong><small>学习能量控制台</small></div>
+      </div>
+      <nav id="mainNav" class="main-nav" aria-label="主导航">
+        <button class="nav-item active" data-route="home"><span class="nav-glyph nav-glyph-home">⌂</span>首页</button>
+        <button class="nav-item" data-route="papers"><span class="nav-glyph">▤</span>试卷目录</button>
+        <button class="nav-item" data-route="generator"><span class="nav-glyph">✦</span>生成试卷</button>
+        <button class="nav-item" data-route="reading"><span class="nav-glyph">▥</span>阅读资料</button>
+        <button class="nav-item" data-route="games"><span class="nav-glyph">◇</span>学习游戏</button>
+        <button class="nav-item" data-route="templates"><span class="nav-glyph">⌘</span>配置模板</button>
+      </nav>
+      <div class="sidebar-note">
+        <span class="note-core" aria-hidden="true"></span>
+        <p><strong>本机离线保存</strong><br>请勿清除 Safari 网站数据</p>
+      </div>
+    </aside>
+
+    <main id="mainContent" class="main-content" tabindex="-1"></main>
+  </div>
+
+  <div id="appLoading" class="app-loading" role="status" aria-live="polite">
+    <span class="loading-timer" aria-hidden="true"><i></i></span>
+    <strong>光之进化</strong>
+    <small>正在启动学习控制台</small>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="modalRoot"></div>
+  <script>
+    const appScript = document.createElement('script');
+    if (location.protocol === 'file:') {
+      appScript.src = 'dist/app.bundle.js?v=20260808-8';
+    } else {
+      appScript.type = 'module';
+      appScript.src = 'src/app.js?v=20260808-8';
+    }
+    document.body.appendChild(appScript);
+  </script>
+</body>
+</html>

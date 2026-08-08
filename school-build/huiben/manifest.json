@@ -1,0 +1,158 @@
+﻿{
+    "generatedAt":  "2026-08-07T08:00:30.5228597Z",
+    "books":  [
+                  {
+                      "id":  "huiben-50f18e43",
+                      "title":  "不一样的卡梅拉动漫绘本 我下了个金鸡蛋 (（法）约里波瓦文, 据[法]克利斯提昂·约里波瓦同名绘本动画片改编 , 郑迪蔚 编译 etc.)",
+                      "fileName":  "不一样的卡梅拉动漫绘本 我下了个金鸡蛋 (（法）约里波瓦文, 据[法]克利斯提昂·约里波瓦同名绘本动画片改编 , 郑迪蔚 编译 etc.) (z-library.sk, 1lib.sk, z-lib.sk).pdf",
+                      "fileKind":  "pdf",
+                      "url":  "./huiben/%E4%B8%8D%E4%B8%80%E6%A0%B7%E7%9A%84%E5%8D%A1%E6%A2%85%E6%8B%89%E5%8A%A8%E6%BC%AB%E7%BB%98%E6%9C%AC%20%E6%88%91%E4%B8%8B%E4%BA%86%E4%B8%AA%E9%87%91%E9%B8%A1%E8%9B%8B%20(%EF%BC%88%E6%B3%95%EF%BC%89%E7%BA%A6%E9%87%8C%E6%B3%A2%E7%93%A6%E6%96%87%2C%20%E6%8D%AE%5B%E6%B3%95%5D%E5%85%8B%E5%88%A9%E6%96%AF%E6%8F%90%E6%98%82%C2%B7%E7%BA%A6%E9%87%8C%E6%B3%A2%E7%93%A6%E5%90%8C%E5%90%8D%E7%BB%98%E6%9C%AC%E5%8A%A8%E7%94%BB%E7%89%87%E6%94%B9%E7%BC%96%20%2C%20%E9%83%91%E8%BF%AA%E8%94%9A%20%E7%BC%96%E8%AF%91%20etc.)%20(z-library.sk%2C%201lib.sk%2C%20z-lib.sk).pdf",
+                      "size":  6224462,
+                      "category":  "绘本"
+                  },
+                  {
+                      "id":  "huiben-70750f85",
+                      "title":  "不一样的卡梅拉动漫绘本 我是侠盗罗宾汉 (（法）克利斯提昂·约里波瓦改编；郑迪蔚编译 etc.)",
+                      "fileName":  "不一样的卡梅拉动漫绘本 我是侠盗罗宾汉 (（法）克利斯提昂·约里波瓦改编；郑迪蔚编译 etc.) (z-library.sk, 1lib.sk, z-lib.sk).pdf",
+                      "fileKind":  "pdf",
+                      "url":  "./huiben/%E4%B8%8D%E4%B8%80%E6%A0%B7%E7%9A%84%E5%8D%A1%E6%A2%85%E6%8B%89%E5%8A%A8%E6%BC%AB%E7%BB%98%E6%9C%AC%20%E6%88%91%E6%98%AF%E4%BE%A0%E7%9B%97%E7%BD%97%E5%AE%BE%E6%B1%89%20(%EF%BC%88%E6%B3%95%EF%BC%89%E5%85%8B%E5%88%A9%E6%96%AF%E6%8F%90%E6%98%82%C2%B7%E7%BA%A6%E9%87%8C%E6%B3%A2%E7%93%A6%E6%94%B9%E7%BC%96%EF%BC%9B%E9%83%91%E8%BF%AA%E8%94%9A%E7%BC%96%E8%AF%91%20etc.)%20(z-library.sk%2C%201lib.sk%2C%20z-lib.sk).pdf",
+                      "size":  6744584,
+                      "category":  "绘本"
+                  },
+                  {
+                      "id":  "huiben-30026dd7",
+                      "title":  "不一样的卡梅拉动漫绘本 我是大明星 (（法）约里波瓦文；郑迪蔚编译, 据[法]克利斯提昂·约里波瓦同名绘本动画片改编 etc.)",
+                      "fileName":  "不一样的卡梅拉动漫绘本 我是大明星 (（法）约里波瓦文；郑迪蔚编译, 据[法]克利斯提昂·约里波瓦同名绘本动画片改编 etc.) (z-library.sk, 1lib.sk, z-lib.sk).pdf",
+                      "fileKind":  "pdf",
+                      "url":  "./huiben/%E4%B8%8D%E4%B8%80%E6%A0%B7%E7%9A%84%E5%8D%A1%E6%A2%85%E6%8B%89%E5%8A%A8%E6%BC%AB%E7%BB%98%E6%9C%AC%20%E6%88%91%E6%98%AF%E5%A4%A7%E6%98%8E%E6%98%9F%20(%EF%BC%88%E6%B3%95%EF%BC%89%E7%BA%A6%E9%87%8C%E6%B3%A2%E7%93%A6%E6%96%87%EF%BC%9B%E9%83%91%E8%BF%AA%E8%94%9A%E7%BC%96%E8%AF%91%2C%20%E6%8D%AE%5B%E6%B3%95%5D%E5%85%8B%E5%88%A9%E6%96%AF%E6%8F%90%E6%98%82%C2%B7%E7%BA%A6%E9%87%8C%E6%B3%A2%E7%93%A6%E5%90%8C%E5%90%8D%E7%BB%98%E6%9C%AC%E5%8A%A8%E7%94%BB%E7%89%87%E6%94%B9%E7%BC%96%20etc.)%20(z-library.sk%2C%201lib.sk%2C%20z-lib.sk).pdf",
+                      "size":  7251034,
+                      "category":  "绘本"
+                  },
+                  {
+                      "id":  "huiben-6cad4cb4",
+                      "title":  "不一样的卡梅拉动漫绘本 我的胆子变大了 (（法）克利斯提昂·约里波瓦改编；郑迪蔚编译 etc.)",
+                      "fileName":  "不一样的卡梅拉动漫绘本 我的胆子变大了 (（法）克利斯提昂·约里波瓦改编；郑迪蔚编译 etc.) (z-library.sk, 1lib.sk, z-lib.sk).pdf",
+                      "fileKind":  "pdf",
+                      "url":  "./huiben/%E4%B8%8D%E4%B8%80%E6%A0%B7%E7%9A%84%E5%8D%A1%E6%A2%85%E6%8B%89%E5%8A%A8%E6%BC%AB%E7%BB%98%E6%9C%AC%20%E6%88%91%E7%9A%84%E8%83%86%E5%AD%90%E5%8F%98%E5%A4%A7%E4%BA%86%20(%EF%BC%88%E6%B3%95%EF%BC%89%E5%85%8B%E5%88%A9%E6%96%AF%E6%8F%90%E6%98%82%C2%B7%E7%BA%A6%E9%87%8C%E6%B3%A2%E7%93%A6%E6%94%B9%E7%BC%96%EF%BC%9B%E9%83%91%E8%BF%AA%E8%94%9A%E7%BC%96%E8%AF%91%20etc.)%20(z-library.sk%2C%201lib.sk%2C%20z-lib.sk).pdf",
+                      "size":  7582488,
+                      "category":  "绘本"
+                  },
+                  {
+                      "id":  "huiben-1b40c5ed",
+                      "title":  "不一样的卡梅拉动漫绘本 我许下三个愿望 (（法）约里波瓦文, 据[法]克利斯提昂·约里波瓦同名绘本动画片改编 , 郑迪蔚 编译 etc.)",
+                      "fileName":  "不一样的卡梅拉动漫绘本 我许下三个愿望 (（法）约里波瓦文, 据[法]克利斯提昂·约里波瓦同名绘本动画片改编 , 郑迪蔚 编译 etc.) (z-library.sk, 1lib.sk, z-lib.sk).pdf",
+                      "fileKind":  "pdf",
+                      "url":  "./huiben/%E4%B8%8D%E4%B8%80%E6%A0%B7%E7%9A%84%E5%8D%A1%E6%A2%85%E6%8B%89%E5%8A%A8%E6%BC%AB%E7%BB%98%E6%9C%AC%20%E6%88%91%E8%AE%B8%E4%B8%8B%E4%B8%89%E4%B8%AA%E6%84%BF%E6%9C%9B%20(%EF%BC%88%E6%B3%95%EF%BC%89%E7%BA%A6%E9%87%8C%E6%B3%A2%E7%93%A6%E6%96%87%2C%20%E6%8D%AE%5B%E6%B3%95%5D%E5%85%8B%E5%88%A9%E6%96%AF%E6%8F%90%E6%98%82%C2%B7%E7%BA%A6%E9%87%8C%E6%B3%A2%E7%93%A6%E5%90%8C%E5%90%8D%E7%BB%98%E6%9C%AC%E5%8A%A8%E7%94%BB%E7%89%87%E6%94%B9%E7%BC%96%20%2C%20%E9%83%91%E8%BF%AA%E8%94%9A%20%E7%BC%96%E8%AF%91%20etc.)%20(z-library.sk%2C%201lib.sk%2C%20z-lib.sk).pdf",
+                      "size":  6738000,
+                      "category":  "绘本"
+                  },
+                  {
+                      "id":  "huiben-58157c4f",
+                      "title":  "中国经典古诗文彩绘读本 低年级 (陈雪梅主编, 陈雪梅主编, 陈雪梅)",
+                      "fileName":  "中国经典古诗文彩绘读本 低年级 (陈雪梅主编, 陈雪梅主编, 陈雪梅) (z-library.sk, 1lib.sk, z-lib.sk).pdf",
+                      "fileKind":  "pdf",
+                      "url":  "./huiben/%E4%B8%AD%E5%9B%BD%E7%BB%8F%E5%85%B8%E5%8F%A4%E8%AF%97%E6%96%87%E5%BD%A9%E7%BB%98%E8%AF%BB%E6%9C%AC%20%E4%BD%8E%E5%B9%B4%E7%BA%A7%20(%E9%99%88%E9%9B%AA%E6%A2%85%E4%B8%BB%E7%BC%96%2C%20%E9%99%88%E9%9B%AA%E6%A2%85%E4%B8%BB%E7%BC%96%2C%20%E9%99%88%E9%9B%AA%E6%A2%85)%20(z-library.sk%2C%201lib.sk%2C%20z-lib.sk).pdf",
+                      "size":  83406409,
+                      "category":  "绘本"
+                  },
+                  {
+                      "id":  "huiben-4ab12b36",
+                      "title":  "佩顿的理想宠物：《爱的五种语言》儿童绘本 (盖瑞·查普曼  瑞克·奥斯本)",
+                      "fileName":  "佩顿的理想宠物：《爱的五种语言》儿童绘本 (盖瑞·查普曼  瑞克·奥斯本) (z-library.sk, 1lib.sk, z-lib.sk).epub",
+                      "fileKind":  "epub",
+                      "url":  "./huiben/%E4%BD%A9%E9%A1%BF%E7%9A%84%E7%90%86%E6%83%B3%E5%AE%A0%E7%89%A9%EF%BC%9A%E3%80%8A%E7%88%B1%E7%9A%84%E4%BA%94%E7%A7%8D%E8%AF%AD%E8%A8%80%E3%80%8B%E5%84%BF%E7%AB%A5%E7%BB%98%E6%9C%AC%20(%E7%9B%96%E7%91%9E%C2%B7%E6%9F%A5%E6%99%AE%E6%9B%BC%20%20%E7%91%9E%E5%85%8B%C2%B7%E5%A5%A5%E6%96%AF%E6%9C%AC)%20(z-library.sk%2C%201lib.sk%2C%20z-lib.sk).epub",
+                      "size":  7204706,
+                      "category":  "绘本"
+                  },
+                  {
+                      "id":  "huiben-1ceb8d7e",
+                      "title":  "儿童行为习惯培养绘本：小兔子起床喽-孩子贪睡，怎么办？ (陈书韵、翁淑惠)",
+                      "fileName":  "儿童行为习惯培养绘本：小兔子起床喽-孩子贪睡，怎么办？ (陈书韵、翁淑惠) (z-library.sk, 1lib.sk, z-lib.sk).epub",
+                      "fileKind":  "epub",
+                      "url":  "./huiben/%E5%84%BF%E7%AB%A5%E8%A1%8C%E4%B8%BA%E4%B9%A0%E6%83%AF%E5%9F%B9%E5%85%BB%E7%BB%98%E6%9C%AC%EF%BC%9A%E5%B0%8F%E5%85%94%E5%AD%90%E8%B5%B7%E5%BA%8A%E5%96%BD-%E5%AD%A9%E5%AD%90%E8%B4%AA%E7%9D%A1%EF%BC%8C%E6%80%8E%E4%B9%88%E5%8A%9E%EF%BC%9F%20(%E9%99%88%E4%B9%A6%E9%9F%B5%E3%80%81%E7%BF%81%E6%B7%91%E6%83%A0)%20(z-library.sk%2C%201lib.sk%2C%20z-lib.sk).epub",
+                      "size":  4096129,
+                      "category":  "绘本"
+                  },
+                  {
+                      "id":  "huiben-66fdef1a",
+                      "title":  "十二生肖的故事【儿童绘本】 (Si-Jia Gu)",
+                      "fileName":  "十二生肖的故事【儿童绘本】 (Si-Jia Gu) (z-library.sk, 1lib.sk, z-lib.sk).epub",
+                      "fileKind":  "epub",
+                      "url":  "./huiben/%E5%8D%81%E4%BA%8C%E7%94%9F%E8%82%96%E7%9A%84%E6%95%85%E4%BA%8B%E3%80%90%E5%84%BF%E7%AB%A5%E7%BB%98%E6%9C%AC%E3%80%91%20(Si-Jia%20Gu)%20(z-library.sk%2C%201lib.sk%2C%20z-lib.sk).epub",
+                      "size":  2603677,
+                      "category":  "绘本"
+                  },
+                  {
+                      "id":  "huiben-00602134",
+                      "title":  "发现与培养儿童职业启蒙绘本 第6辑 我要当汽车工程师 (刘香英著；幸福猫儿童文学工作室绘)",
+                      "fileName":  "发现与培养儿童职业启蒙绘本 第6辑 我要当汽车工程师 (刘香英著；幸福猫儿童文学工作室绘) (z-library.sk, 1lib.sk, z-lib.sk).pdf",
+                      "fileKind":  "pdf",
+                      "url":  "./huiben/%E5%8F%91%E7%8E%B0%E4%B8%8E%E5%9F%B9%E5%85%BB%E5%84%BF%E7%AB%A5%E8%81%8C%E4%B8%9A%E5%90%AF%E8%92%99%E7%BB%98%E6%9C%AC%20%E7%AC%AC6%E8%BE%91%20%E6%88%91%E8%A6%81%E5%BD%93%E6%B1%BD%E8%BD%A6%E5%B7%A5%E7%A8%8B%E5%B8%88%20(%E5%88%98%E9%A6%99%E8%8B%B1%E8%91%97%EF%BC%9B%E5%B9%B8%E7%A6%8F%E7%8C%AB%E5%84%BF%E7%AB%A5%E6%96%87%E5%AD%A6%E5%B7%A5%E4%BD%9C%E5%AE%A4%E7%BB%98)%20(z-library.sk%2C%201lib.sk%2C%20z-lib.sk).pdf",
+                      "size":  7968973,
+                      "category":  "绘本"
+                  },
+                  {
+                      "id":  "huiben-4e90ab93",
+                      "title":  "奇怪的生物图鉴【风靡日韩，日文版上市仅1个月加印4次！销量突破100000册日本亚马逊高分评价，日韩话题性科普绘本，40种生物，上百个冷知识：没...",
+                      "fileName":  "奇怪的生物图鉴【风靡日韩，日文版上市仅1个月加印4次！销量突破100000册日本亚马逊高分评价，日韩话题性科普绘本，40种生物，上百个冷知识：没... (z-library.sk, 1lib.sk, z-lib.sk).epub",
+                      "fileKind":  "epub",
+                      "url":  "./huiben/%E5%A5%87%E6%80%AA%E7%9A%84%E7%94%9F%E7%89%A9%E5%9B%BE%E9%89%B4%E3%80%90%E9%A3%8E%E9%9D%A1%E6%97%A5%E9%9F%A9%EF%BC%8C%E6%97%A5%E6%96%87%E7%89%88%E4%B8%8A%E5%B8%82%E4%BB%851%E4%B8%AA%E6%9C%88%E5%8A%A0%E5%8D%B04%E6%AC%A1%EF%BC%81%E9%94%80%E9%87%8F%E7%AA%81%E7%A0%B4100000%E5%86%8C%E6%97%A5%E6%9C%AC%E4%BA%9A%E9%A9%AC%E9%80%8A%E9%AB%98%E5%88%86%E8%AF%84%E4%BB%B7%EF%BC%8C%E6%97%A5%E9%9F%A9%E8%AF%9D%E9%A2%98%E6%80%A7%E7%A7%91%E6%99%AE%E7%BB%98%E6%9C%AC%EF%BC%8C40%E7%A7%8D%E7%94%9F%E7%89%A9%EF%BC%8C%E4%B8%8A%E7%99%BE%E4%B8%AA%E5%86%B7%E7%9F%A5%E8%AF%86%EF%BC%9A%E6%B2%A1...%20(z-library.sk%2C%201lib.sk%2C%20z-lib.sk).epub",
+                      "size":  10573611,
+                      "category":  "绘本"
+                  },
+                  {
+                      "id":  "huiben-211de70c",
+                      "title":  "小川未明童话绘本（5册套装） (（日）小川未明)",
+                      "fileName":  "小川未明童话绘本（5册套装） (（日）小川未明) (z-library.sk, 1lib.sk, z-lib.sk).pdf",
+                      "fileKind":  "pdf",
+                      "url":  "./huiben/%E5%B0%8F%E5%B7%9D%E6%9C%AA%E6%98%8E%E7%AB%A5%E8%AF%9D%E7%BB%98%E6%9C%AC%EF%BC%885%E5%86%8C%E5%A5%97%E8%A3%85%EF%BC%89%20(%EF%BC%88%E6%97%A5%EF%BC%89%E5%B0%8F%E5%B7%9D%E6%9C%AA%E6%98%8E)%20(z-library.sk%2C%201lib.sk%2C%20z-lib.sk).pdf",
+                      "size":  18139122,
+                      "category":  "绘本"
+                  },
+                  {
+                      "id":  "huiben-676cfbe8",
+                      "title":  "小王子三部曲(一直以来,我们只读了《小王子》的三分之一《小王子》只是三部曲的终篇,它的前传《风沙星辰》《夜间飞行》埋藏着《小王子》真正...",
+                      "fileName":  "小王子三部曲(一直以来,我们只读了《小王子》的三分之一《小王子》只是三部曲的终篇,它的前传《风沙星辰》《夜间飞行》埋藏着《小王子》真正... (z-library.sk, 1lib.sk, z-lib.sk).epub",
+                      "fileKind":  "epub",
+                      "url":  "./huiben/%E5%B0%8F%E7%8E%8B%E5%AD%90%E4%B8%89%E9%83%A8%E6%9B%B2(%E4%B8%80%E7%9B%B4%E4%BB%A5%E6%9D%A5%2C%E6%88%91%E4%BB%AC%E5%8F%AA%E8%AF%BB%E4%BA%86%E3%80%8A%E5%B0%8F%E7%8E%8B%E5%AD%90%E3%80%8B%E7%9A%84%E4%B8%89%E5%88%86%E4%B9%8B%E4%B8%80%E3%80%8A%E5%B0%8F%E7%8E%8B%E5%AD%90%E3%80%8B%E5%8F%AA%E6%98%AF%E4%B8%89%E9%83%A8%E6%9B%B2%E7%9A%84%E7%BB%88%E7%AF%87%2C%E5%AE%83%E7%9A%84%E5%89%8D%E4%BC%A0%E3%80%8A%E9%A3%8E%E6%B2%99%E6%98%9F%E8%BE%B0%E3%80%8B%E3%80%8A%E5%A4%9C%E9%97%B4%E9%A3%9E%E8%A1%8C%E3%80%8B%E5%9F%8B%E8%97%8F%E7%9D%80%E3%80%8A%E5%B0%8F%E7%8E%8B%E5%AD%90%E3%80%8B%E7%9C%9F%E6%AD%A3...%20(z-library.sk%2C%201lib.sk%2C%20z-lib.sk).epub",
+                      "size":  4717494,
+                      "category":  "绘本"
+                  },
+                  {
+                      "id":  "huiben-7d0e9c77",
+                      "title":  "成长文库 世界少年文学精选(拼音版美绘本)·洋葱头历险记 (成长文库•世界儿童文学经典拼音美绘本) (罗大里)",
+                      "fileName":  "成长文库 世界少年文学精选(拼音版美绘本)·洋葱头历险记 (成长文库•世界儿童文学经典拼音美绘本) (罗大里) (z-library.sk, 1lib.sk, z-lib.sk).epub",
+                      "fileKind":  "epub",
+                      "url":  "./huiben/%E6%88%90%E9%95%BF%E6%96%87%E5%BA%93%20%E4%B8%96%E7%95%8C%E5%B0%91%E5%B9%B4%E6%96%87%E5%AD%A6%E7%B2%BE%E9%80%89(%E6%8B%BC%E9%9F%B3%E7%89%88%E7%BE%8E%E7%BB%98%E6%9C%AC)%C2%B7%E6%B4%8B%E8%91%B1%E5%A4%B4%E5%8E%86%E9%99%A9%E8%AE%B0%20(%E6%88%90%E9%95%BF%E6%96%87%E5%BA%93%E2%80%A2%E4%B8%96%E7%95%8C%E5%84%BF%E7%AB%A5%E6%96%87%E5%AD%A6%E7%BB%8F%E5%85%B8%E6%8B%BC%E9%9F%B3%E7%BE%8E%E7%BB%98%E6%9C%AC)%20(%E7%BD%97%E5%A4%A7%E9%87%8C)%20(z-library.sk%2C%201lib.sk%2C%20z-lib.sk).epub",
+                      "size":  5680742,
+                      "category":  "绘本"
+                  },
+                  {
+                      "id":  "huiben-31fbaef4",
+                      "title":  "成长文库：世界儿童文学经典（拼音美绘本）假话国历险记 (成长文库.世界儿童文学经典拼音美绘本) (罗大里 [罗大里])",
+                      "fileName":  "成长文库：世界儿童文学经典（拼音美绘本）假话国历险记 (成长文库.世界儿童文学经典拼音美绘本) (罗大里 [罗大里]) (z-library.sk, 1lib.sk, z-lib.sk).epub",
+                      "fileKind":  "epub",
+                      "url":  "./huiben/%E6%88%90%E9%95%BF%E6%96%87%E5%BA%93%EF%BC%9A%E4%B8%96%E7%95%8C%E5%84%BF%E7%AB%A5%E6%96%87%E5%AD%A6%E7%BB%8F%E5%85%B8%EF%BC%88%E6%8B%BC%E9%9F%B3%E7%BE%8E%E7%BB%98%E6%9C%AC%EF%BC%89%E5%81%87%E8%AF%9D%E5%9B%BD%E5%8E%86%E9%99%A9%E8%AE%B0%20(%E6%88%90%E9%95%BF%E6%96%87%E5%BA%93.%E4%B8%96%E7%95%8C%E5%84%BF%E7%AB%A5%E6%96%87%E5%AD%A6%E7%BB%8F%E5%85%B8%E6%8B%BC%E9%9F%B3%E7%BE%8E%E7%BB%98%E6%9C%AC)%20(%E7%BD%97%E5%A4%A7%E9%87%8C%20%5B%E7%BD%97%E5%A4%A7%E9%87%8C%5D)%20(z-library.sk%2C%201lib.sk%2C%20z-lib.sk).epub",
+                      "size":  3670952,
+                      "category":  "绘本"
+                  },
+                  {
+                      "id":  "huiben-14766226",
+                      "title":  "汤汤奇幻童年故事本（套装6册）（第十届全国优秀儿童文学奖获奖作品，一段瑰丽丰富的童年往事，一阙悠扬漫长的田园牧歌；作家汤汤携全新奇幻...",
+                      "fileName":  "汤汤奇幻童年故事本（套装6册）（第十届全国优秀儿童文学奖获奖作品，一段瑰丽丰富的童年往事，一阙悠扬漫长的田园牧歌；作家汤汤携全新奇幻... (z-library.sk, 1lib.sk, z-lib.sk).epub",
+                      "fileKind":  "epub",
+                      "url":  "./huiben/%E6%B1%A4%E6%B1%A4%E5%A5%87%E5%B9%BB%E7%AB%A5%E5%B9%B4%E6%95%85%E4%BA%8B%E6%9C%AC%EF%BC%88%E5%A5%97%E8%A3%856%E5%86%8C%EF%BC%89%EF%BC%88%E7%AC%AC%E5%8D%81%E5%B1%8A%E5%85%A8%E5%9B%BD%E4%BC%98%E7%A7%80%E5%84%BF%E7%AB%A5%E6%96%87%E5%AD%A6%E5%A5%96%E8%8E%B7%E5%A5%96%E4%BD%9C%E5%93%81%EF%BC%8C%E4%B8%80%E6%AE%B5%E7%91%B0%E4%B8%BD%E4%B8%B0%E5%AF%8C%E7%9A%84%E7%AB%A5%E5%B9%B4%E5%BE%80%E4%BA%8B%EF%BC%8C%E4%B8%80%E9%98%99%E6%82%A0%E6%89%AC%E6%BC%AB%E9%95%BF%E7%9A%84%E7%94%B0%E5%9B%AD%E7%89%A7%E6%AD%8C%EF%BC%9B%E4%BD%9C%E5%AE%B6%E6%B1%A4%E6%B1%A4%E6%90%BA%E5%85%A8%E6%96%B0%E5%A5%87%E5%B9%BB...%20(z-library.sk%2C%201lib.sk%2C%20z-lib.sk).epub",
+                      "size":  21069778,
+                      "category":  "绘本"
+                  },
+                  {
+                      "id":  "huiben-4d5190e1",
+                      "title":  "绘本里的世界（套装共九册）【国际儿童读物联盟（IBBY）主席张明舟、前主席邓肯、北京作协副主席曹文轩、儿童文学作家高洪波等联袂推荐！凝集...",
+                      "fileName":  "绘本里的世界（套装共九册）【国际儿童读物联盟（IBBY）主席张明舟、前主席邓肯、北京作协副主席曹文轩、儿童文学作家高洪波等联袂推荐！凝集... (z-library.sk, 1lib.sk, z-lib.sk).epub",
+                      "fileKind":  "epub",
+                      "url":  "./huiben/%E7%BB%98%E6%9C%AC%E9%87%8C%E7%9A%84%E4%B8%96%E7%95%8C%EF%BC%88%E5%A5%97%E8%A3%85%E5%85%B1%E4%B9%9D%E5%86%8C%EF%BC%89%E3%80%90%E5%9B%BD%E9%99%85%E5%84%BF%E7%AB%A5%E8%AF%BB%E7%89%A9%E8%81%94%E7%9B%9F%EF%BC%88IBBY%EF%BC%89%E4%B8%BB%E5%B8%AD%E5%BC%A0%E6%98%8E%E8%88%9F%E3%80%81%E5%89%8D%E4%B8%BB%E5%B8%AD%E9%82%93%E8%82%AF%E3%80%81%E5%8C%97%E4%BA%AC%E4%BD%9C%E5%8D%8F%E5%89%AF%E4%B8%BB%E5%B8%AD%E6%9B%B9%E6%96%87%E8%BD%A9%E3%80%81%E5%84%BF%E7%AB%A5%E6%96%87%E5%AD%A6%E4%BD%9C%E5%AE%B6%E9%AB%98%E6%B4%AA%E6%B3%A2%E7%AD%89%E8%81%94%E8%A2%82%E6%8E%A8%E8%8D%90%EF%BC%81%E5%87%9D%E9%9B%86...%20(z-library.sk%2C%201lib.sk%2C%20z-lib.sk).epub",
+                      "size":  21859822,
+                      "category":  "绘本"
+                  }
+              ]
+}

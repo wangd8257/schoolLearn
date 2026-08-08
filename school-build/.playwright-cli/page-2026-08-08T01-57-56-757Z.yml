@@ -1,0 +1,65 @@
+- generic [active] [ref=f4e1]:
+  - generic [ref=f4e2]:
+    - banner [ref=f4e3]:
+      - button "打开导航" [ref=f4e4] [cursor=pointer]: ☰
+      - generic [ref=f4e5]: 成长小桌
+      - button "新建" [ref=f4e6] [cursor=pointer]: ＋
+    - complementary [ref=f4e7]:
+      - generic [ref=f4e8]:
+        - generic [ref=f4e9]: ✦
+        - generic [ref=f4e10]:
+          - strong [ref=f4e11]: 成长小桌
+          - text: 每天进步一点点
+      - navigation "主导航" [ref=f4e12]:
+        - button "🏠 首页" [ref=f4e13] [cursor=pointer]:
+          - generic [ref=f4e14]: 🏠
+          - text: 首页
+        - button "📝 试卷目录" [ref=f4e15] [cursor=pointer]:
+          - generic [ref=f4e16]: 📝
+          - text: 试卷目录
+        - button "🪄 生成试卷" [ref=f4e17] [cursor=pointer]:
+          - generic [ref=f4e18]: 🪄
+          - text: 生成试卷
+        - button "📚 阅读资料" [ref=f4e19] [cursor=pointer]:
+          - generic [ref=f4e20]: 📚
+          - text: 阅读资料
+        - button "🎮 学习游戏" [ref=f4e21] [cursor=pointer]:
+          - generic [ref=f4e22]: 🎮
+          - text: 学习游戏
+        - button "🧩 配置模板" [ref=f4e23] [cursor=pointer]:
+          - generic [ref=f4e24]: 🧩
+          - text: 配置模板
+      - generic [ref=f4e25]:
+        - generic [ref=f4e26]: ☁️
+        - paragraph [ref=f4e27]:
+          - strong [ref=f4e28]: 数据只在本机
+          - text: 请勿清除 Safari 网站数据
+    - main [ref=f4e29]:
+      - article [ref=f4e886]:
+        - generic [ref=f4e887]:
+          - strong [ref=f4e888]: 汤汤奇幻童年故事本（套装6册）（第十届全国优秀儿童文学奖获奖作品，一段瑰丽丰富的童年往事，一阙悠扬漫长的田园牧歌；作家汤汤携全新奇幻...
+          - generic [ref=f4e889]: EPUB
+          - button "退出阅读" [ref=f4e890] [cursor=pointer]
+        - generic "EPUB 绘本阅读器" [ref=f4e891]:
+          - generic [ref=f4e892]:
+            - generic:
+              - generic: EPUB
+              - generic: 汤汤奇幻童年故事本（套装6册）（第十届全国优秀儿童文学奖获奖作品，一段瑰丽丰富的童年往事，一阙悠扬漫长的田园牧歌；作家汤汤携全新奇幻童话彩绘本，展现童年之美，书写中国童话 ）
+            - toolbar "Reading controls" [ref=f4e893]:
+              - button "Toggle table of contents" [ref=f4e895] [cursor=pointer]: ☰
+              - generic [ref=f4e896]:
+                - button "Previous chapter" [disabled] [ref=f4e897]: ←
+                - status [ref=f4e898]: 1 / 167
+                - generic "Position in chapter" [ref=f4e899]: 100%
+                - button "Next chapter" [ref=f4e900] [cursor=pointer]: →
+              - generic [ref=f4e901]:
+                - button "Decrease font size" [ref=f4e902] [cursor=pointer]: A−
+                - button "Increase font size" [ref=f4e903] [cursor=pointer]: A+
+                - button "Search book" [ref=f4e904] [cursor=pointer]: 🔍
+                - button "Highlights" [ref=f4e905] [cursor=pointer]: 🖌
+                - button "Bookmarks" [ref=f4e906] [cursor=pointer]: ☆
+                - button "Library" [ref=f4e907] [cursor=pointer]: 📚
+                - button "Reading settings" [ref=f4e908] [cursor=pointer]: Aa
+          - iframe [ref=f4e911]:
+            
+  - status

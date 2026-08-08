@@ -1,0 +1,94 @@
+- generic [ref=f2e1]:
+  - generic [ref=f2e2]:
+    - banner [ref=f2e3]:
+      - button "打开导航" [ref=f2e4] [cursor=pointer]: ☰
+      - generic [ref=f2e5]: 成长小桌
+      - button "新建" [ref=f2e6] [cursor=pointer]: ＋
+    - complementary [ref=f2e7]:
+      - generic [ref=f2e8]:
+        - generic [ref=f2e9]: ✦
+        - generic [ref=f2e10]:
+          - strong [ref=f2e11]: 成长小桌
+          - text: 每天进步一点点
+      - navigation "主导航" [ref=f2e12]:
+        - button "🏠 首页" [ref=f2e13] [cursor=pointer]:
+          - generic [ref=f2e14]: 🏠
+          - text: 首页
+        - button "📝 试卷目录" [ref=f2e15] [cursor=pointer]:
+          - generic [ref=f2e16]: 📝
+          - text: 试卷目录
+        - button "🪄 生成试卷" [ref=f2e17] [cursor=pointer]:
+          - generic [ref=f2e18]: 🪄
+          - text: 生成试卷
+        - button "📚 阅读资料" [ref=f2e19] [cursor=pointer]:
+          - generic [ref=f2e20]: 📚
+          - text: 阅读资料
+        - button "🎮 学习游戏" [ref=f2e21] [cursor=pointer]:
+          - generic [ref=f2e22]: 🎮
+          - text: 学习游戏
+        - button "🧩 配置模板" [ref=f2e23] [cursor=pointer]:
+          - generic [ref=f2e24]: 🧩
+          - text: 配置模板
+      - generic [ref=f2e25]:
+        - generic [ref=f2e26]: ☁️
+        - paragraph [ref=f2e27]:
+          - strong [ref=f2e28]: 数据只在本机
+          - text: 请勿清除 Safari 网站数据
+    - main [active] [ref=f2e29]:
+      - generic [ref=f2e736]:
+        - generic [ref=f2e737]:
+          - heading "试卷目录" [level=1] [ref=f2e738]
+          - paragraph [ref=f2e739]: 默认按生成时间倒序排列
+        - generic [ref=f2e740]:
+          - button "批量删除" [ref=f2e741] [cursor=pointer]
+          - button "＋ 生成新试卷" [ref=f2e742] [cursor=pointer]
+      - generic [ref=f2e743]:
+        - button "全部 (3)" [ref=f2e744] [cursor=pointer]
+        - button "未作答" [ref=f2e745] [cursor=pointer]
+        - button "作答中" [ref=f2e746] [cursor=pointer]
+        - button "待批改" [ref=f2e747] [cursor=pointer]
+        - button "已批改" [ref=f2e748] [cursor=pointer]
+      - generic [ref=f2e749]:
+        - article [ref=f2e750]:
+          - generic [ref=f2e751]:
+            - checkbox "选择" [ref=f2e752]
+            - text: 选择
+          - button "打开数学·凑十法·30题" [ref=f2e753] [cursor=pointer]
+          - generic [ref=f2e755]:
+            - heading "数学·凑十法·30题" [level=3] [ref=f2e756]
+            - generic [ref=f2e757]:
+              - generic [ref=f2e758]: 未作答
+              - time [ref=f2e759]: 2026/8/8 09:49:02
+            - generic [ref=f2e760]:
+              - button "复制" [ref=f2e761] [cursor=pointer]
+              - button "改名" [ref=f2e762] [cursor=pointer]
+              - button "删除" [ref=f2e763] [cursor=pointer]
+        - article [ref=f2e764]:
+          - generic [ref=f2e765]:
+            - checkbox "选择" [ref=f2e766]
+            - text: 选择
+          - button "打开数学·凑十法·30题" [ref=f2e767] [cursor=pointer]
+          - generic [ref=f2e769]:
+            - heading "数学·凑十法·30题" [level=3] [ref=f2e770]
+            - generic [ref=f2e771]:
+              - generic [ref=f2e772]: 未作答
+              - time [ref=f2e773]: 2026/8/8 09:46:29
+            - generic [ref=f2e774]:
+              - button "复制" [ref=f2e775] [cursor=pointer]
+              - button "改名" [ref=f2e776] [cursor=pointer]
+              - button "删除" [ref=f2e777] [cursor=pointer]
+        - article [ref=f2e778]:
+          - generic [ref=f2e779]:
+            - checkbox "选择" [ref=f2e780]
+            - text: 选择
+          - button "打开数学·凑十法·30题" [ref=f2e781] [cursor=pointer]
+          - generic [ref=f2e783]:
+            - heading "数学·凑十法·30题" [level=3] [ref=f2e784]
+            - generic [ref=f2e785]:
+              - generic [ref=f2e786]: 未作答
+              - time [ref=f2e787]: 2026/8/8 09:40:00
+            - generic [ref=f2e788]:
+              - button "复制" [ref=f2e789] [cursor=pointer]
+              - button "改名" [ref=f2e790] [cursor=pointer]
+              - button "删除" [ref=f2e791] [cursor=pointer]
+  - status: 试卷已生成并保存
