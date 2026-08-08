@@ -23729,7 +23729,7 @@
   globalThis.pdfjsLib = { AbortException, AnnotationEditorLayer, AnnotationEditorParamsType: v, AnnotationEditorType: y, AnnotationEditorUIManager, AnnotationLayer, AnnotationMode: m, AnnotationType: k, applyOpacity, build: zt, ColorPicker, createValidAbsoluteUrl, CSSConstants, DOMSVGFactory, DrawLayer, FeatureTest, fetchData, findContrastColor, getDocument, getFilenameFromUrl, getPdfFilenameFromUrl, getRGB, getRGBA, getUuid, GlobalWorkerOptions, ImageKind: _, InvalidPDFException, isDataScheme, isPdfFile, isValidExplicitDest: gt, makeArr, makeMap, makeObj, makeSet, MathClamp, noContextMenu, normalizeUnicode, OPS: B, OutputScale, PasswordException, PasswordResponses: G, PDFDataRangeTransport, PDFDateString, PDFWorker, PermissionFlag: w, PixelsPerInch, RenderingCancelledException, renderRichText, ResponseException, setLayerDimensions, shadow, SignatureExtractor, stopEvent, SupportedImageMimeTypes: X, TextLayer, TextLayerImages, TouchManager, updateUrlHash, Util, VerbosityLevel: R, version: Ht, XfaLayer };
 
   // src/app.js
-  var state = { route: "home", paperFilter: "all", activeReadingId: null, activePaperId: null, pictureBookDraft: null, paperTransform: null, paperStatus: null, bookObjectUrl: null, fileReader: null, fileReaderToken: 0, pdfZoom: 1 };
+  var state = { route: "home", paperFilter: "all", activeReadingId: null, activePaperId: null, pictureBookDraft: null, paperTransform: null, paperStatus: null, bookObjectUrl: null, fileReader: null, fileReaderToken: 0, pdfZoom: 1, selectedBookIds: /* @__PURE__ */ new Set(), bookCacheRun: 0 };
   var main = document.querySelector("#mainContent");
   var toast = document.querySelector("#toast");
   var modalRoot = document.querySelector("#modalRoot");
@@ -23743,6 +23743,7 @@
   function reportReaderRuntimeError(error, source) {
     if (state.route !== "reading" || !state.activeReadingId) return;
     const message = error instanceof Error ? error.message : String(error || "\u672A\u77E5\u9519\u8BEF");
+    if (/ResizeObserver loop (?:completed with undelivered notifications|limit exceeded)/u.test(message)) return;
     const reader = document.querySelector("[data-pdf-reader], [data-epubjs-reader]");
     const status = reader?.querySelector("[data-pdf-progress], [data-epub-status]");
     if (status && /正在|准备/u.test(status.textContent || "")) {
@@ -24351,7 +24352,20 @@
       URL.revokeObjectURL(state.bookObjectUrl);
       state.bookObjectUrl = null;
     }
+    const fileBooks = readings.filter((item) => item.type === "file-book" && canReaderRequestUrl(item));
+    const cachedCount = readings.filter((item) => isBookCached(item)).length;
+    const selectableIds = new Set(fileBooks.map((item) => item.id));
+    state.selectedBookIds.forEach((id) => {
+      if (!selectableIds.has(id)) state.selectedBookIds.delete(id);
+    });
+    preloadReaderAssets(readings);
     main.innerHTML = `${pageHeader("\u7ED8\u672C\u4E66\u67B6", "\u8BFB\u53D6 huiben \u6587\u4EF6\u5939\u548C\u5DF2\u5BFC\u5165\u4E66\u7C4D", '<button class="primary" data-new-picture-book>\uFF0B \u5BFC\u5165\u4E66\u7C4D</button><button class="secondary" data-new-text-reading>\uFF0B \u65B0\u5EFA\u6587\u5B57</button>')}
+    <div class="book-cache-toolbar" data-book-cache-toolbar>
+      <span data-book-cache-status>\u672C\u5730\u4E66\u5E93\uFF1A${cachedCount} \u672C\u5DF2\u4E0B\u8F7D</span>
+      <button class="secondary" data-book-select-all>${fileBooks.length && state.selectedBookIds.size === fileBooks.length ? "\u53D6\u6D88\u5168\u9009" : "\u5168\u9009\u4E66\u7C4D"}</button>
+      <button class="primary" data-book-batch-download ${fileBooks.length ? "" : "disabled"}>\u4E0B\u8F7D\u9009\u4E2D</button>
+      <button class="secondary" data-book-clear-cache ${cachedCount ? "" : "disabled"}>\u6E05\u9664\u672C\u5730\u7F13\u5B58</button>
+    </div>
     ${readings.length ? `<section class="bookshelf-grid">${readings.map((item) => renderBookCard(item)).join("")}</section>` : '<div class="empty-state"><span class="emoji">\u{1F4DA}</span><h2>\u4E66\u67B6\u6B63\u5728\u51C6\u5907</h2><p>\u6B63\u5728\u8BFB\u53D6 huiben \u6587\u4EF6\u5939\u6E05\u5355\uFF0C\u8BF7\u7A0D\u5019\u3002</p></div>'}`;
   }
   function renderActiveReading(item) {
@@ -24365,12 +24379,14 @@
       if (kind === "pdf") void mountPdfJsReader(readerItem, state.fileReaderToken);
       if (["epub", "equb"].includes(kind)) void mountEpubJsReader(readerItem, state.fileReaderToken);
     }
-    if (item.type === "file-book") void cacheFileBook(item);
+    if (item.type === "file-book" && item.source !== "huiben") void cacheFileBook(item);
   }
   function renderBookCard(item) {
     const badge = item.fileKind ? String(item.fileKind).toUpperCase() : item.type === "picture-book" ? "\u56FE\u7247" : "\u6587\u672C";
     const source = item.source === "huiben" ? "huiben" : item.source === "imported" ? "\u5DF2\u5BFC\u5165" : item.category || "\u9605\u8BFB";
-    return `<button class="book-card" data-reading-id="${item.id}" aria-label="\u6253\u5F00${escapeHtml2(item.title)}"><span class="book-badge">${escapeHtml2(badge)}</span><strong>${escapeHtml2(item.title)}</strong><small>${escapeHtml2(source)}</small></button>`;
+    const selectable = item.type === "file-book" && canReaderRequestUrl(item);
+    const cached = isBookCached(item);
+    return `<article class="book-card-shell">${selectable ? `<label class="book-cache-select"><input type="checkbox" data-book-select="${item.id}" ${state.selectedBookIds.has(item.id) ? "checked" : ""}><span>\u7F13\u5B58\u5230\u672C\u5730</span></label>` : ""}<button class="book-card" data-reading-id="${item.id}" aria-label="\u6253\u5F00${escapeHtml2(item.title)}"><span class="book-badge">${escapeHtml2(badge)}</span><strong>${escapeHtml2(item.title)}</strong><small>${escapeHtml2(source)}</small>${cached ? '<small class="book-cache-state">\u5DF2\u4E0B\u8F7D\u5230\u672C\u673A</small>' : ""}</button></article>`;
   }
   function renderReader(item) {
     if (item.type === "file-book") return renderFileBookReader(item);
@@ -24405,17 +24421,91 @@
     return { ...item, sourceUrl: state.bookObjectUrl };
   }
   async function cacheFileBook(item) {
+    return cacheFileBookWithOptions(item);
+  }
+  async function cacheFileBookWithOptions(item, options = {}) {
     const sourceUrl = String(item.sourceUrl || "");
     const isLocalFileUrl = globalThis.location?.protocol === "file:" || sourceUrl.startsWith("file:");
     const isInlineSource = /^(blob:|data:)/u.test(sourceUrl);
-    if (isLocalFileUrl || isInlineSource || item.sourceBlob instanceof Blob || item.source === "huiben" || !sourceUrl) return;
+    if (isLocalFileUrl || isInlineSource || !options.force && isBookCached(item) || !sourceUrl) return { ok: false, skipped: true };
     try {
       const response = await fetch(sourceUrl, { cache: "force-cache" });
       if (!response.ok) throw new Error(`\u7ED8\u672C\u6587\u4EF6\u8BFB\u53D6\u5931\u8D25\uFF1A${response.status}`);
       const blob = await response.blob();
-      await put("readings", { ...item, sourceBlob: blob, size: blob.size, updatedAt: Date.now() });
+      if (!blob.size) throw new Error("\u7ED8\u672C\u6587\u4EF6\u4E3A\u7A7A");
+      await put("readings", { ...item, sourceBlob: blob, cacheMode: "device", cacheUpdatedAt: Date.now(), size: blob.size, updatedAt: Date.now() });
+      return { ok: true, size: blob.size };
     } catch (error) {
       console.warn("\u7ED8\u672C\u79BB\u7EBF\u526F\u672C\u51C6\u5907\u5931\u8D25", error);
+      return { ok: false, error: error instanceof Error ? error : new Error(String(error)) };
+    }
+  }
+  function isBookCached(item) {
+    return item?.type === "file-book" && item?.cacheMode === "device" && item.sourceBlob instanceof Blob && item.sourceBlob.size > 0;
+  }
+  function preloadReaderAssets(readings) {
+    const hasEpub = readings.some((item) => ["epub", "equb"].includes(String(item.fileKind || "").toLowerCase()));
+    const hasPdf = readings.some((item) => String(item.fileKind || "").toLowerCase() === "pdf");
+    if (hasEpub) {
+      void Promise.all([
+        loadScriptOnce("./src/vendor/epubjs/jszip.min.js", "JSZip"),
+        loadScriptOnce("./src/vendor/epubjs/epub.min.js", "ePub")
+      ]).catch((error) => console.warn("EPUB \u7EC4\u4EF6\u9884\u70ED\u5931\u8D25", error));
+    }
+    if (hasPdf && typeof fetch === "function") {
+      void fetch("./src/vendor/pdfjs/pdf.worker.min.mjs", { cache: "force-cache" }).catch(() => {
+      });
+    }
+  }
+  async function downloadSelectedBooks() {
+    if (state.bookCacheRun) return;
+    const readings = await getAll("readings");
+    const selected = readings.filter((item) => state.selectedBookIds.has(item.id) && item.type === "file-book" && canReaderRequestUrl(item));
+    if (!selected.length) {
+      showToast("\u8BF7\u5148\u52FE\u9009\u8981\u4E0B\u8F7D\u7684\u7ED8\u672C");
+      return;
+    }
+    const runId = Date.now();
+    state.bookCacheRun = runId;
+    const status = document.querySelector("[data-book-cache-status]");
+    let successCount = 0;
+    let failedCount = 0;
+    try {
+      for (let index = 0; index < selected.length; index += 1) {
+        if (state.bookCacheRun !== runId) return;
+        const item = selected[index];
+        if (status) status.textContent = `\u6B63\u5728\u4E0B\u8F7D ${index + 1}/${selected.length}\uFF1A${item.title}`;
+        const result = await cacheFileBookWithOptions(item);
+        if (result.ok || result.skipped) successCount += 1;
+        else failedCount += 1;
+      }
+    } finally {
+      state.bookCacheRun = 0;
+    }
+    showToast(failedCount ? `\u5DF2\u4E0B\u8F7D ${successCount} \u672C\uFF0C\u5931\u8D25 ${failedCount} \u672C` : `\u5DF2\u4E0B\u8F7D ${successCount} \u672C\u5230\u672C\u673A`);
+    state.selectedBookIds.clear();
+    const refreshed = (await getAll("readings")).sort((a2, b2) => (b2.createdAt || 0) - (a2.createdAt || 0));
+    if (state.route === "reading" && !state.activeReadingId) renderReadingShelf(refreshed);
+  }
+  async function clearLocalBookCache() {
+    const readings = await getAll("readings");
+    const cached = readings.filter((item) => isBookCached(item));
+    if (!cached.length) {
+      showToast("\u6CA1\u6709\u53EF\u6E05\u7406\u7684\u672C\u5730\u7ED8\u672C");
+      return;
+    }
+    if (!confirm(`\u786E\u5B9A\u5220\u9664\u672C\u673A\u7F13\u5B58\u7684 ${cached.length} \u672C\u7ED8\u672C\u5417\uFF1F\u4E66\u67B6\u8BB0\u5F55\u4F1A\u4FDD\u7559\u3002`)) return;
+    await Promise.all(cached.map(async (item) => {
+      const next = { ...item };
+      delete next.sourceBlob;
+      delete next.cacheMode;
+      delete next.cacheUpdatedAt;
+      await put("readings", next);
+    }));
+    state.selectedBookIds.clear();
+    showToast(`\u5DF2\u6E05\u9664 ${cached.length} \u672C\u672C\u5730\u7ED8\u672C`);
+    if (state.route === "reading" && !state.activeReadingId) {
+      renderReadingShelf((await getAll("readings")).sort((a2, b2) => (b2.createdAt || 0) - (a2.createdAt || 0)));
     }
   }
   function canReaderRequestUrl(item) {
@@ -24540,6 +24630,25 @@
     const currentPage = viewportElement.querySelector(`[data-pdf-page-number="${readerState.currentPage}"]`);
     currentPage?.scrollIntoView({ block: "start" });
   }
+  async function waitForEpubContent(viewport, timeoutMs = 15e3) {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      const frames = [...viewport.querySelectorAll("iframe")];
+      const hasContent = frames.some((frame) => {
+        try {
+          const documentElement = frame.contentDocument;
+          const text = documentElement?.body?.textContent?.trim() || "";
+          const imageCount = documentElement?.images?.length || 0;
+          return Boolean(text || imageCount);
+        } catch (error) {
+          return false;
+        }
+      });
+      if (hasContent) return true;
+      await new Promise((resolve) => setTimeout(resolve, 120));
+    }
+    return false;
+  }
   async function mountPdfJsReader(item, token) {
     const reader = document.querySelector("[data-pdf-reader]");
     const viewportElement = reader?.querySelector("[data-pdf-viewport]");
@@ -24596,7 +24705,11 @@
       });
       const readerState = { kind: "epub", token, book, rendition };
       state.fileReader = readerState;
-      await withReaderTimeout(rendition.display(), "EPUB \u9996\u7AE0\u6E32\u67D3\u8D85\u65F6\uFF0C\u8BF7\u68C0\u67E5\u6587\u4EF6\u6216\u7F51\u7EDC");
+      const displayReady = rendition.display().then(() => true).catch(() => new Promise(() => {
+      }));
+      const contentReady = waitForEpubContent(viewport).then((ready) => ready ? true : new Promise(() => {
+      }));
+      await withReaderTimeout(Promise.race([displayReady, contentReady]), "EPUB \u9996\u7AE0\u6E32\u67D3\u8D85\u65F6\uFF0C\u8BF7\u68C0\u67E5\u6587\u4EF6\u6216\u7F51\u7EDC");
       if (token !== state.fileReaderToken || !reader.isConnected) return;
       setFileReaderStatus(reader, "EPUB \u5DF2\u6253\u5F00\uFF0C\u53EF\u5728\u5F53\u524D\u9875\u9762\u4E0A\u4E0B\u6EDA\u52A8\u9605\u8BFB");
     } catch (error) {
@@ -24734,6 +24847,15 @@
     }
     const paperId = event.target.closest("[data-open-paper]")?.dataset.openPaper;
     if (paperId) return navigate("paper", { paperId });
+    if (event.target.closest("[data-book-select-all]")) {
+      const readings = await getAll("readings");
+      const ids = readings.filter((item) => item.type === "file-book" && canReaderRequestUrl(item)).map((item) => item.id);
+      if (state.selectedBookIds.size === ids.length) state.selectedBookIds.clear();
+      else ids.forEach((id) => state.selectedBookIds.add(id));
+      return renderReadingShelf(readings.sort((a2, b2) => (b2.createdAt || 0) - (a2.createdAt || 0)));
+    }
+    if (event.target.closest("[data-book-batch-download]")) return downloadSelectedBooks();
+    if (event.target.closest("[data-book-clear-cache]")) return clearLocalBookCache();
     const readingId = event.target.closest("[data-reading-id]")?.dataset.readingId;
     if (readingId) {
       state.activeReadingId = readingId;
@@ -25118,6 +25240,14 @@
     }
   });
   document.addEventListener("change", async (event) => {
+    if (event.target.matches("[data-book-select]")) {
+      const id = event.target.dataset.bookSelect;
+      if (event.target.checked) state.selectedBookIds.add(id);
+      else state.selectedBookIds.delete(id);
+      const status = document.querySelector("[data-book-cache-status]");
+      if (status) status.textContent = `\u5DF2\u9009\u62E9 ${state.selectedBookIds.size} \u672C\u7ED8\u672C`;
+      return;
+    }
     if (event.target.matches("[data-local-book-picker]")) {
       const file = event.target.files?.[0];
       if (!file) return;
@@ -25201,7 +25331,7 @@
       await openDatabase();
       await ensureDefaultTemplates();
       await ensureReadingSeeds();
-      if ("serviceWorker" in navigator && location.protocol.startsWith("http")) navigator.serviceWorker.register("./sw.js?v=20260808-7").catch(console.warn);
+      if ("serviceWorker" in navigator && location.protocol.startsWith("http")) navigator.serviceWorker.register("./sw.js?v=20260808-8").catch(console.warn);
       await navigate("home");
     } finally {
       loading?.classList.add("is-hidden");

@@ -1950,11 +1950,18 @@ body.paper-focus-active .main-content { height: 100dvh; padding: 0; overflow: hi
 .english-game-screen .picture-card > div { width: 48px !important; height: 48px !important; font-size: 25px !important; border-width: 2px !important; }
 .english-game-screen .picture-card small { font-size: 12px; line-height: 1.1; }
 .english-game-screen .word-target { font-size: 15px; }
-.bookshelf-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 18px; align-items: stretch; }
+.book-cache-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 16px; padding: 12px 14px; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-tight); }
+.book-cache-toolbar > span { flex: 1 1 220px; color: var(--muted); font-size: 13px; font-weight: 700; }
+.book-cache-toolbar button { min-height: 34px; padding: 0 10px; font-size: 12px; }
+.bookshelf-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 18px; align-items: stretch; margin-top: 18px; }
+.book-card-shell { position: relative; min-width: 0; }
+.book-cache-select { position: absolute; top: 10px; left: 10px; z-index: 3; display: inline-flex; align-items: center; gap: 5px; padding: 4px 6px; border-radius: 6px; color: #765f45; background: rgba(255,255,255,.82); font-size: 11px; font-weight: 700; }
+.book-cache-select input { margin: 0; accent-color: var(--blue); }
 .book-card { position: relative; min-height: 220px; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-end; gap: 7px; padding: 18px; overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: linear-gradient(145deg, #fff9e7, #f0d39c); box-shadow: var(--shadow); text-align: left; }
 .book-card::before { content: "📖"; position: absolute; top: 28px; left: 50%; transform: translateX(-50%); font-size: 66px; }
 .book-card strong { position: relative; z-index: 1; max-width: 100%; overflow-wrap: anywhere; }
 .book-card small { position: relative; z-index: 1; color: #765f45; }
+.book-card .book-cache-state { color: var(--blue); font-weight: 800; }
 .book-badge { position: absolute; top: 10px; right: 10px; z-index: 1; padding: 3px 6px; border-radius: 4px; color: #765f45; background: rgba(255,255,255,.62); font-size: 11px; font-weight: 800; }
 .fullscreen-reader { position: fixed; inset: 0; z-index: 75; min-height: 100dvh; padding: 0; border: 0; border-radius: 0; background: #252525; overflow: hidden; }
 .reader-floating-toolbar { position: absolute; inset: 0 0 auto 0; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; min-height: 58px; padding: 8px 12px; color: white; background: rgba(24,24,24,.86); overflow-x: hidden; }

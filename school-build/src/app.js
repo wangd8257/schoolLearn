@@ -35,7 +35,7 @@ import { renderProblemHtml, renderWorksheetMetaHtml, worksheetColumns, worksheet
 import { paperMoveDelta, paperScrollDelta } from './paper-controls.mjs';
 import * as pdfjsLib from './vendor/pdfjs/pdf.min.mjs';
 
-const state = { route: 'home', paperFilter: 'all', activeReadingId: null, activePaperId: null, pictureBookDraft: null, paperTransform: null, paperStatus: null, bookObjectUrl: null, fileReader: null, fileReaderToken: 0, pdfZoom: 1 };
+const state = { route: 'home', paperFilter: 'all', activeReadingId: null, activePaperId: null, pictureBookDraft: null, paperTransform: null, paperStatus: null, bookObjectUrl: null, fileReader: null, fileReaderToken: 0, pdfZoom: 1, selectedBookIds: new Set(), bookCacheRun: 0 };
 const main = document.querySelector('#mainContent');
 const toast = document.querySelector('#toast');
 const modalRoot = document.querySelector('#modalRoot');
@@ -58,6 +58,7 @@ const READER_LOAD_TIMEOUT_MS = 60000;
 function reportReaderRuntimeError(error, source) {
   if (state.route !== 'reading' || !state.activeReadingId) return;
   const message = error instanceof Error ? error.message : String(error || '未知错误');
+  if (/ResizeObserver loop (?:completed with undelivered notifications|limit exceeded)/u.test(message)) return;
   const reader = document.querySelector('[data-pdf-reader], [data-epubjs-reader]');
 
   // 只在阅读器仍显示加载状态时覆盖状态栏，避免覆盖已经成功打开的阅读内容。
@@ -780,7 +781,18 @@ function renderReadingShelf(readings) {
     URL.revokeObjectURL(state.bookObjectUrl);
     state.bookObjectUrl = null;
   }
+  const fileBooks = readings.filter((item) => item.type === 'file-book' && canReaderRequestUrl(item));
+  const cachedCount = readings.filter((item) => isBookCached(item)).length;
+  const selectableIds = new Set(fileBooks.map((item) => item.id));
+  state.selectedBookIds.forEach((id) => { if (!selectableIds.has(id)) state.selectedBookIds.delete(id); });
+  preloadReaderAssets(readings);
   main.innerHTML = `${pageHeader('绘本书架','读取 huiben 文件夹和已导入书籍','<button class="primary" data-new-picture-book>＋ 导入书籍</button><button class="secondary" data-new-text-reading>＋ 新建文字</button>')}
+    <div class="book-cache-toolbar" data-book-cache-toolbar>
+      <span data-book-cache-status>本地书库：${cachedCount} 本已下载</span>
+      <button class="secondary" data-book-select-all>${fileBooks.length && state.selectedBookIds.size === fileBooks.length ? '取消全选' : '全选书籍'}</button>
+      <button class="primary" data-book-batch-download ${fileBooks.length ? '' : 'disabled'}>下载选中</button>
+      <button class="secondary" data-book-clear-cache ${cachedCount ? '' : 'disabled'}>清除本地缓存</button>
+    </div>
     ${readings.length ? `<section class="bookshelf-grid">${readings.map((item)=>renderBookCard(item)).join('')}</section>` : '<div class="empty-state"><span class="emoji">📚</span><h2>书架正在准备</h2><p>正在读取 huiben 文件夹清单，请稍候。</p></div>'}`;
 }
 
@@ -801,13 +813,15 @@ function renderActiveReading(item) {
     if (kind === 'pdf') void mountPdfJsReader(readerItem, state.fileReaderToken);
     if (['epub', 'equb'].includes(kind)) void mountEpubJsReader(readerItem, state.fileReaderToken);
   }
-  if (item.type === 'file-book') void cacheFileBook(item);
+  if (item.type === 'file-book' && item.source !== 'huiben') void cacheFileBook(item);
 }
 
 function renderBookCard(item) {
   const badge = item.fileKind ? String(item.fileKind).toUpperCase() : (item.type === 'picture-book' ? '图片' : '文本');
   const source = item.source === 'huiben' ? 'huiben' : (item.source === 'imported' ? '已导入' : item.category || '阅读');
-  return `<button class="book-card" data-reading-id="${item.id}" aria-label="打开${escapeHtml(item.title)}"><span class="book-badge">${escapeHtml(badge)}</span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(source)}</small></button>`;
+  const selectable = item.type === 'file-book' && canReaderRequestUrl(item);
+  const cached = isBookCached(item);
+  return `<article class="book-card-shell">${selectable ? `<label class="book-cache-select"><input type="checkbox" data-book-select="${item.id}" ${state.selectedBookIds.has(item.id) ? 'checked' : ''}><span>缓存到本地</span></label>` : ''}<button class="book-card" data-reading-id="${item.id}" aria-label="打开${escapeHtml(item.title)}"><span class="book-badge">${escapeHtml(badge)}</span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(source)}</small>${cached ? '<small class="book-cache-state">已下载到本机</small>' : ''}</button></article>`;
 }
 
 function renderReader(item) {
@@ -866,18 +880,120 @@ function createImmediateFileBook(item) {
  * @returns {Promise<void>} 缓存完成或失败后的 Promise。
  */
 async function cacheFileBook(item) {
+  return cacheFileBookWithOptions(item);
+}
+
+/**
+ * 将单本静态绘本下载到应用自己的 IndexedDB 本地书库。
+ * @param {Record<string, unknown>} item 书架中的文件绘本记录。
+ * @param {{force?:boolean}} options 是否忽略已有缓存并重新下载。
+ * @returns {Promise<{ok:boolean,skipped?:boolean,error?:Error,size?:number}>} 下载结果。
+ */
+async function cacheFileBookWithOptions(item, options = {}) {
   const sourceUrl = String(item.sourceUrl || '');
   const isLocalFileUrl = globalThis.location?.protocol === 'file:' || sourceUrl.startsWith('file:');
   const isInlineSource = /^(blob:|data:)/u.test(sourceUrl);
-  if (isLocalFileUrl || isInlineSource || item.sourceBlob instanceof Blob || item.source === 'huiben' || !sourceUrl) return;
+  if (isLocalFileUrl || isInlineSource || (!options.force && isBookCached(item)) || !sourceUrl) return { ok: false, skipped: true };
   try {
     const response = await fetch(sourceUrl, { cache: 'force-cache' });
     if (!response.ok) throw new Error(`绘本文件读取失败：${response.status}`);
     const blob = await response.blob();
-    await put('readings', { ...item, sourceBlob: blob, size: blob.size, updatedAt: Date.now() });
+    if (!blob.size) throw new Error('绘本文件为空');
+    await put('readings', { ...item, sourceBlob: blob, cacheMode: 'device', cacheUpdatedAt: Date.now(), size: blob.size, updatedAt: Date.now() });
+    return { ok: true, size: blob.size };
   } catch (error) {
-    // 阅读器已经使用原始 URL 尝试打开，后台缓存失败不应阻断当前阅读。
+    // 单本下载失败只返回结果，由批量任务汇总，不能中断其他书籍。
     console.warn('绘本离线副本准备失败', error);
+    return { ok: false, error: error instanceof Error ? error : new Error(String(error)) };
+  }
+}
+
+/**
+ * 判断书架记录是否包含应用管理的本地绘本缓存。
+ * @param {Record<string, unknown>} item 书架中的阅读资料记录。
+ * @returns {boolean} 是否存在可读取的本地 Blob。
+ */
+function isBookCached(item) {
+  return item?.type === 'file-book' && item?.cacheMode === 'device' && item.sourceBlob instanceof Blob && item.sourceBlob.size > 0;
+}
+
+/**
+ * 在用户进入书架后后台预热本地阅读器脚本，缩短首次打开等待时间。
+ * @param {Array<Record<string, unknown>>} readings 当前书架记录。
+ * @returns {void}
+ */
+function preloadReaderAssets(readings) {
+  const hasEpub = readings.some((item) => ['epub', 'equb'].includes(String(item.fileKind || '').toLowerCase()));
+  const hasPdf = readings.some((item) => String(item.fileKind || '').toLowerCase() === 'pdf');
+  if (hasEpub) {
+    void Promise.all([
+      loadScriptOnce('./src/vendor/epubjs/jszip.min.js', 'JSZip'),
+      loadScriptOnce('./src/vendor/epubjs/epub.min.js', 'ePub'),
+    ]).catch((error) => console.warn('EPUB 组件预热失败', error));
+  }
+  if (hasPdf && typeof fetch === 'function') {
+    void fetch('./src/vendor/pdfjs/pdf.worker.min.mjs', { cache: 'force-cache' }).catch(() => {});
+  }
+}
+
+/**
+ * 下载用户选中的绘本，按顺序写入固定的应用本地缓存库。
+ * @returns {Promise<void>} 批量下载完成后的 Promise。
+ */
+async function downloadSelectedBooks() {
+  if (state.bookCacheRun) return;
+  const readings = await getAll('readings');
+  const selected = readings.filter((item) => state.selectedBookIds.has(item.id) && item.type === 'file-book' && canReaderRequestUrl(item));
+  if (!selected.length) {
+    showToast('请先勾选要下载的绘本');
+    return;
+  }
+  const runId = Date.now();
+  state.bookCacheRun = runId;
+  const status = document.querySelector('[data-book-cache-status]');
+  let successCount = 0;
+  let failedCount = 0;
+  try {
+    for (let index = 0; index < selected.length; index += 1) {
+      if (state.bookCacheRun !== runId) return;
+      const item = selected[index];
+      if (status) status.textContent = `正在下载 ${index + 1}/${selected.length}：${item.title}`;
+      const result = await cacheFileBookWithOptions(item);
+      if (result.ok || result.skipped) successCount += 1;
+      else failedCount += 1;
+    }
+  } finally {
+    state.bookCacheRun = 0;
+  }
+  showToast(failedCount ? `已下载 ${successCount} 本，失败 ${failedCount} 本` : `已下载 ${successCount} 本到本机`);
+  state.selectedBookIds.clear();
+  const refreshed = (await getAll('readings')).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  if (state.route === 'reading' && !state.activeReadingId) renderReadingShelf(refreshed);
+}
+
+/**
+ * 清理应用本地缓存中的绘本文件，但保留书架记录和原始 huiben 地址。
+ * @returns {Promise<void>} 清理完成后的 Promise。
+ */
+async function clearLocalBookCache() {
+  const readings = await getAll('readings');
+  const cached = readings.filter((item) => isBookCached(item));
+  if (!cached.length) {
+    showToast('没有可清理的本地绘本');
+    return;
+  }
+  if (!confirm(`确定删除本机缓存的 ${cached.length} 本绘本吗？书架记录会保留。`)) return;
+  await Promise.all(cached.map(async (item) => {
+    const next = { ...item };
+    delete next.sourceBlob;
+    delete next.cacheMode;
+    delete next.cacheUpdatedAt;
+    await put('readings', next);
+  }));
+  state.selectedBookIds.clear();
+  showToast(`已清除 ${cached.length} 本本地绘本`);
+  if (state.route === 'reading' && !state.activeReadingId) {
+    renderReadingShelf((await getAll('readings')).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)));
   }
 }
 
@@ -1062,6 +1178,33 @@ async function rerenderPdfDocument(readerState) {
 }
 
 /**
+ * 等待 epub.js 在当前视口中写入首章内容。
+ * @param {Element} viewport EPUB 内容容器。
+ * @param {number} timeoutMs 等待上限，单位为毫秒。
+ * @returns {Promise<boolean>} 是否已经发现可读的首章内容。
+ */
+async function waitForEpubContent(viewport, timeoutMs = 15000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const frames = [...viewport.querySelectorAll('iframe')];
+    const hasContent = frames.some((frame) => {
+      try {
+        const documentElement = frame.contentDocument;
+        const text = documentElement?.body?.textContent?.trim() || '';
+        const imageCount = documentElement?.images?.length || 0;
+        return Boolean(text || imageCount);
+      } catch (error) {
+        // Safari 可能暂时不允许访问尚未完成加载的 iframe，下一轮继续检查。
+        return false;
+      }
+    });
+    if (hasContent) return true;
+    await new Promise((resolve) => setTimeout(resolve, 120));
+  }
+  return false;
+}
+
+/**
  * 使用 Mozilla PDF.js 在当前页面内渲染 PDF，并渐进式生成可滚动页面。
  * @param {Record<string, unknown>} item 书架中的 PDF 书籍记录。
  * @param {number} token 本次打开动作的令牌。
@@ -1137,7 +1280,10 @@ async function mountEpubJsReader(item, token) {
     });
     const readerState = { kind: 'epub', token, book, rendition };
     state.fileReader = readerState;
-    await withReaderTimeout(rendition.display(), 'EPUB 首章渲染超时，请检查文件或网络');
+    // iOS Safari 中 display() 的完成事件可能晚于 iframe 实际出现，二者任一成功即可进入阅读状态。
+    const displayReady = rendition.display().then(() => true).catch(() => new Promise(() => {}));
+    const contentReady = waitForEpubContent(viewport).then((ready) => ready ? true : new Promise(() => {}));
+    await withReaderTimeout(Promise.race([displayReady, contentReady]), 'EPUB 首章渲染超时，请检查文件或网络');
     if (token !== state.fileReaderToken || !reader.isConnected) return;
     setFileReaderStatus(reader, 'EPUB 已打开，可在当前页面上下滚动阅读');
   } catch (error) {
@@ -1301,6 +1447,15 @@ async function handleGlobalClick(event) {
   if (filter) { state.paperFilter = filter; return renderPapers(); }
   const paperId = event.target.closest('[data-open-paper]')?.dataset.openPaper;
   if (paperId) return navigate('paper',{paperId});
+  if (event.target.closest('[data-book-select-all]')) {
+    const readings = await getAll('readings');
+    const ids = readings.filter((item) => item.type === 'file-book' && canReaderRequestUrl(item)).map((item) => item.id);
+    if (state.selectedBookIds.size === ids.length) state.selectedBookIds.clear();
+    else ids.forEach((id) => state.selectedBookIds.add(id));
+    return renderReadingShelf(readings.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)));
+  }
+  if (event.target.closest('[data-book-batch-download]')) return downloadSelectedBooks();
+  if (event.target.closest('[data-book-clear-cache]')) return clearLocalBookCache();
   const readingId = event.target.closest('[data-reading-id]')?.dataset.readingId;
   if (readingId) { state.activeReadingId = readingId; state.bookPage = 0; return renderReading(); }
   if (event.target.closest('[data-exit-reader]')) { state.activeReadingId = null; state.bookPage = 0; return renderReading(); }
@@ -1528,6 +1683,14 @@ document.addEventListener('submit', async (event) => {
   }
 });
 document.addEventListener('change', async (event) => {
+  if (event.target.matches('[data-book-select]')) {
+    const id = event.target.dataset.bookSelect;
+    if (event.target.checked) state.selectedBookIds.add(id);
+    else state.selectedBookIds.delete(id);
+    const status = document.querySelector('[data-book-cache-status]');
+    if (status) status.textContent = `已选择 ${state.selectedBookIds.size} 本绘本`;
+    return;
+  }
   if (event.target.matches('[data-local-book-picker]')) {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -1599,7 +1762,7 @@ async function init() {
     await openDatabase();
     await ensureDefaultTemplates();
     await ensureReadingSeeds();
-    if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('./sw.js?v=20260808-7').catch(console.warn);
+    if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('./sw.js?v=20260808-8').catch(console.warn);
     await navigate('home');
   } finally {
     loading?.classList.add('is-hidden');
