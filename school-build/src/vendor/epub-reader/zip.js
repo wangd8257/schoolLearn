@@ -1,4 +1,5 @@
-// Minimal ZIP reader using DecompressionStream for DEFLATE.
+// Minimal ZIP reader with a native and pure JavaScript DEFLATE path.
+import { inflateRawSync } from './inflate-raw.js';
 // Supports: stored (0) and deflate (8). No ZIP64, no encryption.
 // Enough for nearly every EPUB in the wild.
 
@@ -208,11 +209,15 @@ function decodeName(bytes, flags) {
  * @returns {Promise<Uint8Array>}
  */
 async function inflateRaw(bytes) {
-  if (typeof DecompressionStream === 'undefined') {
-    throw new Error('DecompressionStream is not available in this environment');
+  if (typeof DecompressionStream !== 'undefined') {
+    try {
+      const ds = new DecompressionStream('deflate-raw');
+      const stream = new Blob([/** @type {BlobPart} */ (bytes)]).stream().pipeThrough(ds);
+      const out = await new Response(stream).arrayBuffer();
+      return new Uint8Array(out);
+    } catch {
+      // Safari 某些版本存在 DecompressionStream，但不接受 deflate-raw 格式。
+    }
   }
-  const ds = new DecompressionStream('deflate-raw');
-  const stream = new Blob([/** @type {BlobPart} */ (bytes)]).stream().pipeThrough(ds);
-  const out = await new Response(stream).arrayBuffer();
-  return new Uint8Array(out);
+  return inflateRawSync(bytes);
 }

@@ -3347,6 +3347,231 @@
     return -paperMoveDelta(direction, step);
   }
 
+  // src/vendor/epub-reader/inflate-raw.js
+  var u8 = Uint8Array;
+  var u16 = Uint16Array;
+  var i32 = Int32Array;
+  var fleb = new u8([0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0, 0, 0]);
+  var fdeb = new u8([0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13, 0, 0]);
+  var clim = new u8([16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15]);
+  function freb(extraBits, start) {
+    const base = new u16(31);
+    for (let index = 0; index < 31; index += 1) base[index] = start += 1 << extraBits[index - 1];
+    const reverseBase = new i32(base[30]);
+    for (let index = 1; index < 30; index += 1) {
+      for (let value = base[index]; value < base[index + 1]; value += 1) {
+        reverseBase[value] = value - base[index] << 5 | index;
+      }
+    }
+    return { base, reverseBase };
+  }
+  var lengthTables = freb(fleb, 2);
+  var fl = lengthTables.base;
+  var distanceTables = freb(fdeb, 0);
+  var fd = distanceTables.base;
+  var reverseBits = new u16(32768);
+  for (let index = 0; index < 32768; index += 1) {
+    let value = (index & 43690) >> 1 | (index & 21845) << 1;
+    value = (value & 52428) >> 2 | (value & 13107) << 2;
+    value = (value & 61680) >> 4 | (value & 3855) << 4;
+    reverseBits[index] = ((value & 65280) >> 8 | (value & 255) << 8) >> 1;
+  }
+  function hMap(codeLengths, maxBits, reverse) {
+    const size = codeLengths.length;
+    const counts = new u16(maxBits);
+    for (let index = 0; index < size; index += 1) {
+      if (codeLengths[index]) counts[codeLengths[index] - 1] += 1;
+    }
+    const minimumCodes = new u16(maxBits);
+    for (let index = 1; index < maxBits; index += 1) {
+      minimumCodes[index] = minimumCodes[index - 1] + counts[index - 1] << 1;
+    }
+    if (!reverse) {
+      const map2 = new u16(size);
+      for (let index = 0; index < size; index += 1) {
+        if (codeLengths[index]) map2[index] = reverseBits[minimumCodes[codeLengths[index] - 1]++] >> 15 - codeLengths[index];
+      }
+      return map2;
+    }
+    const map = new u16(1 << maxBits);
+    const reverseBitsToRemove = 15 - maxBits;
+    for (let index = 0; index < size; index += 1) {
+      if (!codeLengths[index]) continue;
+      const symbolAndBits = index << 4 | codeLengths[index];
+      const freeBits = maxBits - codeLengths[index];
+      let value = minimumCodes[codeLengths[index] - 1]++ << freeBits;
+      const end = value | (1 << freeBits) - 1;
+      for (; value <= end; value += 1) map[reverseBits[value] >> reverseBitsToRemove] = symbolAndBits;
+    }
+    return map;
+  }
+  var fixedLengthTree = new u8(288);
+  for (let index = 0; index < 144; index += 1) fixedLengthTree[index] = 8;
+  for (let index = 144; index < 256; index += 1) fixedLengthTree[index] = 9;
+  for (let index = 256; index < 280; index += 1) fixedLengthTree[index] = 7;
+  for (let index = 280; index < 288; index += 1) fixedLengthTree[index] = 8;
+  var fixedDistanceTree = new u8(32);
+  for (let index = 0; index < 32; index += 1) fixedDistanceTree[index] = 5;
+  var fixedLengthMap = hMap(fixedLengthTree, 9, true);
+  var fixedDistanceMap = hMap(fixedDistanceTree, 5, true);
+  function maxValue(values) {
+    let max = values[0];
+    for (let index = 1; index < values.length; index += 1) {
+      if (values[index] > max) max = values[index];
+    }
+    return max;
+  }
+  function bits(data, position, mask) {
+    const offset = position / 8 | 0;
+    return (data[offset] | data[offset + 1] << 8) >> (position & 7) & mask;
+  }
+  function bits16(data, position) {
+    const offset = position / 8 | 0;
+    return (data[offset] | data[offset + 1] << 8 | data[offset + 2] << 16) >> (position & 7);
+  }
+  function bytePosition(position) {
+    return (position + 7) / 8 | 0;
+  }
+  function copyBytes(value, start, end) {
+    return new u8(value.subarray(start, end));
+  }
+  function inflateRawSync(data, expectedSize) {
+    const sourceLength = data.length;
+    if (!sourceLength) return new u8(0);
+    const output = expectedSize > 0 ? new u8(expectedSize) : null;
+    const noOutput = !output;
+    const resize = noOutput;
+    let buffer = output || new u8(sourceLength * 3);
+    const ensureCapacity = (length) => {
+      if (length <= buffer.length) return;
+      const next = new u8(Math.max(buffer.length * 2, length));
+      next.set(buffer);
+      buffer = next;
+    };
+    let final = 0;
+    let position = 0;
+    let written = 0;
+    let lengthMap;
+    let distanceMap;
+    let lengthBits = 0;
+    let distanceBits = 0;
+    const totalBits = sourceLength * 8;
+    do {
+      if (!lengthMap) {
+        final = bits(data, position, 1);
+        const type = bits(data, position + 1, 3);
+        position += 3;
+        if (type === 0) {
+          const start = bytePosition(position) + 4;
+          const length = data[start - 4] | data[start - 3] << 8;
+          const end = start + length;
+          if (end > sourceLength) throw new Error("Invalid raw DEFLATE block");
+          if (resize) ensureCapacity(written + length);
+          buffer.set(data.subarray(start, end), written);
+          written += length;
+          position = end * 8;
+          continue;
+        }
+        if (type === 1) {
+          lengthMap = fixedLengthMap;
+          distanceMap = fixedDistanceMap;
+          lengthBits = 9;
+          distanceBits = 5;
+        } else if (type === 2) {
+          const literalCount = bits(data, position, 31) + 257;
+          const distanceCount = bits(data, position + 5, 31) + 1;
+          const codeLengthCount = bits(data, position + 10, 15) + 4;
+          const totalCodes = literalCount + distanceCount;
+          position += 14;
+          const lengths = new u8(totalCodes);
+          const codeLengths = new u8(19);
+          for (let index = 0; index < codeLengthCount; index += 1) codeLengths[clim[index]] = bits(data, position + index * 3, 7);
+          position += codeLengthCount * 3;
+          const codeLengthBits = maxValue(codeLengths);
+          const codeLengthMap = hMap(codeLengths, codeLengthBits, true);
+          const codeLengthMask = (1 << codeLengthBits) - 1;
+          for (let index = 0; index < totalCodes; ) {
+            const code = codeLengthMap[bits(data, position, codeLengthMask)];
+            position += code & 15;
+            const symbol = code >> 4;
+            if (symbol < 16) {
+              lengths[index] = symbol;
+              index += 1;
+              continue;
+            }
+            let count = 0;
+            let repeatedLength = 0;
+            if (symbol === 16) {
+              count = 3 + bits(data, position, 3);
+              position += 2;
+              repeatedLength = lengths[index - 1];
+            } else if (symbol === 17) {
+              count = 3 + bits(data, position, 7);
+              position += 3;
+            } else if (symbol === 18) {
+              count = 11 + bits(data, position, 127);
+              position += 7;
+            } else {
+              throw new Error("Invalid DEFLATE code length");
+            }
+            while (count--) {
+              lengths[index] = repeatedLength;
+              index += 1;
+            }
+          }
+          const lengthTree = lengths.subarray(0, literalCount);
+          const distanceTree = lengths.subarray(literalCount);
+          lengthBits = maxValue(lengthTree);
+          distanceBits = maxValue(distanceTree);
+          lengthMap = hMap(lengthTree, lengthBits, true);
+          distanceMap = hMap(distanceTree, distanceBits, true);
+        } else {
+          throw new Error("Invalid DEFLATE block type");
+        }
+        if (position > totalBits) throw new Error("Unexpected end of raw DEFLATE data");
+      }
+      if (resize) ensureCapacity(written + 131072);
+      const lengthMask = (1 << lengthBits) - 1;
+      const distanceMask = (1 << distanceBits) - 1;
+      while (true) {
+        const code = lengthMap[bits16(data, position) & lengthMask];
+        const symbol = code >> 4;
+        position += code & 15;
+        if (position > totalBits || !code) throw new Error("Invalid DEFLATE length code");
+        if (symbol < 256) {
+          buffer[written] = symbol;
+          written += 1;
+        } else if (symbol === 256) {
+          lengthMap = null;
+          break;
+        } else {
+          let length = symbol - 254;
+          if (symbol > 264) {
+            const index = symbol - 257;
+            const extraBits = fleb[index];
+            length = bits(data, position, (1 << extraBits) - 1) + fl[index];
+            position += extraBits;
+          }
+          const distanceCode = distanceMap[bits16(data, position) & distanceMask];
+          const distanceSymbol = distanceCode >> 4;
+          if (!distanceCode) throw new Error("Invalid DEFLATE distance code");
+          position += distanceCode & 15;
+          let distance = fd[distanceSymbol];
+          if (distanceSymbol > 3) {
+            const extraBits = fdeb[distanceSymbol];
+            distance += bits16(data, position) & (1 << extraBits) - 1;
+            position += extraBits;
+          }
+          if (position > totalBits || distance > written) throw new Error("Invalid DEFLATE distance");
+          if (resize) ensureCapacity(written + length);
+          const end = written + length;
+          for (; written < end; written += 1) buffer[written] = buffer[written - distance];
+        }
+      }
+    } while (!final);
+    return noOutput ? copyBytes(buffer, 0, written) : buffer.subarray(0, written);
+  }
+
   // src/vendor/epub-reader/zip.js
   var SIG_CDH = 33639248;
   var SIG_LFH = 67324752;
@@ -3510,16 +3735,19 @@
     }
   }
   async function inflateRaw(bytes) {
-    if (typeof DecompressionStream === "undefined") {
-      throw new Error("DecompressionStream is not available in this environment");
+    if (typeof DecompressionStream !== "undefined") {
+      try {
+        const ds = new DecompressionStream("deflate-raw");
+        const stream = new Blob([
+          /** @type {BlobPart} */
+          bytes
+        ]).stream().pipeThrough(ds);
+        const out = await new Response(stream).arrayBuffer();
+        return new Uint8Array(out);
+      } catch {
+      }
     }
-    const ds = new DecompressionStream("deflate-raw");
-    const stream = new Blob([
-      /** @type {BlobPart} */
-      bytes
-    ]).stream().pipeThrough(ds);
-    const out = await new Response(stream).arrayBuffer();
-    return new Uint8Array(out);
+    return inflateRawSync(bytes);
   }
 
   // src/vendor/epub-reader/epub.js
@@ -7898,23 +8126,28 @@ ${user}`);
     const paragraphs = item.content.split(/\n+/).filter(Boolean);
     return `<article class="reader fullscreen-reader text-reader"><div class="reader-floating-toolbar"><button class="primary" data-speak-all>\u25B6 \u8FDE\u7EED\u6717\u8BFB</button><button class="secondary" data-stop-speech>\u25A0 \u505C\u6B62</button><select id="traceMode"><option value="none">\u666E\u901A\u9605\u8BFB</option><option value="overlay">\u8986\u76D6\u539F\u6587\u63CF\u7EA2</option><option value="practice">\u63CF\u7EA2 + \u4EFF\u5199</option></select><button class="primary" data-exit-reader>\u9000\u51FA\u9605\u8BFB</button></div><h2>${escapeHtml2(item.title)}</h2>${paragraphs.map((paragraph, index) => `<div class="paragraph-wrap"><p class="reading-paragraph" data-paragraph-index="${index}" data-text="${escapeHtml2(paragraph)}">${tokenHtml(paragraph, item.language)}</p><div class="trace-extra"></div></div>`).join("")}</article>`;
   }
+  function isAppleMobileDevice() {
+    return /iPad|iPhone|iPod/u.test(navigator.userAgent) || navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+  }
   function renderFileBookReader(item) {
     const source = String(item.sourceUrl || "").trim();
     const sourceUrl = escapeHtml2(source);
     const title = escapeHtml2(item.title);
     const kind = String(item.fileKind || "file").toUpperCase();
     const isEpub = ["EPUB", "EQUB"].includes(kind);
+    const isApplePdf = kind === "PDF" && isAppleMobileDevice();
     const openLink = source && !isEpub ? `<a class="secondary book-open-link" href="${sourceUrl}" target="_blank" rel="noopener">\u5728\u65B0\u7A97\u53E3\u6253\u5F00</a>` : "";
     const localFileFallback = item.fileAccessMode === "local-file" ? `<div class="book-file-fallback local-file-notice"><span class="ultra-notice-mark" aria-hidden="true"></span><h2>${title}</h2><p>${isEpub ? "EPUB/EQUB" : "PDF"} \u4E0D\u80FD\u5728 file:// \u9875\u9762\u5185\u5D4C\u9605\u8BFB\uFF0C\u6D4F\u89C8\u5668\u4F1A\u963B\u6B62\u672C\u5730\u8D44\u6E90\u52A0\u8F7D\u3002</p><p class="book-file-hint">\u8BF7\u542F\u52A8\u672C\u5730\u670D\u52A1\u540E\u6253\u5F00\u672C\u5E94\u7528\uFF1B\u4E5F\u53EF\u4EE5\u76F4\u63A5\u6253\u5F00\u539F\u6587\u4EF6\uFF0C\u7531\u7CFB\u7EDF\u9605\u8BFB\u5668\u8D1F\u8D23\u663E\u793A\u3002</p><div class="local-file-actions"><a class="primary" href="http://127.0.0.1:4173/" target="_blank" rel="noopener">\u6253\u5F00\u672C\u5730\u9605\u8BFB\u670D\u52A1</a>${source ? `<a class="secondary" href="${sourceUrl}" target="_blank" rel="noopener">\u76F4\u63A5\u6253\u5F00\u539F\u6587\u4EF6</a>` : ""}</div></div>` : "";
     const fallback = source ? `<div class="book-file-fallback"><h2>${title}</h2><p>${kind === "PDF" ? "PDF \u6587\u4EF6\u5DF2\u8F7D\u5165\u3002\u82E5\u5185\u7F6E\u67E5\u770B\u5668\u6CA1\u6709\u663E\u793A\uFF0C\u8BF7\u70B9\u51FB\u201C\u6253\u5F00\u539F\u6587\u4EF6\u201D\u3002" : `${kind} \u6587\u4EF6\u5DF2\u8F7D\u5165\u3002\u6D4F\u89C8\u5668\u4E0D\u4FDD\u8BC1\u76F4\u63A5\u6392\u7248\u663E\u793A\u6B64\u683C\u5F0F\uFF0C\u8BF7\u4F7F\u7528\u7CFB\u7EDF\u9605\u8BFB\u5668\u6253\u5F00\u3002`}</p><a class="primary" href="${sourceUrl}" target="_blank" rel="noopener">\u6253\u5F00\u539F\u6587\u4EF6</a></div>` : `<div class="book-file-fallback"><h2>${title}</h2><p>\u6CA1\u6709\u627E\u5230\u4E66\u7C4D\u6587\u4EF6\u5730\u5740\uFF0C\u8BF7\u91CD\u65B0\u5BFC\u5165\u6216\u68C0\u67E5 huiben/manifest.json\u3002</p></div>`;
-    const body = localFileFallback ? localFileFallback : isEpub ? '<epub-reader class="epub-reader-frame" data-epub-reader aria-label="EPUB \u7ED8\u672C\u9605\u8BFB\u5668"></epub-reader>' : kind === "PDF" && source ? `<iframe class="book-file-frame" src="${sourceUrl}" title="${title}" loading="eager"></iframe>` : fallback;
+    const body = localFileFallback ? localFileFallback : isEpub ? '<epub-reader class="epub-reader-frame" data-epub-reader aria-label="EPUB \u7ED8\u672C\u9605\u8BFB\u5668"></epub-reader>' : isApplePdf && source ? `<div class="book-file-fallback apple-pdf-notice"><h2>${title}</h2><p>iPad \u4F7F\u7528\u7CFB\u7EDF\u9605\u8BFB\u5668\u6253\u5F00 PDF\uFF0C\u9605\u8BFB\u548C\u7F29\u653E\u66F4\u7A33\u5B9A\u3002</p><a class="primary" href="${sourceUrl}" target="_blank" rel="noopener">\u6253\u5F00 PDF</a></div>` : kind === "PDF" && source ? `<iframe class="book-file-frame" src="${sourceUrl}" title="${title}" loading="eager"></iframe>` : fallback;
     return `<article class="reader fullscreen-reader file-book-reader"><div class="reader-floating-toolbar"><strong>${title}</strong><span>${kind}</span>${openLink}<button class="primary" data-exit-reader>\u9000\u51FA\u9605\u8BFB</button></div>${body}</article>`;
   }
   function createImmediateFileBook(item) {
     const sourceUrl = String(item.sourceUrl || "");
     const isLocalFileUrl = globalThis.location?.protocol === "file:" || sourceUrl.startsWith("file:");
     if (isLocalFileUrl) return { ...item, fileAccessMode: "local-file" };
-    if (!(item.sourceBlob instanceof Blob) || typeof URL?.createObjectURL !== "function") return item;
+    const isEpub = ["epub", "equb"].includes(String(item.fileKind || "").toLowerCase());
+    if (isEpub || !(item.sourceBlob instanceof Blob) || typeof URL?.createObjectURL !== "function") return item;
     if (state.bookObjectUrl) URL.revokeObjectURL(state.bookObjectUrl);
     state.bookObjectUrl = URL.createObjectURL(item.sourceBlob);
     return { ...item, sourceUrl: state.bookObjectUrl };
@@ -7935,18 +8168,22 @@ ${user}`);
   }
   async function mountEpubReader(item) {
     const reader = document.querySelector("[data-epub-reader]");
-    if (!reader || !item.sourceUrl) return;
+    const source = item.sourceBlob instanceof Blob ? item.sourceBlob : String(item.sourceUrl || "");
+    if (!reader || !source) return;
     const fallback = (message) => {
       if (!reader.isConnected) return;
-      reader.outerHTML = `<div class="book-file-fallback"><h2>${escapeHtml2(item.title)}</h2><p>\u5F53\u524D\u6587\u4EF6\u65E0\u6CD5\u88AB\u6D4F\u89C8\u5668\u76F4\u63A5\u8BFB\u53D6\uFF0C\u8BF7\u5728\u6B64\u9875\u9009\u62E9 EPUB/EQUB \u6587\u4EF6\u7EE7\u7EED\u9605\u8BFB\u3002${message ? ` ${escapeHtml2(message)}` : ""}</p><label class="primary file-button">\u9009\u62E9\u6587\u4EF6\u9605\u8BFB<input type="file" accept=".epub,.equb,application/epub+zip" data-local-book-picker></label></div>`;
+      const source2 = String(item.sourceUrl || "");
+      const directLink = source2 && !/^(blob:|data:|file:)/u.test(source2) ? `<a class="secondary" href="${escapeHtml2(source2)}" target="_blank" rel="noopener">\u5C1D\u8BD5\u7528\u7CFB\u7EDF\u6253\u5F00</a>` : "";
+      reader.outerHTML = `<div class="book-file-fallback"><h2>${escapeHtml2(item.title)}</h2><p>\u5F53\u524D\u8BBE\u5907\u65E0\u6CD5\u5728\u7F51\u9875\u5185\u89E3\u538B\u6B64 EPUB/EQUB \u6587\u4EF6\uFF0C\u8BF7\u9009\u62E9\u5176\u4ED6\u6253\u5F00\u65B9\u5F0F\u3002${message ? ` ${escapeHtml2(message)}` : ""}</p><div class="local-file-actions">${directLink}<label class="primary file-button">\u9009\u62E9\u6587\u4EF6\u9605\u8BFB<input type="file" accept=".epub,.equb,application/epub+zip" data-local-book-picker></label></div></div>`;
       showToast("\u7ED8\u672C\u52A0\u8F7D\u5931\u8D25\uFF0C\u8BF7\u5728\u5F53\u524D\u9875\u9762\u9009\u62E9\u6587\u4EF6");
     };
+    if (typeof DecompressionStream === "undefined") console.info("\u5F53\u524D\u6D4F\u89C8\u5668\u6CA1\u6709 DecompressionStream\uFF0C\u5C06\u4F7F\u7528\u672C\u5730 ZIP \u89E3\u538B\u517C\u5BB9\u8DEF\u5F84");
     reader.addEventListener("epub-error", (event) => {
       const detail = event.detail?.error;
       fallback(detail?.message || "");
     }, { once: true });
     try {
-      await reader.open(item.sourceUrl);
+      await reader.open(source);
     } catch (error) {
       fallback(error?.message || "");
     }

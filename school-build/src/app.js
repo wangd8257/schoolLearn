@@ -772,12 +772,22 @@ function renderReader(item) {
   return `<article class="reader fullscreen-reader text-reader"><div class="reader-floating-toolbar"><button class="primary" data-speak-all>▶ 连续朗读</button><button class="secondary" data-stop-speech>■ 停止</button><select id="traceMode"><option value="none">普通阅读</option><option value="overlay">覆盖原文描红</option><option value="practice">描红 + 仿写</option></select><button class="primary" data-exit-reader>退出阅读</button></div><h2>${escapeHtml(item.title)}</h2>${paragraphs.map((paragraph,index)=>`<div class="paragraph-wrap"><p class="reading-paragraph" data-paragraph-index="${index}" data-text="${escapeHtml(paragraph)}">${tokenHtml(paragraph,item.language)}</p><div class="trace-extra"></div></div>`).join('')}</article>`;
 }
 
+/**
+ * 判断当前是否为触屏 Apple 移动设备。
+ * @returns {boolean} iPhone、iPad 或 iPad 桌面模式返回 true。
+ */
+function isAppleMobileDevice() {
+  return /iPad|iPhone|iPod/u.test(navigator.userAgent)
+    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
 function renderFileBookReader(item) {
   const source = String(item.sourceUrl || '').trim();
   const sourceUrl = escapeHtml(source);
   const title = escapeHtml(item.title);
   const kind = String(item.fileKind || 'file').toUpperCase();
   const isEpub = ['EPUB', 'EQUB'].includes(kind);
+  const isApplePdf = kind === 'PDF' && isAppleMobileDevice();
   const openLink = source && !isEpub
     ? `<a class="secondary book-open-link" href="${sourceUrl}" target="_blank" rel="noopener">在新窗口打开</a>`
     : '';
@@ -791,6 +801,8 @@ function renderFileBookReader(item) {
     ? localFileFallback
     : isEpub
     ? '<epub-reader class="epub-reader-frame" data-epub-reader aria-label="EPUB 绘本阅读器"></epub-reader>'
+    : isApplePdf && source
+    ? `<div class="book-file-fallback apple-pdf-notice"><h2>${title}</h2><p>iPad 使用系统阅读器打开 PDF，阅读和缩放更稳定。</p><a class="primary" href="${sourceUrl}" target="_blank" rel="noopener">打开 PDF</a></div>`
     : kind === 'PDF' && source
     ? `<iframe class="book-file-frame" src="${sourceUrl}" title="${title}" loading="eager"></iframe>`
     : fallback;
@@ -806,7 +818,8 @@ function createImmediateFileBook(item) {
   const sourceUrl = String(item.sourceUrl || '');
   const isLocalFileUrl = globalThis.location?.protocol === 'file:' || sourceUrl.startsWith('file:');
   if (isLocalFileUrl) return { ...item, fileAccessMode: 'local-file' };
-  if (!(item.sourceBlob instanceof Blob) || typeof URL?.createObjectURL !== 'function') return item;
+  const isEpub = ['epub', 'equb'].includes(String(item.fileKind || '').toLowerCase());
+  if (isEpub || !(item.sourceBlob instanceof Blob) || typeof URL?.createObjectURL !== 'function') return item;
   if (state.bookObjectUrl) URL.revokeObjectURL(state.bookObjectUrl);
   state.bookObjectUrl = URL.createObjectURL(item.sourceBlob);
   return { ...item, sourceUrl: state.bookObjectUrl };
@@ -840,18 +853,24 @@ async function cacheFileBook(item) {
  */
 async function mountEpubReader(item) {
   const reader = document.querySelector('[data-epub-reader]');
-  if (!reader || !item.sourceUrl) return;
+  const source = item.sourceBlob instanceof Blob ? item.sourceBlob : String(item.sourceUrl || '');
+  if (!reader || !source) return;
   const fallback = (message) => {
     if (!reader.isConnected) return;
-    reader.outerHTML = `<div class="book-file-fallback"><h2>${escapeHtml(item.title)}</h2><p>当前文件无法被浏览器直接读取，请在此页选择 EPUB/EQUB 文件继续阅读。${message ? ` ${escapeHtml(message)}` : ''}</p><label class="primary file-button">选择文件阅读<input type="file" accept=".epub,.equb,application/epub+zip" data-local-book-picker></label></div>`;
+    const source = String(item.sourceUrl || '');
+    const directLink = source && !/^(blob:|data:|file:)/u.test(source)
+      ? `<a class="secondary" href="${escapeHtml(source)}" target="_blank" rel="noopener">尝试用系统打开</a>`
+      : '';
+    reader.outerHTML = `<div class="book-file-fallback"><h2>${escapeHtml(item.title)}</h2><p>当前设备无法在网页内解压此 EPUB/EQUB 文件，请选择其他打开方式。${message ? ` ${escapeHtml(message)}` : ''}</p><div class="local-file-actions">${directLink}<label class="primary file-button">选择文件阅读<input type="file" accept=".epub,.equb,application/epub+zip" data-local-book-picker></label></div></div>`;
     showToast('绘本加载失败，请在当前页面选择文件');
   };
+  if (typeof DecompressionStream === 'undefined') console.info('当前浏览器没有 DecompressionStream，将使用本地 ZIP 解压兼容路径');
   reader.addEventListener('epub-error', (event) => {
     const detail = event.detail?.error;
     fallback(detail?.message || '');
   }, { once: true });
   try {
-    await reader.open(item.sourceUrl);
+    await reader.open(source);
   } catch (error) {
     fallback(error?.message || '');
   }
