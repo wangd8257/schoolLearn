@@ -755,13 +755,34 @@ async function sampleKnowledgeForUse(type, candidates, count, excluded = new Set
 }
 
 /**
+ * 为不填写内容的语文试卷构造轻量候选池，喜欢项优先进入候选，随机项只取小池子。
+ * @param {string} type 知识库分类。
+ * @param {number} count 需要生成的题目数量。
+ * @returns {Promise<Record<string, unknown>[]>} 带偏好倾向的候选池。
+ */
+async function buildPreferredRandomKnowledgePool(type, count) {
+  if (!state.knowledgePreferences || !Object.keys(state.knowledgePreferences).length) {
+    state.knowledgePreferences = await loadKnowledgePreferences();
+  }
+  const likedKeys = Object.entries(state.knowledgePreferences)
+    .filter(([key, value]) => value === 'like' && key.startsWith(`${type}:`))
+    .map(([key]) => key);
+  const likedItems = (await Promise.all(likedKeys.map((key) => getKnowledgeDetail(type, key)))).filter(Boolean);
+  const randomItems = await randomKnowledgeAsync(type, Math.max(Number(count) * 8, 40));
+  return [...likedItems, ...randomItems];
+}
+
+/**
  * 生成成语填空题，确保同一份试卷不重复。
  * @param {Record<string, unknown>} values 生成配置。
  * @returns {Array<Record<string, unknown>>} 成语填空题列表。
  */
 async function createIdiomFillProblems(values) {
-  const candidates = await filterKnowledgeAsync('idiom', { query: values.knowledgeQuery });
   const count = boundedPracticeCount(values.count, 10);
+  const query = String(values.knowledgeQuery || '').trim();
+  const candidates = query
+    ? await filterKnowledgeAsync('idiom', { query })
+    : await buildPreferredRandomKnowledgePool('idiom', count);
   const selected = await sampleKnowledgeForUse('idiom', candidates, count);
   const allCharacters = [...new Set(candidates.flatMap((item) => Array.from(item.word)))];
   return selected.map((item, index) => {
@@ -790,7 +811,7 @@ async function createPoetryMatchProblems(values) {
   const query = String(values.knowledgeQuery || '').trim();
   const candidates = query
     ? await filterKnowledgeAsync('poetry', { query })
-    : await randomKnowledgeAsync('poetry', count);
+    : await buildPreferredRandomKnowledgePool('poetry', count);
   const selected = await sampleKnowledgeForUse('poetry', candidates, count);
   return selected.map((poem, index) => {
     const lines = (poem.lines || []).map((line) => toSimplifiedChinese(line));
@@ -818,9 +839,9 @@ async function createPoetryMatchProblems(values) {
  * @returns {Array<Record<string, unknown>>} 看拼音写汉字题列表。
  */
 async function createPinyinWriteProblems(values, lines) {
-  const knowledgeWords = lines.length ? [] : await filterKnowledgeAsync('word');
+  const count = boundedPracticeCount(values.count, lines.length || 10);
+  const knowledgeWords = lines.length ? [] : await buildPreferredRandomKnowledgePool('word', count);
   const source = lines.length ? lines : knowledgeWords.map((item) => item.word);
-  const count = boundedPracticeCount(values.count, source.length);
   const selected = lines.length
     ? shuffleValues([...new Set(source)]).slice(0, count)
     : (await sampleKnowledgeForUse('word', knowledgeWords, count)).map((item) => item.word);
@@ -1279,11 +1300,14 @@ async function cacheFileBookWithOptions(item, options = {}) {
     if (!response.ok) throw new Error(`绘本文件读取失败：${response.status}`);
     if (canReaderRequestUrl(item)) {
       const cachedInStorage = await putBookResponseCache(sourceUrl, response);
-      if (!cachedInStorage) throw new Error('浏览器拒绝写入本地绘本缓存');
-      const cacheStorageRecord = { ...item, cacheMode: 'cache-storage', cacheUpdatedAt: Date.now(), size: Number(response.headers.get('content-length') || item.size || 0), updatedAt: Date.now() };
-      delete cacheStorageRecord.sourceBlob;
-      await put('readings', cacheStorageRecord);
-      return { ok: true, size: cacheStorageRecord.size };
+      if (cachedInStorage) {
+        const cacheStorageRecord = { ...item, cacheMode: 'cache-storage', cacheUpdatedAt: Date.now(), size: Number(response.headers.get('content-length') || item.size || 0), updatedAt: Date.now() };
+        delete cacheStorageRecord.sourceBlob;
+        await put('readings', cacheStorageRecord);
+        return { ok: true, size: cacheStorageRecord.size };
+      }
+      // iPad PWA 可能拒绝 Cache Storage 写入大文件，继续退到 IndexedDB Blob，保证“下载”按钮有可用本地副本。
+      console.warn('Cache Storage unavailable for book, falling back to IndexedDB Blob');
     }
     const blob = await response.blob();
     if (!blob.size) throw new Error('绘本文件为空');
@@ -2733,7 +2757,7 @@ function startPostBootTasks() {
   // huiben 清单可能包含较多本地书籍，延后同步可以让首页和知识库先响应点击。
   void ensureReadingSeeds().catch((error) => console.warn('阅读资料后台同步失败', error));
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('./sw.js?v=20260811-9').catch(console.warn);
+    navigator.serviceWorker.register('./sw.js?v=20260811-10').catch(console.warn);
   }
 }
 

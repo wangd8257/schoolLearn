@@ -52,10 +52,14 @@ const RAW_SOURCES = Object.freeze({
 });
 const rawCache = new Map();
 const POETRY_BASE = './src/data/knowledge/poetry';
+const XINHUA_BASE = './src/data/knowledge/xinhua';
 const poetryShardCache = new Map();
 const poetryFilterCache = new Map();
 const poetryMetaCache = new Map();
+const xinhuaShardCache = new Map();
+const xinhuaFilterCache = new Map();
 let poetryManifestCache;
+let xinhuaManifestCache;
 const TRADITIONAL_SIMPLIFIED_MAP = Object.freeze({
   '萬': '万',
   '與': '与',
@@ -760,6 +764,232 @@ async function loadPoetryShard(kind, shardIndex) {
 }
 
 /**
+ * 读取新华知识库分片 manifest，失败时返回 undefined 并交给原始 JSON 兜底。
+ * @returns {Promise<Record<string, unknown>|undefined>} 新华知识库 manifest。
+ */
+async function loadXinhuaManifest() {
+  if (xinhuaManifestCache) return xinhuaManifestCache;
+  xinhuaManifestCache = await fetchJson(`${XINHUA_BASE}/manifest.json`);
+  return xinhuaManifestCache;
+}
+
+/**
+ * 读取指定新华知识库 catalog 分片。
+ * @param {string} type 知识库分类。
+ * @param {number} shardIndex 分片编号。
+ * @returns {Promise<Record<string, unknown>[]>} 分片条目。
+ */
+async function loadXinhuaShard(type, shardIndex) {
+  const key = `${type}:${shardIndex}`;
+  if (xinhuaShardCache.has(key)) return xinhuaShardCache.get(key);
+  const data = await fetchJson(`${XINHUA_BASE}/${type}/catalog-${String(shardIndex).padStart(4, '0')}.json`);
+  const list = Array.isArray(data) ? data.map((item) => normalizeKnowledgeItem(type, item)) : [];
+  xinhuaShardCache.set(key, list);
+  return list;
+}
+
+/**
+ * 返回非古诗知识库用于标题筛选的主标题。
+ * @param {string} type 知识库分类。
+ * @param {Record<string, unknown>} item 知识条目。
+ * @returns {string} 标题文本。
+ */
+function knowledgeTitle(type, item) {
+  if (type === 'char') return String(item.char || '');
+  if (type === 'xiehouyu') return String(item.riddle || '');
+  return String(item.word || '');
+}
+
+/**
+ * 计算新华知识库字符索引候选分片。
+ * @param {Record<string, unknown>} manifest 新华知识库 manifest。
+ * @param {string} type 知识库分类。
+ * @param {string} query 查询字符。
+ * @returns {number[]} 候选分片编号。
+ */
+function getCandidateXinhuaShards(manifest, type, query = '') {
+  const meta = manifest?.types?.[type];
+  const shardCount = Number(meta?.shardCount || 0);
+  const allShards = Array.from({ length: shardCount }, (_, index) => index);
+  const characters = [...new Set(Array.from(String(query || '').trim()).filter((item) => item.trim()))];
+  if (!characters.length) return allShards;
+  let candidates;
+  for (const character of characters) {
+    const shards = Array.isArray(meta?.characterShards?.[character]) ? meta.characterShards[character] : [];
+    candidates = candidates ? intersectSortedNumbers(candidates, shards) : shards;
+    if (!candidates.length) return [];
+  }
+  return candidates || allShards;
+}
+
+/**
+ * 判断新华知识条目是否命中标题筛选。
+ * @param {string} type 知识库分类。
+ * @param {Record<string, unknown>} item 知识条目。
+ * @param {string} query 查询字符。
+ * @returns {boolean} 是否命中。
+ */
+function matchesXinhuaFilters(type, item, query = '') {
+  const title = knowledgeTitle(type, item);
+  const requiredCharacters = [...String(query || '').trim()].filter((character) => character.trim());
+  return requiredCharacters.every((character) => title.includes(character));
+}
+
+/**
+ * 使用新华分片索引加载当前页，避免 iPad PWA 查询时读取几十 MB 原始 JSON。
+ * @param {string} type 知识库分类。
+ * @param {{query?:string}} filters 筛选条件。
+ * @param {number} page 页码。
+ * @param {number} pageSize 每页数量。
+ * @returns {Promise<{items:Record<string, unknown>[],total:number,page:number,pageSize:number,pageCount:number}|undefined>} 分页结果。
+ */
+async function pageXinhuaKnowledge(type, filters = {}, page = 1, pageSize = 20) {
+  const manifest = await loadXinhuaManifest();
+  const meta = manifest?.types?.[type];
+  if (!meta) return undefined;
+  const query = String(filters.query || '').trim();
+  const size = Math.max(1, Number(pageSize) || 20);
+  const candidateShards = getCandidateXinhuaShards(manifest, type, query);
+  const indexedTotal = query.length === 1 ? Number(meta.characterCounts?.[query] || 0) : undefined;
+  const total = indexedTotal ?? await countXinhuaMatches(type, candidateShards, query);
+  const pageCount = Math.max(1, Math.ceil(total / size));
+  const currentPage = Math.max(1, Math.min(pageCount, Number(page) || 1));
+  const start = (currentPage - 1) * size;
+  const items = await loadXinhuaPageItems(type, candidateShards, query, start, size);
+  return { items, total, page: currentPage, pageSize: size, pageCount };
+}
+
+/**
+ * 统计新华分片中的标题筛选命中数。
+ * @param {string} type 知识库分类。
+ * @param {number[]} candidateShards 候选分片。
+ * @param {string} query 查询字符。
+ * @returns {Promise<number>} 命中数量。
+ */
+async function countXinhuaMatches(type, candidateShards, query = '') {
+  let total = 0;
+  for (const shardIndex of candidateShards) {
+    const shard = await loadXinhuaShard(type, shardIndex);
+    total += shard.filter((item) => matchesXinhuaFilters(type, item, query)).length;
+  }
+  return total;
+}
+
+/**
+ * 只读取新华知识库当前分页窗口中的条目。
+ * @param {string} type 知识库分类。
+ * @param {number[]} candidateShards 候选分片。
+ * @param {string} query 查询字符。
+ * @param {number} start 起始命中序号。
+ * @param {number} size 当前页数量。
+ * @returns {Promise<Record<string, unknown>[]>} 当前页条目。
+ */
+async function loadXinhuaPageItems(type, candidateShards, query, start, size) {
+  const items = [];
+  let matchedCount = 0;
+  for (const shardIndex of candidateShards) {
+    const shard = await loadXinhuaShard(type, shardIndex);
+    for (const item of shard) {
+      if (!matchesXinhuaFilters(type, item, query)) continue;
+      if (matchedCount >= start && items.length < size) items.push(item);
+      matchedCount += 1;
+      if (items.length >= size) return items;
+    }
+  }
+  return items;
+}
+
+/**
+ * 从新华分片索引中筛选候选全集；生成试卷带筛选字时使用。
+ * @param {string} type 知识库分类。
+ * @param {{query?:string}} filters 筛选条件。
+ * @returns {Promise<Record<string, unknown>[]|undefined>} 命中条目，索引不可用时返回 undefined。
+ */
+async function filterXinhuaKnowledge(type, filters = {}) {
+  const manifest = await loadXinhuaManifest();
+  if (!manifest?.types?.[type]) return undefined;
+  const query = String(filters.query || '').trim();
+  const cacheKey = JSON.stringify({ type, query });
+  if (xinhuaFilterCache.has(cacheKey)) return xinhuaFilterCache.get(cacheKey);
+  const candidateShards = getCandidateXinhuaShards(manifest, type, query);
+  const matched = [];
+  for (const shardIndex of candidateShards) {
+    const shard = await loadXinhuaShard(type, shardIndex);
+    matched.push(...shard.filter((item) => matchesXinhuaFilters(type, item, query)));
+  }
+  xinhuaFilterCache.set(cacheKey, matched);
+  return matched;
+}
+
+/**
+ * 从新华分片中随机抽取不重复条目，避免空内容生成试卷时加载完整 raw JSON。
+ * @param {string} type 知识库分类。
+ * @param {number} count 抽取数量。
+ * @param {Set<string>} excluded 已排除的条目键。
+ * @returns {Promise<Record<string, unknown>[]|undefined>} 随机条目，索引不可用时返回 undefined。
+ */
+async function randomXinhuaKnowledge(type, count = 1, excluded = new Set()) {
+  const manifest = await loadXinhuaManifest();
+  const meta = manifest?.types?.[type];
+  if (!meta) return undefined;
+  const targetCount = Math.max(1, Number(count) || 1);
+  const selected = [];
+  const seen = new Set();
+  const total = Number(meta.total || 0);
+  const maxAttempts = Math.min(total, targetCount * 30 + 120);
+  for (let attempt = 0; attempt < maxAttempts && selected.length < targetCount; attempt += 1) {
+    const absoluteIndex = Math.floor(Math.random() * total);
+    const item = await getXinhuaItemByIndex(type, absoluteIndex);
+    const key = item ? knowledgeKey(type, item) : '';
+    if (!item || seen.has(key) || excluded.has(key)) continue;
+    seen.add(key);
+    selected.push(item);
+  }
+  for (let index = 0; index < total && selected.length < targetCount; index += 1) {
+    const item = await getXinhuaItemByIndex(type, index);
+    const key = item ? knowledgeKey(type, item) : '';
+    if (!item || seen.has(key) || excluded.has(key)) continue;
+    seen.add(key);
+    selected.push(item);
+  }
+  return selected;
+}
+
+/**
+ * 按全局序号读取新华知识条目。
+ * @param {string} type 知识库分类。
+ * @param {number} absoluteIndex 全局序号。
+ * @returns {Promise<Record<string, unknown>|undefined>} 知识条目。
+ */
+async function getXinhuaItemByIndex(type, absoluteIndex) {
+  const manifest = await loadXinhuaManifest();
+  const shardSize = Number(manifest?.shardSize || 1000);
+  if (!Number.isFinite(absoluteIndex) || absoluteIndex < 0) return undefined;
+  const shard = await loadXinhuaShard(type, Math.floor(absoluteIndex / shardSize));
+  return shard[absoluteIndex % shardSize];
+}
+
+/**
+ * 通过稳定键从新华分片中查找详情。
+ * @param {string} type 知识库分类。
+ * @param {string} key 稳定键。
+ * @returns {Promise<Record<string, unknown>|undefined>} 知识条目详情。
+ */
+async function getXinhuaDetailByKey(type, key) {
+  const title = String(key || '').split(':')[1] || '';
+  if (!title) return undefined;
+  const manifest = await loadXinhuaManifest();
+  if (!manifest?.types?.[type]) return undefined;
+  const candidateShards = getCandidateXinhuaShards(manifest, type, title);
+  for (const shardIndex of candidateShards) {
+    const shard = await loadXinhuaShard(type, shardIndex);
+    const item = shard.find((entry) => knowledgeKey(type, entry) === key);
+    if (item) return item;
+  }
+  return undefined;
+}
+
+/**
  * 将紧凑 catalog 行恢复为页面可读的诗词条目。
  * @param {unknown[]} row catalog 紧凑行。
  * @returns {Record<string, unknown>} 诗词条目。
@@ -1099,6 +1329,8 @@ export function filterKnowledge(type, filters = {}) {
  */
 export async function filterKnowledgeAsync(type, filters = {}) {
   if (type === 'poetry') return filterPoetryCatalog(filters);
+  const indexed = await filterXinhuaKnowledge(type, filters);
+  if (indexed) return indexed;
   const source = await loadKnowledge(type);
   const query = String(filters.query || '').trim();
   const requiredCharacters = [...query].filter((item) => item.trim());
@@ -1151,6 +1383,8 @@ export async function pageKnowledge(type, filters = {}, page = 1, pageSize = 20)
       return { items: matched.slice(start, start + size), total: matched.length, page: currentPage, pageSize: size, pageCount };
     }
   }
+  const indexedPage = await pageXinhuaKnowledge(type, filters, page, pageSize);
+  if (indexedPage) return indexedPage;
   const matched = await filterKnowledgeAsync(type, filters);
   const size = Math.max(1, Number(pageSize) || 20);
   const pageCount = Math.max(1, Math.ceil(matched.length / size));
@@ -1170,6 +1404,8 @@ export async function getKnowledgeDetail(type, key) {
     const match = /^poetry:(\d+)$/u.exec(String(key || ''));
     if (match) return getPoetryById(Number(match[1]));
   }
+  const indexed = await getXinhuaDetailByKey(type, key);
+  if (indexed) return indexed;
   const source = await loadKnowledge(type);
   return source.find((item) => knowledgeKey(type, item) === key);
 }
@@ -1220,6 +1456,8 @@ export async function randomKnowledgeAsync(type, count = 1, excluded = new Set()
       return selected;
     }
   }
+  const indexed = await randomXinhuaKnowledge(type, count, excluded);
+  if (indexed) return indexed;
   const candidates = (await loadKnowledge(type)).filter((item) => !excluded.has(knowledgeKey(type, item)));
   const shuffled = [...candidates].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, Math.max(1, Number(count) || 1));

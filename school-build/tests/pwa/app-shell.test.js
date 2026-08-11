@@ -32,7 +32,7 @@ test('入口资源带版本参数，避免线上旧缓存继续加载旧文件',
 test('Service Worker 升级缓存名并优先读取网络文件', () => {
   const source = readFileSync(new URL('../../sw.js', import.meta.url), 'utf8');
 
-  assert.match(source, /growth-desk-v31-20260811/);
+  assert.match(source, /growth-desk-v32-20260811/);
   assert.match(source, /src\/data\/knowledge\/index\.mjs/);
   assert.doesNotMatch(source, /cache\.addAll\(\[[\s\S]*?src\/vendor\/chinese\/cnchar\.min\.js/);
   assert.doesNotMatch(source, /cache\.addAll\(\[[\s\S]*?src\/data\/knowledge\/poetry\/manifest\.json/);
@@ -62,7 +62,8 @@ test('app.js statically imports math and supports local book cache fallback', ()
   assert.match(source, /import\('\.\/vendor\/pdfjs\/pdf\.min\.mjs'\)/);
   assert.match(source, /growth-desk-books-v1/);
   assert.match(source, /cache-storage/);
-  assert.match(source, /serviceWorker' in navigator[\s\S]*?register\('\.\/sw\.js\?v=20260811-9'\)/);
+  assert.match(source, /falling back to IndexedDB Blob/);
+  assert.match(source, /serviceWorker' in navigator[\s\S]*?register\('\.\/sw\.js\?v=20260811-10'\)/);
   assert.doesNotMatch(source, /sw\.js\?v=20260811-8/);
   assert.match(source, /function startPostBootTasks/);
   assert.match(source, /await navigate\('home'\);[\s\S]*?startPostBootTasks\(\)/);

@@ -39,23 +39,37 @@ test('词语库和汉字库筛选只匹配标题字段', async () => {
   assert.ok(charPage.items.every((item) => String(item.char).includes('光')));
 });
 
-test('成语、词语、歇后语和汉字均对接 chinese-xinhua raw 数据', async () => {
+test('成语、词语、歇后语和汉字均对接 chinese-xinhua 分片索引，PWA 查询不读取 raw 大文件', async () => {
   const freshKnowledge = await import(`../../src/data/knowledge/index.mjs?xinhua-raw=${Date.now()}`);
   const cases = [
-    ['idiom', 'src/data/knowledge/raw/idiom.json', 30895],
-    ['word', 'src/data/knowledge/raw/ci.json', 264434],
-    ['xiehouyu', 'src/data/knowledge/raw/xiehouyu.json', 14032],
-    ['char', 'src/data/knowledge/raw/word.json', 16142],
+    ['idiom', 30895],
+    ['word', 264434],
+    ['xiehouyu', 14032],
+    ['char', 16142],
   ];
 
-  for (const [type, expectedPath, expectedTotal] of cases) {
+  for (const [type, expectedTotal] of cases) {
     fetchedPaths.length = 0;
     const page = await freshKnowledge.pageKnowledge(type, {}, 1, 1);
 
     assert.equal(page.total, expectedTotal);
     assert.equal(page.items.length, 1);
-    assert.ok(fetchedPaths.includes(expectedPath));
+    assert.ok(fetchedPaths.some((path) => path.includes(`src/data/knowledge/xinhua/${type}/catalog-`)));
+    assert.ok(!fetchedPaths.some((path) => path.includes('src/data/knowledge/raw/')));
   }
+});
+
+test('空内容抽题使用知识库随机分片，不加载完整 raw 大文件', async () => {
+  const freshKnowledge = await import(`../../src/data/knowledge/index.mjs?xinhua-random=${Date.now()}`);
+  fetchedPaths.length = 0;
+
+  const items = await freshKnowledge.randomKnowledgeAsync('word', 12);
+
+  assert.equal(items.length, 12);
+  assert.ok(items.every((item) => item.word));
+  assert.ok(fetchedPaths.includes('src/data/knowledge/xinhua/manifest.json'));
+  assert.ok(fetchedPaths.some((path) => path.includes('src/data/knowledge/xinhua/word/catalog-')));
+  assert.ok(!fetchedPaths.some((path) => path.includes('src/data/knowledge/raw/')));
 });
 
 test('全量古诗使用 manifest 和 catalog 分页，不在空筛选时读取所有分片', async () => {

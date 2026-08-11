@@ -24466,10 +24466,14 @@
   });
   var rawCache = /* @__PURE__ */ new Map();
   var POETRY_BASE = "./src/data/knowledge/poetry";
+  var XINHUA_BASE = "./src/data/knowledge/xinhua";
   var poetryShardCache = /* @__PURE__ */ new Map();
   var poetryFilterCache = /* @__PURE__ */ new Map();
   var poetryMetaCache = /* @__PURE__ */ new Map();
+  var xinhuaShardCache = /* @__PURE__ */ new Map();
+  var xinhuaFilterCache = /* @__PURE__ */ new Map();
   var poetryManifestCache;
+  var xinhuaManifestCache;
   var TRADITIONAL_SIMPLIFIED_MAP = Object.freeze({
     "\u842C": "\u4E07",
     "\u8207": "\u4E0E",
@@ -25112,6 +25116,141 @@
     poetryShardCache.set(key, list);
     return list;
   }
+  async function loadXinhuaManifest() {
+    if (xinhuaManifestCache) return xinhuaManifestCache;
+    xinhuaManifestCache = await fetchJson(`${XINHUA_BASE}/manifest.json`);
+    return xinhuaManifestCache;
+  }
+  async function loadXinhuaShard(type, shardIndex) {
+    const key = `${type}:${shardIndex}`;
+    if (xinhuaShardCache.has(key)) return xinhuaShardCache.get(key);
+    const data = await fetchJson(`${XINHUA_BASE}/${type}/catalog-${String(shardIndex).padStart(4, "0")}.json`);
+    const list = Array.isArray(data) ? data.map((item) => normalizeKnowledgeItem(type, item)) : [];
+    xinhuaShardCache.set(key, list);
+    return list;
+  }
+  function knowledgeTitle(type, item) {
+    if (type === "char") return String(item.char || "");
+    if (type === "xiehouyu") return String(item.riddle || "");
+    return String(item.word || "");
+  }
+  function getCandidateXinhuaShards(manifest, type, query = "") {
+    const meta = manifest?.types?.[type];
+    const shardCount = Number(meta?.shardCount || 0);
+    const allShards = Array.from({ length: shardCount }, (_2, index) => index);
+    const characters = [...new Set(Array.from(String(query || "").trim()).filter((item) => item.trim()))];
+    if (!characters.length) return allShards;
+    let candidates;
+    for (const character of characters) {
+      const shards = Array.isArray(meta?.characterShards?.[character]) ? meta.characterShards[character] : [];
+      candidates = candidates ? intersectSortedNumbers(candidates, shards) : shards;
+      if (!candidates.length) return [];
+    }
+    return candidates || allShards;
+  }
+  function matchesXinhuaFilters(type, item, query = "") {
+    const title = knowledgeTitle(type, item);
+    const requiredCharacters = [...String(query || "").trim()].filter((character) => character.trim());
+    return requiredCharacters.every((character) => title.includes(character));
+  }
+  async function pageXinhuaKnowledge(type, filters = {}, page = 1, pageSize = 20) {
+    const manifest = await loadXinhuaManifest();
+    const meta = manifest?.types?.[type];
+    if (!meta) return void 0;
+    const query = String(filters.query || "").trim();
+    const size = Math.max(1, Number(pageSize) || 20);
+    const candidateShards = getCandidateXinhuaShards(manifest, type, query);
+    const indexedTotal = query.length === 1 ? Number(meta.characterCounts?.[query] || 0) : void 0;
+    const total = indexedTotal ?? await countXinhuaMatches(type, candidateShards, query);
+    const pageCount = Math.max(1, Math.ceil(total / size));
+    const currentPage = Math.max(1, Math.min(pageCount, Number(page) || 1));
+    const start = (currentPage - 1) * size;
+    const items = await loadXinhuaPageItems(type, candidateShards, query, start, size);
+    return { items, total, page: currentPage, pageSize: size, pageCount };
+  }
+  async function countXinhuaMatches(type, candidateShards, query = "") {
+    let total = 0;
+    for (const shardIndex of candidateShards) {
+      const shard = await loadXinhuaShard(type, shardIndex);
+      total += shard.filter((item) => matchesXinhuaFilters(type, item, query)).length;
+    }
+    return total;
+  }
+  async function loadXinhuaPageItems(type, candidateShards, query, start, size) {
+    const items = [];
+    let matchedCount = 0;
+    for (const shardIndex of candidateShards) {
+      const shard = await loadXinhuaShard(type, shardIndex);
+      for (const item of shard) {
+        if (!matchesXinhuaFilters(type, item, query)) continue;
+        if (matchedCount >= start && items.length < size) items.push(item);
+        matchedCount += 1;
+        if (items.length >= size) return items;
+      }
+    }
+    return items;
+  }
+  async function filterXinhuaKnowledge(type, filters = {}) {
+    const manifest = await loadXinhuaManifest();
+    if (!manifest?.types?.[type]) return void 0;
+    const query = String(filters.query || "").trim();
+    const cacheKey = JSON.stringify({ type, query });
+    if (xinhuaFilterCache.has(cacheKey)) return xinhuaFilterCache.get(cacheKey);
+    const candidateShards = getCandidateXinhuaShards(manifest, type, query);
+    const matched = [];
+    for (const shardIndex of candidateShards) {
+      const shard = await loadXinhuaShard(type, shardIndex);
+      matched.push(...shard.filter((item) => matchesXinhuaFilters(type, item, query)));
+    }
+    xinhuaFilterCache.set(cacheKey, matched);
+    return matched;
+  }
+  async function randomXinhuaKnowledge(type, count = 1, excluded = /* @__PURE__ */ new Set()) {
+    const manifest = await loadXinhuaManifest();
+    const meta = manifest?.types?.[type];
+    if (!meta) return void 0;
+    const targetCount = Math.max(1, Number(count) || 1);
+    const selected = [];
+    const seen = /* @__PURE__ */ new Set();
+    const total = Number(meta.total || 0);
+    const maxAttempts = Math.min(total, targetCount * 30 + 120);
+    for (let attempt = 0; attempt < maxAttempts && selected.length < targetCount; attempt += 1) {
+      const absoluteIndex = Math.floor(Math.random() * total);
+      const item = await getXinhuaItemByIndex(type, absoluteIndex);
+      const key = item ? knowledgeKey(type, item) : "";
+      if (!item || seen.has(key) || excluded.has(key)) continue;
+      seen.add(key);
+      selected.push(item);
+    }
+    for (let index = 0; index < total && selected.length < targetCount; index += 1) {
+      const item = await getXinhuaItemByIndex(type, index);
+      const key = item ? knowledgeKey(type, item) : "";
+      if (!item || seen.has(key) || excluded.has(key)) continue;
+      seen.add(key);
+      selected.push(item);
+    }
+    return selected;
+  }
+  async function getXinhuaItemByIndex(type, absoluteIndex) {
+    const manifest = await loadXinhuaManifest();
+    const shardSize = Number(manifest?.shardSize || 1e3);
+    if (!Number.isFinite(absoluteIndex) || absoluteIndex < 0) return void 0;
+    const shard = await loadXinhuaShard(type, Math.floor(absoluteIndex / shardSize));
+    return shard[absoluteIndex % shardSize];
+  }
+  async function getXinhuaDetailByKey(type, key) {
+    const title = String(key || "").split(":")[1] || "";
+    if (!title) return void 0;
+    const manifest = await loadXinhuaManifest();
+    if (!manifest?.types?.[type]) return void 0;
+    const candidateShards = getCandidateXinhuaShards(manifest, type, title);
+    for (const shardIndex of candidateShards) {
+      const shard = await loadXinhuaShard(type, shardIndex);
+      const item = shard.find((entry) => knowledgeKey(type, entry) === key);
+      if (item) return item;
+    }
+    return void 0;
+  }
   function catalogRowToPoetry(row) {
     const lines = simplifyStringList(row[7] || []);
     return { id: row[0], title: toSimplifiedChinese(row[1]), author: toSimplifiedChinese(row[2]), dynasty: toSimplifiedChinese(row[3]), collection: toSimplifiedChinese(row[4]), shard: row[5], offset: row[6], excerpt: lines, lines };
@@ -25337,6 +25476,8 @@
   }
   async function filterKnowledgeAsync(type, filters = {}) {
     if (type === "poetry") return filterPoetryCatalog(filters);
+    const indexed = await filterXinhuaKnowledge(type, filters);
+    if (indexed) return indexed;
     const source = await loadKnowledge(type);
     const query = String(filters.query || "").trim();
     const requiredCharacters = [...query].filter((item) => item.trim());
@@ -25380,6 +25521,8 @@
         return { items: matched2.slice(start2, start2 + size2), total: matched2.length, page: currentPage2, pageSize: size2, pageCount: pageCount2 };
       }
     }
+    const indexedPage = await pageXinhuaKnowledge(type, filters, page, pageSize);
+    if (indexedPage) return indexedPage;
     const matched = await filterKnowledgeAsync(type, filters);
     const size = Math.max(1, Number(pageSize) || 20);
     const pageCount = Math.max(1, Math.ceil(matched.length / size));
@@ -25392,6 +25535,8 @@
       const match = /^poetry:(\d+)$/u.exec(String(key || ""));
       if (match) return getPoetryById(Number(match[1]));
     }
+    const indexed = await getXinhuaDetailByKey(type, key);
+    if (indexed) return indexed;
     const source = await loadKnowledge(type);
     return source.find((item) => knowledgeKey(type, item) === key);
   }
@@ -25421,6 +25566,8 @@
         return selected;
       }
     }
+    const indexed = await randomXinhuaKnowledge(type, count, excluded);
+    if (indexed) return indexed;
     const candidates = (await loadKnowledge(type)).filter((item) => !excluded.has(knowledgeKey(type, item)));
     const shuffled = [...candidates].sort(() => Math.random() - 0.5);
     return shuffled.slice(0, Math.max(1, Number(count) || 1));
@@ -25996,9 +26143,19 @@
     }
     return weightedKnowledgeSample(type, candidates, count, excluded, state.knowledgePreferences);
   }
+  async function buildPreferredRandomKnowledgePool(type, count) {
+    if (!state.knowledgePreferences || !Object.keys(state.knowledgePreferences).length) {
+      state.knowledgePreferences = await loadKnowledgePreferences();
+    }
+    const likedKeys = Object.entries(state.knowledgePreferences).filter(([key, value]) => value === "like" && key.startsWith(`${type}:`)).map(([key]) => key);
+    const likedItems = (await Promise.all(likedKeys.map((key) => getKnowledgeDetail(type, key)))).filter(Boolean);
+    const randomItems = await randomKnowledgeAsync(type, Math.max(Number(count) * 8, 40));
+    return [...likedItems, ...randomItems];
+  }
   async function createIdiomFillProblems(values) {
-    const candidates = await filterKnowledgeAsync("idiom", { query: values.knowledgeQuery });
     const count = boundedPracticeCount(values.count, 10);
+    const query = String(values.knowledgeQuery || "").trim();
+    const candidates = query ? await filterKnowledgeAsync("idiom", { query }) : await buildPreferredRandomKnowledgePool("idiom", count);
     const selected = await sampleKnowledgeForUse("idiom", candidates, count);
     const allCharacters = [...new Set(candidates.flatMap((item) => Array.from(item.word)))];
     return selected.map((item, index) => {
@@ -26019,7 +26176,7 @@
   async function createPoetryMatchProblems(values) {
     const count = boundedPracticeCount(values.count, 6);
     const query = String(values.knowledgeQuery || "").trim();
-    const candidates = query ? await filterKnowledgeAsync("poetry", { query }) : await randomKnowledgeAsync("poetry", count);
+    const candidates = query ? await filterKnowledgeAsync("poetry", { query }) : await buildPreferredRandomKnowledgePool("poetry", count);
     const selected = await sampleKnowledgeForUse("poetry", candidates, count);
     return selected.map((poem, index) => {
       const lines = (poem.lines || []).map((line) => toSimplifiedChinese(line));
@@ -26040,9 +26197,9 @@
     });
   }
   async function createPinyinWriteProblems(values, lines) {
-    const knowledgeWords = lines.length ? [] : await filterKnowledgeAsync("word");
+    const count = boundedPracticeCount(values.count, lines.length || 10);
+    const knowledgeWords = lines.length ? [] : await buildPreferredRandomKnowledgePool("word", count);
     const source = lines.length ? lines : knowledgeWords.map((item) => item.word);
-    const count = boundedPracticeCount(values.count, source.length);
     const selected = lines.length ? shuffleValues([...new Set(source)]).slice(0, count) : (await sampleKnowledgeForUse("word", knowledgeWords, count)).map((item) => item.word);
     return selected.map((word, index) => ({
       id: `problem-${index + 1}`,
@@ -26383,11 +26540,13 @@
       if (!response.ok) throw new Error(`\u7ED8\u672C\u6587\u4EF6\u8BFB\u53D6\u5931\u8D25\uFF1A${response.status}`);
       if (canReaderRequestUrl(item)) {
         const cachedInStorage = await putBookResponseCache(sourceUrl, response);
-        if (!cachedInStorage) throw new Error("\u6D4F\u89C8\u5668\u62D2\u7EDD\u5199\u5165\u672C\u5730\u7ED8\u672C\u7F13\u5B58");
-        const cacheStorageRecord = { ...item, cacheMode: "cache-storage", cacheUpdatedAt: Date.now(), size: Number(response.headers.get("content-length") || item.size || 0), updatedAt: Date.now() };
-        delete cacheStorageRecord.sourceBlob;
-        await put("readings", cacheStorageRecord);
-        return { ok: true, size: cacheStorageRecord.size };
+        if (cachedInStorage) {
+          const cacheStorageRecord = { ...item, cacheMode: "cache-storage", cacheUpdatedAt: Date.now(), size: Number(response.headers.get("content-length") || item.size || 0), updatedAt: Date.now() };
+          delete cacheStorageRecord.sourceBlob;
+          await put("readings", cacheStorageRecord);
+          return { ok: true, size: cacheStorageRecord.size };
+        }
+        console.warn("Cache Storage unavailable for book, falling back to IndexedDB Blob");
       }
       const blob = await response.blob();
       if (!blob.size) throw new Error("\u7ED8\u672C\u6587\u4EF6\u4E3A\u7A7A");
@@ -27693,7 +27852,7 @@
     void preloadLanguageTools().catch((error) => console.warn("\u8BED\u8A00\u5DE5\u5177\u540E\u53F0\u9884\u70ED\u5931\u8D25", error));
     void ensureReadingSeeds().catch((error) => console.warn("\u9605\u8BFB\u8D44\u6599\u540E\u53F0\u540C\u6B65\u5931\u8D25", error));
     if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
-      navigator.serviceWorker.register("./sw.js?v=20260811-9").catch(console.warn);
+      navigator.serviceWorker.register("./sw.js?v=20260811-10").catch(console.warn);
     }
   }
   async function init() {
