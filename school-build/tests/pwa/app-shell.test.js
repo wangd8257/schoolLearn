@@ -32,23 +32,21 @@ test('入口资源带版本参数，避免线上旧缓存继续加载旧文件',
 test('Service Worker 升级缓存名并优先读取网络文件', () => {
   const source = readFileSync(new URL('../../sw.js', import.meta.url), 'utf8');
 
-  assert.match(source, /growth-desk-v28-20260811/);
-  assert.match(source, /src\/vendor\/chinese\/cnchar\.min\.js/);
+  assert.match(source, /growth-desk-v29-20260811/);
   assert.match(source, /src\/data\/knowledge\/index\.mjs/);
-  assert.match(source, /src\/data\/knowledge\/poetry\/manifest\.json/);
+  assert.doesNotMatch(source, /cache\.addAll\(\[[\s\S]*?src\/vendor\/chinese\/cnchar\.min\.js/);
+  assert.doesNotMatch(source, /cache\.addAll\(\[[\s\S]*?src\/data\/knowledge\/poetry\/manifest\.json/);
   assert.doesNotMatch(source, /src\/data\/knowledge\/poetry\/catalog\/catalog-/);
   assert.doesNotMatch(source, /src\/data\/knowledge\/poetry\/search\/search-/);
   assert.doesNotMatch(source, /src\/data\/knowledge\/poetry\/shards\/poetry-/);
-  assert.match(source, /dist\/app\.bundle\.js/);
+  assert.doesNotMatch(source, /cache\.addAll\(\[[\s\S]*?src\/vendor\/pdfjs\/pdf\.min\.mjs/);
+  assert.doesNotMatch(source, /cache\.addAll\(\[[\s\S]*?src\/vendor\/epubjs\/epub\.min\.js/);
+  assert.doesNotMatch(source, /cache\.addAll\(\[[\s\S]*?huiben\/manifest\.json/);
+  assert.doesNotMatch(source, /dist\/app\.bundle\.js/);
   assert.match(source, /async function fetchFreshThenCache/);
   assert.match(source, /const response = await fetch\(request\)/);
   assert.match(source, /void cache\.put\(request, response\.clone\(\)\)\.catch/);
-  assert.match(source, /\.\/huiben\/manifest\.json/);
   assert.match(source, /\.\/src\/data\/huiben-manifest\.mjs/);
-  assert.match(source, /\.\/src\/vendor\/pdfjs\/pdf\.min\.mjs/);
-  assert.match(source, /\.\/src\/vendor\/pdfjs\/pdf\.worker\.min\.mjs/);
-  assert.match(source, /\.\/src\/vendor\/epubjs\/jszip\.min\.js/);
-  assert.match(source, /\.\/src\/vendor\/epubjs\/epub\.min\.js/);
   assert.match(source, /function isBookBinaryRequest/);
   assert.match(source, /Range 请求必须保持原始响应/);
 });
@@ -59,10 +57,15 @@ test('app.js statically imports math and supports local book cache fallback', ()
 
   assert.match(source, /import \{ generateWorksheet \} from '\.\/math\/index\.mjs';/);
   assert.doesNotMatch(source, /import\('\.\/math\/index\.mjs'\)/);
+  assert.doesNotMatch(source, /import \* as pdfjsLib from '\.\/vendor\/pdfjs\/pdf\.min\.mjs';/);
+  assert.match(source, /function loadPdfJsLib/);
+  assert.match(source, /import\('\.\/vendor\/pdfjs\/pdf\.min\.mjs'\)/);
   assert.match(source, /growth-desk-books-v1/);
   assert.match(source, /cache-storage/);
-  assert.match(source, /serviceWorker' in navigator[\s\S]*?register\('\.\/sw\.js\?v=20260811-7'\)/);
+  assert.match(source, /serviceWorker' in navigator[\s\S]*?register\('\.\/sw\.js\?v=20260811-8'\)/);
   assert.doesNotMatch(source, /sw\.js\?v=20260808-8/);
+  assert.match(source, /function startPostBootTasks/);
+  assert.match(source, /await navigate\('home'\);[\s\S]*?startPostBootTasks\(\)/);
   assert.match(source, /item\.sourceBlob instanceof Blob \|\| isBookCacheStorageRecord\(item\)[\s\S]*?await readBookArrayBuffer\(item\)[\s\S]*?canReaderRequestUrl\(item\)/);
 });
 
@@ -73,6 +76,7 @@ test('EPUB 阅读包含同页离线解析兜底，不把超时直接留成空白
   assert.match(source, /async function mountDirectEpubReader[\s\S]*?loadScriptOnce\('\.\/src\/vendor\/epubjs\/jszip\.min\.js',\s*'JSZip'\)/);
   assert.match(source, /data-epub-direct-content/);
   assert.match(source, /mountDirectEpubReader\(item, token/);
+  assert.match(source, /if \(await mountDirectEpubReader\(item, token\)\) return;/);
   assert.match(source, /kind: 'epub-direct'/);
 });
 

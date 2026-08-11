@@ -35,14 +35,11 @@ import { renderProblemHtml, renderWorksheetMetaHtml, worksheetColumns, worksheet
 import { paperMoveDelta, paperScrollDelta } from './paper-controls.mjs';
 import { generateWorksheet } from './math/index.mjs';
 import { filterKnowledgeAsync, getKnowledgeDetail, getPoetryMeta, knowledgeKey, pageKnowledge, randomKnowledgeAsync } from './data/knowledge/index.mjs';
-import * as pdfjsLib from './vendor/pdfjs/pdf.min.mjs';
 
 const state = { route: 'home', paperFilter: 'all', activeReadingId: null, activePaperId: null, pictureBookDraft: null, paperTransform: null, paperStatus: null, bookObjectUrl: null, fileReader: null, fileReaderToken: 0, pdfZoom: 1, selectedBookIds: new Set(), bookCacheRun: 0, knowledgeType: 'idiom', knowledgeQuery: '', knowledgeAuthor: '', knowledgeDynasty: '', knowledgeCollection: '', knowledgePage: 1, knowledgeHasQueried: false, wrongType: 'all', learningItems: [], learningIndex: 0, learningCompleted: new Set() };
 const main = document.querySelector('#mainContent');
 const toast = document.querySelector('#toast');
 const modalRoot = document.querySelector('#modalRoot');
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = './src/vendor/pdfjs/pdf.worker.min.mjs';
 
 const PDF_JS_OPTIONS = Object.freeze({
   cMapUrl: './src/vendor/pdfjs/cmaps/',
@@ -51,6 +48,22 @@ const PDF_JS_OPTIONS = Object.freeze({
 });
 const READER_LOAD_TIMEOUT_MS = 60000;
 const BOOK_DEVICE_CACHE_NAME = 'growth-desk-books-v1';
+let pdfjsLibPromise;
+
+/**
+ * 按需加载 PDF.js，避免首页为了未打开的 PDF 阅读功能提前下载和解析大模块。
+ * @returns {Promise<Record<string, unknown>>} 已配置 worker 的 PDF.js 模块对象。
+ */
+async function loadPdfJsLib() {
+  if (!pdfjsLibPromise) {
+    pdfjsLibPromise = import('./vendor/pdfjs/pdf.min.mjs').then((module) => {
+      // iPad PWA 下自动 worker 推断不稳定，统一指定本地 worker 地址。
+      module.GlobalWorkerOptions.workerSrc = './src/vendor/pdfjs/pdf.worker.min.mjs';
+      return module;
+    });
+  }
+  return pdfjsLibPromise;
+}
 
 /**
  * 把阅读器异常转换为用户可理解的短消息，并同步到当前阅读界面。
@@ -61,6 +74,7 @@ const BOOK_DEVICE_CACHE_NAME = 'growth-desk-books-v1';
 function reportReaderRuntimeError(error, source) {
   if (state.route !== 'reading' || !state.activeReadingId) return;
   const message = error instanceof Error ? error.message : String(error || '未知错误');
+  if (!message || message === '未知错误') return;
   if (/ResizeObserver loop (?:completed with undelivered notifications|limit exceeded)/u.test(message)) return;
   const reader = document.querySelector('[data-pdf-reader], [data-epubjs-reader]');
 
@@ -1205,17 +1219,17 @@ async function cacheFileBookWithOptions(item, options = {}) {
   try {
     const response = await fetch(sourceUrl, { cache: 'force-cache' });
     if (!response.ok) throw new Error(`绘本文件读取失败：${response.status}`);
-    const cachedInStorage = await putBookResponseCache(sourceUrl, response.clone());
-    const blob = await response.blob();
-    if (!blob.size) throw new Error('绘本文件为空');
-    try {
-      await put('readings', { ...item, sourceBlob: blob, cacheMode: 'device', cacheUpdatedAt: Date.now(), size: blob.size, updatedAt: Date.now() });
-    } catch (error) {
-      if (!cachedInStorage) throw error;
-      const cacheStorageRecord = { ...item, cacheMode: 'cache-storage', cacheUpdatedAt: Date.now(), size: blob.size, updatedAt: Date.now() };
+    if (canReaderRequestUrl(item)) {
+      const cachedInStorage = await putBookResponseCache(sourceUrl, response);
+      if (!cachedInStorage) throw new Error('浏览器拒绝写入本地绘本缓存');
+      const cacheStorageRecord = { ...item, cacheMode: 'cache-storage', cacheUpdatedAt: Date.now(), size: Number(response.headers.get('content-length') || item.size || 0), updatedAt: Date.now() };
       delete cacheStorageRecord.sourceBlob;
       await put('readings', cacheStorageRecord);
+      return { ok: true, size: cacheStorageRecord.size };
     }
+    const blob = await response.blob();
+    if (!blob.size) throw new Error('绘本文件为空');
+    await put('readings', { ...item, sourceBlob: blob, cacheMode: 'device', cacheUpdatedAt: Date.now(), size: blob.size, updatedAt: Date.now() });
     return { ok: true, size: blob.size };
   } catch (error) {
     // 缓存兜底后仍下载失败时返回错误，由书架批量流程统一汇总。
@@ -1240,15 +1254,9 @@ function isBookCached(item) {
  */
 function preloadReaderAssets(readings) {
   const hasEpub = readings.some((item) => ['epub', 'equb'].includes(String(item.fileKind || '').toLowerCase()));
-  const hasPdf = readings.some((item) => String(item.fileKind || '').toLowerCase() === 'pdf');
   if (hasEpub) {
-    void Promise.all([
-      loadScriptOnce('./src/vendor/epubjs/jszip.min.js', 'JSZip'),
-      loadScriptOnce('./src/vendor/epubjs/epub.min.js', 'ePub'),
-    ]).catch((error) => console.warn('EPUB 组件预热失败', error));
-  }
-  if (hasPdf && typeof fetch === 'function') {
-    void fetch('./src/vendor/pdfjs/pdf.worker.min.mjs', { cache: 'force-cache' }).catch(() => {});
+    // EPUB 默认使用同页解压直读，目录页只预热轻量 JSZip，重型阅读器和 PDF worker 延后到打开书籍时加载。
+    void loadScriptOnce('./src/vendor/epubjs/jszip.min.js', 'JSZip').catch((error) => console.warn('EPUB 解压组件预热失败', error));
   }
 }
 
@@ -1620,6 +1628,24 @@ async function parseEpubArchive(arrayBuffer) {
 }
 
 /**
+ * 先移除 EPUB 章节中的相对图片地址，避免章节插入页面后浏览器错误请求站点根路径。
+ * @param {Element} body 章节正文节点。
+ * @returns {void}
+ */
+function prepareEpubImagePlaceholders(body) {
+  body.querySelectorAll('img, image').forEach((image) => {
+    const source = image.getAttribute('src') || image.getAttribute('data-src') || image.getAttribute('href') || image.getAttribute('xlink:href') || '';
+    if (!isEpubRelativeAsset(source)) return;
+    image.setAttribute('data-epub-src', source);
+    image.removeAttribute('src');
+    image.removeAttribute('srcset');
+    image.removeAttribute('href');
+    image.removeAttribute('xlink:href');
+    image.setAttribute('loading', 'lazy');
+  });
+}
+
+/**
  * 将 EPUB 章节中的图片引用替换为同页可访问的临时 URL。
  * @param {Element} body 章节正文节点。
  * @param {object} zip EPUB 压缩包实例。
@@ -1628,19 +1654,46 @@ async function parseEpubArchive(arrayBuffer) {
  * @returns {Promise<void>} 图片资源替换完成。
  */
 async function hydrateEpubImages(body, zip, chapterPath, objectUrls) {
-  const images = [...body.querySelectorAll('img')];
-  await Promise.all(images.map(async (image) => {
-    const source = image.getAttribute('src') || image.getAttribute('data-src') || '';
+  const images = [...body.querySelectorAll('img[data-epub-src], image[data-epub-src]')];
+  await Promise.allSettled(images.map(async (image) => {
+    const source = image.getAttribute('data-epub-src') || '';
     if (!isEpubRelativeAsset(source)) return;
     const asset = zip.file(resolveEpubArchivePath(chapterPath, source));
     if (!asset) return;
     const blob = await asset.async('blob');
     const objectUrl = URL.createObjectURL(blob);
     objectUrls.push(objectUrl);
-    image.setAttribute('src', objectUrl);
-    image.removeAttribute('srcset');
-    image.setAttribute('loading', 'lazy');
+    if (image.tagName.toLowerCase() === 'image') image.setAttribute('href', objectUrl);
+    else image.setAttribute('src', objectUrl);
+    image.removeAttribute('data-epub-src');
   }));
+}
+
+/**
+ * 将 EPUB 样式表中的相对资源地址改写为当前页面可访问的临时 URL。
+ * @param {string} cssText 原始 CSS 文本。
+ * @param {object} zip EPUB 压缩包实例。
+ * @param {string} stylePath 当前 CSS 文件在压缩包内的路径。
+ * @param {string[]} objectUrls 临时 URL 回收列表。
+ * @returns {Promise<string>} 已完成相对 URL 改写的 CSS 文本。
+ */
+async function rewriteEpubCssUrls(cssText, zip, stylePath, objectUrls) {
+  const replacements = [];
+  const pattern = /url\((['"]?)([^'")]+)\1\)/giu;
+  for (const match of cssText.matchAll(pattern)) {
+    const source = String(match[2] || '').trim();
+    if (!isEpubRelativeAsset(source)) continue;
+    const asset = zip.file(resolveEpubArchivePath(stylePath, source));
+    if (!asset) {
+      replacements.push([match[0], 'url("")']);
+      continue;
+    }
+    const blob = await asset.async('blob');
+    const objectUrl = URL.createObjectURL(blob);
+    objectUrls.push(objectUrl);
+    replacements.push([match[0], `url("${objectUrl}")`]);
+  }
+  return replacements.reduce((nextCss, [from, to]) => nextCss.split(from).join(to), cssText);
 }
 
 /**
@@ -1658,13 +1711,15 @@ async function renderDirectEpubChapter(readerState, chapter, chapterIndex) {
   const body = documentFragment.body;
   if (!body) return;
   body.querySelectorAll('script, iframe, object, embed, form').forEach((node) => node.remove());
-  await hydrateEpubImages(body, readerState.zip, chapter.path, readerState.objectUrls);
+  // 先插入章节骨架，再异步补图，避免 iPad PWA 因图片解压慢而长时间停在加载态。
+  prepareEpubImagePlaceholders(body);
   const section = document.createElement('article');
   section.className = 'epub-direct-chapter';
   section.dataset.chapterIndex = String(chapterIndex + 1);
   section.innerHTML = body.innerHTML || '<p>本章节没有可显示内容。</p>';
   readerState.content.appendChild(section);
   readerState.renderedChapters.add(chapter.path);
+  void hydrateEpubImages(section, readerState.zip, chapter.path, readerState.objectUrls).catch((error) => console.warn('EPUB 图片渲染失败', error));
 }
 
 /**
@@ -1706,7 +1761,8 @@ async function mountDirectEpubReader(item, token) {
       const styleFile = parsed.zip.file(stylePath);
       if (!styleFile) continue;
       const style = document.createElement('style');
-      style.textContent = await styleFile.async('string');
+      // EPUB 内部 CSS 常使用相对图片或字体路径，必须改写后再插入页面，避免请求站点根路径。
+      style.textContent = await rewriteEpubCssUrls(await styleFile.async('string'), parsed.zip, stylePath, readerState.objectUrls);
       content.appendChild(style);
     }
     await renderDirectEpubChapter(readerState, parsed.chapters[0], 0);
@@ -1738,6 +1794,8 @@ async function mountPdfJsReader(item, token) {
   const viewportElement = reader?.querySelector('[data-pdf-viewport]');
   if (!reader || !viewportElement) return;
   try {
+    setFileReaderStatus(reader, '正在加载 PDF 阅读器…');
+    const pdfjsLib = await withReaderTimeout(loadPdfJsLib(), 'PDF 阅读器加载超时，请检查网络后重试');
     setFileReaderStatus(reader, canReaderRequestUrl(item) ? '正在连接 PDF…' : '正在读取 PDF…');
     if (token !== state.fileReaderToken) return;
     const source = item.sourceBlob instanceof Blob || isBookCacheStorageRecord(item)
@@ -1783,11 +1841,9 @@ async function mountEpubJsReader(item, token) {
   const viewport = reader?.querySelector('[data-epub-viewport]');
   if (!reader || !viewport) return;
   try {
-    if (shouldPreferDirectEpubReader()) {
-      if (await mountDirectEpubReader(item, token)) return;
-      disposeReaderState(state.fileReader);
-      state.fileReader = null;
-    }
+    if (await mountDirectEpubReader(item, token)) return;
+    disposeReaderState(state.fileReader);
+    state.fileReader = null;
     setFileReaderStatus(reader, '正在加载 EPUB 阅读器…');
     await withReaderTimeout(loadScriptOnce('./src/vendor/epubjs/jszip.min.js', 'JSZip'), 'EPUB 解压组件加载超时');
     const ePub = await withReaderTimeout(loadScriptOnce('./src/vendor/epubjs/epub.min.js', 'ePub'), 'EPUB 阅读器加载超时');
@@ -2526,16 +2582,28 @@ function handleMainContentWheel(event) {
 document.addEventListener('wheel', handleMainContentWheel, { passive: false });
 document.querySelector('#menuButton').addEventListener('click',()=>document.querySelector('#sidebar').classList.toggle('open'));
 
+/**
+ * 首屏完成后再启动非首页必需的后台任务，避免阅读清单和语言脚本阻塞导航点击。
+ * @returns {void}
+ */
+function startPostBootTasks() {
+  // 中文拼音工具只在生成语文试卷时需要，后台预热失败不影响首页可用。
+  void preloadLanguageTools().catch((error) => console.warn('语言工具后台预热失败', error));
+  // huiben 清单可能包含较多本地书籍，延后同步可以让首页和知识库先响应点击。
+  void ensureReadingSeeds().catch((error) => console.warn('阅读资料后台同步失败', error));
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+    navigator.serviceWorker.register('./sw.js?v=20260811-8').catch(console.warn);
+  }
+}
+
 async function init() {
   const loading = document.querySelector('#appLoading');
   try {
     installReaderDiagnostics();
     await openDatabase();
     await ensureDefaultTemplates();
-    await preloadLanguageTools();
-    await ensureReadingSeeds();
-    if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('./sw.js?v=20260811-7').catch(console.warn);
     await navigate('home');
+    startPostBootTasks();
   } finally {
     loading?.classList.add('is-hidden');
     setTimeout(() => loading?.remove(), 360);
