@@ -1,5 +1,6 @@
 import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { toSimplifiedChinese } from '../src/data/knowledge/index.mjs';
 
 const sourceRoot = process.argv[2];
 const outputRoot = process.argv[3] || 'src/data/knowledge/poetry';
@@ -12,6 +13,80 @@ const dynastyByRoot = new Map([
 ]);
 
 if (!sourceRoot) throw new Error('Usage: node scripts/build-poetry-index.mjs <chinese-poetry-root> [output-root]');
+
+/**
+ * 归一化古诗索引键，统一简繁、括号和空白。
+ * @param {unknown} value 需要写入索引的文本。
+ * @returns {string} 规范化索引键。
+ */
+function normalizePoetryIndexText(value) {
+  return toSimplifiedChinese(value)
+    .replace(/[（]/gu, '(')
+    .replace(/[）]/gu, ')')
+    .replace(/\s+/gu, '')
+    .trim();
+}
+
+/**
+ * 归一化作者索引键，兼容“（朝代）作者”和“朝代：作者”。
+ * @param {unknown} value 作者文本。
+ * @returns {string} 作者索引键。
+ */
+function normalizePoetryAuthorKey(value) {
+  return normalizePoetryIndexText(value)
+    .replace(/^\([^)]{1,8}\)/u, '')
+    .replace(/^[\u3400-\u9fff]{1,8}[:：]/u, '');
+}
+
+/**
+ * 向索引表写入分片编号和总数。
+ * @param {Record<string, Record<string, Set<number>>>} shardIndexes 分片索引表。
+ * @param {Record<string, Record<string, number>>} indexCounts 数量索引表。
+ * @param {'collection'|'dynasty'|'author'|'character'} type 索引类型。
+ * @param {string} key 索引键。
+ * @param {number} shardIndex 分片编号。
+ * @returns {void}
+ */
+function addIndexEntry(shardIndexes, indexCounts, type, key, shardIndex) {
+  if (!key) return;
+  shardIndexes[type][key] ||= new Set();
+  shardIndexes[type][key].add(shardIndex);
+  indexCounts[type][key] = (indexCounts[type][key] || 0) + 1;
+}
+
+/**
+ * 写入组合条件数量索引，列表分页可直接读取总数，不需要扫描全部候选分片。
+ * @param {Record<string, Record<string, number>>} compoundCounts 组合数量索引。
+ * @param {'collectionDynasty'|'collectionAuthor'|'dynastyAuthor'|'collectionDynastyAuthor'} type 组合类型。
+ * @param {string[]} keys 组合索引键片段。
+ * @returns {void}
+ */
+function addCompoundCount(compoundCounts, type, keys) {
+  if (keys.some((key) => !key)) return;
+  const key = keys.join('\t');
+  compoundCounts[type][key] = (compoundCounts[type][key] || 0) + 1;
+}
+
+/**
+ * 将 Set 索引转换为可 JSON 序列化的排序数组。
+ * @param {Record<string, Set<number>>} group 单类 Set 索引。
+ * @returns {Record<string, number[]>} 排序后的数组索引。
+ */
+function serializeShardIndexGroup(group) {
+  return Object.fromEntries(Object.entries(group).map(([key, value]) => [key, [...value].sort((a, b) => a - b)]));
+}
+
+/**
+ * 将 collection 维度的联动筛选元数据转换为排序数组。
+ * @param {Record<string, {authors:Set<string>,dynasties:Set<string>}>} meta 联动元数据。
+ * @returns {Record<string, {authors:string[],dynasties:string[]}>} 可序列化元数据。
+ */
+function serializeCollectionMeta(meta) {
+  return Object.fromEntries(Object.entries(meta).map(([collection, value]) => [collection, {
+    authors: [...value.authors].sort((a, b) => a.localeCompare(b, 'zh-CN')),
+    dynasties: [...value.dynasties].sort((a, b) => a.localeCompare(b, 'zh-CN')),
+  }]));
+}
 
 /**
  * 判断目录树中是否包含 JSON 文件，用于识别 chinese-poetry 的内容类型目录。
@@ -200,6 +275,25 @@ for (const name of ['catalog', 'search', 'shards']) mkdirSync(path.join(outputRo
 const authors = new Set();
 const dynasties = new Set();
 const collections = new Set();
+const shardIndexes = {
+  collection: {},
+  dynasty: {},
+  author: {},
+  character: {},
+};
+const indexCounts = {
+  collection: {},
+  dynasty: {},
+  author: {},
+  character: {},
+};
+const compoundCounts = {
+  collectionDynasty: {},
+  collectionAuthor: {},
+  dynastyAuthor: {},
+  collectionDynastyAuthor: {},
+};
+const collectionMeta = {};
 
 for (let start = 0; start < poems.length; start += shardSize) {
   const shardIndex = Math.floor(start / shardSize);
@@ -210,6 +304,22 @@ for (let start = 0; start < poems.length; start += shardSize) {
     authors.add(poem.author);
     dynasties.add(poem.dynasty);
     collections.add(poem.collection);
+    const collectionKey = normalizePoetryIndexText(poem.collection);
+    const dynastyKey = normalizePoetryIndexText(poem.dynasty);
+    const authorKey = normalizePoetryAuthorKey(poem.author);
+    collectionMeta[collectionKey] ||= { authors: new Set(), dynasties: new Set() };
+    collectionMeta[collectionKey].authors.add(toSimplifiedChinese(poem.author));
+    collectionMeta[collectionKey].dynasties.add(toSimplifiedChinese(poem.dynasty));
+    addIndexEntry(shardIndexes, indexCounts, 'collection', collectionKey, shardIndex);
+    addIndexEntry(shardIndexes, indexCounts, 'dynasty', dynastyKey, shardIndex);
+    addIndexEntry(shardIndexes, indexCounts, 'author', authorKey, shardIndex);
+    addCompoundCount(compoundCounts, 'collectionDynasty', [collectionKey, dynastyKey]);
+    addCompoundCount(compoundCounts, 'collectionAuthor', [collectionKey, authorKey]);
+    addCompoundCount(compoundCounts, 'dynastyAuthor', [dynastyKey, authorKey]);
+    addCompoundCount(compoundCounts, 'collectionDynastyAuthor', [collectionKey, dynastyKey, authorKey]);
+    for (const character of new Set(Array.from(normalizePoetryIndexText([poem.title, poem.author, poem.dynasty, poem.collection, ...poem.lines].join(''))))) {
+      addIndexEntry(shardIndexes, indexCounts, 'character', character, shardIndex);
+    }
     catalog.push([poem.id, poem.title, poem.author, poem.dynasty, poem.collection, shardIndex, poem.id - start, poem.lines.slice(0, 2)]);
     // 搜索层只保留唯一字符集合，满足“某个或某些字”筛选，同时避免复制完整正文。
     search.push([poem.id, [...new Set(Array.from([poem.title, poem.author, poem.dynasty, poem.collection, ...poem.lines].join('')))].join('')]);
@@ -228,6 +338,15 @@ const manifest = {
   authors: [...authors].sort((a, b) => a.localeCompare(b, 'zh-CN')),
   dynasties: [...dynasties].sort((a, b) => a.localeCompare(b, 'zh-CN')),
   collections: [...collections].sort((a, b) => a.localeCompare(b, 'zh-CN')),
+  shardIndexes: {
+    collection: serializeShardIndexGroup(shardIndexes.collection),
+    dynasty: serializeShardIndexGroup(shardIndexes.dynasty),
+    author: serializeShardIndexGroup(shardIndexes.author),
+    character: serializeShardIndexGroup(shardIndexes.character),
+  },
+  indexCounts,
+  compoundCounts,
+  collectionMeta: serializeCollectionMeta(collectionMeta),
 };
 writeFileSync(path.join(outputRoot, 'manifest.json'), `${JSON.stringify(manifest)}\n`, 'utf8');
 console.log(`source=${resolvedSourceRoot} types=${contentRoots.length} poems=${poems.length} shards=${manifest.shardCount}`);

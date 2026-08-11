@@ -508,6 +508,8 @@ const TRADITIONAL_SIMPLIFIED_MAP = Object.freeze({
   '訓': '训',
   '記': '记',
   '講': '讲',
+  '軾': '轼',
+  '轍': '辙',
   '謝': '谢',
   '謙': '谦',
   '謀': '谋',
@@ -683,6 +685,55 @@ function simplifyStringList(values) {
 }
 
 /**
+ * 归一化古诗筛选文本，统一简繁、全半角括号和空白，避免 UI 显示值与索引值不一致。
+ * @param {unknown} value 用户输入或索引中的原始文本。
+ * @returns {string} 可用于索引匹配的规范化文本。
+ */
+function normalizePoetryFilterText(value) {
+  return toSimplifiedChinese(value)
+    .replace(/[（]/gu, '(')
+    .replace(/[）]/gu, ')')
+    .replace(/\s+/gu, '')
+    .trim();
+}
+
+/**
+ * 归一化古诗作者名，去掉“（朝代）作者”和“朝代：作者”等前缀差异。
+ * @param {unknown} value 作者筛选值。
+ * @returns {string} 作者索引键。
+ */
+function normalizePoetryAuthorKey(value) {
+  return normalizePoetryFilterText(value)
+    .replace(/^\([^)]{1,8}\)/u, '')
+    .replace(/^[\u3400-\u9fff]{1,8}[:：]/u, '');
+}
+
+/**
+ * 计算两个已排序数字数组的交集，用于多条件定位候选古诗分片。
+ * @param {number[]|undefined} left 左侧分片列表。
+ * @param {number[]|undefined} right 右侧分片列表。
+ * @returns {number[]} 两个分片列表的交集。
+ */
+function intersectSortedNumbers(left, right) {
+  if (!Array.isArray(left) || !Array.isArray(right)) return [];
+  const result = [];
+  let i = 0;
+  let j = 0;
+  while (i < left.length && j < right.length) {
+    if (left[i] === right[j]) {
+      result.push(left[i]);
+      i += 1;
+      j += 1;
+    } else if (left[i] < right[j]) {
+      i += 1;
+    } else {
+      j += 1;
+    }
+  }
+  return result;
+}
+
+/**
  * 读取全量古诗 manifest，manifest 只包含总量和筛选枚举。
  * @returns {Promise<Record<string, unknown>|undefined>} 古诗 manifest。
  */
@@ -741,6 +792,118 @@ async function loadPoetryCatalogRange(start, count) {
 }
 
 /**
+ * 从 manifest 的索引表中读取分片列表。
+ * @param {Record<string, unknown>} manifest 古诗 manifest。
+ * @param {'collection'|'dynasty'|'author'|'character'} type 索引类型。
+ * @param {string} key 已归一化的索引键。
+ * @returns {number[]|undefined} 匹配的分片列表。
+ */
+function getIndexedPoetryShards(manifest, type, key) {
+  const indexes = manifest?.shardIndexes && typeof manifest.shardIndexes === 'object' ? manifest.shardIndexes : {};
+  const group = indexes[type] && typeof indexes[type] === 'object' ? indexes[type] : {};
+  const shards = group[key];
+  return Array.isArray(shards) ? shards : undefined;
+}
+
+/**
+ * 根据筛选条件从 manifest 索引中收敛候选 catalog 分片，避免每次扫描 66MB 全量目录。
+ * @param {Record<string, unknown>} manifest 古诗 manifest。
+ * @param {{query?:string,author?:string,dynasty?:string,collection?:string}} filters 筛选条件。
+ * @returns {number[]} 需要读取的 catalog 分片编号。
+ */
+function getCandidatePoetryShards(manifest, filters = {}) {
+  const query = normalizePoetryFilterText(filters.query);
+  const author = normalizePoetryAuthorKey(filters.author);
+  const dynasty = normalizePoetryFilterText(filters.dynasty);
+  const collection = normalizePoetryFilterText(filters.collection);
+  const allShards = Array.from({ length: Number(manifest?.shardCount || 0) }, (_, index) => index);
+  let candidates;
+  const apply = (shards) => {
+    if (!Array.isArray(shards)) {
+      candidates = [];
+      return;
+    }
+    candidates = candidates ? intersectSortedNumbers(candidates, shards) : shards;
+  };
+
+  if (collection) apply(getIndexedPoetryShards(manifest, 'collection', collection));
+  if (dynasty) apply(getIndexedPoetryShards(manifest, 'dynasty', dynasty));
+  if (author) apply(getIndexedPoetryShards(manifest, 'author', author));
+  for (const character of [...new Set(Array.from(query).filter(Boolean))]) {
+    apply(getIndexedPoetryShards(manifest, 'character', character));
+  }
+  return candidates || allShards;
+}
+
+/**
+ * 判断 catalog 条目是否满足当前古诗筛选条件。
+ * @param {Record<string, unknown>} item 已规范化的古诗条目。
+ * @param {{query?:string,author?:string,dynasty?:string,collection?:string}} filters 筛选条件。
+ * @returns {boolean} 是否命中筛选。
+ */
+function matchesPoetryFilters(item, filters = {}) {
+  const query = normalizePoetryFilterText(filters.query);
+  const author = normalizePoetryAuthorKey(filters.author);
+  const dynasty = normalizePoetryFilterText(filters.dynasty);
+  const collection = normalizePoetryFilterText(filters.collection);
+  if (author && normalizePoetryAuthorKey(item.author) !== author) return false;
+  if (dynasty && normalizePoetryFilterText(item.dynasty) !== dynasty) return false;
+  if (collection && normalizePoetryFilterText(item.collection) !== collection) return false;
+  if (!query) return true;
+  const searchable = normalizePoetryFilterText([item.title, item.author, item.dynasty, item.collection, ...(item.lines || [])].join(''));
+  const requiredCharacters = [...query].filter(Boolean);
+  // 多字查询优先精确短语命中，短语不在 catalog 摘要里时退化为全部字符包含。
+  return searchable.includes(query) || requiredCharacters.every((character) => searchable.includes(character));
+}
+
+/**
+ * 从 manifest 数量索引中读取无 query 条件的古诗总数。
+ * @param {Record<string, unknown>} manifest 古诗 manifest。
+ * @param {{author?:string,dynasty?:string,collection?:string}} filters 筛选条件。
+ * @returns {number|undefined} 可直接读取的总数，无法命中索引时返回 undefined。
+ */
+function getIndexedPoetryCount(manifest, filters = {}) {
+  const author = normalizePoetryAuthorKey(filters.author);
+  const dynasty = normalizePoetryFilterText(filters.dynasty);
+  const collection = normalizePoetryFilterText(filters.collection);
+  const counts = manifest?.indexCounts && typeof manifest.indexCounts === 'object' ? manifest.indexCounts : {};
+  const compound = manifest?.compoundCounts && typeof manifest.compoundCounts === 'object' ? manifest.compoundCounts : {};
+  if (collection && dynasty && author) return compound.collectionDynastyAuthor?.[[collection, dynasty, author].join('\t')] || 0;
+  if (collection && dynasty) return compound.collectionDynasty?.[[collection, dynasty].join('\t')] || 0;
+  if (collection && author) return compound.collectionAuthor?.[[collection, author].join('\t')] || 0;
+  if (dynasty && author) return compound.dynastyAuthor?.[[dynasty, author].join('\t')] || 0;
+  if (collection) return counts.collection?.[collection] || 0;
+  if (dynasty) return counts.dynasty?.[dynasty] || 0;
+  if (author) return counts.author?.[author] || 0;
+  return undefined;
+}
+
+/**
+ * 从候选 catalog 分片中只读取当前分页窗口，避免为了第一页扫描完整古诗库。
+ * @param {Record<string, unknown>} manifest 古诗 manifest。
+ * @param {{author?:string,dynasty?:string,collection?:string}} filters 筛选条件。
+ * @param {number} start 当前页起始匹配序号。
+ * @param {number} size 当前页数量。
+ * @returns {Promise<Record<string, unknown>[]>} 当前页古诗条目。
+ */
+async function loadPoetryCatalogPageByIndex(manifest, filters, start, size) {
+  const items = [];
+  let matchedCount = 0;
+  const candidateShards = getCandidatePoetryShards(manifest, filters);
+  for (const shardIndex of candidateShards) {
+    const shard = await loadPoetryShard('catalog', shardIndex);
+    for (const row of shard) {
+      const item = catalogRowToPoetry(row);
+      if (!matchesPoetryFilters(item, filters)) continue;
+      if (matchedCount >= start && items.length < size) items.push(item);
+      matchedCount += 1;
+      if (items.length >= size) return items;
+    }
+  }
+  return items;
+}
+
+/**
  * 筛选全量古诗 catalog，按需扫描 search 分片满足多字筛选。
  * @param {{query?:string,author?:string,dynasty?:string,collection?:string}} filters 筛选条件。
  * @returns {Promise<Record<string, unknown>[]>} 匹配的 catalog 条目。
@@ -748,24 +911,19 @@ async function loadPoetryCatalogRange(start, count) {
 async function filterPoetryCatalog(filters = {}) {
   const manifest = await loadPoetryManifest();
   if (!manifest) return filterKnowledge('poetry', filters);
-  const query = toSimplifiedChinese(filters.query).trim();
-  const author = toSimplifiedChinese(filters.author).trim();
-  const dynasty = toSimplifiedChinese(filters.dynasty).trim();
-  const collection = toSimplifiedChinese(filters.collection).trim();
+  const query = normalizePoetryFilterText(filters.query);
+  const author = normalizePoetryAuthorKey(filters.author);
+  const dynasty = normalizePoetryFilterText(filters.dynasty);
+  const collection = normalizePoetryFilterText(filters.collection);
   const cacheKey = JSON.stringify({ query, author, dynasty, collection });
   if (poetryFilterCache.has(cacheKey)) return poetryFilterCache.get(cacheKey);
-  const requiredCharacters = [...query].filter((item) => item.trim());
   const matched = [];
-  for (let shardIndex = 0; shardIndex < Number(manifest.shardCount || 0); shardIndex += 1) {
+  const candidateShards = getCandidatePoetryShards(manifest, { query, author, dynasty, collection });
+  for (const shardIndex of candidateShards) {
     const shard = await loadPoetryShard('catalog', shardIndex);
     for (const row of shard) {
       const item = catalogRowToPoetry(row);
-      if (author && item.author !== author) continue;
-      if (dynasty && item.dynasty !== dynasty) continue;
-      if (collection && item.collection !== collection) continue;
-      const searchable = [item.title, item.author, item.dynasty, item.collection, ...(item.lines || [])].join('');
-      if (requiredCharacters.length && !searchable.includes(query) && !requiredCharacters.every((character) => searchable.includes(character))) continue;
-      matched.push(item);
+      if (matchesPoetryFilters(item, { query, author, dynasty, collection })) matched.push(item);
     }
   }
   poetryFilterCache.set(cacheKey, matched);
@@ -793,10 +951,10 @@ async function getPoetryById(id) {
  */
 export async function getPoetryMeta(filters = {}) {
   const manifest = await loadPoetryManifest();
-  const query = toSimplifiedChinese(filters.query).trim();
-  const author = toSimplifiedChinese(filters.author).trim();
-  const dynasty = toSimplifiedChinese(filters.dynasty).trim();
-  const collection = toSimplifiedChinese(filters.collection).trim();
+  const query = normalizePoetryFilterText(filters.query);
+  const author = normalizePoetryAuthorKey(filters.author);
+  const dynasty = normalizePoetryFilterText(filters.dynasty);
+  const collection = normalizePoetryFilterText(filters.collection);
   const collections = simplifyStringList(manifest?.sourceRootTypes || manifest?.collections || []);
   if (!manifest) return { authors: [], dynasties: [], collections: [] };
   if (!query && !author && !dynasty && !collection) {
@@ -808,6 +966,16 @@ export async function getPoetryMeta(filters = {}) {
   }
   const cacheKey = JSON.stringify({ query, author, dynasty, collection });
   if (poetryMetaCache.has(cacheKey)) return poetryMetaCache.get(cacheKey);
+  const collectionMeta = manifest.collectionMeta && typeof manifest.collectionMeta === 'object' ? manifest.collectionMeta[collection] : undefined;
+  if (collection && !query && !author && !dynasty && collectionMeta) {
+    const meta = {
+      authors: simplifyStringList(collectionMeta.authors),
+      dynasties: simplifyStringList(collectionMeta.dynasties),
+      collections,
+    };
+    poetryMetaCache.set(cacheKey, meta);
+    return meta;
+  }
   const matched = await filterPoetryCatalog({ query, author, dynasty, collection });
   const meta = {
     authors: [...new Set(matched.map((item) => item.author).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'zh-CN')),
@@ -966,6 +1134,15 @@ export async function pageKnowledge(type, filters = {}, page = 1, pageSize = 20)
         const start = (currentPage - 1) * size;
         const items = await loadPoetryCatalogRange(start, size);
         return { items, total, page: currentPage, pageSize: size, pageCount };
+      }
+      const hasQuery = Boolean(String(filters.query || '').trim());
+      const indexedTotal = hasQuery ? undefined : getIndexedPoetryCount(manifest, filters);
+      if (indexedTotal !== undefined) {
+        const pageCount = Math.max(1, Math.ceil(indexedTotal / size));
+        const currentPage = Math.max(1, Math.min(pageCount, Number(page) || 1));
+        const start = (currentPage - 1) * size;
+        const items = await loadPoetryCatalogPageByIndex(manifest, filters, start, size);
+        return { items, total: indexedTotal, page: currentPage, pageSize: size, pageCount };
       }
       const matched = await filterPoetryCatalog(filters);
       const pageCount = Math.max(1, Math.ceil(matched.length / size));

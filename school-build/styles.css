@@ -1145,11 +1145,13 @@ body,
 .knowledge-preference-actions button.active {
   color: #fff;
   background: var(--ultra-blue);
+  box-shadow: 0 8px 18px rgba(0, 102, 255, .22);
 }
 
 .knowledge-preference-actions button.dislike {
   color: #fff;
   background: var(--ultra-red);
+  box-shadow: 0 8px 18px rgba(232, 77, 57, .22);
 }
 
 @media (max-width: 900px) {
@@ -5065,11 +5067,13 @@ body,
 .knowledge-preference-actions button.active {
   color: #fff;
   background: var(--ultra-blue);
+  box-shadow: 0 8px 18px rgba(0, 102, 255, .22);
 }
 
 .knowledge-preference-actions button.dislike {
   color: #fff;
   background: var(--ultra-red);
+  box-shadow: 0 8px 18px rgba(232, 77, 57, .22);
 }
 
 @media (max-width: 900px) {

@@ -2099,7 +2099,9 @@ function renderWrongQuestionSummary(record) {
 function renderKnowledgeItem(type, item) {
   const key = knowledgeKey(type, item);
   const preference = state.knowledgePreferences?.[key] || '';
-  return `<article class="knowledge-item"><button class="knowledge-main" data-knowledge-detail-type="${escapeHtml(type)}" data-knowledge-detail-key="${escapeHtml(key)}">${renderKnowledgeSummary(type, item)}</button><div class="knowledge-preference-actions"><button class="secondary ${preference === 'like' ? 'active' : ''}" data-knowledge-preference="like" data-knowledge-preference-type="${escapeHtml(type)}" data-knowledge-preference-key="${escapeHtml(key)}">喜欢</button><button class="secondary ${preference === 'dislike' ? 'active dislike' : ''}" data-knowledge-preference="dislike" data-knowledge-preference-type="${escapeHtml(type)}" data-knowledge-preference-key="${escapeHtml(key)}">不喜欢</button></div></article>`;
+  const liked = preference === 'like';
+  const disliked = preference === 'dislike';
+  return `<article class="knowledge-item"><button class="knowledge-main" data-knowledge-detail-type="${escapeHtml(type)}" data-knowledge-detail-key="${escapeHtml(key)}">${renderKnowledgeSummary(type, item)}</button><div class="knowledge-preference-actions"><button class="secondary ${liked ? 'active' : ''}" aria-pressed="${liked ? 'true' : 'false'}" data-knowledge-preference="like" data-knowledge-preference-type="${escapeHtml(type)}" data-knowledge-preference-key="${escapeHtml(key)}">${liked ? '已喜欢' : '喜欢'}</button><button class="secondary ${disliked ? 'active dislike' : ''}" aria-pressed="${disliked ? 'true' : 'false'}" data-knowledge-preference="dislike" data-knowledge-preference-type="${escapeHtml(type)}" data-knowledge-preference-key="${escapeHtml(key)}">${disliked ? '已降低' : '不喜欢'}</button></div></article>`;
 }
 
 /**

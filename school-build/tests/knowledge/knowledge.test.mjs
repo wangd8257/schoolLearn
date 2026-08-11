@@ -87,6 +87,33 @@ test('古诗库类型和 chinese-poetry 内容目录同步，并可按类型筛�
   assert.ok(page.items.every((item) => item.collection === '诗经'));
 });
 
+test('古诗库筛选使用 manifest 索引，不全量扫描 catalog 分片', async () => {
+  const freshKnowledge = await import(`../../src/data/knowledge/index.mjs?indexed-poetry=${Date.now()}`);
+  fetchedPaths.length = 0;
+
+  const page = await freshKnowledge.pageKnowledge('poetry', { collection: '全唐诗', dynasty: '宋' }, 1, 20);
+  const catalogFetches = fetchedPaths.filter((path) => path.includes('poetry/catalog/catalog-'));
+
+  assert.ok(page.total > 0);
+  assert.ok(page.items.length > 0);
+  assert.ok(page.items.every((item) => item.collection === '全唐诗' && item.dynasty === '宋'));
+  assert.ok(catalogFetches.length > 0);
+  assert.ok(catalogFetches.length < 80, `筛选读取 catalog 分片过多：${catalogFetches.length}`);
+});
+
+test('古诗库作者筛选兼容朝代前缀和简繁格式', async () => {
+  const freshKnowledge = await import(`../../src/data/knowledge/index.mjs?author-alias=${Date.now()}`);
+  fetchedPaths.length = 0;
+
+  const plain = await freshKnowledge.pageKnowledge('poetry', { author: '苏轼' }, 1, 10);
+  const prefixed = await freshKnowledge.pageKnowledge('poetry', { author: '（宋）苏轼' }, 1, 10);
+
+  assert.ok(plain.total > 0);
+  assert.ok(prefixed.total > 0);
+  assert.ok(plain.items.every((item) => item.author === '苏轼' || item.author.includes('苏轼')));
+  assert.ok(prefixed.items.every((item) => item.author === '苏轼' || item.author.includes('苏轼')));
+});
+
 test('古诗库支持按诗句精确查询并按类型联动作者朝代', async () => {
   const page = await knowledge.pageKnowledge('poetry', { query: '床前明月光' }, 1, 10);
   const meta = await knowledge.getPoetryMeta({ collection: '诗经' });

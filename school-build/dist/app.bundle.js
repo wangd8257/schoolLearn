@@ -24922,6 +24922,8 @@
     "\u8A13": "\u8BAD",
     "\u8A18": "\u8BB0",
     "\u8B1B": "\u8BB2",
+    "\u8EFE": "\u8F7C",
+    "\u8F4D": "\u8F99",
     "\u8B1D": "\u8C22",
     "\u8B19": "\u8C26",
     "\u8B00": "\u8C0B",
@@ -25072,6 +25074,30 @@
   function simplifyStringList(values) {
     return Array.isArray(values) ? values.map((item) => toSimplifiedChinese(item)).filter(Boolean) : [];
   }
+  function normalizePoetryFilterText(value) {
+    return toSimplifiedChinese(value).replace(/[（]/gu, "(").replace(/[）]/gu, ")").replace(/\s+/gu, "").trim();
+  }
+  function normalizePoetryAuthorKey(value) {
+    return normalizePoetryFilterText(value).replace(/^\([^)]{1,8}\)/u, "").replace(/^[\u3400-\u9fff]{1,8}[:：]/u, "");
+  }
+  function intersectSortedNumbers(left, right) {
+    if (!Array.isArray(left) || !Array.isArray(right)) return [];
+    const result = [];
+    let i2 = 0;
+    let j2 = 0;
+    while (i2 < left.length && j2 < right.length) {
+      if (left[i2] === right[j2]) {
+        result.push(left[i2]);
+        i2 += 1;
+        j2 += 1;
+      } else if (left[i2] < right[j2]) {
+        i2 += 1;
+      } else {
+        j2 += 1;
+      }
+    }
+    return result;
+  }
   async function loadPoetryManifest() {
     if (poetryManifestCache) return poetryManifestCache;
     poetryManifestCache = await fetchJson(`${POETRY_BASE}/manifest.json`);
@@ -25105,27 +25131,94 @@
     }
     return items;
   }
-  async function filterPoetryCatalog(filters = {}) {
-    const manifest = await loadPoetryManifest();
-    if (!manifest) return filterKnowledge("poetry", filters);
-    const query = toSimplifiedChinese(filters.query).trim();
-    const author = toSimplifiedChinese(filters.author).trim();
-    const dynasty = toSimplifiedChinese(filters.dynasty).trim();
-    const collection = toSimplifiedChinese(filters.collection).trim();
-    const cacheKey = JSON.stringify({ query, author, dynasty, collection });
-    if (poetryFilterCache.has(cacheKey)) return poetryFilterCache.get(cacheKey);
-    const requiredCharacters = [...query].filter((item) => item.trim());
-    const matched = [];
-    for (let shardIndex = 0; shardIndex < Number(manifest.shardCount || 0); shardIndex += 1) {
+  function getIndexedPoetryShards(manifest, type, key) {
+    const indexes = manifest?.shardIndexes && typeof manifest.shardIndexes === "object" ? manifest.shardIndexes : {};
+    const group = indexes[type] && typeof indexes[type] === "object" ? indexes[type] : {};
+    const shards = group[key];
+    return Array.isArray(shards) ? shards : void 0;
+  }
+  function getCandidatePoetryShards(manifest, filters = {}) {
+    const query = normalizePoetryFilterText(filters.query);
+    const author = normalizePoetryAuthorKey(filters.author);
+    const dynasty = normalizePoetryFilterText(filters.dynasty);
+    const collection = normalizePoetryFilterText(filters.collection);
+    const allShards = Array.from({ length: Number(manifest?.shardCount || 0) }, (_2, index) => index);
+    let candidates;
+    const apply = (shards) => {
+      if (!Array.isArray(shards)) {
+        candidates = [];
+        return;
+      }
+      candidates = candidates ? intersectSortedNumbers(candidates, shards) : shards;
+    };
+    if (collection) apply(getIndexedPoetryShards(manifest, "collection", collection));
+    if (dynasty) apply(getIndexedPoetryShards(manifest, "dynasty", dynasty));
+    if (author) apply(getIndexedPoetryShards(manifest, "author", author));
+    for (const character of [...new Set(Array.from(query).filter(Boolean))]) {
+      apply(getIndexedPoetryShards(manifest, "character", character));
+    }
+    return candidates || allShards;
+  }
+  function matchesPoetryFilters(item, filters = {}) {
+    const query = normalizePoetryFilterText(filters.query);
+    const author = normalizePoetryAuthorKey(filters.author);
+    const dynasty = normalizePoetryFilterText(filters.dynasty);
+    const collection = normalizePoetryFilterText(filters.collection);
+    if (author && normalizePoetryAuthorKey(item.author) !== author) return false;
+    if (dynasty && normalizePoetryFilterText(item.dynasty) !== dynasty) return false;
+    if (collection && normalizePoetryFilterText(item.collection) !== collection) return false;
+    if (!query) return true;
+    const searchable = normalizePoetryFilterText([item.title, item.author, item.dynasty, item.collection, ...item.lines || []].join(""));
+    const requiredCharacters = [...query].filter(Boolean);
+    return searchable.includes(query) || requiredCharacters.every((character) => searchable.includes(character));
+  }
+  function getIndexedPoetryCount(manifest, filters = {}) {
+    const author = normalizePoetryAuthorKey(filters.author);
+    const dynasty = normalizePoetryFilterText(filters.dynasty);
+    const collection = normalizePoetryFilterText(filters.collection);
+    const counts = manifest?.indexCounts && typeof manifest.indexCounts === "object" ? manifest.indexCounts : {};
+    const compound = manifest?.compoundCounts && typeof manifest.compoundCounts === "object" ? manifest.compoundCounts : {};
+    if (collection && dynasty && author) return compound.collectionDynastyAuthor?.[[collection, dynasty, author].join("	")] || 0;
+    if (collection && dynasty) return compound.collectionDynasty?.[[collection, dynasty].join("	")] || 0;
+    if (collection && author) return compound.collectionAuthor?.[[collection, author].join("	")] || 0;
+    if (dynasty && author) return compound.dynastyAuthor?.[[dynasty, author].join("	")] || 0;
+    if (collection) return counts.collection?.[collection] || 0;
+    if (dynasty) return counts.dynasty?.[dynasty] || 0;
+    if (author) return counts.author?.[author] || 0;
+    return void 0;
+  }
+  async function loadPoetryCatalogPageByIndex(manifest, filters, start, size) {
+    const items = [];
+    let matchedCount = 0;
+    const candidateShards = getCandidatePoetryShards(manifest, filters);
+    for (const shardIndex of candidateShards) {
       const shard = await loadPoetryShard("catalog", shardIndex);
       for (const row of shard) {
         const item = catalogRowToPoetry(row);
-        if (author && item.author !== author) continue;
-        if (dynasty && item.dynasty !== dynasty) continue;
-        if (collection && item.collection !== collection) continue;
-        const searchable = [item.title, item.author, item.dynasty, item.collection, ...item.lines || []].join("");
-        if (requiredCharacters.length && !searchable.includes(query) && !requiredCharacters.every((character) => searchable.includes(character))) continue;
-        matched.push(item);
+        if (!matchesPoetryFilters(item, filters)) continue;
+        if (matchedCount >= start && items.length < size) items.push(item);
+        matchedCount += 1;
+        if (items.length >= size) return items;
+      }
+    }
+    return items;
+  }
+  async function filterPoetryCatalog(filters = {}) {
+    const manifest = await loadPoetryManifest();
+    if (!manifest) return filterKnowledge("poetry", filters);
+    const query = normalizePoetryFilterText(filters.query);
+    const author = normalizePoetryAuthorKey(filters.author);
+    const dynasty = normalizePoetryFilterText(filters.dynasty);
+    const collection = normalizePoetryFilterText(filters.collection);
+    const cacheKey = JSON.stringify({ query, author, dynasty, collection });
+    if (poetryFilterCache.has(cacheKey)) return poetryFilterCache.get(cacheKey);
+    const matched = [];
+    const candidateShards = getCandidatePoetryShards(manifest, { query, author, dynasty, collection });
+    for (const shardIndex of candidateShards) {
+      const shard = await loadPoetryShard("catalog", shardIndex);
+      for (const row of shard) {
+        const item = catalogRowToPoetry(row);
+        if (matchesPoetryFilters(item, { query, author, dynasty, collection })) matched.push(item);
       }
     }
     poetryFilterCache.set(cacheKey, matched);
@@ -25141,10 +25234,10 @@
   }
   async function getPoetryMeta(filters = {}) {
     const manifest = await loadPoetryManifest();
-    const query = toSimplifiedChinese(filters.query).trim();
-    const author = toSimplifiedChinese(filters.author).trim();
-    const dynasty = toSimplifiedChinese(filters.dynasty).trim();
-    const collection = toSimplifiedChinese(filters.collection).trim();
+    const query = normalizePoetryFilterText(filters.query);
+    const author = normalizePoetryAuthorKey(filters.author);
+    const dynasty = normalizePoetryFilterText(filters.dynasty);
+    const collection = normalizePoetryFilterText(filters.collection);
     const collections = simplifyStringList(manifest?.sourceRootTypes || manifest?.collections || []);
     if (!manifest) return { authors: [], dynasties: [], collections: [] };
     if (!query && !author && !dynasty && !collection) {
@@ -25156,6 +25249,16 @@
     }
     const cacheKey = JSON.stringify({ query, author, dynasty, collection });
     if (poetryMetaCache.has(cacheKey)) return poetryMetaCache.get(cacheKey);
+    const collectionMeta = manifest.collectionMeta && typeof manifest.collectionMeta === "object" ? manifest.collectionMeta[collection] : void 0;
+    if (collection && !query && !author && !dynasty && collectionMeta) {
+      const meta2 = {
+        authors: simplifyStringList(collectionMeta.authors),
+        dynasties: simplifyStringList(collectionMeta.dynasties),
+        collections
+      };
+      poetryMetaCache.set(cacheKey, meta2);
+      return meta2;
+    }
     const matched = await filterPoetryCatalog({ query, author, dynasty, collection });
     const meta = {
       authors: [...new Set(matched.map((item) => item.author).filter(Boolean))].sort((a2, b2) => a2.localeCompare(b2, "zh-CN")),
@@ -25260,6 +25363,15 @@
           const start3 = (currentPage3 - 1) * size2;
           const items = await loadPoetryCatalogRange(start3, size2);
           return { items, total, page: currentPage3, pageSize: size2, pageCount: pageCount3 };
+        }
+        const hasQuery = Boolean(String(filters.query || "").trim());
+        const indexedTotal = hasQuery ? void 0 : getIndexedPoetryCount(manifest, filters);
+        if (indexedTotal !== void 0) {
+          const pageCount3 = Math.max(1, Math.ceil(indexedTotal / size2));
+          const currentPage3 = Math.max(1, Math.min(pageCount3, Number(page) || 1));
+          const start3 = (currentPage3 - 1) * size2;
+          const items = await loadPoetryCatalogPageByIndex(manifest, filters, start3, size2);
+          return { items, total: indexedTotal, page: currentPage3, pageSize: size2, pageCount: pageCount3 };
         }
         const matched2 = await filterPoetryCatalog(filters);
         const pageCount2 = Math.max(1, Math.ceil(matched2.length / size2));
@@ -26838,7 +26950,9 @@
   function renderKnowledgeItem(type, item) {
     const key = knowledgeKey(type, item);
     const preference = state.knowledgePreferences?.[key] || "";
-    return `<article class="knowledge-item"><button class="knowledge-main" data-knowledge-detail-type="${escapeHtml2(type)}" data-knowledge-detail-key="${escapeHtml2(key)}">${renderKnowledgeSummary(type, item)}</button><div class="knowledge-preference-actions"><button class="secondary ${preference === "like" ? "active" : ""}" data-knowledge-preference="like" data-knowledge-preference-type="${escapeHtml2(type)}" data-knowledge-preference-key="${escapeHtml2(key)}">\u559C\u6B22</button><button class="secondary ${preference === "dislike" ? "active dislike" : ""}" data-knowledge-preference="dislike" data-knowledge-preference-type="${escapeHtml2(type)}" data-knowledge-preference-key="${escapeHtml2(key)}">\u4E0D\u559C\u6B22</button></div></article>`;
+    const liked = preference === "like";
+    const disliked = preference === "dislike";
+    return `<article class="knowledge-item"><button class="knowledge-main" data-knowledge-detail-type="${escapeHtml2(type)}" data-knowledge-detail-key="${escapeHtml2(key)}">${renderKnowledgeSummary(type, item)}</button><div class="knowledge-preference-actions"><button class="secondary ${liked ? "active" : ""}" aria-pressed="${liked ? "true" : "false"}" data-knowledge-preference="like" data-knowledge-preference-type="${escapeHtml2(type)}" data-knowledge-preference-key="${escapeHtml2(key)}">${liked ? "\u5DF2\u559C\u6B22" : "\u559C\u6B22"}</button><button class="secondary ${disliked ? "active dislike" : ""}" aria-pressed="${disliked ? "true" : "false"}" data-knowledge-preference="dislike" data-knowledge-preference-type="${escapeHtml2(type)}" data-knowledge-preference-key="${escapeHtml2(key)}">${disliked ? "\u5DF2\u964D\u4F4E" : "\u4E0D\u559C\u6B22"}</button></div></article>`;
   }
   function openKnowledgeDetail(type, item) {
     const title = item.word || item.char || item.title || item.riddle || "\u8BE6\u60C5";

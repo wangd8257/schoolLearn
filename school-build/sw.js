@@ -1,4 +1,4 @@
-const CACHE_NAME = 'growth-desk-v30-20260811';
+const CACHE_NAME = 'growth-desk-v31-20260811';
 const CORE = ['./','./index.html','./styles.css','./manifest.webmanifest','./assets/icon.svg','./src/app.js','./src/db.js','./src/drawing.js','./src/papers.js','./src/templates.js','./src/reading.js','./src/worksheet-render.js','./src/paper-controls.mjs','./src/games.js','./src/data/readings.js','./src/data/word-lists.js','./src/data/huiben-manifest.mjs','./src/games/chinese-word-game.js','./src/games/english-match-game.js','./src/games/game-session.js','./src/games/random.js','./src/math/index.mjs','./src/math/constants.mjs','./src/math/generators.mjs','./src/math/random.mjs','./src/math/validator.mjs','./src/math/worksheet.mjs','./src/data/knowledge/index.mjs'];
 
 self.addEventListener('install', (event) => event.waitUntil(

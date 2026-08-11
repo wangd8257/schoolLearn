@@ -32,7 +32,7 @@ test('入口资源带版本参数，避免线上旧缓存继续加载旧文件',
 test('Service Worker 升级缓存名并优先读取网络文件', () => {
   const source = readFileSync(new URL('../../sw.js', import.meta.url), 'utf8');
 
-  assert.match(source, /growth-desk-v30-20260811/);
+  assert.match(source, /growth-desk-v31-20260811/);
   assert.match(source, /src\/data\/knowledge\/index\.mjs/);
   assert.doesNotMatch(source, /cache\.addAll\(\[[\s\S]*?src\/vendor\/chinese\/cnchar\.min\.js/);
   assert.doesNotMatch(source, /cache\.addAll\(\[[\s\S]*?src\/data\/knowledge\/poetry\/manifest\.json/);
