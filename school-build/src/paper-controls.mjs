@@ -23,6 +23,6 @@ export function paperMoveDelta(direction, step) {
  * @returns {number} scrollBy 应使用的纵向位移。
  */
 export function paperScrollDelta(direction, step) {
-  // scrollBy 改变的是视口位置；为了让试卷视觉上移，滚动容器需要向下滚。
-  return -paperMoveDelta(direction, step);
+  // 用户把按钮理解为鼠标滚轮方向，上移对应向上滚动，下移对应向下滚动。
+  return paperMoveDelta(direction, step);
 }

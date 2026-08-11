@@ -54,7 +54,591 @@ const rawCache = new Map();
 const POETRY_BASE = './src/data/knowledge/poetry';
 const poetryShardCache = new Map();
 const poetryFilterCache = new Map();
+const poetryMetaCache = new Map();
 let poetryManifestCache;
+const TRADITIONAL_SIMPLIFIED_MAP = Object.freeze({
+  '萬': '万',
+  '與': '与',
+  '專': '专',
+  '業': '业',
+  '東': '东',
+  '絲': '丝',
+  '丟': '丢',
+  '兩': '两',
+  '嚴': '严',
+  '喪': '丧',
+  '個': '个',
+  '豐': '丰',
+  '臨': '临',
+  '為': '为',
+  '爲': '为',
+  '麗': '丽',
+  '舉': '举',
+  '義': '义',
+  '烏': '乌',
+  '樂': '乐',
+  '喬': '乔',
+  '習': '习',
+  '鄉': '乡',
+  '書': '书',
+  '買': '买',
+  '亂': '乱',
+  '爭': '争',
+  '於': '于',
+  '雲': '云',
+  '亞': '亚',
+  '產': '产',
+  '畝': '亩',
+  '親': '亲',
+  '褻': '亵',
+  '褱': '怀',
+  '億': '亿',
+  '僅': '仅',
+  '僕': '仆',
+  '從': '从',
+  '倉': '仓',
+  '儀': '仪',
+  '們': '们',
+  '價': '价',
+  '眾': '众',
+  '優': '优',
+  '會': '会',
+  '傘': '伞',
+  '偉': '伟',
+  '傳': '传',
+  '傷': '伤',
+  '倫': '伦',
+  '偽': '伪',
+  '佇': '伫',
+  '體': '体',
+  '餘': '余',
+  '佛': '佛',
+  '來': '来',
+  '侖': '仑',
+  '侶': '侣',
+  '俠': '侠',
+  '俁': '俣',
+  '倀': '伥',
+  '倆': '俩',
+  '倖': '幸',
+  '倣': '仿',
+  '倦': '倦',
+  '偵': '侦',
+  '側': '侧',
+  '僑': '侨',
+  '儂': '侬',
+  '償': '偿',
+  '儘': '尽',
+  '兒': '儿',
+  '兌': '兑',
+  '黨': '党',
+  '內': '内',
+  '冊': '册',
+  '軍': '军',
+  '農': '农',
+  '冪': '幂',
+  '凈': '净',
+  '凍': '冻',
+  '凜': '凛',
+  '幾': '几',
+  '鳳': '凤',
+  '劃': '划',
+  '劉': '刘',
+  '則': '则',
+  '剛': '刚',
+  '創': '创',
+  '別': '别',
+  '刪': '删',
+  '劇': '剧',
+  '劍': '剑',
+  '劑': '剂',
+  '勁': '劲',
+  '動': '动',
+  '務': '务',
+  '勝': '胜',
+  '勞': '劳',
+  '勢': '势',
+  '勵': '励',
+  '勸': '劝',
+  '匯': '汇',
+  '區': '区',
+  '醫': '医',
+  '華': '华',
+  '協': '协',
+  '單': '单',
+  '賣': '卖',
+  '盧': '卢',
+  '衛': '卫',
+  '卻': '却',
+  '廠': '厂',
+  '歷': '历',
+  '厲': '厉',
+  '壓': '压',
+  '厭': '厌',
+  '參': '参',
+  '雙': '双',
+  '發': '发',
+  '變': '变',
+  '敘': '叙',
+  '葉': '叶',
+  '號': '号',
+  '嘆': '叹',
+  '嘗': '尝',
+  '員': '员',
+  '問': '问',
+  '啓': '启',
+  '啟': '启',
+  '嗎': '吗',
+  '喚': '唤',
+  '嗚': '呜',
+  '噴': '喷',
+  '嚇': '吓',
+  '囑': '嘱',
+  '圍': '围',
+  '園': '园',
+  '國': '国',
+  '圓': '圆',
+  '圖': '图',
+  '團': '团',
+  '塵': '尘',
+  '場': '场',
+  '壞': '坏',
+  '塊': '块',
+  '堅': '坚',
+  '壇': '坛',
+  '壘': '垒',
+  '壙': '圹',
+  '壯': '壮',
+  '聲': '声',
+  '壹': '壹',
+  '處': '处',
+  '備': '备',
+  '複': '复',
+  '復': '复',
+  '夢': '梦',
+  '夥': '伙',
+  '頭': '头',
+  '夾': '夹',
+  '奪': '夺',
+  '奮': '奋',
+  '奧': '奥',
+  '婦': '妇',
+  '媽': '妈',
+  '姍': '姗',
+  '娛': '娱',
+  '孫': '孙',
+  '學': '学',
+  '寧': '宁',
+  '寶': '宝',
+  '實': '实',
+  '審': '审',
+  '寫': '写',
+  '寬': '宽',
+  '寵': '宠',
+  '將': '将',
+  '尋': '寻',
+  '對': '对',
+  '導': '导',
+  '層': '层',
+  '屬': '属',
+  '岡': '冈',
+  '峽': '峡',
+  '島': '岛',
+  '嶺': '岭',
+  '巋': '岿',
+  '崑': '昆',
+  '崗': '岗',
+  '嶄': '崭',
+  '嶇': '岖',
+  '嵐': '岚',
+  '嶽': '岳',
+  '幣': '币',
+  '帥': '帅',
+  '師': '师',
+  '帳': '帐',
+  '帶': '带',
+  '幀': '帧',
+  '幫': '帮',
+  '幹': '干',
+  '廣': '广',
+  '庫': '库',
+  '廬': '庐',
+  '廳': '厅',
+  '張': '张',
+  '彌': '弥',
+  '彎': '弯',
+  '彥': '彦',
+  '後': '后',
+  '徑': '径',
+  '徵': '征',
+  '憶': '忆',
+  '懷': '怀',
+  '態': '态',
+  '恆': '恒',
+  '恥': '耻',
+  '悅': '悦',
+  '惡': '恶',
+  '惱': '恼',
+  '惲': '恽',
+  '愛': '爱',
+  '愜': '惬',
+  '愷': '恺',
+  '慄': '栗',
+  '慘': '惨',
+  '慶': '庆',
+  '慮': '虑',
+  '憂': '忧',
+  '憑': '凭',
+  '懇': '恳',
+  '應': '应',
+  '懶': '懒',
+  '懼': '惧',
+  '懺': '忏',
+  '戲': '戏',
+  '戶': '户',
+  '拋': '抛',
+  '挾': '挟',
+  '捨': '舍',
+  '掃': '扫',
+  '掄': '抡',
+  '換': '换',
+  '揚': '扬',
+  '損': '损',
+  '搖': '摇',
+  '攝': '摄',
+  '擬': '拟',
+  '擇': '择',
+  '擊': '击',
+  '擔': '担',
+  '據': '据',
+  '擠': '挤',
+  '擴': '扩',
+  '擺': '摆',
+  '攜': '携',
+  '敵': '敌',
+  '數': '数',
+  '斂': '敛',
+  '斷': '断',
+  '時': '时',
+  '晉': '晋',
+  '曉': '晓',
+  '暈': '晕',
+  '暢': '畅',
+  '曆': '历',
+  '曇': '昙',
+  '朧': '胧',
+  '條': '条',
+  '楊': '杨',
+  '極': '极',
+  '構': '构',
+  '樞': '枢',
+  '標': '标',
+  '樓': '楼',
+  '樹': '树',
+  '樣': '样',
+  '樸': '朴',
+  '機': '机',
+  '橫': '横',
+  '檢': '检',
+  '櫃': '柜',
+  '權': '权',
+  '歡': '欢',
+  '歐': '欧',
+  '歲': '岁',
+  '歸': '归',
+  '殘': '残',
+  '殼': '壳',
+  '氣': '气',
+  '漢': '汉',
+  '湯': '汤',
+  '溝': '沟',
+  '淚': '泪',
+  '淨': '净',
+  '淺': '浅',
+  '渦': '涡',
+  '測': '测',
+  '渾': '浑',
+  '滄': '沧',
+  '滅': '灭',
+  '滯': '滞',
+  '滲': '渗',
+  '滿': '满',
+  '漁': '渔',
+  '漸': '渐',
+  '漲': '涨',
+  '瀟': '潇',
+  '濃': '浓',
+  '濟': '济',
+  '濤': '涛',
+  '濫': '滥',
+  '灣': '湾',
+  '灑': '洒',
+  '無': '无',
+  '煩': '烦',
+  '煉': '炼',
+  '煙': '烟',
+  '煥': '焕',
+  '燈': '灯',
+  '燒': '烧',
+  '營': '营',
+  '燦': '灿',
+  '爛': '烂',
+  '爺': '爷',
+  '牀': '床',
+  '狀': '状',
+  '獨': '独',
+  '獲': '获',
+  '獻': '献',
+  '環': '环',
+  '現': '现',
+  '瑤': '瑶',
+  '璣': '玑',
+  '畫': '画',
+  '畢': '毕',
+  '異': '异',
+  '當': '当',
+  '疇': '畴',
+  '痕': '痕',
+  '盡': '尽',
+  '監': '监',
+  '盤': '盘',
+  '睜': '睁',
+  '矚': '瞩',
+  '硯': '砚',
+  '碩': '硕',
+  '礎': '础',
+  '禮': '礼',
+  '禍': '祸',
+  '離': '离',
+  '禪': '禅',
+  '禦': '御',
+  '稱': '称',
+  '穀': '谷',
+  '積': '积',
+  '穎': '颖',
+  '窮': '穷',
+  '竄': '窜',
+  '筆': '笔',
+  '箇': '个',
+  '節': '节',
+  '範': '范',
+  '簾': '帘',
+  '籃': '篮',
+  '籠': '笼',
+  '糧': '粮',
+  '糾': '纠',
+  '紀': '纪',
+  '約': '约',
+  '紅': '红',
+  '紋': '纹',
+  '納': '纳',
+  '純': '纯',
+  '紗': '纱',
+  '紙': '纸',
+  '級': '级',
+  '紛': '纷',
+  '素': '素',
+  '細': '细',
+  '終': '终',
+  '組': '组',
+  '絆': '绊',
+  '結': '结',
+  '絕': '绝',
+  '絡': '络',
+  '給': '给',
+  '統': '统',
+  '綠': '绿',
+  '維': '维',
+  '綱': '纲',
+  '網': '网',
+  '綺': '绮',
+  '綻': '绽',
+  '緊': '紧',
+  '緒': '绪',
+  '線': '线',
+  '練': '练',
+  '緯': '纬',
+  '縣': '县',
+  '縱': '纵',
+  '總': '总',
+  '績': '绩',
+  '織': '织',
+  '繞': '绕',
+  '繡': '绣',
+  '繼': '继',
+  '續': '续',
+  '纏': '缠',
+  '罷': '罢',
+  '羅': '罗',
+  '聖': '圣',
+  '聞': '闻',
+  '聯': '联',
+  '聰': '聪',
+  '肅': '肃',
+  '脫': '脱',
+  '臉': '脸',
+  '臘': '腊',
+  '興': '兴',
+  '舊': '旧',
+  '艙': '舱',
+  '艱': '艰',
+  '藝': '艺',
+  '蘇': '苏',
+  '蘭': '兰',
+  '蟲': '虫',
+  '蠻': '蛮',
+  '術': '术',
+  '衝': '冲',
+  '衆': '众',
+  '裝': '装',
+  '裏': '里',
+  '補': '补',
+  '裡': '里',
+  '製': '制',
+  '見': '见',
+  '規': '规',
+  '視': '视',
+  '覺': '觉',
+  '覽': '览',
+  '觀': '观',
+  '解': '解',
+  '觸': '触',
+  '訂': '订',
+  '計': '计',
+  '訓': '训',
+  '記': '记',
+  '講': '讲',
+  '謝': '谢',
+  '謙': '谦',
+  '謀': '谋',
+  '謂': '谓',
+  '謠': '谣',
+  '謹': '谨',
+  '證': '证',
+  '識': '识',
+  '譯': '译',
+  '議': '议',
+  '讀': '读',
+  '讓': '让',
+  '豈': '岂',
+  '貝': '贝',
+  '貞': '贞',
+  '負': '负',
+  '財': '财',
+  '責': '责',
+  '賢': '贤',
+  '敗': '败',
+  '貨': '货',
+  '質': '质',
+  '賞': '赏',
+  '賽': '赛',
+  '贈': '赠',
+  '贊': '赞',
+  '趙': '赵',
+  '跡': '迹',
+  '踐': '践',
+  '蹤': '踪',
+  '車': '车',
+  '軒': '轩',
+  '轉': '转',
+  '輕': '轻',
+  '較': '较',
+  '輩': '辈',
+  '輪': '轮',
+  '辭': '辞',
+  '邊': '边',
+  '遙': '遥',
+  '遜': '逊',
+  '遞': '递',
+  '選': '选',
+  '遺': '遗',
+  '還': '还',
+  '邇': '迩',
+  '郵': '邮',
+  '鄧': '邓',
+  '鄭': '郑',
+  '鄰': '邻',
+  '釋': '释',
+  '鈞': '钧',
+  '鈴': '铃',
+  '鉛': '铅',
+  '銅': '铜',
+  '銘': '铭',
+  '錢': '钱',
+  '錦': '锦',
+  '鍾': '钟',
+  '鎖': '锁',
+  '鏡': '镜',
+  '鐵': '铁',
+  '鐘': '钟',
+  '鑑': '鉴',
+  '長': '长',
+  '門': '门',
+  '閃': '闪',
+  '閉': '闭',
+  '閑': '闲',
+  '間': '间',
+  '閣': '阁',
+  '閱': '阅',
+  '闊': '阔',
+  '闔': '阖',
+  '隊': '队',
+  '陽': '阳',
+  '陰': '阴',
+  '陣': '阵',
+  '階': '阶',
+  '際': '际',
+  '隱': '隐',
+  '險': '险',
+  '雖': '虽',
+  '雜': '杂',
+  '雞': '鸡',
+  '難': '难',
+  '電': '电',
+  '靈': '灵',
+  '靜': '静',
+  '韋': '韦',
+  '韻': '韵',
+  '頁': '页',
+  '頂': '顶',
+  '頃': '顷',
+  '項': '项',
+  '順': '顺',
+  '須': '须',
+  '頌': '颂',
+  '預': '预',
+  '領': '领',
+  '顏': '颜',
+  '願': '愿',
+  '類': '类',
+  '風': '风',
+  '飛': '飞',
+  '飢': '饥',
+  '飯': '饭',
+  '飲': '饮',
+  '館': '馆',
+  '馬': '马',
+  '駕': '驾',
+  '騎': '骑',
+  '騙': '骗',
+  '驚': '惊',
+  '髮': '发',
+  '鬥': '斗',
+  '魯': '鲁',
+  '鮮': '鲜',
+  '鳥': '鸟',
+  '鳴': '鸣',
+  '鴻': '鸿',
+  '鵬': '鹏',
+  '鶴': '鹤',
+  '麥': '麦',
+  '黃': '黄',
+  '點': '点',
+  '齊': '齐',
+  '齋': '斋',
+  '龍': '龙',
+  '龜': '龟',
+});
 
 /**
  * 判断当前运行环境是否允许通过 fetch 读取同源静态 JSON。
@@ -78,6 +662,24 @@ async function fetchJson(path) {
   } catch (error) {
     return undefined;
   }
+}
+
+/**
+ * 将古诗库中的常见繁体字转成简体，PWA 离线时不依赖额外网络脚本。
+ * @param {unknown} value 需要转换的文本。
+ * @returns {string} 转换后的简体文本。
+ */
+export function toSimplifiedChinese(value) {
+  return String(value || '').replace(/[\u3400-\u9fff]/gu, (character) => TRADITIONAL_SIMPLIFIED_MAP[character] || character);
+}
+
+/**
+ * 将数组字段统一转换为简体字符串数组。
+ * @param {unknown} values 需要转换的数组。
+ * @returns {string[]} 简体字符串数组。
+ */
+function simplifyStringList(values) {
+  return Array.isArray(values) ? values.map((item) => toSimplifiedChinese(item)).filter(Boolean) : [];
 }
 
 /**
@@ -112,7 +714,8 @@ async function loadPoetryShard(kind, shardIndex) {
  * @returns {Record<string, unknown>} 诗词条目。
  */
 function catalogRowToPoetry(row) {
-  return { id: row[0], title: row[1], author: row[2], dynasty: row[3], collection: row[4], shard: row[5], offset: row[6], excerpt: row[7] || [], lines: row[7] || [] };
+  const lines = simplifyStringList(row[7] || []);
+  return { id: row[0], title: toSimplifiedChinese(row[1]), author: toSimplifiedChinese(row[2]), dynasty: toSimplifiedChinese(row[3]), collection: toSimplifiedChinese(row[4]), shard: row[5], offset: row[6], excerpt: lines, lines };
 }
 
 /**
@@ -145,32 +748,24 @@ async function loadPoetryCatalogRange(start, count) {
 async function filterPoetryCatalog(filters = {}) {
   const manifest = await loadPoetryManifest();
   if (!manifest) return filterKnowledge('poetry', filters);
-  const query = String(filters.query || '').trim();
-  const author = String(filters.author || '').trim();
-  const dynasty = String(filters.dynasty || '').trim();
-  const collection = String(filters.collection || '').trim();
+  const query = toSimplifiedChinese(filters.query).trim();
+  const author = toSimplifiedChinese(filters.author).trim();
+  const dynasty = toSimplifiedChinese(filters.dynasty).trim();
+  const collection = toSimplifiedChinese(filters.collection).trim();
   const cacheKey = JSON.stringify({ query, author, dynasty, collection });
   if (poetryFilterCache.has(cacheKey)) return poetryFilterCache.get(cacheKey);
   const requiredCharacters = [...query].filter((item) => item.trim());
-  let matchedIds;
-  if (requiredCharacters.length) {
-    matchedIds = new Set();
-    for (let shardIndex = 0; shardIndex < Number(manifest.shardCount || 0); shardIndex += 1) {
-      const shard = await loadPoetryShard('search', shardIndex);
-      for (const [id, characters] of shard) {
-        if (requiredCharacters.every((character) => String(characters).includes(character))) matchedIds.add(id);
-      }
-    }
-  }
   const matched = [];
   for (let shardIndex = 0; shardIndex < Number(manifest.shardCount || 0); shardIndex += 1) {
     const shard = await loadPoetryShard('catalog', shardIndex);
     for (const row of shard) {
-      if (matchedIds && !matchedIds.has(row[0])) continue;
-      if (author && row[2] !== author) continue;
-      if (dynasty && row[3] !== dynasty) continue;
-      if (collection && row[4] !== collection) continue;
-      matched.push(catalogRowToPoetry(row));
+      const item = catalogRowToPoetry(row);
+      if (author && item.author !== author) continue;
+      if (dynasty && item.dynasty !== dynasty) continue;
+      if (collection && item.collection !== collection) continue;
+      const searchable = [item.title, item.author, item.dynasty, item.collection, ...(item.lines || [])].join('');
+      if (requiredCharacters.length && !searchable.includes(query) && !requiredCharacters.every((character) => searchable.includes(character))) continue;
+      matched.push(item);
     }
   }
   poetryFilterCache.set(cacheKey, matched);
@@ -188,17 +783,39 @@ async function getPoetryById(id) {
   const shardIndex = Math.floor(id / Number(manifest.shardSize || 1000));
   const offset = id % Number(manifest.shardSize || 1000);
   const shard = await loadPoetryShard('shards', shardIndex);
-  return shard[offset];
+  return normalizeKnowledgeItem('poetry', shard[offset] || {});
 }
 
 /**
  * 返回古诗筛选枚举，不加载正文分片。
+ * @param {{query?:string,author?:string,dynasty?:string,collection?:string}} filters 联动筛选条件。
  * @returns {Promise<{authors:string[],dynasties:string[],collections:string[]}>} 筛选枚举。
  */
-export async function getPoetryMeta() {
+export async function getPoetryMeta(filters = {}) {
   const manifest = await loadPoetryManifest();
-  const collections = manifest?.sourceRootTypes || manifest?.collections || [];
-  return { authors: manifest?.authors || [], dynasties: manifest?.dynasties || [], collections };
+  const query = toSimplifiedChinese(filters.query).trim();
+  const author = toSimplifiedChinese(filters.author).trim();
+  const dynasty = toSimplifiedChinese(filters.dynasty).trim();
+  const collection = toSimplifiedChinese(filters.collection).trim();
+  const collections = simplifyStringList(manifest?.sourceRootTypes || manifest?.collections || []);
+  if (!manifest) return { authors: [], dynasties: [], collections: [] };
+  if (!query && !author && !dynasty && !collection) {
+    return {
+      authors: simplifyStringList(manifest.authors),
+      dynasties: simplifyStringList(manifest.dynasties),
+      collections,
+    };
+  }
+  const cacheKey = JSON.stringify({ query, author, dynasty, collection });
+  if (poetryMetaCache.has(cacheKey)) return poetryMetaCache.get(cacheKey);
+  const matched = await filterPoetryCatalog({ query, author, dynasty, collection });
+  const meta = {
+    authors: [...new Set(matched.map((item) => item.author).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'zh-CN')),
+    dynasties: [...new Set(matched.map((item) => item.dynasty).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'zh-CN')),
+    collections,
+  };
+  poetryMetaCache.set(cacheKey, meta);
+  return meta;
 }
 
 /**
@@ -218,8 +835,8 @@ export function listKnowledgeTypes() {
 function searchableText(item, type) {
   if (type === 'poetry') return [item.title, item.author, item.dynasty, ...(item.lines || [])].join('');
   if (type === 'xiehouyu') return [item.riddle, item.answer, item.explanation].join('');
-  if (type === 'char') return [item.char, item.pinyin, item.radical, item.meaning, item.more].join('');
-  return [item.word, item.pinyin, item.explanation, item.example, item.meaning, item.derivation].join('');
+  if (type === 'char') return [item.char].join('');
+  return [item.word].join('');
 }
 
 /**
@@ -242,11 +859,12 @@ function normalizeKnowledgeItem(type, item) {
   if (type === 'word') return { word: item.ci || item.word || '', pinyin: item.pinyin || '', meaning: item.explanation || item.meaning || '' };
   if (type === 'poetry') {
     return {
-      title: item.title || '',
-      author: item.author || '',
-      dynasty: item.dynasty || '唐',
-      collection: item.collection || '古诗',
-      lines: Array.isArray(item.lines) ? item.lines : Array.isArray(item.paragraphs) ? item.paragraphs : [],
+      id: item.id,
+      title: toSimplifiedChinese(item.title || ''),
+      author: toSimplifiedChinese(item.author || ''),
+      dynasty: toSimplifiedChinese(item.dynasty || '唐'),
+      collection: toSimplifiedChinese(item.collection || '古诗'),
+      lines: simplifyStringList(Array.isArray(item.lines) ? item.lines : Array.isArray(item.paragraphs) ? item.paragraphs : []),
     };
   }
   if (type === 'xiehouyu') return { riddle: item.riddle || '', answer: item.answer || '', explanation: item.explanation || '' };
@@ -428,6 +1046,33 @@ export async function randomKnowledgeAsync(type, count = 1, excluded = new Set()
   const candidates = (await loadKnowledge(type)).filter((item) => !excluded.has(knowledgeKey(type, item)));
   const shuffled = [...candidates].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, Math.max(1, Number(count) || 1));
+}
+
+/**
+ * 从指定候选集中按用户偏好抽样，喜欢优先，不喜欢仅在候选不足时补位。
+ * @param {string} type 知识库分类。
+ * @param {Record<string, unknown>[]} candidates 候选条目全集。
+ * @param {number} count 抽取数量。
+ * @param {Set<string>} excluded 已排除的条目键集合。
+ * @param {Record<string, 'like'|'dislike'>} preferences 用户知识库偏好。
+ * @returns {Record<string, unknown>[]} 抽样后的条目列表。
+ */
+export function weightedKnowledgeSample(type, candidates, count = 1, excluded = new Set(), preferences = {}) {
+  const targetCount = Math.max(1, Number(count) || 1);
+  const unique = [];
+  const seen = new Set();
+  for (const item of Array.isArray(candidates) ? candidates : []) {
+    const key = knowledgeKey(type, item);
+    if (!key || excluded.has(key) || seen.has(key)) continue;
+    seen.add(key);
+    unique.push(item);
+  }
+  const liked = unique.filter((item) => preferences[knowledgeKey(type, item)] === 'like');
+  const normal = unique.filter((item) => !preferences[knowledgeKey(type, item)]);
+  const disliked = unique.filter((item) => preferences[knowledgeKey(type, item)] === 'dislike');
+  // 不喜欢内容不是绝对屏蔽；当可用候选不足时才补位，避免试卷数量生成失败。
+  const prioritized = [...liked, ...normal.sort(() => Math.random() - 0.5), ...disliked.sort(() => Math.random() - 0.5)];
+  return prioritized.slice(0, targetCount);
 }
 
 /**

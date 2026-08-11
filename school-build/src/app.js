@@ -34,9 +34,9 @@ import {
 import { renderProblemHtml, renderWorksheetMetaHtml, worksheetColumns, worksheetLayoutClass } from './worksheet-render.js';
 import { paperMoveDelta, paperScrollDelta } from './paper-controls.mjs';
 import { generateWorksheet } from './math/index.mjs';
-import { filterKnowledgeAsync, getKnowledgeDetail, getPoetryMeta, knowledgeKey, pageKnowledge, randomKnowledgeAsync } from './data/knowledge/index.mjs';
+import { filterKnowledgeAsync, getKnowledgeDetail, getPoetryMeta, knowledgeKey, pageKnowledge, randomKnowledgeAsync, toSimplifiedChinese, weightedKnowledgeSample } from './data/knowledge/index.mjs';
 
-const state = { route: 'home', paperFilter: 'all', activeReadingId: null, activePaperId: null, pictureBookDraft: null, paperTransform: null, paperStatus: null, bookObjectUrl: null, fileReader: null, fileReaderToken: 0, pdfZoom: 1, selectedBookIds: new Set(), bookCacheRun: 0, knowledgeType: 'idiom', knowledgeQuery: '', knowledgeAuthor: '', knowledgeDynasty: '', knowledgeCollection: '', knowledgePage: 1, knowledgeHasQueried: false, wrongType: 'all', learningItems: [], learningIndex: 0, learningCompleted: new Set() };
+const state = { route: 'home', paperFilter: 'all', activeReadingId: null, activePaperId: null, pictureBookDraft: null, paperTransform: null, paperStatus: null, bookObjectUrl: null, fileReader: null, fileReaderToken: 0, pdfZoom: 1, selectedBookIds: new Set(), bookCacheRun: 0, knowledgeType: 'idiom', knowledgeQuery: '', knowledgeAuthor: '', knowledgeDynasty: '', knowledgeCollection: '', knowledgePage: 1, knowledgeHasQueried: false, knowledgePreferences: {}, wrongType: 'all', learningItems: [], learningIndex: 0, learningCompleted: new Set() };
 const main = document.querySelector('#mainContent');
 const toast = document.querySelector('#toast');
 const modalRoot = document.querySelector('#modalRoot');
@@ -701,6 +701,60 @@ function shuffleValues(values) {
 }
 
 /**
+ * 读取知识库偏好设置，供随机学习和试卷生成共同使用。
+ * @returns {Promise<Record<string, 'like'|'dislike'>>} 用户对知识条目的喜欢/不喜欢状态。
+ */
+async function loadKnowledgePreferences() {
+  const record = await get('settings', 'knowledgePreferences');
+  return record?.value && typeof record.value === 'object' ? record.value : {};
+}
+
+/**
+ * 保存单条知识库偏好；再次点击同一状态会取消偏好。
+ * @param {string} type 知识库分类。
+ * @param {Record<string, unknown>} item 知识条目。
+ * @param {'like'|'dislike'} preference 新偏好状态。
+ * @returns {Promise<void>} 偏好持久化完成。
+ */
+async function saveKnowledgePreference(type, item, preference) {
+  const key = knowledgeKey(type, item);
+  const next = { ...(state.knowledgePreferences || {}) };
+  if (next[key] === preference) delete next[key];
+  else next[key] = preference;
+  state.knowledgePreferences = next;
+  // 偏好会影响后续生成试卷的抽样权重，因此写入 settings 表跨会话保留。
+  await put('settings', { id: 'knowledgePreferences', value: next, updatedAt: Date.now() });
+}
+
+/**
+ * 返回当前知识库页面筛选条件，避免列表、随机学习和试卷生成入口口径分裂。
+ * @returns {{query:string,author:string,dynasty:string,collection:string}} 当前筛选条件。
+ */
+function currentKnowledgeFilters() {
+  return {
+    query: state.knowledgeQuery,
+    author: state.knowledgeAuthor,
+    dynasty: state.knowledgeDynasty,
+    collection: state.knowledgeCollection,
+  };
+}
+
+/**
+ * 从知识库候选集中按偏好抽样，生成题目时喜欢项优先、不喜欢项尽量靠后。
+ * @param {string} type 知识库分类。
+ * @param {Record<string, unknown>[]} candidates 候选条目全集。
+ * @param {number} count 需要抽取的数量。
+ * @param {Set<string>} excluded 排除的知识条目键集合。
+ * @returns {Promise<Record<string, unknown>[]>} 抽样后的候选条目。
+ */
+async function sampleKnowledgeForUse(type, candidates, count, excluded = new Set()) {
+  if (!state.knowledgePreferences || !Object.keys(state.knowledgePreferences).length) {
+    state.knowledgePreferences = await loadKnowledgePreferences();
+  }
+  return weightedKnowledgeSample(type, candidates, count, excluded, state.knowledgePreferences);
+}
+
+/**
  * 生成成语填空题，确保同一份试卷不重复。
  * @param {Record<string, unknown>} values 生成配置。
  * @returns {Array<Record<string, unknown>>} 成语填空题列表。
@@ -708,7 +762,7 @@ function shuffleValues(values) {
 async function createIdiomFillProblems(values) {
   const candidates = await filterKnowledgeAsync('idiom', { query: values.knowledgeQuery });
   const count = boundedPracticeCount(values.count, 10);
-  const selected = shuffleValues(candidates).slice(0, count);
+  const selected = await sampleKnowledgeForUse('idiom', candidates, count);
   const allCharacters = [...new Set(candidates.flatMap((item) => Array.from(item.word)))];
   return selected.map((item, index) => {
     const word = String(item.word);
@@ -737,8 +791,9 @@ async function createPoetryMatchProblems(values) {
   const candidates = query
     ? await filterKnowledgeAsync('poetry', { query })
     : await randomKnowledgeAsync('poetry', count);
-  return shuffleValues(candidates).slice(0, count).map((poem, index) => {
-    const lines = poem.lines || [];
+  const selected = await sampleKnowledgeForUse('poetry', candidates, count);
+  return selected.map((poem, index) => {
+    const lines = (poem.lines || []).map((line) => toSimplifiedChinese(line));
     const pairIndex = Math.floor(Math.random() * Math.max(1, Math.floor(lines.length / 2))) * 2;
     const pair = lines.slice(pairIndex, pairIndex + 2);
     const highDifficulty = values.poetryDifficulty === 'high';
@@ -746,12 +801,12 @@ async function createPoetryMatchProblems(values) {
     return {
       id: `problem-${index + 1}`,
       kind: 'poetry-match',
-      title: `${poem.title} · ${poem.author}`,
+      title: `${toSimplifiedChinese(poem.title)} · ${toSimplifiedChinese(poem.author)}`,
       prompt: highDifficulty ? `请默写“${pair[0] || ''}”及下一句` : `请写出“${pair[0] || ''}”的下句`,
       target,
       options: [],
       answer: target,
-      meta: { dynasty: poem.dynasty, author: poem.author },
+      meta: { dynasty: toSimplifiedChinese(poem.dynasty), author: toSimplifiedChinese(poem.author) },
     };
   });
 }
@@ -766,7 +821,10 @@ async function createPinyinWriteProblems(values, lines) {
   const knowledgeWords = lines.length ? [] : await filterKnowledgeAsync('word');
   const source = lines.length ? lines : knowledgeWords.map((item) => item.word);
   const count = boundedPracticeCount(values.count, source.length);
-  return shuffleValues([...new Set(source)]).slice(0, count).map((word, index) => ({
+  const selected = lines.length
+    ? shuffleValues([...new Set(source)]).slice(0, count)
+    : (await sampleKnowledgeForUse('word', knowledgeWords, count)).map((item) => item.word);
+  return selected.map((word, index) => ({
     id: `problem-${index + 1}`,
     kind: 'pinyin-write',
     prompt: word,
@@ -1586,6 +1644,42 @@ function isEpubRelativeAsset(source) {
 }
 
 /**
+ * 解析 EPUB 内部目录链接，保留目标章节和锚点。
+ * @param {string} href 原始链接地址。
+ * @param {string} currentPath 当前章节路径。
+ * @returns {{path:string,anchor:string}|null} EPUB 内部跳转目标。
+ */
+function resolveEpubInternalLink(href, currentPath) {
+  const raw = String(href || '').trim();
+  if (!raw || /^(?:https?:|mailto:|tel:|data:|blob:|file:|javascript:)/iu.test(raw)) return null;
+  const hashIndex = raw.indexOf('#');
+  const pathPart = (hashIndex >= 0 ? raw.slice(0, hashIndex) : raw).trim();
+  const anchor = hashIndex >= 0 ? raw.slice(hashIndex + 1) : '';
+  const path = pathPart ? resolveEpubArchivePath(currentPath, pathPart) : normalizeEpubArchivePath(currentPath);
+  return path ? { path, anchor } : null;
+}
+
+/**
+ * 将 EPUB 章节内目录链接改写为应用内跳转，避免相对 HTML 跳出阅读器。
+ * @param {Element} body 章节正文节点。
+ * @param {Array<{path:string}>} chapters EPUB 可阅读章节列表。
+ * @param {string} currentPath 当前章节路径。
+ * @returns {void}
+ */
+function prepareEpubInternalLinks(body, chapters, currentPath) {
+  body.querySelectorAll('a[href]').forEach((anchorElement) => {
+    const target = resolveEpubInternalLink(anchorElement.getAttribute('href'), currentPath);
+    if (!target) return;
+    const chapterIndex = chapters.findIndex((chapter) => normalizeEpubArchivePath(chapter.path) === target.path);
+    if (chapterIndex < 0) return;
+    // EPUB 目录只改变当前阅读容器内容，不能让浏览器跳出到站点根路径。
+    anchorElement.dataset.epubLink = String(chapterIndex);
+    anchorElement.dataset.epubAnchor = target.anchor || '';
+    anchorElement.setAttribute('href', '#');
+  });
+}
+
+/**
  * 解析 EPUB 的容器、目录和阅读顺序。
  * @param {ArrayBuffer} arrayBuffer EPUB 文件字节。
  * @returns {Promise<{zip:object,chapters:Array<{path:string,id:string}>,stylePaths:string[],title:string}>} 可逐章渲染的压缩包模型。
@@ -1713,6 +1807,7 @@ async function renderDirectEpubChapter(readerState, chapter, chapterIndex) {
   body.querySelectorAll('script, iframe, object, embed, form').forEach((node) => node.remove());
   // 先插入章节骨架，再异步补图，避免 iPad PWA 因图片解压慢而长时间停在加载态。
   prepareEpubImagePlaceholders(body);
+  prepareEpubInternalLinks(body, readerState.chapters, chapter.path);
   const section = document.createElement('article');
   section.className = 'epub-direct-chapter';
   section.dataset.chapterIndex = String(chapterIndex + 1);
@@ -1720,6 +1815,28 @@ async function renderDirectEpubChapter(readerState, chapter, chapterIndex) {
   readerState.content.appendChild(section);
   readerState.renderedChapters.add(chapter.path);
   void hydrateEpubImages(section, readerState.zip, chapter.path, readerState.objectUrls).catch((error) => console.warn('EPUB 图片渲染失败', error));
+}
+
+/**
+ * 在同页 EPUB 阅读器中打开书内目录链接，并滚动到目标锚点。
+ * @param {HTMLElement} linkElement 被点击的 EPUB 内链。
+ * @returns {Promise<void>} 目标章节渲染和滚动完成。
+ */
+async function openDirectEpubLink(linkElement) {
+  const readerState = state.fileReader;
+  if (readerState?.kind !== 'epub-direct') return;
+  const chapterIndex = Number(linkElement.dataset.epubLink);
+  const chapter = readerState.chapters[chapterIndex];
+  if (!chapter) return;
+  await renderDirectEpubChapter(readerState, chapter, chapterIndex);
+  const section = readerState.content.querySelector(`[data-chapter-index="${chapterIndex + 1}"]`);
+  if (!section) return;
+  const rawAnchor = linkElement.dataset.epubAnchor || '';
+  const target = rawAnchor
+    ? [...section.querySelectorAll('[id], a[name]')].find((element) => element.id === rawAnchor || element.getAttribute('name') === rawAnchor)
+    : section;
+  // 锚点缺失时仍滚动到章节开头，保证目录点击有明确反馈。
+  (target || section).scrollIntoView({ block: 'start' });
 }
 
 /**
@@ -1908,14 +2025,12 @@ const KNOWLEDGE_LABELS = Object.freeze({
  * @returns {Promise<void>} 页面数据读取和 HTML 更新完成后的 Promise。
  */
 async function renderKnowledge() {
-  const poetryMeta = state.knowledgeType === 'poetry' ? await getPoetryMeta() : { authors: [], dynasties: [] };
+  if (!state.knowledgePreferences || !Object.keys(state.knowledgePreferences).length) {
+    state.knowledgePreferences = await loadKnowledgePreferences();
+  }
+  const poetryMeta = state.knowledgeType === 'poetry' ? await getPoetryMeta({ collection: state.knowledgeCollection }) : { authors: [], dynasties: [] };
   const page = state.knowledgeHasQueried
-    ? await pageKnowledge(state.knowledgeType, {
-      query: state.knowledgeQuery,
-      author: state.knowledgeAuthor,
-      dynasty: state.knowledgeDynasty,
-      collection: state.knowledgeCollection,
-    }, state.knowledgePage, 20)
+    ? await pageKnowledge(state.knowledgeType, currentKnowledgeFilters(), state.knowledgePage, 20)
     : { items: [], total: 0, page: 1, pageSize: 20, pageCount: 1 };
   state.knowledgePage = page.page;
   const authors = poetryMeta.authors || [];
@@ -1982,7 +2097,9 @@ function renderWrongQuestionSummary(record) {
  * @returns {string} 知识条目 HTML。
  */
 function renderKnowledgeItem(type, item) {
-  return `<article class="knowledge-item"><button class="knowledge-main" data-knowledge-detail-type="${escapeHtml(type)}" data-knowledge-detail-key="${escapeHtml(knowledgeKey(type, item))}">${renderKnowledgeSummary(type, item)}</button></article>`;
+  const key = knowledgeKey(type, item);
+  const preference = state.knowledgePreferences?.[key] || '';
+  return `<article class="knowledge-item"><button class="knowledge-main" data-knowledge-detail-type="${escapeHtml(type)}" data-knowledge-detail-key="${escapeHtml(key)}">${renderKnowledgeSummary(type, item)}</button><div class="knowledge-preference-actions"><button class="secondary ${preference === 'like' ? 'active' : ''}" data-knowledge-preference="like" data-knowledge-preference-type="${escapeHtml(type)}" data-knowledge-preference-key="${escapeHtml(key)}">喜欢</button><button class="secondary ${preference === 'dislike' ? 'active dislike' : ''}" data-knowledge-preference="dislike" data-knowledge-preference-type="${escapeHtml(type)}" data-knowledge-preference-key="${escapeHtml(key)}">不喜欢</button></div></article>`;
 }
 
 /**
@@ -2204,17 +2321,25 @@ function bindPictureBookTextDragging() {
 }
 
 async function handleGlobalClick(event) {
+  const epubLink = event.target.closest('[data-epub-link]');
+  if (epubLink) {
+    event.preventDefault();
+    return openDirectEpubLink(epubLink);
+  }
   const route = event.target.closest('[data-route]')?.dataset.route;
   if (route) return navigate(route);
   if (event.target.closest('[data-knowledge-search]')) {
     return submitKnowledgeSearch();
   }
   if (event.target.closest('[data-learning-start]')) {
-    state.learningItems = await randomKnowledgeAsync(state.knowledgeType, 8, state.learningCompleted);
+    const queriedCandidates = state.knowledgeHasQueried ? await filterKnowledgeAsync(state.knowledgeType, currentKnowledgeFilters()) : [];
+    state.learningItems = queriedCandidates.length
+      ? await sampleKnowledgeForUse(state.knowledgeType, queriedCandidates, 8, state.learningCompleted)
+      : await sampleKnowledgeForUse(state.knowledgeType, await randomKnowledgeAsync(state.knowledgeType, 40, state.learningCompleted), 8, state.learningCompleted);
     state.learningIndex = 0;
     if (!state.learningItems.length) {
       state.learningCompleted.clear();
-      state.learningItems = await randomKnowledgeAsync(state.knowledgeType, 8);
+      state.learningItems = await sampleKnowledgeForUse(state.knowledgeType, queriedCandidates.length ? queriedCandidates : await randomKnowledgeAsync(state.knowledgeType, 40), 8);
     }
     return renderKnowledge();
   }
@@ -2233,6 +2358,15 @@ async function handleGlobalClick(event) {
     if (!item) { showToast('没有找到详情'); return; }
     openKnowledgeDetail(type, item);
     return;
+  }
+  const knowledgePreferenceButton = event.target.closest('[data-knowledge-preference]');
+  if (knowledgePreferenceButton) {
+    const type = knowledgePreferenceButton.dataset.knowledgePreferenceType;
+    const item = await getKnowledgeDetail(type, knowledgePreferenceButton.dataset.knowledgePreferenceKey);
+    if (!item) { showToast('没有找到内容'); return; }
+    await saveKnowledgePreference(type, item, knowledgePreferenceButton.dataset.knowledgePreference);
+    showToast(state.knowledgePreferences[knowledgeKey(type, item)] ? '偏好已保存' : '偏好已取消');
+    return renderKnowledge();
   }
   if (event.target.closest('[data-delete-wrong]')) {
     const id = event.target.closest('[data-delete-wrong]').dataset.deleteWrong;
@@ -2502,8 +2636,13 @@ document.addEventListener('change', async (event) => {
   if (event.target.matches('[data-knowledge-filter]')) {
     const field = event.target.dataset.knowledgeFilter;
     state[`knowledge${field.charAt(0).toUpperCase()}${field.slice(1)}`] = event.target.value;
+    if (field === 'collection') {
+      state.knowledgeAuthor = '';
+      state.knowledgeDynasty = '';
+    }
     state.knowledgePage = 1;
     state.knowledgeHasQueried = false;
+    if (state.knowledgeType === 'poetry' && field === 'collection') return renderKnowledge();
     return;
   }
   if (event.target.matches('[data-wrong-type]')) {
@@ -2592,7 +2731,7 @@ function startPostBootTasks() {
   // huiben 清单可能包含较多本地书籍，延后同步可以让首页和知识库先响应点击。
   void ensureReadingSeeds().catch((error) => console.warn('阅读资料后台同步失败', error));
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('./sw.js?v=20260811-8').catch(console.warn);
+    navigator.serviceWorker.register('./sw.js?v=20260811-9').catch(console.warn);
   }
 }
 

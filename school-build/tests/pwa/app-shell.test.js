@@ -32,7 +32,7 @@ test('入口资源带版本参数，避免线上旧缓存继续加载旧文件',
 test('Service Worker 升级缓存名并优先读取网络文件', () => {
   const source = readFileSync(new URL('../../sw.js', import.meta.url), 'utf8');
 
-  assert.match(source, /growth-desk-v29-20260811/);
+  assert.match(source, /growth-desk-v30-20260811/);
   assert.match(source, /src\/data\/knowledge\/index\.mjs/);
   assert.doesNotMatch(source, /cache\.addAll\(\[[\s\S]*?src\/vendor\/chinese\/cnchar\.min\.js/);
   assert.doesNotMatch(source, /cache\.addAll\(\[[\s\S]*?src\/data\/knowledge\/poetry\/manifest\.json/);
@@ -62,8 +62,8 @@ test('app.js statically imports math and supports local book cache fallback', ()
   assert.match(source, /import\('\.\/vendor\/pdfjs\/pdf\.min\.mjs'\)/);
   assert.match(source, /growth-desk-books-v1/);
   assert.match(source, /cache-storage/);
-  assert.match(source, /serviceWorker' in navigator[\s\S]*?register\('\.\/sw\.js\?v=20260811-8'\)/);
-  assert.doesNotMatch(source, /sw\.js\?v=20260808-8/);
+  assert.match(source, /serviceWorker' in navigator[\s\S]*?register\('\.\/sw\.js\?v=20260811-9'\)/);
+  assert.doesNotMatch(source, /sw\.js\?v=20260811-8/);
   assert.match(source, /function startPostBootTasks/);
   assert.match(source, /await navigate\('home'\);[\s\S]*?startPostBootTasks\(\)/);
   assert.match(source, /item\.sourceBlob instanceof Blob \|\| isBookCacheStorageRecord\(item\)[\s\S]*?await readBookArrayBuffer\(item\)[\s\S]*?canReaderRequestUrl\(item\)/);
@@ -75,6 +75,7 @@ test('EPUB 阅读包含同页离线解析兜底，不把超时直接留成空白
   assert.match(source, /async function mountDirectEpubReader/);
   assert.match(source, /async function mountDirectEpubReader[\s\S]*?loadScriptOnce\('\.\/src\/vendor\/epubjs\/jszip\.min\.js',\s*'JSZip'\)/);
   assert.match(source, /data-epub-direct-content/);
+  assert.match(source, /data-epub-link/);
   assert.match(source, /mountDirectEpubReader\(item, token/);
   assert.match(source, /if \(await mountDirectEpubReader\(item, token\)\) return;/);
   assert.match(source, /kind: 'epub-direct'/);

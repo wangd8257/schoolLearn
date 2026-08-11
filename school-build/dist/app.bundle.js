@@ -23759,7 +23759,7 @@
     return normalizedDirection * normalizedStep;
   }
   function paperScrollDelta(direction, step) {
-    return -paperMoveDelta(direction, step);
+    return paperMoveDelta(direction, step);
   }
 
   // src/math/constants.mjs
@@ -24468,7 +24468,591 @@
   var POETRY_BASE = "./src/data/knowledge/poetry";
   var poetryShardCache = /* @__PURE__ */ new Map();
   var poetryFilterCache = /* @__PURE__ */ new Map();
+  var poetryMetaCache = /* @__PURE__ */ new Map();
   var poetryManifestCache;
+  var TRADITIONAL_SIMPLIFIED_MAP = Object.freeze({
+    "\u842C": "\u4E07",
+    "\u8207": "\u4E0E",
+    "\u5C08": "\u4E13",
+    "\u696D": "\u4E1A",
+    "\u6771": "\u4E1C",
+    "\u7D72": "\u4E1D",
+    "\u4E1F": "\u4E22",
+    "\u5169": "\u4E24",
+    "\u56B4": "\u4E25",
+    "\u55AA": "\u4E27",
+    "\u500B": "\u4E2A",
+    "\u8C50": "\u4E30",
+    "\u81E8": "\u4E34",
+    "\u70BA": "\u4E3A",
+    "\u7232": "\u4E3A",
+    "\u9E97": "\u4E3D",
+    "\u8209": "\u4E3E",
+    "\u7FA9": "\u4E49",
+    "\u70CF": "\u4E4C",
+    "\u6A02": "\u4E50",
+    "\u55AC": "\u4E54",
+    "\u7FD2": "\u4E60",
+    "\u9109": "\u4E61",
+    "\u66F8": "\u4E66",
+    "\u8CB7": "\u4E70",
+    "\u4E82": "\u4E71",
+    "\u722D": "\u4E89",
+    "\u65BC": "\u4E8E",
+    "\u96F2": "\u4E91",
+    "\u4E9E": "\u4E9A",
+    "\u7522": "\u4EA7",
+    "\u755D": "\u4EA9",
+    "\u89AA": "\u4EB2",
+    "\u893B": "\u4EB5",
+    "\u8931": "\u6000",
+    "\u5104": "\u4EBF",
+    "\u50C5": "\u4EC5",
+    "\u50D5": "\u4EC6",
+    "\u5F9E": "\u4ECE",
+    "\u5009": "\u4ED3",
+    "\u5100": "\u4EEA",
+    "\u5011": "\u4EEC",
+    "\u50F9": "\u4EF7",
+    "\u773E": "\u4F17",
+    "\u512A": "\u4F18",
+    "\u6703": "\u4F1A",
+    "\u5098": "\u4F1E",
+    "\u5049": "\u4F1F",
+    "\u50B3": "\u4F20",
+    "\u50B7": "\u4F24",
+    "\u502B": "\u4F26",
+    "\u507D": "\u4F2A",
+    "\u4F47": "\u4F2B",
+    "\u9AD4": "\u4F53",
+    "\u9918": "\u4F59",
+    "\u4F5B": "\u4F5B",
+    "\u4F86": "\u6765",
+    "\u4F96": "\u4ED1",
+    "\u4FB6": "\u4FA3",
+    "\u4FE0": "\u4FA0",
+    "\u4FC1": "\u4FE3",
+    "\u5000": "\u4F25",
+    "\u5006": "\u4FE9",
+    "\u5016": "\u5E78",
+    "\u5023": "\u4EFF",
+    "\u5026": "\u5026",
+    "\u5075": "\u4FA6",
+    "\u5074": "\u4FA7",
+    "\u50D1": "\u4FA8",
+    "\u5102": "\u4FAC",
+    "\u511F": "\u507F",
+    "\u5118": "\u5C3D",
+    "\u5152": "\u513F",
+    "\u514C": "\u5151",
+    "\u9EE8": "\u515A",
+    "\u5167": "\u5185",
+    "\u518A": "\u518C",
+    "\u8ECD": "\u519B",
+    "\u8FB2": "\u519C",
+    "\u51AA": "\u5E42",
+    "\u51C8": "\u51C0",
+    "\u51CD": "\u51BB",
+    "\u51DC": "\u51DB",
+    "\u5E7E": "\u51E0",
+    "\u9CF3": "\u51E4",
+    "\u5283": "\u5212",
+    "\u5289": "\u5218",
+    "\u5247": "\u5219",
+    "\u525B": "\u521A",
+    "\u5275": "\u521B",
+    "\u5225": "\u522B",
+    "\u522A": "\u5220",
+    "\u5287": "\u5267",
+    "\u528D": "\u5251",
+    "\u5291": "\u5242",
+    "\u52C1": "\u52B2",
+    "\u52D5": "\u52A8",
+    "\u52D9": "\u52A1",
+    "\u52DD": "\u80DC",
+    "\u52DE": "\u52B3",
+    "\u52E2": "\u52BF",
+    "\u52F5": "\u52B1",
+    "\u52F8": "\u529D",
+    "\u532F": "\u6C47",
+    "\u5340": "\u533A",
+    "\u91AB": "\u533B",
+    "\u83EF": "\u534E",
+    "\u5354": "\u534F",
+    "\u55AE": "\u5355",
+    "\u8CE3": "\u5356",
+    "\u76E7": "\u5362",
+    "\u885B": "\u536B",
+    "\u537B": "\u5374",
+    "\u5EE0": "\u5382",
+    "\u6B77": "\u5386",
+    "\u53B2": "\u5389",
+    "\u58D3": "\u538B",
+    "\u53AD": "\u538C",
+    "\u53C3": "\u53C2",
+    "\u96D9": "\u53CC",
+    "\u767C": "\u53D1",
+    "\u8B8A": "\u53D8",
+    "\u6558": "\u53D9",
+    "\u8449": "\u53F6",
+    "\u865F": "\u53F7",
+    "\u5606": "\u53F9",
+    "\u5617": "\u5C1D",
+    "\u54E1": "\u5458",
+    "\u554F": "\u95EE",
+    "\u5553": "\u542F",
+    "\u555F": "\u542F",
+    "\u55CE": "\u5417",
+    "\u559A": "\u5524",
+    "\u55DA": "\u545C",
+    "\u5674": "\u55B7",
+    "\u5687": "\u5413",
+    "\u56D1": "\u5631",
+    "\u570D": "\u56F4",
+    "\u5712": "\u56ED",
+    "\u570B": "\u56FD",
+    "\u5713": "\u5706",
+    "\u5716": "\u56FE",
+    "\u5718": "\u56E2",
+    "\u5875": "\u5C18",
+    "\u5834": "\u573A",
+    "\u58DE": "\u574F",
+    "\u584A": "\u5757",
+    "\u5805": "\u575A",
+    "\u58C7": "\u575B",
+    "\u58D8": "\u5792",
+    "\u58D9": "\u5739",
+    "\u58EF": "\u58EE",
+    "\u8072": "\u58F0",
+    "\u58F9": "\u58F9",
+    "\u8655": "\u5904",
+    "\u5099": "\u5907",
+    "\u8907": "\u590D",
+    "\u5FA9": "\u590D",
+    "\u5922": "\u68A6",
+    "\u5925": "\u4F19",
+    "\u982D": "\u5934",
+    "\u593E": "\u5939",
+    "\u596A": "\u593A",
+    "\u596E": "\u594B",
+    "\u5967": "\u5965",
+    "\u5A66": "\u5987",
+    "\u5ABD": "\u5988",
+    "\u59CD": "\u59D7",
+    "\u5A1B": "\u5A31",
+    "\u5B6B": "\u5B59",
+    "\u5B78": "\u5B66",
+    "\u5BE7": "\u5B81",
+    "\u5BF6": "\u5B9D",
+    "\u5BE6": "\u5B9E",
+    "\u5BE9": "\u5BA1",
+    "\u5BEB": "\u5199",
+    "\u5BEC": "\u5BBD",
+    "\u5BF5": "\u5BA0",
+    "\u5C07": "\u5C06",
+    "\u5C0B": "\u5BFB",
+    "\u5C0D": "\u5BF9",
+    "\u5C0E": "\u5BFC",
+    "\u5C64": "\u5C42",
+    "\u5C6C": "\u5C5E",
+    "\u5CA1": "\u5188",
+    "\u5CFD": "\u5CE1",
+    "\u5CF6": "\u5C9B",
+    "\u5DBA": "\u5CAD",
+    "\u5DCB": "\u5CBF",
+    "\u5D11": "\u6606",
+    "\u5D17": "\u5C97",
+    "\u5D84": "\u5D2D",
+    "\u5D87": "\u5C96",
+    "\u5D50": "\u5C9A",
+    "\u5DBD": "\u5CB3",
+    "\u5E63": "\u5E01",
+    "\u5E25": "\u5E05",
+    "\u5E2B": "\u5E08",
+    "\u5E33": "\u5E10",
+    "\u5E36": "\u5E26",
+    "\u5E40": "\u5E27",
+    "\u5E6B": "\u5E2E",
+    "\u5E79": "\u5E72",
+    "\u5EE3": "\u5E7F",
+    "\u5EAB": "\u5E93",
+    "\u5EEC": "\u5E90",
+    "\u5EF3": "\u5385",
+    "\u5F35": "\u5F20",
+    "\u5F4C": "\u5F25",
+    "\u5F4E": "\u5F2F",
+    "\u5F65": "\u5F66",
+    "\u5F8C": "\u540E",
+    "\u5F91": "\u5F84",
+    "\u5FB5": "\u5F81",
+    "\u61B6": "\u5FC6",
+    "\u61F7": "\u6000",
+    "\u614B": "\u6001",
+    "\u6046": "\u6052",
+    "\u6065": "\u803B",
+    "\u6085": "\u60A6",
+    "\u60E1": "\u6076",
+    "\u60F1": "\u607C",
+    "\u60F2": "\u607D",
+    "\u611B": "\u7231",
+    "\u611C": "\u60EC",
+    "\u6137": "\u607A",
+    "\u6144": "\u6817",
+    "\u6158": "\u60E8",
+    "\u6176": "\u5E86",
+    "\u616E": "\u8651",
+    "\u6182": "\u5FE7",
+    "\u6191": "\u51ED",
+    "\u61C7": "\u6073",
+    "\u61C9": "\u5E94",
+    "\u61F6": "\u61D2",
+    "\u61FC": "\u60E7",
+    "\u61FA": "\u5FCF",
+    "\u6232": "\u620F",
+    "\u6236": "\u6237",
+    "\u62CB": "\u629B",
+    "\u633E": "\u631F",
+    "\u6368": "\u820D",
+    "\u6383": "\u626B",
+    "\u6384": "\u62A1",
+    "\u63DB": "\u6362",
+    "\u63DA": "\u626C",
+    "\u640D": "\u635F",
+    "\u6416": "\u6447",
+    "\u651D": "\u6444",
+    "\u64EC": "\u62DF",
+    "\u64C7": "\u62E9",
+    "\u64CA": "\u51FB",
+    "\u64D4": "\u62C5",
+    "\u64DA": "\u636E",
+    "\u64E0": "\u6324",
+    "\u64F4": "\u6269",
+    "\u64FA": "\u6446",
+    "\u651C": "\u643A",
+    "\u6575": "\u654C",
+    "\u6578": "\u6570",
+    "\u6582": "\u655B",
+    "\u65B7": "\u65AD",
+    "\u6642": "\u65F6",
+    "\u6649": "\u664B",
+    "\u66C9": "\u6653",
+    "\u6688": "\u6655",
+    "\u66A2": "\u7545",
+    "\u66C6": "\u5386",
+    "\u66C7": "\u6619",
+    "\u6727": "\u80E7",
+    "\u689D": "\u6761",
+    "\u694A": "\u6768",
+    "\u6975": "\u6781",
+    "\u69CB": "\u6784",
+    "\u6A1E": "\u67A2",
+    "\u6A19": "\u6807",
+    "\u6A13": "\u697C",
+    "\u6A39": "\u6811",
+    "\u6A23": "\u6837",
+    "\u6A38": "\u6734",
+    "\u6A5F": "\u673A",
+    "\u6A6B": "\u6A2A",
+    "\u6AA2": "\u68C0",
+    "\u6AC3": "\u67DC",
+    "\u6B0A": "\u6743",
+    "\u6B61": "\u6B22",
+    "\u6B50": "\u6B27",
+    "\u6B72": "\u5C81",
+    "\u6B78": "\u5F52",
+    "\u6B98": "\u6B8B",
+    "\u6BBC": "\u58F3",
+    "\u6C23": "\u6C14",
+    "\u6F22": "\u6C49",
+    "\u6E6F": "\u6C64",
+    "\u6E9D": "\u6C9F",
+    "\u6DDA": "\u6CEA",
+    "\u6DE8": "\u51C0",
+    "\u6DFA": "\u6D45",
+    "\u6E26": "\u6DA1",
+    "\u6E2C": "\u6D4B",
+    "\u6E3E": "\u6D51",
+    "\u6EC4": "\u6CA7",
+    "\u6EC5": "\u706D",
+    "\u6EEF": "\u6EDE",
+    "\u6EF2": "\u6E17",
+    "\u6EFF": "\u6EE1",
+    "\u6F01": "\u6E14",
+    "\u6F38": "\u6E10",
+    "\u6F32": "\u6DA8",
+    "\u701F": "\u6F47",
+    "\u6FC3": "\u6D53",
+    "\u6FDF": "\u6D4E",
+    "\u6FE4": "\u6D9B",
+    "\u6FEB": "\u6EE5",
+    "\u7063": "\u6E7E",
+    "\u7051": "\u6D12",
+    "\u7121": "\u65E0",
+    "\u7169": "\u70E6",
+    "\u7149": "\u70BC",
+    "\u7159": "\u70DF",
+    "\u7165": "\u7115",
+    "\u71C8": "\u706F",
+    "\u71D2": "\u70E7",
+    "\u71DF": "\u8425",
+    "\u71E6": "\u707F",
+    "\u721B": "\u70C2",
+    "\u723A": "\u7237",
+    "\u7240": "\u5E8A",
+    "\u72C0": "\u72B6",
+    "\u7368": "\u72EC",
+    "\u7372": "\u83B7",
+    "\u737B": "\u732E",
+    "\u74B0": "\u73AF",
+    "\u73FE": "\u73B0",
+    "\u7464": "\u7476",
+    "\u74A3": "\u7391",
+    "\u756B": "\u753B",
+    "\u7562": "\u6BD5",
+    "\u7570": "\u5F02",
+    "\u7576": "\u5F53",
+    "\u7587": "\u7574",
+    "\u75D5": "\u75D5",
+    "\u76E1": "\u5C3D",
+    "\u76E3": "\u76D1",
+    "\u76E4": "\u76D8",
+    "\u775C": "\u7741",
+    "\u77DA": "\u77A9",
+    "\u786F": "\u781A",
+    "\u78A9": "\u7855",
+    "\u790E": "\u7840",
+    "\u79AE": "\u793C",
+    "\u798D": "\u7978",
+    "\u96E2": "\u79BB",
+    "\u79AA": "\u7985",
+    "\u79A6": "\u5FA1",
+    "\u7A31": "\u79F0",
+    "\u7A40": "\u8C37",
+    "\u7A4D": "\u79EF",
+    "\u7A4E": "\u9896",
+    "\u7AAE": "\u7A77",
+    "\u7AC4": "\u7A9C",
+    "\u7B46": "\u7B14",
+    "\u7B87": "\u4E2A",
+    "\u7BC0": "\u8282",
+    "\u7BC4": "\u8303",
+    "\u7C3E": "\u5E18",
+    "\u7C43": "\u7BEE",
+    "\u7C60": "\u7B3C",
+    "\u7CE7": "\u7CAE",
+    "\u7CFE": "\u7EA0",
+    "\u7D00": "\u7EAA",
+    "\u7D04": "\u7EA6",
+    "\u7D05": "\u7EA2",
+    "\u7D0B": "\u7EB9",
+    "\u7D0D": "\u7EB3",
+    "\u7D14": "\u7EAF",
+    "\u7D17": "\u7EB1",
+    "\u7D19": "\u7EB8",
+    "\u7D1A": "\u7EA7",
+    "\u7D1B": "\u7EB7",
+    "\u7D20": "\u7D20",
+    "\u7D30": "\u7EC6",
+    "\u7D42": "\u7EC8",
+    "\u7D44": "\u7EC4",
+    "\u7D46": "\u7ECA",
+    "\u7D50": "\u7ED3",
+    "\u7D55": "\u7EDD",
+    "\u7D61": "\u7EDC",
+    "\u7D66": "\u7ED9",
+    "\u7D71": "\u7EDF",
+    "\u7DA0": "\u7EFF",
+    "\u7DAD": "\u7EF4",
+    "\u7DB1": "\u7EB2",
+    "\u7DB2": "\u7F51",
+    "\u7DBA": "\u7EEE",
+    "\u7DBB": "\u7EFD",
+    "\u7DCA": "\u7D27",
+    "\u7DD2": "\u7EEA",
+    "\u7DDA": "\u7EBF",
+    "\u7DF4": "\u7EC3",
+    "\u7DEF": "\u7EAC",
+    "\u7E23": "\u53BF",
+    "\u7E31": "\u7EB5",
+    "\u7E3D": "\u603B",
+    "\u7E3E": "\u7EE9",
+    "\u7E54": "\u7EC7",
+    "\u7E5E": "\u7ED5",
+    "\u7E61": "\u7EE3",
+    "\u7E7C": "\u7EE7",
+    "\u7E8C": "\u7EED",
+    "\u7E8F": "\u7F20",
+    "\u7F77": "\u7F62",
+    "\u7F85": "\u7F57",
+    "\u8056": "\u5723",
+    "\u805E": "\u95FB",
+    "\u806F": "\u8054",
+    "\u8070": "\u806A",
+    "\u8085": "\u8083",
+    "\u812B": "\u8131",
+    "\u81C9": "\u8138",
+    "\u81D8": "\u814A",
+    "\u8208": "\u5174",
+    "\u820A": "\u65E7",
+    "\u8259": "\u8231",
+    "\u8271": "\u8270",
+    "\u85DD": "\u827A",
+    "\u8607": "\u82CF",
+    "\u862D": "\u5170",
+    "\u87F2": "\u866B",
+    "\u883B": "\u86EE",
+    "\u8853": "\u672F",
+    "\u885D": "\u51B2",
+    "\u8846": "\u4F17",
+    "\u88DD": "\u88C5",
+    "\u88CF": "\u91CC",
+    "\u88DC": "\u8865",
+    "\u88E1": "\u91CC",
+    "\u88FD": "\u5236",
+    "\u898B": "\u89C1",
+    "\u898F": "\u89C4",
+    "\u8996": "\u89C6",
+    "\u89BA": "\u89C9",
+    "\u89BD": "\u89C8",
+    "\u89C0": "\u89C2",
+    "\u89E3": "\u89E3",
+    "\u89F8": "\u89E6",
+    "\u8A02": "\u8BA2",
+    "\u8A08": "\u8BA1",
+    "\u8A13": "\u8BAD",
+    "\u8A18": "\u8BB0",
+    "\u8B1B": "\u8BB2",
+    "\u8B1D": "\u8C22",
+    "\u8B19": "\u8C26",
+    "\u8B00": "\u8C0B",
+    "\u8B02": "\u8C13",
+    "\u8B20": "\u8C23",
+    "\u8B39": "\u8C28",
+    "\u8B49": "\u8BC1",
+    "\u8B58": "\u8BC6",
+    "\u8B6F": "\u8BD1",
+    "\u8B70": "\u8BAE",
+    "\u8B80": "\u8BFB",
+    "\u8B93": "\u8BA9",
+    "\u8C48": "\u5C82",
+    "\u8C9D": "\u8D1D",
+    "\u8C9E": "\u8D1E",
+    "\u8CA0": "\u8D1F",
+    "\u8CA1": "\u8D22",
+    "\u8CAC": "\u8D23",
+    "\u8CE2": "\u8D24",
+    "\u6557": "\u8D25",
+    "\u8CA8": "\u8D27",
+    "\u8CEA": "\u8D28",
+    "\u8CDE": "\u8D4F",
+    "\u8CFD": "\u8D5B",
+    "\u8D08": "\u8D60",
+    "\u8D0A": "\u8D5E",
+    "\u8D99": "\u8D75",
+    "\u8DE1": "\u8FF9",
+    "\u8E10": "\u8DF5",
+    "\u8E64": "\u8E2A",
+    "\u8ECA": "\u8F66",
+    "\u8ED2": "\u8F69",
+    "\u8F49": "\u8F6C",
+    "\u8F15": "\u8F7B",
+    "\u8F03": "\u8F83",
+    "\u8F29": "\u8F88",
+    "\u8F2A": "\u8F6E",
+    "\u8FAD": "\u8F9E",
+    "\u908A": "\u8FB9",
+    "\u9059": "\u9065",
+    "\u905C": "\u900A",
+    "\u905E": "\u9012",
+    "\u9078": "\u9009",
+    "\u907A": "\u9057",
+    "\u9084": "\u8FD8",
+    "\u9087": "\u8FE9",
+    "\u90F5": "\u90AE",
+    "\u9127": "\u9093",
+    "\u912D": "\u90D1",
+    "\u9130": "\u90BB",
+    "\u91CB": "\u91CA",
+    "\u921E": "\u94A7",
+    "\u9234": "\u94C3",
+    "\u925B": "\u94C5",
+    "\u9285": "\u94DC",
+    "\u9298": "\u94ED",
+    "\u9322": "\u94B1",
+    "\u9326": "\u9526",
+    "\u937E": "\u949F",
+    "\u9396": "\u9501",
+    "\u93E1": "\u955C",
+    "\u9435": "\u94C1",
+    "\u9418": "\u949F",
+    "\u9451": "\u9274",
+    "\u9577": "\u957F",
+    "\u9580": "\u95E8",
+    "\u9583": "\u95EA",
+    "\u9589": "\u95ED",
+    "\u9591": "\u95F2",
+    "\u9593": "\u95F4",
+    "\u95A3": "\u9601",
+    "\u95B1": "\u9605",
+    "\u95CA": "\u9614",
+    "\u95D4": "\u9616",
+    "\u968A": "\u961F",
+    "\u967D": "\u9633",
+    "\u9670": "\u9634",
+    "\u9663": "\u9635",
+    "\u968E": "\u9636",
+    "\u969B": "\u9645",
+    "\u96B1": "\u9690",
+    "\u96AA": "\u9669",
+    "\u96D6": "\u867D",
+    "\u96DC": "\u6742",
+    "\u96DE": "\u9E21",
+    "\u96E3": "\u96BE",
+    "\u96FB": "\u7535",
+    "\u9748": "\u7075",
+    "\u975C": "\u9759",
+    "\u97CB": "\u97E6",
+    "\u97FB": "\u97F5",
+    "\u9801": "\u9875",
+    "\u9802": "\u9876",
+    "\u9803": "\u9877",
+    "\u9805": "\u9879",
+    "\u9806": "\u987A",
+    "\u9808": "\u987B",
+    "\u980C": "\u9882",
+    "\u9810": "\u9884",
+    "\u9818": "\u9886",
+    "\u984F": "\u989C",
+    "\u9858": "\u613F",
+    "\u985E": "\u7C7B",
+    "\u98A8": "\u98CE",
+    "\u98DB": "\u98DE",
+    "\u98E2": "\u9965",
+    "\u98EF": "\u996D",
+    "\u98F2": "\u996E",
+    "\u9928": "\u9986",
+    "\u99AC": "\u9A6C",
+    "\u99D5": "\u9A7E",
+    "\u9A0E": "\u9A91",
+    "\u9A19": "\u9A97",
+    "\u9A5A": "\u60CA",
+    "\u9AEE": "\u53D1",
+    "\u9B25": "\u6597",
+    "\u9B6F": "\u9C81",
+    "\u9BAE": "\u9C9C",
+    "\u9CE5": "\u9E1F",
+    "\u9CF4": "\u9E23",
+    "\u9D3B": "\u9E3F",
+    "\u9D6C": "\u9E4F",
+    "\u9DB4": "\u9E64",
+    "\u9EA5": "\u9EA6",
+    "\u9EC3": "\u9EC4",
+    "\u9EDE": "\u70B9",
+    "\u9F4A": "\u9F50",
+    "\u9F4B": "\u658B",
+    "\u9F8D": "\u9F99",
+    "\u9F9C": "\u9F9F"
+  });
   function canFetchStaticAssets() {
     return typeof fetch === "function" && globalThis.location?.protocol !== "file:";
   }
@@ -24481,6 +25065,12 @@
     } catch (error) {
       return void 0;
     }
+  }
+  function toSimplifiedChinese(value) {
+    return String(value || "").replace(/[\u3400-\u9fff]/gu, (character) => TRADITIONAL_SIMPLIFIED_MAP[character] || character);
+  }
+  function simplifyStringList(values) {
+    return Array.isArray(values) ? values.map((item) => toSimplifiedChinese(item)).filter(Boolean) : [];
   }
   async function loadPoetryManifest() {
     if (poetryManifestCache) return poetryManifestCache;
@@ -24497,7 +25087,8 @@
     return list;
   }
   function catalogRowToPoetry(row) {
-    return { id: row[0], title: row[1], author: row[2], dynasty: row[3], collection: row[4], shard: row[5], offset: row[6], excerpt: row[7] || [], lines: row[7] || [] };
+    const lines = simplifyStringList(row[7] || []);
+    return { id: row[0], title: toSimplifiedChinese(row[1]), author: toSimplifiedChinese(row[2]), dynasty: toSimplifiedChinese(row[3]), collection: toSimplifiedChinese(row[4]), shard: row[5], offset: row[6], excerpt: lines, lines };
   }
   async function loadPoetryCatalogRange(start, count) {
     const manifest = await loadPoetryManifest();
@@ -24517,32 +25108,24 @@
   async function filterPoetryCatalog(filters = {}) {
     const manifest = await loadPoetryManifest();
     if (!manifest) return filterKnowledge("poetry", filters);
-    const query = String(filters.query || "").trim();
-    const author = String(filters.author || "").trim();
-    const dynasty = String(filters.dynasty || "").trim();
-    const collection = String(filters.collection || "").trim();
+    const query = toSimplifiedChinese(filters.query).trim();
+    const author = toSimplifiedChinese(filters.author).trim();
+    const dynasty = toSimplifiedChinese(filters.dynasty).trim();
+    const collection = toSimplifiedChinese(filters.collection).trim();
     const cacheKey = JSON.stringify({ query, author, dynasty, collection });
     if (poetryFilterCache.has(cacheKey)) return poetryFilterCache.get(cacheKey);
     const requiredCharacters = [...query].filter((item) => item.trim());
-    let matchedIds;
-    if (requiredCharacters.length) {
-      matchedIds = /* @__PURE__ */ new Set();
-      for (let shardIndex = 0; shardIndex < Number(manifest.shardCount || 0); shardIndex += 1) {
-        const shard = await loadPoetryShard("search", shardIndex);
-        for (const [id, characters] of shard) {
-          if (requiredCharacters.every((character) => String(characters).includes(character))) matchedIds.add(id);
-        }
-      }
-    }
     const matched = [];
     for (let shardIndex = 0; shardIndex < Number(manifest.shardCount || 0); shardIndex += 1) {
       const shard = await loadPoetryShard("catalog", shardIndex);
       for (const row of shard) {
-        if (matchedIds && !matchedIds.has(row[0])) continue;
-        if (author && row[2] !== author) continue;
-        if (dynasty && row[3] !== dynasty) continue;
-        if (collection && row[4] !== collection) continue;
-        matched.push(catalogRowToPoetry(row));
+        const item = catalogRowToPoetry(row);
+        if (author && item.author !== author) continue;
+        if (dynasty && item.dynasty !== dynasty) continue;
+        if (collection && item.collection !== collection) continue;
+        const searchable = [item.title, item.author, item.dynasty, item.collection, ...item.lines || []].join("");
+        if (requiredCharacters.length && !searchable.includes(query) && !requiredCharacters.every((character) => searchable.includes(character))) continue;
+        matched.push(item);
       }
     }
     poetryFilterCache.set(cacheKey, matched);
@@ -24554,18 +25137,39 @@
     const shardIndex = Math.floor(id / Number(manifest.shardSize || 1e3));
     const offset = id % Number(manifest.shardSize || 1e3);
     const shard = await loadPoetryShard("shards", shardIndex);
-    return shard[offset];
+    return normalizeKnowledgeItem("poetry", shard[offset] || {});
   }
-  async function getPoetryMeta() {
+  async function getPoetryMeta(filters = {}) {
     const manifest = await loadPoetryManifest();
-    const collections = manifest?.sourceRootTypes || manifest?.collections || [];
-    return { authors: manifest?.authors || [], dynasties: manifest?.dynasties || [], collections };
+    const query = toSimplifiedChinese(filters.query).trim();
+    const author = toSimplifiedChinese(filters.author).trim();
+    const dynasty = toSimplifiedChinese(filters.dynasty).trim();
+    const collection = toSimplifiedChinese(filters.collection).trim();
+    const collections = simplifyStringList(manifest?.sourceRootTypes || manifest?.collections || []);
+    if (!manifest) return { authors: [], dynasties: [], collections: [] };
+    if (!query && !author && !dynasty && !collection) {
+      return {
+        authors: simplifyStringList(manifest.authors),
+        dynasties: simplifyStringList(manifest.dynasties),
+        collections
+      };
+    }
+    const cacheKey = JSON.stringify({ query, author, dynasty, collection });
+    if (poetryMetaCache.has(cacheKey)) return poetryMetaCache.get(cacheKey);
+    const matched = await filterPoetryCatalog({ query, author, dynasty, collection });
+    const meta = {
+      authors: [...new Set(matched.map((item) => item.author).filter(Boolean))].sort((a2, b2) => a2.localeCompare(b2, "zh-CN")),
+      dynasties: [...new Set(matched.map((item) => item.dynasty).filter(Boolean))].sort((a2, b2) => a2.localeCompare(b2, "zh-CN")),
+      collections
+    };
+    poetryMetaCache.set(cacheKey, meta);
+    return meta;
   }
   function searchableText(item, type) {
     if (type === "poetry") return [item.title, item.author, item.dynasty, ...item.lines || []].join("");
     if (type === "xiehouyu") return [item.riddle, item.answer, item.explanation].join("");
-    if (type === "char") return [item.char, item.pinyin, item.radical, item.meaning, item.more].join("");
-    return [item.word, item.pinyin, item.explanation, item.example, item.meaning, item.derivation].join("");
+    if (type === "char") return [item.char].join("");
+    return [item.word].join("");
   }
   function normalizeKnowledgeItem(type, item) {
     if (type === "char") {
@@ -24581,11 +25185,12 @@
     if (type === "word") return { word: item.ci || item.word || "", pinyin: item.pinyin || "", meaning: item.explanation || item.meaning || "" };
     if (type === "poetry") {
       return {
-        title: item.title || "",
-        author: item.author || "",
-        dynasty: item.dynasty || "\u5510",
-        collection: item.collection || "\u53E4\u8BD7",
-        lines: Array.isArray(item.lines) ? item.lines : Array.isArray(item.paragraphs) ? item.paragraphs : []
+        id: item.id,
+        title: toSimplifiedChinese(item.title || ""),
+        author: toSimplifiedChinese(item.author || ""),
+        dynasty: toSimplifiedChinese(item.dynasty || "\u5510"),
+        collection: toSimplifiedChinese(item.collection || "\u53E4\u8BD7"),
+        lines: simplifyStringList(Array.isArray(item.lines) ? item.lines : Array.isArray(item.paragraphs) ? item.paragraphs : [])
       };
     }
     if (type === "xiehouyu") return { riddle: item.riddle || "", answer: item.answer || "", explanation: item.explanation || "" };
@@ -24708,6 +25313,22 @@
     const shuffled = [...candidates].sort(() => Math.random() - 0.5);
     return shuffled.slice(0, Math.max(1, Number(count) || 1));
   }
+  function weightedKnowledgeSample(type, candidates, count = 1, excluded = /* @__PURE__ */ new Set(), preferences = {}) {
+    const targetCount = Math.max(1, Number(count) || 1);
+    const unique = [];
+    const seen = /* @__PURE__ */ new Set();
+    for (const item of Array.isArray(candidates) ? candidates : []) {
+      const key = knowledgeKey(type, item);
+      if (!key || excluded.has(key) || seen.has(key)) continue;
+      seen.add(key);
+      unique.push(item);
+    }
+    const liked = unique.filter((item) => preferences[knowledgeKey(type, item)] === "like");
+    const normal = unique.filter((item) => !preferences[knowledgeKey(type, item)]);
+    const disliked = unique.filter((item) => preferences[knowledgeKey(type, item)] === "dislike");
+    const prioritized = [...liked, ...normal.sort(() => Math.random() - 0.5), ...disliked.sort(() => Math.random() - 0.5)];
+    return prioritized.slice(0, targetCount);
+  }
   function knowledgeKey(type, item) {
     if (type === "poetry") {
       if (item.id !== void 0 && item.id !== null) return `${type}:${item.id}`;
@@ -24718,7 +25339,7 @@
   }
 
   // src/app.js
-  var state = { route: "home", paperFilter: "all", activeReadingId: null, activePaperId: null, pictureBookDraft: null, paperTransform: null, paperStatus: null, bookObjectUrl: null, fileReader: null, fileReaderToken: 0, pdfZoom: 1, selectedBookIds: /* @__PURE__ */ new Set(), bookCacheRun: 0, knowledgeType: "idiom", knowledgeQuery: "", knowledgeAuthor: "", knowledgeDynasty: "", knowledgeCollection: "", knowledgePage: 1, knowledgeHasQueried: false, wrongType: "all", learningItems: [], learningIndex: 0, learningCompleted: /* @__PURE__ */ new Set() };
+  var state = { route: "home", paperFilter: "all", activeReadingId: null, activePaperId: null, pictureBookDraft: null, paperTransform: null, paperStatus: null, bookObjectUrl: null, fileReader: null, fileReaderToken: 0, pdfZoom: 1, selectedBookIds: /* @__PURE__ */ new Set(), bookCacheRun: 0, knowledgeType: "idiom", knowledgeQuery: "", knowledgeAuthor: "", knowledgeDynasty: "", knowledgeCollection: "", knowledgePage: 1, knowledgeHasQueried: false, knowledgePreferences: {}, wrongType: "all", learningItems: [], learningIndex: 0, learningCompleted: /* @__PURE__ */ new Set() };
   var main = document.querySelector("#mainContent");
   var toast = document.querySelector("#toast");
   var modalRoot = document.querySelector("#modalRoot");
@@ -25237,10 +25858,36 @@
   function shuffleValues(values) {
     return [...values].sort(() => Math.random() - 0.5);
   }
+  async function loadKnowledgePreferences() {
+    const record = await get("settings", "knowledgePreferences");
+    return record?.value && typeof record.value === "object" ? record.value : {};
+  }
+  async function saveKnowledgePreference(type, item, preference) {
+    const key = knowledgeKey(type, item);
+    const next = { ...state.knowledgePreferences || {} };
+    if (next[key] === preference) delete next[key];
+    else next[key] = preference;
+    state.knowledgePreferences = next;
+    await put("settings", { id: "knowledgePreferences", value: next, updatedAt: Date.now() });
+  }
+  function currentKnowledgeFilters() {
+    return {
+      query: state.knowledgeQuery,
+      author: state.knowledgeAuthor,
+      dynasty: state.knowledgeDynasty,
+      collection: state.knowledgeCollection
+    };
+  }
+  async function sampleKnowledgeForUse(type, candidates, count, excluded = /* @__PURE__ */ new Set()) {
+    if (!state.knowledgePreferences || !Object.keys(state.knowledgePreferences).length) {
+      state.knowledgePreferences = await loadKnowledgePreferences();
+    }
+    return weightedKnowledgeSample(type, candidates, count, excluded, state.knowledgePreferences);
+  }
   async function createIdiomFillProblems(values) {
     const candidates = await filterKnowledgeAsync("idiom", { query: values.knowledgeQuery });
     const count = boundedPracticeCount(values.count, 10);
-    const selected = shuffleValues(candidates).slice(0, count);
+    const selected = await sampleKnowledgeForUse("idiom", candidates, count);
     const allCharacters = [...new Set(candidates.flatMap((item) => Array.from(item.word)))];
     return selected.map((item, index) => {
       const word = String(item.word);
@@ -25261,8 +25908,9 @@
     const count = boundedPracticeCount(values.count, 6);
     const query = String(values.knowledgeQuery || "").trim();
     const candidates = query ? await filterKnowledgeAsync("poetry", { query }) : await randomKnowledgeAsync("poetry", count);
-    return shuffleValues(candidates).slice(0, count).map((poem, index) => {
-      const lines = poem.lines || [];
+    const selected = await sampleKnowledgeForUse("poetry", candidates, count);
+    return selected.map((poem, index) => {
+      const lines = (poem.lines || []).map((line) => toSimplifiedChinese(line));
       const pairIndex = Math.floor(Math.random() * Math.max(1, Math.floor(lines.length / 2))) * 2;
       const pair = lines.slice(pairIndex, pairIndex + 2);
       const highDifficulty = values.poetryDifficulty === "high";
@@ -25270,12 +25918,12 @@
       return {
         id: `problem-${index + 1}`,
         kind: "poetry-match",
-        title: `${poem.title} \xB7 ${poem.author}`,
+        title: `${toSimplifiedChinese(poem.title)} \xB7 ${toSimplifiedChinese(poem.author)}`,
         prompt: highDifficulty ? `\u8BF7\u9ED8\u5199\u201C${pair[0] || ""}\u201D\u53CA\u4E0B\u4E00\u53E5` : `\u8BF7\u5199\u51FA\u201C${pair[0] || ""}\u201D\u7684\u4E0B\u53E5`,
         target,
         options: [],
         answer: target,
-        meta: { dynasty: poem.dynasty, author: poem.author }
+        meta: { dynasty: toSimplifiedChinese(poem.dynasty), author: toSimplifiedChinese(poem.author) }
       };
     });
   }
@@ -25283,7 +25931,8 @@
     const knowledgeWords = lines.length ? [] : await filterKnowledgeAsync("word");
     const source = lines.length ? lines : knowledgeWords.map((item) => item.word);
     const count = boundedPracticeCount(values.count, source.length);
-    return shuffleValues([...new Set(source)]).slice(0, count).map((word, index) => ({
+    const selected = lines.length ? shuffleValues([...new Set(source)]).slice(0, count) : (await sampleKnowledgeForUse("word", knowledgeWords, count)).map((item) => item.word);
+    return selected.map((word, index) => ({
       id: `problem-${index + 1}`,
       kind: "pinyin-write",
       prompt: word,
@@ -25870,6 +26519,26 @@
   function isEpubRelativeAsset(source) {
     return Boolean(source) && !/^(?:data:|blob:|https?:|file:|#)/iu.test(source);
   }
+  function resolveEpubInternalLink(href, currentPath) {
+    const raw = String(href || "").trim();
+    if (!raw || /^(?:https?:|mailto:|tel:|data:|blob:|file:|javascript:)/iu.test(raw)) return null;
+    const hashIndex = raw.indexOf("#");
+    const pathPart = (hashIndex >= 0 ? raw.slice(0, hashIndex) : raw).trim();
+    const anchor = hashIndex >= 0 ? raw.slice(hashIndex + 1) : "";
+    const path = pathPart ? resolveEpubArchivePath(currentPath, pathPart) : normalizeEpubArchivePath(currentPath);
+    return path ? { path, anchor } : null;
+  }
+  function prepareEpubInternalLinks(body, chapters, currentPath) {
+    body.querySelectorAll("a[href]").forEach((anchorElement) => {
+      const target = resolveEpubInternalLink(anchorElement.getAttribute("href"), currentPath);
+      if (!target) return;
+      const chapterIndex = chapters.findIndex((chapter) => normalizeEpubArchivePath(chapter.path) === target.path);
+      if (chapterIndex < 0) return;
+      anchorElement.dataset.epubLink = String(chapterIndex);
+      anchorElement.dataset.epubAnchor = target.anchor || "";
+      anchorElement.setAttribute("href", "#");
+    });
+  }
   async function parseEpubArchive(arrayBuffer) {
     const JSZip = globalThis.JSZip;
     if (!JSZip) throw new Error("EPUB \u89E3\u538B\u7EC4\u4EF6\u4E0D\u53EF\u7528");
@@ -25953,6 +26622,7 @@
     if (!body) return;
     body.querySelectorAll("script, iframe, object, embed, form").forEach((node) => node.remove());
     prepareEpubImagePlaceholders(body);
+    prepareEpubInternalLinks(body, readerState.chapters, chapter.path);
     const section = document.createElement("article");
     section.className = "epub-direct-chapter";
     section.dataset.chapterIndex = String(chapterIndex + 1);
@@ -25960,6 +26630,19 @@
     readerState.content.appendChild(section);
     readerState.renderedChapters.add(chapter.path);
     void hydrateEpubImages(section, readerState.zip, chapter.path, readerState.objectUrls).catch((error) => console.warn("EPUB \u56FE\u7247\u6E32\u67D3\u5931\u8D25", error));
+  }
+  async function openDirectEpubLink(linkElement) {
+    const readerState = state.fileReader;
+    if (readerState?.kind !== "epub-direct") return;
+    const chapterIndex = Number(linkElement.dataset.epubLink);
+    const chapter = readerState.chapters[chapterIndex];
+    if (!chapter) return;
+    await renderDirectEpubChapter(readerState, chapter, chapterIndex);
+    const section = readerState.content.querySelector(`[data-chapter-index="${chapterIndex + 1}"]`);
+    if (!section) return;
+    const rawAnchor = linkElement.dataset.epubAnchor || "";
+    const target = rawAnchor ? [...section.querySelectorAll("[id], a[name]")].find((element) => element.id === rawAnchor || element.getAttribute("name") === rawAnchor) : section;
+    (target || section).scrollIntoView({ block: "start" });
   }
   async function mountDirectEpubReader(item, token) {
     const reader = document.querySelector("[data-epubjs-reader]");
@@ -26113,13 +26796,11 @@
     poetry: "\u53E4\u8BD7\u5E93"
   });
   async function renderKnowledge() {
-    const poetryMeta = state.knowledgeType === "poetry" ? await getPoetryMeta() : { authors: [], dynasties: [] };
-    const page = state.knowledgeHasQueried ? await pageKnowledge(state.knowledgeType, {
-      query: state.knowledgeQuery,
-      author: state.knowledgeAuthor,
-      dynasty: state.knowledgeDynasty,
-      collection: state.knowledgeCollection
-    }, state.knowledgePage, 20) : { items: [], total: 0, page: 1, pageSize: 20, pageCount: 1 };
+    if (!state.knowledgePreferences || !Object.keys(state.knowledgePreferences).length) {
+      state.knowledgePreferences = await loadKnowledgePreferences();
+    }
+    const poetryMeta = state.knowledgeType === "poetry" ? await getPoetryMeta({ collection: state.knowledgeCollection }) : { authors: [], dynasties: [] };
+    const page = state.knowledgeHasQueried ? await pageKnowledge(state.knowledgeType, currentKnowledgeFilters(), state.knowledgePage, 20) : { items: [], total: 0, page: 1, pageSize: 20, pageCount: 1 };
     state.knowledgePage = page.page;
     const authors = poetryMeta.authors || [];
     const dynasties = poetryMeta.dynasties || [];
@@ -26155,7 +26836,9 @@
     return `<div><span class="status status-review">${escapeHtml2(record.type || "\u8BD5\u5377\u9519\u9898")}</span><h3>${escapeHtml2(record.title || item.prompt || "\u8BD5\u5377\u9519\u9898")}</h3><p>${escapeHtml2(item.prompt || item.expression || item.answer || "")}</p></div>`;
   }
   function renderKnowledgeItem(type, item) {
-    return `<article class="knowledge-item"><button class="knowledge-main" data-knowledge-detail-type="${escapeHtml2(type)}" data-knowledge-detail-key="${escapeHtml2(knowledgeKey(type, item))}">${renderKnowledgeSummary(type, item)}</button></article>`;
+    const key = knowledgeKey(type, item);
+    const preference = state.knowledgePreferences?.[key] || "";
+    return `<article class="knowledge-item"><button class="knowledge-main" data-knowledge-detail-type="${escapeHtml2(type)}" data-knowledge-detail-key="${escapeHtml2(key)}">${renderKnowledgeSummary(type, item)}</button><div class="knowledge-preference-actions"><button class="secondary ${preference === "like" ? "active" : ""}" data-knowledge-preference="like" data-knowledge-preference-type="${escapeHtml2(type)}" data-knowledge-preference-key="${escapeHtml2(key)}">\u559C\u6B22</button><button class="secondary ${preference === "dislike" ? "active dislike" : ""}" data-knowledge-preference="dislike" data-knowledge-preference-type="${escapeHtml2(type)}" data-knowledge-preference-key="${escapeHtml2(key)}">\u4E0D\u559C\u6B22</button></div></article>`;
   }
   function openKnowledgeDetail(type, item) {
     const title = item.word || item.char || item.title || item.riddle || "\u8BE6\u60C5";
@@ -26317,17 +27000,23 @@
     });
   }
   async function handleGlobalClick(event) {
+    const epubLink = event.target.closest("[data-epub-link]");
+    if (epubLink) {
+      event.preventDefault();
+      return openDirectEpubLink(epubLink);
+    }
     const route = event.target.closest("[data-route]")?.dataset.route;
     if (route) return navigate(route);
     if (event.target.closest("[data-knowledge-search]")) {
       return submitKnowledgeSearch();
     }
     if (event.target.closest("[data-learning-start]")) {
-      state.learningItems = await randomKnowledgeAsync(state.knowledgeType, 8, state.learningCompleted);
+      const queriedCandidates = state.knowledgeHasQueried ? await filterKnowledgeAsync(state.knowledgeType, currentKnowledgeFilters()) : [];
+      state.learningItems = queriedCandidates.length ? await sampleKnowledgeForUse(state.knowledgeType, queriedCandidates, 8, state.learningCompleted) : await sampleKnowledgeForUse(state.knowledgeType, await randomKnowledgeAsync(state.knowledgeType, 40, state.learningCompleted), 8, state.learningCompleted);
       state.learningIndex = 0;
       if (!state.learningItems.length) {
         state.learningCompleted.clear();
-        state.learningItems = await randomKnowledgeAsync(state.knowledgeType, 8);
+        state.learningItems = await sampleKnowledgeForUse(state.knowledgeType, queriedCandidates.length ? queriedCandidates : await randomKnowledgeAsync(state.knowledgeType, 40), 8);
       }
       return renderKnowledge();
     }
@@ -26349,6 +27038,18 @@
       }
       openKnowledgeDetail(type, item);
       return;
+    }
+    const knowledgePreferenceButton = event.target.closest("[data-knowledge-preference]");
+    if (knowledgePreferenceButton) {
+      const type = knowledgePreferenceButton.dataset.knowledgePreferenceType;
+      const item = await getKnowledgeDetail(type, knowledgePreferenceButton.dataset.knowledgePreferenceKey);
+      if (!item) {
+        showToast("\u6CA1\u6709\u627E\u5230\u5185\u5BB9");
+        return;
+      }
+      await saveKnowledgePreference(type, item, knowledgePreferenceButton.dataset.knowledgePreference);
+      showToast(state.knowledgePreferences[knowledgeKey(type, item)] ? "\u504F\u597D\u5DF2\u4FDD\u5B58" : "\u504F\u597D\u5DF2\u53D6\u6D88");
+      return renderKnowledge();
     }
     if (event.target.closest("[data-delete-wrong]")) {
       const id = event.target.closest("[data-delete-wrong]").dataset.deleteWrong;
@@ -26777,8 +27478,13 @@
     if (event.target.matches("[data-knowledge-filter]")) {
       const field = event.target.dataset.knowledgeFilter;
       state[`knowledge${field.charAt(0).toUpperCase()}${field.slice(1)}`] = event.target.value;
+      if (field === "collection") {
+        state.knowledgeAuthor = "";
+        state.knowledgeDynasty = "";
+      }
       state.knowledgePage = 1;
       state.knowledgeHasQueried = false;
+      if (state.knowledgeType === "poetry" && field === "collection") return renderKnowledge();
       return;
     }
     if (event.target.matches("[data-wrong-type]")) {
@@ -26873,7 +27579,7 @@
     void preloadLanguageTools().catch((error) => console.warn("\u8BED\u8A00\u5DE5\u5177\u540E\u53F0\u9884\u70ED\u5931\u8D25", error));
     void ensureReadingSeeds().catch((error) => console.warn("\u9605\u8BFB\u8D44\u6599\u540E\u53F0\u540C\u6B65\u5931\u8D25", error));
     if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
-      navigator.serviceWorker.register("./sw.js?v=20260811-8").catch(console.warn);
+      navigator.serviceWorker.register("./sw.js?v=20260811-9").catch(console.warn);
     }
   }
   async function init() {
