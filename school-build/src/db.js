@@ -1,6 +1,6 @@
 const DB_NAME = 'growth-desk-db';
-const DB_VERSION = 1;
-const STORES = ['papers', 'templates', 'readings', 'gameRecords', 'settings'];
+const DB_VERSION = 2;
+const STORES = ['papers', 'templates', 'readings', 'gameRecords', 'settings', 'wrongQuestions'];
 
 let connection;
 

@@ -82,20 +82,22 @@ test('小屏作答工具栏不裁剪控制按钮，填写框改为整行且页�
   assert.match(stylesheet, /\.worksheet-wrap\s*\{[^}]*overflow-x:\s*hidden/s);
   assert.match(stylesheet, /\.tabs\s*\{[^}]*flex-wrap:\s*wrap[^}]*overflow-x:\s*hidden/s);
   assert.match(stylesheet, /\.comparison-circle\s*\{[^}]*width:\s*1\.45em/s);
-  assert.match(stylesheet, /\.english-sentence-writing \.english-sample\s*\{[^}]*white-space:\s*normal/s);
+  assert.match(stylesheet, /\.english-sentence-writing \.english-sample\s*\{[^}]*white-space:\s*nowrap/s);
   assert.match(stylesheet, /\.paper-zoom-controls\s*\{/);
   assert.match(stylesheet, /@media \(max-width:\s*760px\)[\s\S]*\.worksheet-lines \.ten-diagram\s*\{[^}]*min-height:\s*clamp\(136px,\s*30vw,\s*166px\)[^}]*overflow:\s*visible/s);
   assert.match(stylesheet, /@media \(max-width:\s*760px\)[\s\S]*\.worksheet-layout-make-ten,\s*\.worksheet-layout-break-ten\s*\{[^}]*grid-template-columns:\s*repeat\(2/s);
   assert.match(stylesheet, /@media \(max-width:\s*760px\)[\s\S]*\.ten-process\s*\{[^}]*transform:\s*none/s);
 });
 
-test('试卷网格按 A4 页面高度均匀排布，预览不再固定只生成 12 题', () => {
+test('普通试卷网格按 A4 高度均匀排布，描红试卷按固定行连续排布', () => {
   const stylesheet = readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
   const appSource = readFileSync(new URL('../../src/app.js', import.meta.url), 'utf8');
 
   assert.match(stylesheet, /\.worksheet-lines\s*\{[^}]*grid-auto-rows:\s*minmax\(34px,\s*1fr\)/s);
   assert.match(stylesheet, /\.worksheet-lines\s*\{[^}]*align-content:\s*stretch/s);
-  assert.match(appSource, /Math\.min\(Number\(values\.count \|\| 12\),\s*100\)/);
+  assert.match(stylesheet, /\.worksheet-layout-hanzi-practice,\s*\.worksheet-layout-english-practice\s*\{[^}]*grid-auto-rows:\s*auto/s);
+  assert.match(stylesheet, /\.worksheet-layout-hanzi-practice,\s*\.worksheet-layout-english-practice\s*\{[^}]*align-content:\s*start/s);
+  assert.match(appSource, /Math\.min\(Number\(values\.count \|\| 30\),\s*100\)/);
   assert.match(appSource, /if \(layout\.includes\('multiply'\) \|\| layout\.includes\('divide'\)\) return 24/);
   assert.match(appSource, /return paper\.orientation === 'landscape' \? 36 : 36/);
 });
@@ -124,8 +126,30 @@ test('凑十破十和练字题使用图片样式需要的专属格线', () => {
   assert.doesNotMatch(breakTen, /ten-final-box/);
   assert.equal((hanzi.match(/mizi-row/g) || []).length, 1);
   assert.equal((hanzi.match(/mizi-sample-cell/g) || []).length, 2);
+  assert.match(hanzi, /pinyin-copybook/);
+  assert.ok(hanzi.indexOf('pinyin-copybook') < hanzi.indexOf('hanzi-copy-mizi'));
+  assert.match(hanzi, />ni<\/span><span class="pinyin-sample">hao</);
   assert.match(hanzi, /hanzi-font-songti/);
   assert.match(english, /english-copybook-line/);
+});
+
+test('诗句上下文配对改为单个手写填空格且不渲染选项', () => {
+  const html = renderProblemHtml({ kind:'poetry-match', title:'静夜思 · 李白', prompt:'请写出“床前明月光”的下句', target:['疑是地上霜'], options:['疑是地上霜', '举头望明月'] }, 0);
+
+  assert.equal((html.match(/poetry-answer-box/g) || []).length, 1);
+  assert.doesNotMatch(html, /poetry-option/);
+  assert.doesNotMatch(html, /draggable=/);
+});
+
+test('汉字连续描红按米字格行切分，单字描红右半区显示拼音四线三格', () => {
+  const longText = renderProblemHtml({ kind:'hanzi-trace', prompt:'鸟蒙山深源百黑鸟蒙山深源百黑' }, 0);
+  const single = renderProblemHtml({ kind:'hanzi-trace', prompt:'鸟' }, 1);
+
+  assert.equal((longText.match(/hanzi-copy-row/g) || []).length, 2);
+  assert.equal((longText.match(/mizi-sample-cell/g) || []).length, 14);
+  assert.doesNotMatch(longText, /mizi-long-text/);
+  assert.match(single, /pinyin-copybook/);
+  assert.match(single, /niao/);
 });
 
 test('汉字按笔画练字渲染笔顺提示和逐笔进度格', () => {
@@ -180,4 +204,11 @@ test('离线缓存包含真实试卷渲染模块', () => {
   const swSource = readFileSync(new URL('../../sw.js', import.meta.url), 'utf8');
 
   assert.match(swSource, /\.\/src\/worksheet-render\.js/);
+});
+
+test('英语描红超长连续文本会继续拆分，禁止撑出试卷范围', () => {
+  const appSource = readFileSync(new URL('../../src/app.js', import.meta.url), 'utf8');
+
+  assert.match(appSource, /word\.length > maxLength/);
+  assert.match(appSource, /word\.slice\(index, index \+ maxLength\)/);
 });

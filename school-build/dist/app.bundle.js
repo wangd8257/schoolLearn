@@ -1,6 +1,10 @@
 (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropNames = Object.getOwnPropertyNames;
+  var __typeError = (msg) => {
+    throw TypeError(msg);
+  };
+  var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
   var __esm = (fn, res, err) => function __init() {
     if (err) throw err[0];
     try {
@@ -13,6 +17,20 @@
     for (var name in all)
       __defProp(target, name, { get: all[name], enumerable: true });
   };
+  var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
+  var __accessCheck = (obj, member, msg) => member.has(obj) || __typeError("Cannot " + msg);
+  var __privateGet = (obj, member, getter) => (__accessCheck(obj, member, "read from private field"), getter ? getter.call(obj) : member.get(obj));
+  var __privateAdd = (obj, member, value) => member.has(obj) ? __typeError("Cannot add the same private member more than once") : member instanceof WeakSet ? member.add(obj) : member.set(obj, value);
+  var __privateSet = (obj, member, value, setter) => (__accessCheck(obj, member, "write to private field"), setter ? setter.call(obj, value) : member.set(obj, value), value);
+  var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "access private method"), method);
+  var __privateWrapper = (obj, member, setter, getter) => ({
+    set _(value) {
+      __privateSet(obj, member, value, setter);
+    },
+    get _() {
+      return __privateGet(obj, member, getter);
+    }
+  });
 
   // src/db.js
   function openDatabase() {
@@ -69,863 +87,8 @@
   var init_db = __esm({
     "src/db.js"() {
       DB_NAME = "growth-desk-db";
-      DB_VERSION = 1;
-      STORES = ["papers", "templates", "readings", "gameRecords", "settings"];
-    }
-  });
-
-  // src/math/constants.mjs
-  var TEMPLATE_TYPES, UNIT_CATEGORIES, ORIENTATIONS, BINARY_OPERATIONS;
-  var init_constants = __esm({
-    "src/math/constants.mjs"() {
-      TEMPLATE_TYPES = Object.freeze({
-        HORIZONTAL: "horizontal",
-        MISSING_TERM: "missing-term",
-        VERTICAL: "vertical",
-        COMPARISON: "comparison",
-        EQUATION: "equation",
-        CHAIN_ADDITION: "chain-addition",
-        CHAIN_SUBTRACTION: "chain-subtraction",
-        MIXED_OPERATIONS: "mixed-operations",
-        MAKE_TEN: "make-ten",
-        BREAK_TEN: "break-ten",
-        CARRYING_ADDITION: "carrying-addition",
-        BORROWING_SUBTRACTION: "borrowing-subtraction",
-        MULTIPLICATION: "multiplication",
-        DIVISION: "division",
-        CURRENCY: "currency",
-        UNIT_CONVERSION: "unit-conversion",
-        CLOCK_READING: "clock-reading",
-        WORD_PROBLEM: "word-problem"
-      });
-      UNIT_CATEGORIES = Object.freeze({
-        TIME: "time",
-        LENGTH: "length",
-        MASS: "mass",
-        AREA: "area",
-        CAPACITY: "capacity"
-      });
-      ORIENTATIONS = Object.freeze(["portrait", "landscape"]);
-      BINARY_OPERATIONS = Object.freeze(["addition", "subtraction"]);
-    }
-  });
-
-  // src/math/random.mjs
-  function createSeededRandom(seed) {
-    if (!Number.isInteger(seed)) {
-      throw new TypeError("seed \u5FC5\u987B\u662F\u6574\u6570");
-    }
-    let state2 = seed >>> 0;
-    return () => {
-      state2 = Math.imul(state2, 1664525) + 1013904223 >>> 0;
-      return state2 / 4294967296;
-    };
-  }
-  function randomInteger(random, minimum, maximum) {
-    if (!Number.isInteger(minimum) || !Number.isInteger(maximum) || minimum > maximum) {
-      throw new RangeError(`\u65E0\u6548\u968F\u673A\u6574\u6570\u8303\u56F4\uFF1A${minimum}\uFF5E${maximum}`);
-    }
-    const value = random();
-    if (!Number.isFinite(value) || value < 0 || value >= 1) {
-      throw new RangeError("random \u5FC5\u987B\u8FD4\u56DE 0\uFF08\u542B\uFF09\u5230 1\uFF08\u4E0D\u542B\uFF09\u4E4B\u95F4\u7684\u6709\u9650\u6570\u503C");
-    }
-    return minimum + Math.floor(value * (maximum - minimum + 1));
-  }
-  function randomItem(random, values) {
-    if (!Array.isArray(values) || values.length === 0) {
-      throw new RangeError("\u968F\u673A\u5019\u9009\u9879\u4E0D\u80FD\u4E3A\u7A7A");
-    }
-    return values[randomInteger(random, 0, values.length - 1)];
-  }
-  var init_random = __esm({
-    "src/math/random.mjs"() {
-    }
-  });
-
-  // src/math/generators.mjs
-  function normalizeOptions(options) {
-    const limit = options.limit ?? DEFAULT_LIMIT;
-    const maxAttempts = options.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
-    const termCount = options.termCount ?? 3;
-    const steps = options.steps ?? 1;
-    const random = options.random ?? Math.random;
-    if (!Number.isInteger(limit) || limit < 0) {
-      throw new RangeError("limit \u5FC5\u987B\u662F\u5927\u4E8E\u6216\u7B49\u4E8E 0 \u7684\u6574\u6570");
-    }
-    if (!Number.isInteger(maxAttempts) || maxAttempts < 1) {
-      throw new RangeError("maxAttempts \u5FC5\u987B\u662F\u5927\u4E8E 0 \u7684\u6574\u6570");
-    }
-    if (!Number.isInteger(termCount) || termCount < 3 || termCount > 10) {
-      throw new RangeError("termCount \u5FC5\u987B\u662F 3 \u5230 10 \u7684\u6574\u6570");
-    }
-    if (!Number.isInteger(steps) || steps < 1 || steps > 3) {
-      throw new RangeError("steps \u5FC5\u987B\u662F 1 \u5230 3 \u7684\u6574\u6570");
-    }
-    if (typeof random !== "function") {
-      throw new TypeError("random \u5FC5\u987B\u662F\u51FD\u6570");
-    }
-    if (options.operation !== void 0 && !BINARY_OPERATIONS.includes(options.operation)) {
-      throw new RangeError("operation \u4EC5\u652F\u6301 addition \u6216 subtraction");
-    }
-    if (options.remainder !== void 0 && !["optional", "required", "none"].includes(options.remainder)) {
-      throw new RangeError("remainder \u4EC5\u652F\u6301 optional\u3001required \u6216 none");
-    }
-    if (options.category !== void 0 && !Object.values(UNIT_CATEGORIES).includes(options.category)) {
-      throw new RangeError("category \u4E0D\u662F\u652F\u6301\u7684\u5355\u4F4D\u5206\u7C7B");
-    }
-    if (options.leftNumber !== void 0 && (!Number.isInteger(options.leftNumber) || options.leftNumber < 0)) {
-      throw new RangeError("leftNumber \u5FC5\u987B\u662F\u5927\u4E8E\u6216\u7B49\u4E8E 0 \u7684\u6574\u6570");
-    }
-    if (options.rightNumber !== void 0 && (!Number.isInteger(options.rightNumber) || options.rightNumber < 0)) {
-      throw new RangeError("rightNumber \u5FC5\u987B\u662F\u5927\u4E8E\u6216\u7B49\u4E8E 0 \u7684\u6574\u6570");
-    }
-    return {
-      ...options,
-      limit,
-      maxAttempts,
-      termCount,
-      steps,
-      random,
-      remainder: options.remainder ?? "optional"
-    };
-  }
-  function createProblem(type, values, limit) {
-    return {
-      type,
-      prompt: "",
-      answer: 0,
-      operands: [],
-      operators: [],
-      intermediateResults: [],
-      blankCount: 1,
-      layout: "horizontal",
-      processBoxes: [],
-      ...values,
-      meta: { limit, ...values.meta ?? {} }
-    };
-  }
-  function operationSymbol(operation) {
-    return operation === "addition" ? "+" : "-";
-  }
-  function randomBalancedInteger(random, minimum, maximum) {
-    if (maximum <= minimum) {
-      return minimum;
-    }
-    const floor = maximum >= 20 ? Math.max(minimum, Math.floor(maximum * 0.25)) : minimum;
-    return randomInteger(random, floor, maximum);
-  }
-  function randomWithinWindow(random, anchor, minimum, maximum, window2 = 20) {
-    const lower = Math.max(minimum, anchor - window2);
-    const upper = Math.min(maximum, anchor + window2);
-    if (upper < lower) return null;
-    return randomInteger(random, lower, upper);
-  }
-  function complementToNextTen(value) {
-    const remainder = value % 10;
-    return remainder === 0 ? 10 : 10 - remainder;
-  }
-  function createBinaryCalculation(operation, limit, random) {
-    if (operation === "addition") {
-      const result = randomBalancedInteger(random, 0, limit);
-      const minimumPart = result >= 20 ? Math.max(1, Math.floor(result * 0.2)) : 0;
-      const maximumPart = Math.max(minimumPart, result - minimumPart);
-      const left2 = randomInteger(random, minimumPart, maximumPart);
-      const right2 = result - left2;
-      return { left: left2, right: right2, result: left2 + right2, symbol: "+" };
-    }
-    const left = randomBalancedInteger(random, 0, limit);
-    const right = randomInteger(random, 0, left);
-    return { left, right, result: left - right, symbol: "-" };
-  }
-  function chooseBinaryOperation(options) {
-    return options.operation ?? randomItem(options.random, BINARY_OPERATIONS);
-  }
-  function generateHorizontal(options) {
-    const operation = chooseBinaryOperation(options);
-    const calculation = createBinaryCalculation(operation, options.limit, options.random);
-    return createProblem(TEMPLATE_TYPES.HORIZONTAL, {
-      prompt: `${calculation.left} ${calculation.symbol} ${calculation.right} = \u25A1`,
-      answer: calculation.result,
-      operands: [calculation.left, calculation.right],
-      operators: [calculation.symbol],
-      intermediateResults: [calculation.result],
-      expression: `${calculation.left} ${calculation.symbol} ${calculation.right}`,
-      meta: { operation }
-    }, options.limit);
-  }
-  function generateMissingTerm(options) {
-    const operation = chooseBinaryOperation(options);
-    const calculation = createBinaryCalculation(operation, options.limit, options.random);
-    const missingIndex = randomInteger(options.random, 0, 1);
-    const visibleLeft = missingIndex === 0 ? "\u25A1" : calculation.left;
-    const visibleRight = missingIndex === 1 ? "\u25A1" : calculation.right;
-    const answer = missingIndex === 0 ? calculation.left : calculation.right;
-    return createProblem(TEMPLATE_TYPES.MISSING_TERM, {
-      prompt: `${visibleLeft} ${calculation.symbol} ${visibleRight} = ${calculation.result}`,
-      answer,
-      operands: [calculation.left, calculation.right],
-      operators: [calculation.symbol],
-      intermediateResults: [calculation.result],
-      expression: `${visibleLeft} ${calculation.symbol} ${visibleRight} = ${calculation.result}`,
-      meta: { operation, missingIndex }
-    }, options.limit);
-  }
-  function generateVertical(options) {
-    const operation = chooseBinaryOperation(options);
-    const calculation = createBinaryCalculation(operation, options.limit, options.random);
-    return createProblem(TEMPLATE_TYPES.VERTICAL, {
-      prompt: `\u7528\u7AD6\u5F0F\u8BA1\u7B97\uFF1A${calculation.left} ${calculation.symbol} ${calculation.right}`,
-      answer: calculation.result,
-      operands: [calculation.left, calculation.right],
-      operators: [calculation.symbol],
-      intermediateResults: [calculation.result],
-      layout: "vertical",
-      displayLines: [String(calculation.left), `${calculation.symbol} ${calculation.right}`, "\u2500\u2500\u2500\u2500", "\u25A1"],
-      meta: { operation }
-    }, options.limit);
-  }
-  function generateComparison(options) {
-    const left = randomBalancedInteger(options.random, 0, options.limit);
-    const right = randomBalancedInteger(options.random, 0, options.limit);
-    const answer = left === right ? "=" : left > right ? ">" : "<";
-    return createProblem(TEMPLATE_TYPES.COMPARISON, {
-      prompt: `${left} \u25CB ${right}`,
-      answer,
-      operands: [left, right],
-      operators: ["compare"]
-    }, options.limit);
-  }
-  function generateEquation(options) {
-    const operation = chooseBinaryOperation(options);
-    const calculation = createBinaryCalculation(operation, options.limit, options.random);
-    const prompt2 = operation === "addition" ? `\u6C42\u6BD4 ${calculation.left} \u591A ${calculation.right} \u7684\u6570\uFF0C\u5217\u5F0F\u8BA1\u7B97\u3002` : `${calculation.left} \u6BD4 ${calculation.right} \u591A\u591A\u5C11\uFF1F\u5217\u5F0F\u8BA1\u7B97\u3002`;
-    return createProblem(TEMPLATE_TYPES.EQUATION, {
-      prompt: prompt2,
-      answer: calculation.result,
-      operands: [calculation.left, calculation.right],
-      operators: [calculation.symbol],
-      intermediateResults: [calculation.result],
-      expression: `${calculation.left} ${calculation.symbol} ${calculation.right} = ${calculation.result}`,
-      processBoxes: [{ kind: "equation", answer: `${calculation.left} ${calculation.symbol} ${calculation.right} = ${calculation.result}` }],
-      meta: { operation }
-    }, options.limit);
-  }
-  function generateChainAddition(options) {
-    const operands = [randomInteger(options.random, 0, options.limit)];
-    const intermediateResults = [];
-    let current = operands[0];
-    for (let index = 1; index < options.termCount; index += 1) {
-      const next = randomInteger(options.random, 0, options.limit - current);
-      operands.push(next);
-      current += next;
-      intermediateResults.push(current);
-    }
-    return createProblem(TEMPLATE_TYPES.CHAIN_ADDITION, {
-      prompt: `${operands.join(" + ")} = \u25A1`,
-      answer: current,
-      operands,
-      operators: Array(options.termCount - 1).fill("+"),
-      intermediateResults,
-      expression: operands.join(" + ")
-    }, options.limit);
-  }
-  function generateChainSubtraction(options) {
-    const operands = [randomInteger(options.random, 0, options.limit)];
-    const intermediateResults = [];
-    let current = operands[0];
-    for (let index = 1; index < options.termCount; index += 1) {
-      const next = randomInteger(options.random, 0, current);
-      operands.push(next);
-      current -= next;
-      intermediateResults.push(current);
-    }
-    return createProblem(TEMPLATE_TYPES.CHAIN_SUBTRACTION, {
-      prompt: `${operands.join(" - ")} = \u25A1`,
-      answer: current,
-      operands,
-      operators: Array(options.termCount - 1).fill("-"),
-      intermediateResults,
-      expression: operands.join(" - ")
-    }, options.limit);
-  }
-  function generateMixedOperations(options) {
-    const operands = [randomInteger(options.random, 0, options.limit)];
-    const operators = [];
-    const intermediateResults = [];
-    let current = operands[0];
-    for (let index = 1; index < options.termCount; index += 1) {
-      const symbol = index === 1 ? "+" : index === 2 ? "-" : randomItem(options.random, ["+", "-"]);
-      const next = symbol === "+" ? randomInteger(options.random, 0, options.limit - current) : randomInteger(options.random, 0, current);
-      operands.push(next);
-      operators.push(symbol);
-      current = symbol === "+" ? current + next : current - next;
-      intermediateResults.push(current);
-    }
-    const expression = operands.slice(1).reduce(
-      (text, operand, index) => `${text} ${operators[index]} ${operand}`,
-      String(operands[0])
-    );
-    return createProblem(TEMPLATE_TYPES.MIXED_OPERATIONS, {
-      prompt: `${expression} = \u25A1`,
-      answer: current,
-      operands,
-      operators,
-      intermediateResults,
-      expression
-    }, options.limit);
-  }
-  function generateMakeTen(options) {
-    if (options.limit < 10) {
-      return null;
-    }
-    const left = options.leftNumber === void 0 ? randomBalancedInteger(options.random, 1, options.limit - 1) : randomWithinWindow(options.random, options.leftNumber, 1, options.limit - 1);
-    if (left < 1 || left >= options.limit) {
-      return null;
-    }
-    const complement = complementToNextTen(left);
-    const maximumRight = options.limit - left;
-    const minimumRight = Math.max(11, complement);
-    if (maximumRight < minimumRight) {
-      return null;
-    }
-    const right = options.rightNumber === void 0 ? randomInteger(options.random, minimumRight, maximumRight) : randomWithinWindow(options.random, options.rightNumber, minimumRight, maximumRight);
-    if (right < complement || right > maximumRight) {
-      return null;
-    }
-    const rest = right - complement;
-    const result = left + right;
-    const roundedTen = left + complement;
-    return createProblem(TEMPLATE_TYPES.MAKE_TEN, {
-      prompt: `${left} + ${right} = \u25A1\uFF08\u7528\u51D1\u5341\u6CD5\uFF09`,
-      answer: result,
-      operands: [left, right],
-      operators: ["+"],
-      intermediateResults: [roundedTen, result],
-      expression: `${left} + ${right}`,
-      processBoxes: [
-        { kind: "make-ten", expression: `${left} + ${complement}`, result: roundedTen },
-        { kind: "remaining-addition", expression: `${roundedTen} + ${rest}`, result }
-      ],
-      meta: { split: [complement, rest] }
-    }, options.limit);
-  }
-  function generateBreakTen(options) {
-    if (options.limit < 10) {
-      return null;
-    }
-    if (options.leftNumber === void 0 && options.limit < 11) {
-      return null;
-    }
-    const left = options.leftNumber === void 0 ? randomInteger(options.random, 11, Math.min(options.limit, 19)) : randomWithinWindow(options.random, options.leftNumber, 11, Math.min(options.limit, 19));
-    if (left < 10 || left > Math.min(options.limit, 19)) {
-      return null;
-    }
-    const firstPart = left - 10;
-    const minimumRight = firstPart + 1;
-    if (minimumRight > left) {
-      return null;
-    }
-    const right = options.rightNumber === void 0 ? randomInteger(options.random, minimumRight, left) : randomWithinWindow(options.random, options.rightNumber, minimumRight, left);
-    if (right < minimumRight || right > left) {
-      return null;
-    }
-    const secondPart = right - firstPart;
-    const result = left - right;
-    return createProblem(TEMPLATE_TYPES.BREAK_TEN, {
-      prompt: `${left} - ${right} = \u25A1\uFF08\u7528\u7834\u5341\u6CD5\uFF09`,
-      answer: result,
-      operands: [left, right],
-      operators: ["-"],
-      intermediateResults: [10, result],
-      expression: `${left} - ${right}`,
-      processBoxes: [
-        { kind: "break-to-ten", expression: `${left} - ${firstPart}`, result: 10 },
-        { kind: "remaining-subtraction", expression: `10 - ${secondPart}`, result }
-      ],
-      meta: { split: [firstPart, secondPart] }
-    }, options.limit);
-  }
-  function generateCarryingAddition(options) {
-    const left = randomBalancedInteger(options.random, 0, options.limit);
-    const right = randomBalancedInteger(options.random, 0, options.limit);
-    const result = left + right;
-    if (result > options.limit || left % 10 + right % 10 < 10) {
-      return null;
-    }
-    return createProblem(TEMPLATE_TYPES.CARRYING_ADDITION, {
-      prompt: `${left} + ${right} = \u25A1`,
-      answer: result,
-      operands: [left, right],
-      operators: ["+"],
-      intermediateResults: [result],
-      expression: `${left} + ${right}`,
-      meta: { carry: true }
-    }, options.limit);
-  }
-  function generateBorrowingSubtraction(options) {
-    const left = randomInteger(options.random, 10, Math.max(10, options.limit));
-    const right = randomBalancedInteger(options.random, 0, options.limit);
-    if (left > options.limit || right > left || left % 10 >= right % 10) {
-      return null;
-    }
-    const result = left - right;
-    return createProblem(TEMPLATE_TYPES.BORROWING_SUBTRACTION, {
-      prompt: `${left} - ${right} = \u25A1`,
-      answer: result,
-      operands: [left, right],
-      operators: ["-"],
-      intermediateResults: [result],
-      expression: `${left} - ${right}`,
-      meta: { borrow: true }
-    }, options.limit);
-  }
-  function generateMultiplication(options) {
-    const maximumFactor = Math.min(12, options.limit);
-    const right = maximumFactor >= 2 ? randomInteger(options.random, 2, maximumFactor) : randomInteger(options.random, 0, options.limit);
-    const maximumLeft = right === 0 ? options.limit : Math.floor(options.limit / right);
-    const left = maximumLeft >= 2 ? randomBalancedInteger(options.random, 2, maximumLeft) : randomInteger(options.random, 0, maximumLeft);
-    const result = left * right;
-    return createProblem(TEMPLATE_TYPES.MULTIPLICATION, {
-      prompt: `${left} \xD7 ${right} = \u25A1`,
-      answer: result,
-      operands: [left, right],
-      operators: ["\xD7"],
-      intermediateResults: [result],
-      expression: `${left} \xD7 ${right}`
-    }, options.limit);
-  }
-  function generateDivision(options) {
-    if (options.limit < 1) {
-      return null;
-    }
-    const requireRemainder = options.remainder === "required" || options.remainder === "optional" && options.limit >= 3 && options.random() < 0.5;
-    let divisor;
-    let quotient;
-    let remainder;
-    if (requireRemainder) {
-      if (options.limit < 3) {
-        return null;
-      }
-      divisor = randomInteger(options.random, 2, options.limit - 1);
-      const maximumQuotient = Math.floor((options.limit - 1) / divisor);
-      if (maximumQuotient < 1) {
-        return null;
-      }
-      quotient = randomInteger(options.random, 1, maximumQuotient);
-      const maximumRemainder = Math.min(divisor - 1, options.limit - divisor * quotient);
-      if (maximumRemainder < 1) {
-        return null;
-      }
-      remainder = randomInteger(options.random, 1, maximumRemainder);
-    } else {
-      divisor = randomInteger(options.random, 1, options.limit);
-      quotient = randomInteger(options.random, 0, Math.floor(options.limit / divisor));
-      remainder = 0;
-    }
-    const dividend = divisor * quotient + remainder;
-    const answerText = remainder === 0 ? `${quotient}` : `${quotient}\u2026\u2026${remainder}`;
-    return createProblem(TEMPLATE_TYPES.DIVISION, {
-      prompt: `${dividend} \xF7 ${divisor} = \u25A1`,
-      answer: quotient,
-      operands: [dividend, divisor],
-      operators: ["\xF7"],
-      intermediateResults: [quotient, remainder],
-      expression: `${dividend} \xF7 ${divisor}`,
-      answerText,
-      remainder
-    }, options.limit);
-  }
-  function generateCurrency(options) {
-    const fitting = CURRENCY_CONVERSIONS.filter(({ factor }) => factor <= options.limit);
-    const available = fitting.length ? fitting : CURRENCY_CONVERSIONS;
-    const conversion = randomItem(options.random, available);
-    const sourceMaximum = Math.max(1, options.limit);
-    const sourceValue = randomInteger(options.random, 1, sourceMaximum);
-    const answer = sourceValue * conversion.factor;
-    return createProblem(TEMPLATE_TYPES.CURRENCY, {
-      prompt: `${sourceValue}${conversion.sourceUnit} = \u25A1${conversion.targetUnit}`,
-      answer,
-      operands: [sourceValue],
-      intermediateResults: [answer],
-      meta: { ...conversion, sourceValue }
-    }, options.limit);
-  }
-  function generateUnitConversion(options) {
-    const categories = options.category ? [options.category] : Object.values(UNIT_CATEGORIES);
-    const fittingAvailable = categories.flatMap((category) => UNIT_CONVERSIONS[category].filter(({ factor }) => factor <= options.limit).map((conversion2) => ({ category, ...conversion2 })));
-    const fallbackAvailable = categories.flatMap((category) => UNIT_CONVERSIONS[category].map((conversion2) => ({ category, ...conversion2 })));
-    const available = fittingAvailable.length ? fittingAvailable : fallbackAvailable;
-    const conversion = randomItem(options.random, available);
-    const sourceMaximum = Math.max(1, options.limit);
-    const sourceValue = randomInteger(options.random, 1, sourceMaximum);
-    const answer = sourceValue * conversion.factor;
-    return createProblem(TEMPLATE_TYPES.UNIT_CONVERSION, {
-      prompt: `${sourceValue}${conversion.sourceUnit} = \u25A1${conversion.targetUnit}`,
-      answer,
-      operands: [sourceValue],
-      intermediateResults: [answer],
-      meta: { ...conversion, sourceValue }
-    }, options.limit);
-  }
-  function generateClockReading(options) {
-    const hour = randomInteger(options.random, 1, 12);
-    const minute = randomInteger(options.random, 0, 11) * 5;
-    const minuteText = String(minute).padStart(2, "0");
-    return createProblem(TEMPLATE_TYPES.CLOCK_READING, {
-      prompt: "\u8BF7\u5199\u51FA\u949F\u9762\u8868\u793A\u7684\u65F6\u95F4",
-      answer: `${hour}:${minuteText}`,
-      operands: [hour, minute],
-      intermediateResults: [],
-      layout: "clock",
-      meta: { hour, minute }
-    }, options.limit);
-  }
-  function generateWordProblem(options) {
-    const start = randomInteger(options.random, 0, options.limit);
-    const operands = [start];
-    const operators = [];
-    const intermediateResults = [];
-    const steps = [];
-    const storyParts = [`\u76D2\u5B50\u91CC\u539F\u6709 ${start} \u652F\u94C5\u7B14`];
-    let current = start;
-    for (let index = 0; index < options.steps; index += 1) {
-      const operation = current === 0 ? "addition" : current === options.limit ? "subtraction" : randomItem(options.random, BINARY_OPERATIONS);
-      const symbol = operationSymbol(operation);
-      const amount = operation === "addition" ? randomInteger(options.random, 0, options.limit - current) : randomInteger(options.random, 0, current);
-      const before = current;
-      current = operation === "addition" ? current + amount : current - amount;
-      operands.push(amount);
-      operators.push(symbol);
-      intermediateResults.push(current);
-      steps.push({
-        index: index + 1,
-        operation,
-        expression: `${before} ${symbol} ${amount} = ${current}`,
-        result: current
-      });
-      storyParts.push(operation === "addition" ? `\u53C8\u653E\u5165 ${amount} \u652F` : `\u53D6\u8D70 ${amount} \u652F`);
-    }
-    return createProblem(TEMPLATE_TYPES.WORD_PROBLEM, {
-      prompt: `${storyParts.join("\uFF0C")}\u3002\u73B0\u5728\u76D2\u5B50\u91CC\u6709\u591A\u5C11\u652F\u94C5\u7B14\uFF1F`,
-      answer: current,
-      operands,
-      operators,
-      intermediateResults,
-      steps,
-      processBoxes: [
-        ...steps.map((step) => ({ kind: "equation", step: step.index, answer: step.expression })),
-        { kind: "final-answer", answer: `${current} \u652F` }
-      ],
-      meta: { stepCount: options.steps }
-    }, options.limit);
-  }
-  function generateProblem(type, options = {}) {
-    const generator = GENERATORS[type];
-    if (!generator) {
-      throw new RangeError(`\u672A\u77E5\u6570\u5B66\u6A21\u677F\uFF1A${type}`);
-    }
-    const normalizedOptions = normalizeOptions(options);
-    for (let attempt = 1; attempt <= normalizedOptions.maxAttempts; attempt += 1) {
-      const problem = generator(normalizedOptions);
-      if (problem) {
-        return problem;
-      }
-    }
-    throw new RangeError(`\u65E0\u6CD5\u751F\u6210 ${type}\uFF1A\u5DF2\u5C1D\u8BD5 ${normalizedOptions.maxAttempts} \u6B21\uFF0C\u8BF7\u8C03\u6574\u8303\u56F4\u6216\u53C2\u6570`);
-  }
-  var DEFAULT_LIMIT, DEFAULT_MAX_ATTEMPTS, CURRENCY_CONVERSIONS, UNIT_CONVERSIONS, GENERATORS;
-  var init_generators = __esm({
-    "src/math/generators.mjs"() {
-      init_constants();
-      init_random();
-      DEFAULT_LIMIT = 20;
-      DEFAULT_MAX_ATTEMPTS = 100;
-      CURRENCY_CONVERSIONS = Object.freeze([
-        { sourceUnit: "\u5143", targetUnit: "\u89D2", factor: 10 },
-        { sourceUnit: "\u89D2", targetUnit: "\u5206", factor: 10 },
-        { sourceUnit: "\u5143", targetUnit: "\u5206", factor: 100 }
-      ]);
-      UNIT_CONVERSIONS = Object.freeze({
-        [UNIT_CATEGORIES.TIME]: [
-          { sourceUnit: "\u65F6", targetUnit: "\u5206", factor: 60 },
-          { sourceUnit: "\u5206", targetUnit: "\u79D2", factor: 60 }
-        ],
-        [UNIT_CATEGORIES.LENGTH]: [
-          { sourceUnit: "\u7C73", targetUnit: "\u5206\u7C73", factor: 10 },
-          { sourceUnit: "\u5206\u7C73", targetUnit: "\u5398\u7C73", factor: 10 },
-          { sourceUnit: "\u7C73", targetUnit: "\u5398\u7C73", factor: 100 },
-          { sourceUnit: "\u5343\u7C73", targetUnit: "\u7C73", factor: 1e3 }
-        ],
-        [UNIT_CATEGORIES.MASS]: [
-          { sourceUnit: "\u5343\u514B", targetUnit: "\u514B", factor: 1e3 }
-        ],
-        [UNIT_CATEGORIES.AREA]: [
-          { sourceUnit: "\u5E73\u65B9\u7C73", targetUnit: "\u5E73\u65B9\u5206\u7C73", factor: 100 },
-          { sourceUnit: "\u5E73\u65B9\u5206\u7C73", targetUnit: "\u5E73\u65B9\u5398\u7C73", factor: 100 }
-        ],
-        [UNIT_CATEGORIES.CAPACITY]: [
-          { sourceUnit: "\u5347", targetUnit: "\u6BEB\u5347", factor: 1e3 }
-        ]
-      });
-      GENERATORS = Object.freeze({
-        [TEMPLATE_TYPES.HORIZONTAL]: generateHorizontal,
-        [TEMPLATE_TYPES.MISSING_TERM]: generateMissingTerm,
-        [TEMPLATE_TYPES.VERTICAL]: generateVertical,
-        [TEMPLATE_TYPES.COMPARISON]: generateComparison,
-        [TEMPLATE_TYPES.EQUATION]: generateEquation,
-        [TEMPLATE_TYPES.CHAIN_ADDITION]: generateChainAddition,
-        [TEMPLATE_TYPES.CHAIN_SUBTRACTION]: generateChainSubtraction,
-        [TEMPLATE_TYPES.MIXED_OPERATIONS]: generateMixedOperations,
-        [TEMPLATE_TYPES.MAKE_TEN]: generateMakeTen,
-        [TEMPLATE_TYPES.BREAK_TEN]: generateBreakTen,
-        [TEMPLATE_TYPES.CARRYING_ADDITION]: generateCarryingAddition,
-        [TEMPLATE_TYPES.BORROWING_SUBTRACTION]: generateBorrowingSubtraction,
-        [TEMPLATE_TYPES.MULTIPLICATION]: generateMultiplication,
-        [TEMPLATE_TYPES.DIVISION]: generateDivision,
-        [TEMPLATE_TYPES.CURRENCY]: generateCurrency,
-        [TEMPLATE_TYPES.UNIT_CONVERSION]: generateUnitConversion,
-        [TEMPLATE_TYPES.CLOCK_READING]: generateClockReading,
-        [TEMPLATE_TYPES.WORD_PROBLEM]: generateWordProblem
-      });
-    }
-  });
-
-  // src/math/validator.mjs
-  function evaluateAddSubtract(operands, operators) {
-    if (operands.length === 0) {
-      return [];
-    }
-    let current = operands[0];
-    return operators.map((operator, index) => {
-      current = operator === "+" ? current + operands[index + 1] : current - operands[index + 1];
-      return current;
-    });
-  }
-  function validateProblem(problem, options = {}) {
-    const errors = [];
-    if (!problem || typeof problem !== "object") {
-      return { valid: false, errors: ["\u9898\u76EE\u5FC5\u987B\u662F\u5BF9\u8C61"] };
-    }
-    if (!Object.values(TEMPLATE_TYPES).includes(problem.type)) {
-      errors.push("\u6A21\u677F\u7C7B\u578B\u65E0\u6548");
-    }
-    if (typeof problem.prompt !== "string" || problem.prompt.length === 0) {
-      errors.push("\u9898\u5E72\u4E0D\u80FD\u4E3A\u7A7A");
-    }
-    if (!Array.isArray(problem.operands) || !Array.isArray(problem.intermediateResults)) {
-      errors.push("\u64CD\u4F5C\u6570\u548C\u4E2D\u95F4\u7ED3\u679C\u5FC5\u987B\u662F\u6570\u7EC4");
-      return { valid: false, errors };
-    }
-    const limit = options.limit ?? problem.meta?.limit;
-    if (!Number.isInteger(limit) || limit < 0) {
-      errors.push("\u7F3A\u5C11\u6709\u6548\u7684\u6570\u503C\u4E0A\u9650");
-    } else {
-      const values = [...problem.operands, ...problem.intermediateResults];
-      if (typeof problem.answer === "number") {
-        values.push(problem.answer);
-      }
-      const enforceUpperBound = ![
-        TEMPLATE_TYPES.CURRENCY,
-        TEMPLATE_TYPES.UNIT_CONVERSION,
-        TEMPLATE_TYPES.CLOCK_READING
-      ].includes(problem.type);
-      if (values.some((value) => !Number.isFinite(value) || value < 0 || enforceUpperBound && value > limit)) {
-        errors.push("\u5B58\u5728\u8D85\u51FA 0\uFF5EN \u7684\u6570\u503C");
-      }
-    }
-    if ([TEMPLATE_TYPES.HORIZONTAL, TEMPLATE_TYPES.MISSING_TERM].includes(problem.type)) {
-      if (problem.blankCount !== 1 || (problem.prompt.match(/□/g) ?? []).length !== 1) {
-        errors.push("\u666E\u901A\u6A2A\u5F0F\u548C\u7F3A\u9879\u9898\u5FC5\u987B\u6070\u597D\u6709\u4E00\u4E2A\u7A7A\u683C");
-      }
-    }
-    if ([
-      TEMPLATE_TYPES.HORIZONTAL,
-      TEMPLATE_TYPES.VERTICAL,
-      TEMPLATE_TYPES.EQUATION,
-      TEMPLATE_TYPES.CARRYING_ADDITION,
-      TEMPLATE_TYPES.BORROWING_SUBTRACTION
-    ].includes(problem.type)) {
-      const [left, right] = problem.operands;
-      const expected = problem.operators[0] === "+" ? left + right : left - right;
-      if (problem.answer !== expected) {
-        errors.push("\u4E8C\u5143\u8FD0\u7B97\u7B54\u6848\u4E0D\u6B63\u786E");
-      }
-    }
-    if (problem.type === TEMPLATE_TYPES.MISSING_TERM) {
-      const missingIndex = problem.meta?.missingIndex;
-      if (![0, 1].includes(missingIndex) || problem.answer !== problem.operands[missingIndex]) {
-        errors.push("\u7F3A\u9879\u7B54\u6848\u4E0E\u7A7A\u683C\u4F4D\u7F6E\u4E0D\u4E00\u81F4");
-      }
-    }
-    if (problem.type === TEMPLATE_TYPES.COMPARISON) {
-      const [left, right] = problem.operands;
-      const expected = left === right ? "=" : left > right ? ">" : "<";
-      if (problem.answer !== expected) {
-        errors.push("\u6BD4\u8F83\u7B26\u53F7\u4E0D\u6B63\u786E");
-      }
-    }
-    if ([
-      TEMPLATE_TYPES.CHAIN_ADDITION,
-      TEMPLATE_TYPES.CHAIN_SUBTRACTION,
-      TEMPLATE_TYPES.MIXED_OPERATIONS
-    ].includes(problem.type)) {
-      const results = evaluateAddSubtract(problem.operands, problem.operators);
-      if (results.some((value) => value < 0)) {
-        errors.push("\u8FDE\u7EED\u8FD0\u7B97\u51FA\u73B0\u8D1F\u6570");
-      }
-      if (results.at(-1) !== problem.answer) {
-        errors.push("\u8FDE\u7EED\u8FD0\u7B97\u7B54\u6848\u4E0D\u6B63\u786E");
-      }
-      if (problem.operands.length < 3 || problem.operands.length > 10) {
-        errors.push("\u8FDE\u7EED\u8FD0\u7B97\u9879\u6570\u5FC5\u987B\u4E3A 3\uFF5E10");
-      }
-    }
-    if (problem.type === TEMPLATE_TYPES.MAKE_TEN && problem.processBoxes?.[0]?.result % 10 !== 0) {
-      errors.push("\u51D1\u5341\u6CD5\u8FC7\u7A0B\u672A\u5148\u5F97\u5230\u6574\u5341\u6570");
-    }
-    if (problem.type === TEMPLATE_TYPES.BREAK_TEN && problem.processBoxes?.[0]?.result !== 10) {
-      errors.push("\u7834\u5341\u6CD5\u8FC7\u7A0B\u672A\u5148\u62C6\u5230 10");
-    }
-    if (problem.type === TEMPLATE_TYPES.CARRYING_ADDITION && problem.operands[0] % 10 + problem.operands[1] % 10 < 10) {
-      errors.push("\u8FDB\u4F4D\u52A0\u6CD5\u7684\u4E2A\u4F4D\u4E0D\u9700\u8981\u8FDB\u4F4D");
-    }
-    if (problem.type === TEMPLATE_TYPES.BORROWING_SUBTRACTION && problem.operands[0] % 10 >= problem.operands[1] % 10) {
-      errors.push("\u9000\u4F4D\u51CF\u6CD5\u7684\u4E2A\u4F4D\u4E0D\u9700\u8981\u9000\u4F4D");
-    }
-    if (problem.type === TEMPLATE_TYPES.MULTIPLICATION && problem.answer !== problem.operands[0] * problem.operands[1]) {
-      errors.push("\u4E58\u6CD5\u7B54\u6848\u4E0D\u6B63\u786E");
-    }
-    if (problem.type === TEMPLATE_TYPES.DIVISION) {
-      const [dividend, divisor] = problem.operands;
-      if (!Number.isInteger(divisor) || divisor <= 0) {
-        errors.push("\u9664\u6570\u5FC5\u987B\u5927\u4E8E 0");
-      } else if (problem.remainder < 0 || problem.remainder >= divisor) {
-        errors.push("\u4F59\u6570\u5FC5\u987B\u5927\u4E8E\u6216\u7B49\u4E8E 0 \u4E14\u5C0F\u4E8E\u9664\u6570");
-      } else if (dividend !== divisor * problem.answer + problem.remainder) {
-        errors.push("\u9664\u6CD5\u7B49\u5F0F\u4E0D\u6210\u7ACB");
-      }
-    }
-    if ([TEMPLATE_TYPES.CURRENCY, TEMPLATE_TYPES.UNIT_CONVERSION].includes(problem.type)) {
-      if (problem.answer !== problem.meta?.sourceValue * problem.meta?.factor) {
-        errors.push("\u5355\u4F4D\u6362\u7B97\u7ED3\u679C\u4E0D\u6B63\u786E");
-      }
-    }
-    if (problem.type === TEMPLATE_TYPES.CLOCK_READING) {
-      const [hour, minute] = problem.operands;
-      const expectedAnswer = `${hour}:${String(minute).padStart(2, "0")}`;
-      if (!Number.isInteger(hour) || hour < 1 || hour > 12) {
-        errors.push("\u949F\u8868\u5C0F\u65F6\u5FC5\u987B\u662F 1\uFF5E12");
-      }
-      if (!Number.isInteger(minute) || minute < 0 || minute > 59 || minute % 5 !== 0) {
-        errors.push("\u949F\u8868\u5206\u949F\u5FC5\u987B\u662F 0\uFF5E55 \u4E14\u4E3A 5 \u7684\u500D\u6570");
-      }
-      if (problem.answer !== expectedAnswer || problem.meta?.hour !== hour || problem.meta?.minute !== minute) {
-        errors.push("\u949F\u8868\u9898\u7B54\u6848\u4E0E\u9898\u9762\u65F6\u95F4\u4E0D\u4E00\u81F4");
-      }
-    }
-    if (problem.type === TEMPLATE_TYPES.WORD_PROBLEM) {
-      if (!Array.isArray(problem.steps) || problem.steps.length < 1 || problem.steps.length > 3) {
-        errors.push("\u5E94\u7528\u9898\u6B65\u9AA4\u6570\u5FC5\u987B\u4E3A 1\uFF5E3");
-      } else if (problem.answer !== problem.steps.at(-1).result) {
-        errors.push("\u5E94\u7528\u9898\u6700\u7EC8\u7B54\u6848\u4E0E\u6700\u540E\u4E00\u6B65\u4E0D\u4E00\u81F4");
-      }
-      if (problem.processBoxes?.length !== problem.steps?.length + 1 || problem.processBoxes?.at(-1)?.kind !== "final-answer") {
-        errors.push("\u5E94\u7528\u9898\u7F3A\u5C11\u9010\u6B65\u5217\u5F0F\u6846\u6216\u6700\u7EC8\u4F5C\u7B54\u6846");
-      }
-    }
-    return { valid: errors.length === 0, errors };
-  }
-  var init_validator = __esm({
-    "src/math/validator.mjs"() {
-      init_constants();
-    }
-  });
-
-  // src/math/worksheet.mjs
-  function snapshotOptions(options) {
-    return JSON.parse(JSON.stringify(options, (key, value) => typeof value === "function" || value === void 0 ? void 0 : value));
-  }
-  function problemSignature(problem) {
-    return JSON.stringify({
-      type: problem.type,
-      prompt: problem.prompt,
-      answer: problem.answer,
-      operands: problem.operands,
-      operators: problem.operators,
-      intermediateResults: problem.intermediateResults,
-      meta: problem.meta,
-      displayLines: problem.displayLines,
-      processBoxes: problem.processBoxes
-    });
-  }
-  function generateWorksheet(config) {
-    if (!config || typeof config !== "object") {
-      throw new TypeError("\u8BD5\u5377\u914D\u7F6E\u4E0D\u80FD\u4E3A\u7A7A");
-    }
-    if (!Number.isInteger(config.count) || config.count < 1) {
-      throw new RangeError("count \u5FC5\u987B\u662F\u5927\u4E8E 0 \u7684\u6574\u6570");
-    }
-    const orientation = config.orientation ?? "portrait";
-    if (!ORIENTATIONS.includes(orientation)) {
-      throw new RangeError("orientation \u4EC5\u652F\u6301 portrait \u6216 landscape");
-    }
-    const options = config.options ?? {};
-    const random = config.random ?? options.random ?? Math.random;
-    const seen = /* @__PURE__ */ new Set();
-    const problems = Array.from({ length: config.count }, (_2, index) => {
-      let problem = null;
-      for (let attempt = 1; attempt <= 200; attempt += 1) {
-        const candidate = generateProblem(config.template, { ...options, random });
-        const signature = problemSignature(candidate);
-        if (seen.has(signature)) continue;
-        seen.add(signature);
-        problem = candidate;
-        break;
-      }
-      if (!problem) {
-        throw new RangeError(`\u8BD5\u5377\u9898\u76EE\u53BB\u91CD\u5931\u8D25\uFF1A${config.template} \u65E0\u6CD5\u5728\u5F53\u524D\u53C2\u6570\u4E0B\u751F\u6210\u8DB3\u591F\u591A\u7684\u4E0D\u540C\u9898\u76EE`);
-      }
-      return {
-        id: `q-${index + 1}`,
-        ...problem
-      };
-    });
-    return {
-      schemaVersion: 1,
-      title: config.title ?? `${config.template} \u7EC3\u4E60`,
-      template: config.template,
-      orientation,
-      createdAt: config.createdAt ?? (/* @__PURE__ */ new Date()).toISOString(),
-      templateOptions: snapshotOptions(options),
-      problems
-    };
-  }
-  var init_worksheet = __esm({
-    "src/math/worksheet.mjs"() {
-      init_constants();
-      init_generators();
-    }
-  });
-
-  // src/math/index.mjs
-  var math_exports = {};
-  __export(math_exports, {
-    BINARY_OPERATIONS: () => BINARY_OPERATIONS,
-    ORIENTATIONS: () => ORIENTATIONS,
-    TEMPLATE_TYPES: () => TEMPLATE_TYPES,
-    UNIT_CATEGORIES: () => UNIT_CATEGORIES,
-    createSeededRandom: () => createSeededRandom,
-    generateProblem: () => generateProblem,
-    generateWorksheet: () => generateWorksheet,
-    validateProblem: () => validateProblem
-  });
-  var init_math = __esm({
-    "src/math/index.mjs"() {
-      init_constants();
-      init_generators();
-      init_random();
-      init_validator();
-      init_worksheet();
+      DB_VERSION = 2;
+      STORES = ["papers", "templates", "readings", "gameRecords", "settings", "wrongQuestions"];
     }
   });
 
@@ -1931,8 +1094,8 @@
   });
 
   // src/games/random.js
-  function createSeededRandom2(seed = Date.now()) {
-    const text = String(seed);
+  function createSeededRandom2(seed2 = Date.now()) {
+    const text = String(seed2);
     let state2 = 2166136261;
     for (let index = 0; index < text.length; index += 1) {
       state2 ^= text.charCodeAt(index);
@@ -1954,7 +1117,7 @@
     }
     return result;
   }
-  var init_random2 = __esm({
+  var init_random = __esm({
     "src/games/random.js"() {
     }
   });
@@ -2226,7 +1389,7 @@
     "src/games/chinese-word-game.js"() {
       init_word_lists();
       init_game_session();
-      init_random2();
+      init_random();
       BOARD_SIDE = 9;
       BOARD_SIZE = BOARD_SIDE * BOARD_SIDE;
     }
@@ -2286,7 +1449,7 @@
     "src/games/english-match-game.js"() {
       init_word_lists();
       init_game_session();
-      init_random2();
+      init_random();
     }
   });
 
@@ -3028,7 +2191,7 @@
     const next = structuredClone(book);
     const page = next.pages?.find((item) => item.id === pageId);
     if (!page) throw new Error("\u9875\u9762\u4E0D\u5B58\u5728");
-    page.textBoxes ||= [];
+    page.textBoxes || (page.textBoxes = []);
     page.textBoxes.push({ id: options.id || uid("text"), text: String(text || "").trim() || "\u8BF7\u8F93\u5165\u6587\u5B57", x: 8, y: 72, width: 84 });
     next.updatedAt = options.now ?? Date.now();
     return next;
@@ -3163,8 +2326,101 @@
     serif: "english-font-serif",
     cursive: "english-font-cursive"
   });
+  var HANZI_PINYIN_MAP = Object.freeze({
+    \u4E00: "yi",
+    \u4E8C: "er",
+    \u4E09: "san",
+    \u56DB: "si",
+    \u4E94: "wu",
+    \u516D: "liu",
+    \u4E03: "qi",
+    \u516B: "ba",
+    \u4E5D: "jiu",
+    \u5341: "shi",
+    \u4EBA: "ren",
+    \u53E3: "kou",
+    \u65E5: "ri",
+    \u6708: "yue",
+    \u5C71: "shan",
+    \u6C34: "shui",
+    \u706B: "huo",
+    \u571F: "tu",
+    \u6728: "mu",
+    \u79BE: "he",
+    \u4F60: "ni",
+    \u597D: "hao",
+    \u65E0: "wu",
+    \u4E0E: "yu",
+    \u5B50: "zi",
+    \u9E1F: "niao",
+    \u8499: "meng",
+    \u6DF1: "shen",
+    \u6E90: "yuan",
+    \u767E: "bai",
+    \u9ED1: "hei",
+    \u5929: "tian",
+    \u5730: "di",
+    \u4E0A: "shang",
+    \u4E0B: "xia",
+    \u4E2D: "zhong",
+    \u5927: "da",
+    \u5C0F: "xiao",
+    \u591A: "duo",
+    \u5C11: "shao",
+    \u6765: "lai",
+    \u53BB: "qu",
+    \u5B66: "xue",
+    \u751F: "sheng",
+    \u8001: "lao",
+    \u5E08: "shi",
+    \u7238: "ba",
+    \u5988: "ma",
+    \u54E5: "ge",
+    \u59D0: "jie",
+    \u5F1F: "di",
+    \u59B9: "mei",
+    \u6625: "chun",
+    \u590F: "xia",
+    \u79CB: "qiu",
+    \u51AC: "dong",
+    \u98CE: "feng",
+    \u96E8: "yu",
+    \u96EA: "xue",
+    \u82B1: "hua",
+    \u8349: "cao",
+    \u866B: "chong"
+  });
   function englishFontClass(problem) {
     return ENGLISH_FONT_CLASSES[problem.meta?.font] || ENGLISH_FONT_CLASSES.comic;
+  }
+  function chunkList(values, size) {
+    const chunks = [];
+    for (let index = 0; index < values.length; index += size) {
+      chunks.push(values.slice(index, index + size));
+    }
+    return chunks;
+  }
+  function getHanziPinyin(character) {
+    const cnchar = globalThis.cnchar || globalThis.CnChar;
+    if (cnchar?.spell) {
+      try {
+        const result = cnchar.spell(character, "low");
+        const normalized = Array.isArray(result) ? result.join(" ") : String(result || "");
+        if (normalized.trim()) return normalized.trim();
+      } catch (error) {
+      }
+    }
+    return HANZI_PINYIN_MAP[character] || "";
+  }
+  function renderMiziCells(samples, totalCells) {
+    const sampleCells = samples.map((character) => `<span class="mizi-cell mizi-sample-cell">${escapeHtml(character)}</span>`).join("");
+    const blankCells = Array.from({ length: Math.max(0, totalCells - samples.length) }, () => '<span class="mizi-cell"></span>').join("");
+    return `${sampleCells}${blankCells}`;
+  }
+  function renderPinyinCopybook(characters) {
+    const pinyin = characters.map(getHanziPinyin);
+    const cells = pinyin.map((value) => `<span class="pinyin-sample">${escapeHtml(value)}</span>`).join("");
+    return `<div class="pinyin-copybook" aria-label="\u62FC\u97F3\u56DB\u7EBF\u4E09\u683C">${cells}</div>`;
   }
   function worksheetLayoutClass(paper = {}) {
     const template = paper.config?.template || paper.problems?.[0]?.kind || paper.problems?.[0]?.type || "horizontal";
@@ -3192,7 +2448,10 @@
       "pinyin-trace": "english-practice",
       "english-word": "english-practice",
       "english-sentence": "english-practice",
-      "english-lines": "english-practice"
+      "english-lines": "english-practice",
+      "idiom-fill": "language-quiz",
+      "poetry-match": "language-quiz",
+      "pinyin-write": "language-quiz"
     }[template] || template;
     return `worksheet-layout-${normalized}`;
   }
@@ -3204,6 +2463,7 @@
     if (layout.includes("multiply") || layout.includes("divide")) return 4;
     if (layout.includes("currency") || layout.includes("unit")) return 2;
     if (layout.includes("clock")) return 2;
+    if (layout.includes("language-quiz")) return 1;
     if (layout.includes("hanzi-practice") || layout.includes("english-practice")) return 1;
     return paper.orientation === "landscape" ? 4 : 3;
   }
@@ -3238,11 +2498,17 @@
     const characters = Array.from(text).filter((character) => character.trim());
     const source = characters.length ? characters : [""];
     const isBlankComposition = (problem.kind || problem.type) === "composition";
-    const samples = isBlankComposition ? [] : source.length > 1 ? source : Array(3).fill(source[0]);
-    const sampleCells = samples.map((character) => `<span class="mizi-cell mizi-sample-cell">${escapeHtml(character)}</span>`).join("");
-    const cells = `${sampleCells}${Array.from({ length: Math.max(0, 12 - samples.length) }, () => '<span class="mizi-cell"></span>').join("")}`;
     const strokeHint = Array.isArray(problem.strokeSteps) && problem.strokeSteps.length ? `<div class="stroke-order-row">${problem.strokeSteps.map((step, index) => `<span>${index + 1}. ${escapeHtml(step)}</span>`).join("")}</div>` : "";
-    return `<div class="problem writing-practice hanzi-writing ${hanziFontClass(problem)}">${strokeHint}<div class="mizi-row">${cells}</div></div>`;
+    if (isBlankComposition) {
+      return `<div class="problem writing-practice hanzi-writing hanzi-blank-writing ${hanziFontClass(problem)}">${strokeHint}<div class="mizi-row">${renderMiziCells([], 12)}</div></div>`;
+    }
+    const rows = chunkList(source, 12).map((row) => {
+      const samples = row.length === 1 ? Array(3).fill(row[0]) : row;
+      const miziRow = `<div class="mizi-row hanzi-copy-mizi">${renderMiziCells(samples.slice(0, 12), 12)}</div>`;
+      const pinyinRow = renderPinyinCopybook(samples.slice(0, 12));
+      return `<div class="hanzi-copy-row">${pinyinRow}${miziRow}</div>`;
+    }).join("");
+    return `<div class="problem writing-practice hanzi-writing hanzi-copy-writing ${hanziFontClass(problem)}">${strokeHint}${rows}</div>`;
   }
   function renderHanziStrokePractice(problem) {
     const text = String(problem.prompt || "").trim();
@@ -3275,6 +2541,21 @@
     const sampleCount = kind === "english-word" ? 3 : 1;
     const samples = Array.from({ length: sampleCount }, () => `<span class="english-sample english-ghost">${text}</span>`).join("");
     return `<div class="problem writing-practice english-writing ${kind === "english-word" ? "english-word-writing" : "english-sentence-writing"} ${englishFontClass(problem)}"><div class="english-copybook-line"><div class="english-copy-row">${samples}</div></div></div>`;
+  }
+  function renderIdiomFillProblem(problem, index) {
+    const number = `<span class="problem-number">${index + 1}.</span>`;
+    const options = Array.isArray(problem.options) ? problem.options : [];
+    return `<div class="problem language-quiz idiom-fill-problem"><div class="language-quiz-prompt">${number}${escapeHtml(problem.prompt || "")}</div><div class="language-quiz-options">${options.map((option, optionIndex) => `<span class="language-option">${String.fromCharCode(65 + optionIndex)}. ${escapeHtml(option)}</span>`).join("")}</div></div>`;
+  }
+  function renderPoetryMatchProblem(problem, index) {
+    const number = `<span class="problem-number">${index + 1}.</span>`;
+    return `<div class="problem language-quiz poetry-match-problem"><div class="poetry-fill-prompt">${number}${escapeHtml(problem.title || "")} \xB7 ${escapeHtml(problem.prompt || "\u8BF7\u586B\u5199\u5BF9\u5E94\u8BD7\u53E5")}</div><div class="poetry-slot single-poetry-slot"><span class="answer-box poetry-answer-box"></span></div></div>`;
+  }
+  function renderPinyinWriteProblem(problem, index) {
+    const number = `<span class="problem-number">${index + 1}.</span>`;
+    const pinyin = String(problem.meta?.pinyin || "").trim();
+    const count = Math.max(1, Array.from(String(problem.prompt || "")).length);
+    return `<div class="problem language-quiz pinyin-write-problem"><div class="pinyin-write-prompt">${number}<span class="pinyin-write-text">${escapeHtml(pinyin)}</span></div><div class="mizi-row pinyin-write-mizi">${renderMiziCells([], Math.min(12, Math.max(6, count * 2)))}</div></div>`;
   }
   function renderEnglishText(value) {
     return Array.from(String(value)).map((character) => character === "g" ? '<span class="english-loop-g">g</span>' : escapeHtml(character)).join("");
@@ -3331,6 +2612,15 @@
     if (kind === "clock") {
       return renderClockProblem(problem, index);
     }
+    if (kind === "idiom-fill") {
+      return renderIdiomFillProblem(problem, index);
+    }
+    if (kind === "poetry-match") {
+      return renderPoetryMatchProblem(problem, index);
+    }
+    if (kind === "pinyin-write") {
+      return renderPinyinWriteProblem(problem, index);
+    }
     if (kind === "hanzi-stroke") {
       return renderHanziStrokePractice(problem);
     }
@@ -3357,6 +2647,961 @@
   }
   function paperScrollDelta(direction, step) {
     return -paperMoveDelta(direction, step);
+  }
+
+  // src/math/constants.mjs
+  var TEMPLATE_TYPES = Object.freeze({
+    HORIZONTAL: "horizontal",
+    MISSING_TERM: "missing-term",
+    VERTICAL: "vertical",
+    COMPARISON: "comparison",
+    EQUATION: "equation",
+    CHAIN_ADDITION: "chain-addition",
+    CHAIN_SUBTRACTION: "chain-subtraction",
+    MIXED_OPERATIONS: "mixed-operations",
+    MAKE_TEN: "make-ten",
+    BREAK_TEN: "break-ten",
+    CARRYING_ADDITION: "carrying-addition",
+    BORROWING_SUBTRACTION: "borrowing-subtraction",
+    MULTIPLICATION: "multiplication",
+    DIVISION: "division",
+    CURRENCY: "currency",
+    UNIT_CONVERSION: "unit-conversion",
+    CLOCK_READING: "clock-reading",
+    WORD_PROBLEM: "word-problem"
+  });
+  var UNIT_CATEGORIES = Object.freeze({
+    TIME: "time",
+    LENGTH: "length",
+    MASS: "mass",
+    AREA: "area",
+    CAPACITY: "capacity"
+  });
+  var ORIENTATIONS = Object.freeze(["portrait", "landscape"]);
+  var BINARY_OPERATIONS = Object.freeze(["addition", "subtraction"]);
+
+  // src/math/random.mjs
+  function randomInteger(random, minimum, maximum) {
+    if (!Number.isInteger(minimum) || !Number.isInteger(maximum) || minimum > maximum) {
+      throw new RangeError(`\u65E0\u6548\u968F\u673A\u6574\u6570\u8303\u56F4\uFF1A${minimum}\uFF5E${maximum}`);
+    }
+    const value = random();
+    if (!Number.isFinite(value) || value < 0 || value >= 1) {
+      throw new RangeError("random \u5FC5\u987B\u8FD4\u56DE 0\uFF08\u542B\uFF09\u5230 1\uFF08\u4E0D\u542B\uFF09\u4E4B\u95F4\u7684\u6709\u9650\u6570\u503C");
+    }
+    return minimum + Math.floor(value * (maximum - minimum + 1));
+  }
+  function randomItem(random, values) {
+    if (!Array.isArray(values) || values.length === 0) {
+      throw new RangeError("\u968F\u673A\u5019\u9009\u9879\u4E0D\u80FD\u4E3A\u7A7A");
+    }
+    return values[randomInteger(random, 0, values.length - 1)];
+  }
+
+  // src/math/generators.mjs
+  var DEFAULT_LIMIT = 20;
+  var DEFAULT_MAX_ATTEMPTS = 100;
+  var CURRENCY_CONVERSIONS = Object.freeze([
+    { sourceUnit: "\u5143", targetUnit: "\u89D2", factor: 10 },
+    { sourceUnit: "\u89D2", targetUnit: "\u5206", factor: 10 },
+    { sourceUnit: "\u5143", targetUnit: "\u5206", factor: 100 }
+  ]);
+  var UNIT_CONVERSIONS = Object.freeze({
+    [UNIT_CATEGORIES.TIME]: [
+      { sourceUnit: "\u65F6", targetUnit: "\u5206", factor: 60 },
+      { sourceUnit: "\u5206", targetUnit: "\u79D2", factor: 60 }
+    ],
+    [UNIT_CATEGORIES.LENGTH]: [
+      { sourceUnit: "\u7C73", targetUnit: "\u5206\u7C73", factor: 10 },
+      { sourceUnit: "\u5206\u7C73", targetUnit: "\u5398\u7C73", factor: 10 },
+      { sourceUnit: "\u7C73", targetUnit: "\u5398\u7C73", factor: 100 },
+      { sourceUnit: "\u5343\u7C73", targetUnit: "\u7C73", factor: 1e3 }
+    ],
+    [UNIT_CATEGORIES.MASS]: [
+      { sourceUnit: "\u5343\u514B", targetUnit: "\u514B", factor: 1e3 }
+    ],
+    [UNIT_CATEGORIES.AREA]: [
+      { sourceUnit: "\u5E73\u65B9\u7C73", targetUnit: "\u5E73\u65B9\u5206\u7C73", factor: 100 },
+      { sourceUnit: "\u5E73\u65B9\u5206\u7C73", targetUnit: "\u5E73\u65B9\u5398\u7C73", factor: 100 }
+    ],
+    [UNIT_CATEGORIES.CAPACITY]: [
+      { sourceUnit: "\u5347", targetUnit: "\u6BEB\u5347", factor: 1e3 }
+    ]
+  });
+  function normalizeOptions(options) {
+    const limit = options.limit ?? DEFAULT_LIMIT;
+    const maxAttempts = options.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
+    const termCount = options.termCount ?? 3;
+    const steps = options.steps ?? 1;
+    const random = options.random ?? Math.random;
+    if (!Number.isInteger(limit) || limit < 0) {
+      throw new RangeError("limit \u5FC5\u987B\u662F\u5927\u4E8E\u6216\u7B49\u4E8E 0 \u7684\u6574\u6570");
+    }
+    if (!Number.isInteger(maxAttempts) || maxAttempts < 1) {
+      throw new RangeError("maxAttempts \u5FC5\u987B\u662F\u5927\u4E8E 0 \u7684\u6574\u6570");
+    }
+    if (!Number.isInteger(termCount) || termCount < 3 || termCount > 10) {
+      throw new RangeError("termCount \u5FC5\u987B\u662F 3 \u5230 10 \u7684\u6574\u6570");
+    }
+    if (!Number.isInteger(steps) || steps < 1 || steps > 3) {
+      throw new RangeError("steps \u5FC5\u987B\u662F 1 \u5230 3 \u7684\u6574\u6570");
+    }
+    if (typeof random !== "function") {
+      throw new TypeError("random \u5FC5\u987B\u662F\u51FD\u6570");
+    }
+    if (options.operation !== void 0 && !BINARY_OPERATIONS.includes(options.operation)) {
+      throw new RangeError("operation \u4EC5\u652F\u6301 addition \u6216 subtraction");
+    }
+    if (options.remainder !== void 0 && !["optional", "required", "none"].includes(options.remainder)) {
+      throw new RangeError("remainder \u4EC5\u652F\u6301 optional\u3001required \u6216 none");
+    }
+    if (options.category !== void 0 && !Object.values(UNIT_CATEGORIES).includes(options.category)) {
+      throw new RangeError("category \u4E0D\u662F\u652F\u6301\u7684\u5355\u4F4D\u5206\u7C7B");
+    }
+    if (options.leftNumber !== void 0 && (!Number.isInteger(options.leftNumber) || options.leftNumber < 0)) {
+      throw new RangeError("leftNumber \u5FC5\u987B\u662F\u5927\u4E8E\u6216\u7B49\u4E8E 0 \u7684\u6574\u6570");
+    }
+    if (options.rightNumber !== void 0 && (!Number.isInteger(options.rightNumber) || options.rightNumber < 0)) {
+      throw new RangeError("rightNumber \u5FC5\u987B\u662F\u5927\u4E8E\u6216\u7B49\u4E8E 0 \u7684\u6574\u6570");
+    }
+    return {
+      ...options,
+      limit,
+      maxAttempts,
+      termCount,
+      steps,
+      random,
+      remainder: options.remainder ?? "optional"
+    };
+  }
+  function createProblem(type, values, limit) {
+    return {
+      type,
+      prompt: "",
+      answer: 0,
+      operands: [],
+      operators: [],
+      intermediateResults: [],
+      blankCount: 1,
+      layout: "horizontal",
+      processBoxes: [],
+      ...values,
+      meta: { limit, ...values.meta ?? {} }
+    };
+  }
+  function operationSymbol(operation) {
+    return operation === "addition" ? "+" : "-";
+  }
+  function randomBalancedInteger(random, minimum, maximum) {
+    if (maximum <= minimum) {
+      return minimum;
+    }
+    const floor = maximum >= 20 ? Math.max(minimum, Math.floor(maximum * 0.25)) : minimum;
+    return randomInteger(random, floor, maximum);
+  }
+  function randomWithinWindow(random, anchor, minimum, maximum, window2 = 20) {
+    const lower = Math.max(minimum, anchor - window2);
+    const upper = Math.min(maximum, anchor + window2);
+    if (upper < lower) return null;
+    return randomInteger(random, lower, upper);
+  }
+  function complementToNextTen(value) {
+    const remainder = value % 10;
+    return remainder === 0 ? 10 : 10 - remainder;
+  }
+  function createBinaryCalculation(operation, limit, random) {
+    if (operation === "addition") {
+      const result = randomBalancedInteger(random, 0, limit);
+      const minimumPart = result >= 20 ? Math.max(1, Math.floor(result * 0.2)) : 0;
+      const maximumPart = Math.max(minimumPart, result - minimumPart);
+      const left2 = randomInteger(random, minimumPart, maximumPart);
+      const right2 = result - left2;
+      return { left: left2, right: right2, result: left2 + right2, symbol: "+" };
+    }
+    const left = randomBalancedInteger(random, 0, limit);
+    const right = randomInteger(random, 0, left);
+    return { left, right, result: left - right, symbol: "-" };
+  }
+  function chooseBinaryOperation(options) {
+    return options.operation ?? randomItem(options.random, BINARY_OPERATIONS);
+  }
+  function generateHorizontal(options) {
+    const operation = chooseBinaryOperation(options);
+    const calculation = createBinaryCalculation(operation, options.limit, options.random);
+    return createProblem(TEMPLATE_TYPES.HORIZONTAL, {
+      prompt: `${calculation.left} ${calculation.symbol} ${calculation.right} = \u25A1`,
+      answer: calculation.result,
+      operands: [calculation.left, calculation.right],
+      operators: [calculation.symbol],
+      intermediateResults: [calculation.result],
+      expression: `${calculation.left} ${calculation.symbol} ${calculation.right}`,
+      meta: { operation }
+    }, options.limit);
+  }
+  function generateMissingTerm(options) {
+    const operation = chooseBinaryOperation(options);
+    const calculation = createBinaryCalculation(operation, options.limit, options.random);
+    const missingIndex = randomInteger(options.random, 0, 1);
+    const visibleLeft = missingIndex === 0 ? "\u25A1" : calculation.left;
+    const visibleRight = missingIndex === 1 ? "\u25A1" : calculation.right;
+    const answer = missingIndex === 0 ? calculation.left : calculation.right;
+    return createProblem(TEMPLATE_TYPES.MISSING_TERM, {
+      prompt: `${visibleLeft} ${calculation.symbol} ${visibleRight} = ${calculation.result}`,
+      answer,
+      operands: [calculation.left, calculation.right],
+      operators: [calculation.symbol],
+      intermediateResults: [calculation.result],
+      expression: `${visibleLeft} ${calculation.symbol} ${visibleRight} = ${calculation.result}`,
+      meta: { operation, missingIndex }
+    }, options.limit);
+  }
+  function generateVertical(options) {
+    const operation = chooseBinaryOperation(options);
+    const calculation = createBinaryCalculation(operation, options.limit, options.random);
+    return createProblem(TEMPLATE_TYPES.VERTICAL, {
+      prompt: `\u7528\u7AD6\u5F0F\u8BA1\u7B97\uFF1A${calculation.left} ${calculation.symbol} ${calculation.right}`,
+      answer: calculation.result,
+      operands: [calculation.left, calculation.right],
+      operators: [calculation.symbol],
+      intermediateResults: [calculation.result],
+      layout: "vertical",
+      displayLines: [String(calculation.left), `${calculation.symbol} ${calculation.right}`, "\u2500\u2500\u2500\u2500", "\u25A1"],
+      meta: { operation }
+    }, options.limit);
+  }
+  function generateComparison(options) {
+    const left = randomBalancedInteger(options.random, 0, options.limit);
+    const right = randomBalancedInteger(options.random, 0, options.limit);
+    const answer = left === right ? "=" : left > right ? ">" : "<";
+    return createProblem(TEMPLATE_TYPES.COMPARISON, {
+      prompt: `${left} \u25CB ${right}`,
+      answer,
+      operands: [left, right],
+      operators: ["compare"]
+    }, options.limit);
+  }
+  function generateEquation(options) {
+    const operation = chooseBinaryOperation(options);
+    const calculation = createBinaryCalculation(operation, options.limit, options.random);
+    const prompt2 = operation === "addition" ? `\u6C42\u6BD4 ${calculation.left} \u591A ${calculation.right} \u7684\u6570\uFF0C\u5217\u5F0F\u8BA1\u7B97\u3002` : `${calculation.left} \u6BD4 ${calculation.right} \u591A\u591A\u5C11\uFF1F\u5217\u5F0F\u8BA1\u7B97\u3002`;
+    return createProblem(TEMPLATE_TYPES.EQUATION, {
+      prompt: prompt2,
+      answer: calculation.result,
+      operands: [calculation.left, calculation.right],
+      operators: [calculation.symbol],
+      intermediateResults: [calculation.result],
+      expression: `${calculation.left} ${calculation.symbol} ${calculation.right} = ${calculation.result}`,
+      processBoxes: [{ kind: "equation", answer: `${calculation.left} ${calculation.symbol} ${calculation.right} = ${calculation.result}` }],
+      meta: { operation }
+    }, options.limit);
+  }
+  function generateChainAddition(options) {
+    const operands = [randomInteger(options.random, 0, options.limit)];
+    const intermediateResults = [];
+    let current = operands[0];
+    for (let index = 1; index < options.termCount; index += 1) {
+      const next = randomInteger(options.random, 0, options.limit - current);
+      operands.push(next);
+      current += next;
+      intermediateResults.push(current);
+    }
+    return createProblem(TEMPLATE_TYPES.CHAIN_ADDITION, {
+      prompt: `${operands.join(" + ")} = \u25A1`,
+      answer: current,
+      operands,
+      operators: Array(options.termCount - 1).fill("+"),
+      intermediateResults,
+      expression: operands.join(" + ")
+    }, options.limit);
+  }
+  function generateChainSubtraction(options) {
+    const operands = [randomInteger(options.random, 0, options.limit)];
+    const intermediateResults = [];
+    let current = operands[0];
+    for (let index = 1; index < options.termCount; index += 1) {
+      const next = randomInteger(options.random, 0, current);
+      operands.push(next);
+      current -= next;
+      intermediateResults.push(current);
+    }
+    return createProblem(TEMPLATE_TYPES.CHAIN_SUBTRACTION, {
+      prompt: `${operands.join(" - ")} = \u25A1`,
+      answer: current,
+      operands,
+      operators: Array(options.termCount - 1).fill("-"),
+      intermediateResults,
+      expression: operands.join(" - ")
+    }, options.limit);
+  }
+  function generateMixedOperations(options) {
+    const operands = [randomInteger(options.random, 0, options.limit)];
+    const operators = [];
+    const intermediateResults = [];
+    let current = operands[0];
+    for (let index = 1; index < options.termCount; index += 1) {
+      const symbol = index === 1 ? "+" : index === 2 ? "-" : randomItem(options.random, ["+", "-"]);
+      const next = symbol === "+" ? randomInteger(options.random, 0, options.limit - current) : randomInteger(options.random, 0, current);
+      operands.push(next);
+      operators.push(symbol);
+      current = symbol === "+" ? current + next : current - next;
+      intermediateResults.push(current);
+    }
+    const expression = operands.slice(1).reduce(
+      (text, operand, index) => `${text} ${operators[index]} ${operand}`,
+      String(operands[0])
+    );
+    return createProblem(TEMPLATE_TYPES.MIXED_OPERATIONS, {
+      prompt: `${expression} = \u25A1`,
+      answer: current,
+      operands,
+      operators,
+      intermediateResults,
+      expression
+    }, options.limit);
+  }
+  function generateMakeTen(options) {
+    if (options.limit < 10) {
+      return null;
+    }
+    const left = options.leftNumber === void 0 ? randomBalancedInteger(options.random, 1, options.limit - 1) : randomWithinWindow(options.random, options.leftNumber, 1, options.limit - 1);
+    if (left < 1 || left >= options.limit) {
+      return null;
+    }
+    const complement = complementToNextTen(left);
+    const maximumRight = options.limit - left;
+    const minimumRight = Math.max(11, complement);
+    if (maximumRight < minimumRight) {
+      return null;
+    }
+    const right = options.rightNumber === void 0 ? randomInteger(options.random, minimumRight, maximumRight) : randomWithinWindow(options.random, options.rightNumber, minimumRight, maximumRight);
+    if (right < complement || right > maximumRight) {
+      return null;
+    }
+    const rest = right - complement;
+    const result = left + right;
+    const roundedTen = left + complement;
+    return createProblem(TEMPLATE_TYPES.MAKE_TEN, {
+      prompt: `${left} + ${right} = \u25A1\uFF08\u7528\u51D1\u5341\u6CD5\uFF09`,
+      answer: result,
+      operands: [left, right],
+      operators: ["+"],
+      intermediateResults: [roundedTen, result],
+      expression: `${left} + ${right}`,
+      processBoxes: [
+        { kind: "make-ten", expression: `${left} + ${complement}`, result: roundedTen },
+        { kind: "remaining-addition", expression: `${roundedTen} + ${rest}`, result }
+      ],
+      meta: { split: [complement, rest] }
+    }, options.limit);
+  }
+  function generateBreakTen(options) {
+    if (options.limit < 10) {
+      return null;
+    }
+    if (options.leftNumber === void 0 && options.limit < 11) {
+      return null;
+    }
+    const left = options.leftNumber === void 0 ? randomInteger(options.random, 11, Math.min(options.limit, 19)) : randomWithinWindow(options.random, options.leftNumber, 11, Math.min(options.limit, 19));
+    if (left < 10 || left > Math.min(options.limit, 19)) {
+      return null;
+    }
+    const firstPart = left - 10;
+    const minimumRight = firstPart + 1;
+    if (minimumRight > left) {
+      return null;
+    }
+    const right = options.rightNumber === void 0 ? randomInteger(options.random, minimumRight, left) : randomWithinWindow(options.random, options.rightNumber, minimumRight, left);
+    if (right < minimumRight || right > left) {
+      return null;
+    }
+    const secondPart = right - firstPart;
+    const result = left - right;
+    return createProblem(TEMPLATE_TYPES.BREAK_TEN, {
+      prompt: `${left} - ${right} = \u25A1\uFF08\u7528\u7834\u5341\u6CD5\uFF09`,
+      answer: result,
+      operands: [left, right],
+      operators: ["-"],
+      intermediateResults: [10, result],
+      expression: `${left} - ${right}`,
+      processBoxes: [
+        { kind: "break-to-ten", expression: `${left} - ${firstPart}`, result: 10 },
+        { kind: "remaining-subtraction", expression: `10 - ${secondPart}`, result }
+      ],
+      meta: { split: [firstPart, secondPart] }
+    }, options.limit);
+  }
+  function generateCarryingAddition(options) {
+    const left = randomBalancedInteger(options.random, 0, options.limit);
+    const right = randomBalancedInteger(options.random, 0, options.limit);
+    const result = left + right;
+    if (result > options.limit || left % 10 + right % 10 < 10) {
+      return null;
+    }
+    return createProblem(TEMPLATE_TYPES.CARRYING_ADDITION, {
+      prompt: `${left} + ${right} = \u25A1`,
+      answer: result,
+      operands: [left, right],
+      operators: ["+"],
+      intermediateResults: [result],
+      expression: `${left} + ${right}`,
+      meta: { carry: true }
+    }, options.limit);
+  }
+  function generateBorrowingSubtraction(options) {
+    const left = randomInteger(options.random, 10, Math.max(10, options.limit));
+    const right = randomBalancedInteger(options.random, 0, options.limit);
+    if (left > options.limit || right > left || left % 10 >= right % 10) {
+      return null;
+    }
+    const result = left - right;
+    return createProblem(TEMPLATE_TYPES.BORROWING_SUBTRACTION, {
+      prompt: `${left} - ${right} = \u25A1`,
+      answer: result,
+      operands: [left, right],
+      operators: ["-"],
+      intermediateResults: [result],
+      expression: `${left} - ${right}`,
+      meta: { borrow: true }
+    }, options.limit);
+  }
+  function generateMultiplication(options) {
+    const maximumFactor = Math.min(12, options.limit);
+    const right = maximumFactor >= 2 ? randomInteger(options.random, 2, maximumFactor) : randomInteger(options.random, 0, options.limit);
+    const maximumLeft = right === 0 ? options.limit : Math.floor(options.limit / right);
+    const left = maximumLeft >= 2 ? randomBalancedInteger(options.random, 2, maximumLeft) : randomInteger(options.random, 0, maximumLeft);
+    const result = left * right;
+    return createProblem(TEMPLATE_TYPES.MULTIPLICATION, {
+      prompt: `${left} \xD7 ${right} = \u25A1`,
+      answer: result,
+      operands: [left, right],
+      operators: ["\xD7"],
+      intermediateResults: [result],
+      expression: `${left} \xD7 ${right}`
+    }, options.limit);
+  }
+  function generateDivision(options) {
+    if (options.limit < 1) {
+      return null;
+    }
+    const requireRemainder = options.remainder === "required" || options.remainder === "optional" && options.limit >= 3 && options.random() < 0.5;
+    let divisor;
+    let quotient;
+    let remainder;
+    if (requireRemainder) {
+      if (options.limit < 3) {
+        return null;
+      }
+      divisor = randomInteger(options.random, 2, options.limit - 1);
+      const maximumQuotient = Math.floor((options.limit - 1) / divisor);
+      if (maximumQuotient < 1) {
+        return null;
+      }
+      quotient = randomInteger(options.random, 1, maximumQuotient);
+      const maximumRemainder = Math.min(divisor - 1, options.limit - divisor * quotient);
+      if (maximumRemainder < 1) {
+        return null;
+      }
+      remainder = randomInteger(options.random, 1, maximumRemainder);
+    } else {
+      divisor = randomInteger(options.random, 1, options.limit);
+      quotient = randomInteger(options.random, 0, Math.floor(options.limit / divisor));
+      remainder = 0;
+    }
+    const dividend = divisor * quotient + remainder;
+    const answerText = remainder === 0 ? `${quotient}` : `${quotient}\u2026\u2026${remainder}`;
+    return createProblem(TEMPLATE_TYPES.DIVISION, {
+      prompt: `${dividend} \xF7 ${divisor} = \u25A1`,
+      answer: quotient,
+      operands: [dividend, divisor],
+      operators: ["\xF7"],
+      intermediateResults: [quotient, remainder],
+      expression: `${dividend} \xF7 ${divisor}`,
+      answerText,
+      remainder
+    }, options.limit);
+  }
+  function generateCurrency(options) {
+    const fitting = CURRENCY_CONVERSIONS.filter(({ factor }) => factor <= options.limit);
+    const available = fitting.length ? fitting : CURRENCY_CONVERSIONS;
+    const conversion = randomItem(options.random, available);
+    const sourceMaximum = Math.max(1, options.limit);
+    const sourceValue = randomInteger(options.random, 1, sourceMaximum);
+    const answer = sourceValue * conversion.factor;
+    return createProblem(TEMPLATE_TYPES.CURRENCY, {
+      prompt: `${sourceValue}${conversion.sourceUnit} = \u25A1${conversion.targetUnit}`,
+      answer,
+      operands: [sourceValue],
+      intermediateResults: [answer],
+      meta: { ...conversion, sourceValue }
+    }, options.limit);
+  }
+  function generateUnitConversion(options) {
+    const categories = options.category ? [options.category] : Object.values(UNIT_CATEGORIES);
+    const fittingAvailable = categories.flatMap((category) => UNIT_CONVERSIONS[category].filter(({ factor }) => factor <= options.limit).map((conversion2) => ({ category, ...conversion2 })));
+    const fallbackAvailable = categories.flatMap((category) => UNIT_CONVERSIONS[category].map((conversion2) => ({ category, ...conversion2 })));
+    const available = fittingAvailable.length ? fittingAvailable : fallbackAvailable;
+    const conversion = randomItem(options.random, available);
+    const sourceMaximum = Math.max(1, options.limit);
+    const sourceValue = randomInteger(options.random, 1, sourceMaximum);
+    const answer = sourceValue * conversion.factor;
+    return createProblem(TEMPLATE_TYPES.UNIT_CONVERSION, {
+      prompt: `${sourceValue}${conversion.sourceUnit} = \u25A1${conversion.targetUnit}`,
+      answer,
+      operands: [sourceValue],
+      intermediateResults: [answer],
+      meta: { ...conversion, sourceValue }
+    }, options.limit);
+  }
+  function generateClockReading(options) {
+    const hour = randomInteger(options.random, 1, 12);
+    const minute = randomInteger(options.random, 0, 11) * 5;
+    const minuteText = String(minute).padStart(2, "0");
+    return createProblem(TEMPLATE_TYPES.CLOCK_READING, {
+      prompt: "\u8BF7\u5199\u51FA\u949F\u9762\u8868\u793A\u7684\u65F6\u95F4",
+      answer: `${hour}:${minuteText}`,
+      operands: [hour, minute],
+      intermediateResults: [],
+      layout: "clock",
+      meta: { hour, minute }
+    }, options.limit);
+  }
+  function generateWordProblem(options) {
+    const start = randomInteger(options.random, 0, options.limit);
+    const operands = [start];
+    const operators = [];
+    const intermediateResults = [];
+    const steps = [];
+    const storyParts = [`\u76D2\u5B50\u91CC\u539F\u6709 ${start} \u652F\u94C5\u7B14`];
+    let current = start;
+    for (let index = 0; index < options.steps; index += 1) {
+      const operation = current === 0 ? "addition" : current === options.limit ? "subtraction" : randomItem(options.random, BINARY_OPERATIONS);
+      const symbol = operationSymbol(operation);
+      const amount = operation === "addition" ? randomInteger(options.random, 0, options.limit - current) : randomInteger(options.random, 0, current);
+      const before = current;
+      current = operation === "addition" ? current + amount : current - amount;
+      operands.push(amount);
+      operators.push(symbol);
+      intermediateResults.push(current);
+      steps.push({
+        index: index + 1,
+        operation,
+        expression: `${before} ${symbol} ${amount} = ${current}`,
+        result: current
+      });
+      storyParts.push(operation === "addition" ? `\u53C8\u653E\u5165 ${amount} \u652F` : `\u53D6\u8D70 ${amount} \u652F`);
+    }
+    return createProblem(TEMPLATE_TYPES.WORD_PROBLEM, {
+      prompt: `${storyParts.join("\uFF0C")}\u3002\u73B0\u5728\u76D2\u5B50\u91CC\u6709\u591A\u5C11\u652F\u94C5\u7B14\uFF1F`,
+      answer: current,
+      operands,
+      operators,
+      intermediateResults,
+      steps,
+      processBoxes: [
+        ...steps.map((step) => ({ kind: "equation", step: step.index, answer: step.expression })),
+        { kind: "final-answer", answer: `${current} \u652F` }
+      ],
+      meta: { stepCount: options.steps }
+    }, options.limit);
+  }
+  var GENERATORS = Object.freeze({
+    [TEMPLATE_TYPES.HORIZONTAL]: generateHorizontal,
+    [TEMPLATE_TYPES.MISSING_TERM]: generateMissingTerm,
+    [TEMPLATE_TYPES.VERTICAL]: generateVertical,
+    [TEMPLATE_TYPES.COMPARISON]: generateComparison,
+    [TEMPLATE_TYPES.EQUATION]: generateEquation,
+    [TEMPLATE_TYPES.CHAIN_ADDITION]: generateChainAddition,
+    [TEMPLATE_TYPES.CHAIN_SUBTRACTION]: generateChainSubtraction,
+    [TEMPLATE_TYPES.MIXED_OPERATIONS]: generateMixedOperations,
+    [TEMPLATE_TYPES.MAKE_TEN]: generateMakeTen,
+    [TEMPLATE_TYPES.BREAK_TEN]: generateBreakTen,
+    [TEMPLATE_TYPES.CARRYING_ADDITION]: generateCarryingAddition,
+    [TEMPLATE_TYPES.BORROWING_SUBTRACTION]: generateBorrowingSubtraction,
+    [TEMPLATE_TYPES.MULTIPLICATION]: generateMultiplication,
+    [TEMPLATE_TYPES.DIVISION]: generateDivision,
+    [TEMPLATE_TYPES.CURRENCY]: generateCurrency,
+    [TEMPLATE_TYPES.UNIT_CONVERSION]: generateUnitConversion,
+    [TEMPLATE_TYPES.CLOCK_READING]: generateClockReading,
+    [TEMPLATE_TYPES.WORD_PROBLEM]: generateWordProblem
+  });
+  function generateProblem(type, options = {}) {
+    const generator = GENERATORS[type];
+    if (!generator) {
+      throw new RangeError(`\u672A\u77E5\u6570\u5B66\u6A21\u677F\uFF1A${type}`);
+    }
+    const normalizedOptions = normalizeOptions(options);
+    for (let attempt = 1; attempt <= normalizedOptions.maxAttempts; attempt += 1) {
+      const problem = generator(normalizedOptions);
+      if (problem) {
+        return problem;
+      }
+    }
+    throw new RangeError(`\u65E0\u6CD5\u751F\u6210 ${type}\uFF1A\u5DF2\u5C1D\u8BD5 ${normalizedOptions.maxAttempts} \u6B21\uFF0C\u8BF7\u8C03\u6574\u8303\u56F4\u6216\u53C2\u6570`);
+  }
+
+  // src/math/worksheet.mjs
+  function snapshotOptions(options) {
+    return JSON.parse(JSON.stringify(options, (key, value) => typeof value === "function" || value === void 0 ? void 0 : value));
+  }
+  function problemSignature(problem) {
+    return JSON.stringify({
+      type: problem.type,
+      prompt: problem.prompt,
+      answer: problem.answer,
+      operands: problem.operands,
+      operators: problem.operators,
+      intermediateResults: problem.intermediateResults,
+      meta: problem.meta,
+      displayLines: problem.displayLines,
+      processBoxes: problem.processBoxes
+    });
+  }
+  function generateWorksheet(config) {
+    if (!config || typeof config !== "object") {
+      throw new TypeError("\u8BD5\u5377\u914D\u7F6E\u4E0D\u80FD\u4E3A\u7A7A");
+    }
+    if (!Number.isInteger(config.count) || config.count < 1) {
+      throw new RangeError("count \u5FC5\u987B\u662F\u5927\u4E8E 0 \u7684\u6574\u6570");
+    }
+    const orientation = config.orientation ?? "portrait";
+    if (!ORIENTATIONS.includes(orientation)) {
+      throw new RangeError("orientation \u4EC5\u652F\u6301 portrait \u6216 landscape");
+    }
+    const options = config.options ?? {};
+    const random = config.random ?? options.random ?? Math.random;
+    const seen = /* @__PURE__ */ new Set();
+    const problems = Array.from({ length: config.count }, (_2, index) => {
+      let problem = null;
+      for (let attempt = 1; attempt <= 200; attempt += 1) {
+        const candidate = generateProblem(config.template, { ...options, random });
+        const signature = problemSignature(candidate);
+        if (seen.has(signature)) continue;
+        seen.add(signature);
+        problem = candidate;
+        break;
+      }
+      if (!problem) {
+        throw new RangeError(`\u8BD5\u5377\u9898\u76EE\u53BB\u91CD\u5931\u8D25\uFF1A${config.template} \u65E0\u6CD5\u5728\u5F53\u524D\u53C2\u6570\u4E0B\u751F\u6210\u8DB3\u591F\u591A\u7684\u4E0D\u540C\u9898\u76EE`);
+      }
+      return {
+        id: `q-${index + 1}`,
+        ...problem
+      };
+    });
+    return {
+      schemaVersion: 1,
+      title: config.title ?? `${config.template} \u7EC3\u4E60`,
+      template: config.template,
+      orientation,
+      createdAt: config.createdAt ?? (/* @__PURE__ */ new Date()).toISOString(),
+      templateOptions: snapshotOptions(options),
+      problems
+    };
+  }
+
+  // src/data/knowledge/index.mjs
+  var seed = {
+    idiom: [
+      { word: "\u4E00\u5FC3\u4E00\u610F", pinyin: "y\u012B x\u012Bn y\u012B y\xEC", explanation: "\u53EA\u6709\u4E00\u4E2A\u5FC3\u773C\uFF0C\u5F62\u5BB9\u4E13\u5FC3\u4E13\u610F\u3002", example: "\u6211\u4EEC\u8981\u4E00\u5FC3\u4E00\u610F\u505A\u597D\u8FD9\u4EF6\u4E8B\u3002" },
+      { word: "\u4E95\u4E95\u6709\u6761", pinyin: "j\u01D0ng j\u01D0ng y\u01D2u ti\xE1o", explanation: "\u5F62\u5BB9\u6574\u9F50\u4E0D\u4E71\uFF0C\u6761\u7406\u5206\u660E\u3002", example: "\u4ED6\u7684\u4E66\u684C\u6574\u7406\u5F97\u4E95\u4E95\u6709\u6761\u3002" },
+      { word: "\u76EE\u4E0D\u8F6C\u775B", pinyin: "m\xF9 b\xF9 zhu\u01CEn j\u012Bng", explanation: "\u773C\u73E0\u4E00\u52A8\u4E0D\u52A8\u5730\u76EF\u7740\u770B\u3002", example: "\u5B69\u5B50\u76EE\u4E0D\u8F6C\u775B\u5730\u770B\u7740\u6545\u4E8B\u4E66\u3002" },
+      { word: "\u5B88\u682A\u5F85\u5154", pinyin: "sh\u01D2u zh\u016B d\xE0i t\xF9", explanation: "\u6BD4\u55BB\u4E0D\u4E3B\u52A8\u52AA\u529B\uFF0C\u53EA\u60F3\u4FA5\u5E78\u5F97\u5230\u6536\u83B7\u3002", example: "\u5B66\u4E60\u4E0D\u80FD\u5B88\u682A\u5F85\u5154\u3002" },
+      { word: "\u80F8\u6709\u6210\u7AF9", pinyin: "xi\u014Dng y\u01D2u ch\xE9ng zh\xFA", explanation: "\u6BD4\u55BB\u505A\u4E8B\u524D\u5DF2\u6709\u5145\u5206\u628A\u63E1\u3002", example: "\u4ED6\u80F8\u6709\u6210\u7AF9\u5730\u8D70\u4E0A\u8BB2\u53F0\u3002" },
+      { word: "\u4EA1\u7F8A\u8865\u7262", pinyin: "w\xE1ng y\xE1ng b\u01D4 l\xE1o", explanation: "\u51FA\u4E86\u95EE\u9898\u4EE5\u540E\u60F3\u529E\u6CD5\u8865\u6551\uFF0C\u53EF\u4EE5\u9632\u6B62\u7EE7\u7EED\u53D7\u635F\u5931\u3002", example: "\u73B0\u5728\u6539\u6B63\u8FD8\u4E0D\u665A\uFF0C\u4EA1\u7F8A\u8865\u7262\u3002" }
+    ],
+    char: [
+      { char: "\u5149", pinyin: "gu\u0101ng", radical: "\u513F", strokes: 6, meaning: "\u660E\u4EAE\uFF1B\u7167\u8000\u3002" },
+      { char: "\u660E", pinyin: "m\xEDng", radical: "\u65E5", strokes: 8, meaning: "\u660E\u4EAE\uFF1B\u6E05\u695A\u3002" },
+      { char: "\u5B66", pinyin: "xu\xE9", radical: "\u5B50", strokes: 8, meaning: "\u5B66\u4E60\uFF1B\u5B66\u95EE\u3002" },
+      { char: "\u4E60", pinyin: "x\xED", radical: "\u4E59", strokes: 3, meaning: "\u53CD\u590D\u7EC3\u4E60\uFF1B\u5B66\u4E60\u3002" },
+      { char: "\u4E66", pinyin: "sh\u016B", radical: "\u4E5B", strokes: 4, meaning: "\u88C5\u8BA2\u6210\u518C\u7684\u8457\u4F5C\u3002" },
+      { char: "\u8BFB", pinyin: "d\xFA", radical: "\u8BA0", strokes: 10, meaning: "\u770B\u7740\u6587\u5B57\u5FF5\u51FA\u58F0\u97F3\u3002" },
+      { char: "\u5199", pinyin: "xi\u011B", radical: "\u5196", strokes: 5, meaning: "\u7528\u7B14\u8BB0\u5F55\u6587\u5B57\u3002" },
+      { char: "\u53CB", pinyin: "y\u01D2u", radical: "\u53C8", strokes: 4, meaning: "\u670B\u53CB\uFF1B\u53CB\u7231\u3002" }
+    ],
+    xiehouyu: [
+      { riddle: "\u516B\u4ED9\u8FC7\u6D77", answer: "\u5404\u663E\u795E\u901A", explanation: "\u6BD4\u55BB\u5404\u81EA\u62FF\u51FA\u672C\u9886\u3002" },
+      { riddle: "\u7AF9\u7BEE\u6253\u6C34", answer: "\u4E00\u573A\u7A7A", explanation: "\u6BD4\u55BB\u767D\u8D39\u529B\u6C14\uFF0C\u6CA1\u6709\u6536\u83B7\u3002" },
+      { riddle: "\u5C0F\u8471\u62CC\u8C46\u8150", answer: "\u4E00\u6E05\u4E8C\u767D", explanation: "\u6BD4\u55BB\u6E05\u6E05\u695A\u695A\uFF0C\u660E\u660E\u767D\u767D\u3002" },
+      { riddle: "\u829D\u9EBB\u5F00\u82B1", answer: "\u8282\u8282\u9AD8", explanation: "\u6BD4\u55BB\u4E0D\u65AD\u8FDB\u6B65\uFF0C\u8D8A\u6765\u8D8A\u597D\u3002" },
+      { riddle: "\u8001\u9F20\u8FC7\u8857", answer: "\u4EBA\u4EBA\u558A\u6253", explanation: "\u6BD4\u55BB\u5BB3\u4EBA\u7684\u4E1C\u897F\uFF0C\u5927\u5BB6\u90FD\u75DB\u6068\u3002" }
+    ],
+    word: [
+      { word: "\u8BA4\u771F", pinyin: "r\xE8n zh\u0113n", meaning: "\u4E25\u8083\u5BF9\u5F85\uFF0C\u4E0D\u9A6C\u864E\u3002" },
+      { word: "\u52AA\u529B", pinyin: "n\u01D4 l\xEC", meaning: "\u628A\u529B\u91CF\u5C3D\u91CF\u4F7F\u51FA\u6765\u3002" },
+      { word: "\u9633\u5149", pinyin: "y\xE1ng gu\u0101ng", meaning: "\u592A\u9633\u53D1\u51FA\u7684\u5149\u3002" },
+      { word: "\u670B\u53CB", pinyin: "p\xE9ng you", meaning: "\u5F7C\u6B64\u6709\u4EA4\u60C5\u7684\u4EBA\u3002" },
+      { word: "\u9605\u8BFB", pinyin: "yu\xE8 d\xFA", meaning: "\u770B\u5E76\u9886\u4F1A\u6587\u5B57\u5185\u5BB9\u3002" },
+      { word: "\u7EC3\u4E60", pinyin: "li\xE0n x\xED", meaning: "\u53CD\u590D\u5B66\u4E60\uFF0C\u4EE5\u6C42\u719F\u7EC3\u3002" }
+    ],
+    poetry: [
+      { title: "\u9759\u591C\u601D", author: "\u674E\u767D", dynasty: "\u5510", lines: ["\u5E8A\u524D\u660E\u6708\u5149", "\u7591\u662F\u5730\u4E0A\u971C", "\u4E3E\u5934\u671B\u660E\u6708", "\u4F4E\u5934\u601D\u6545\u4E61"] },
+      { title: "\u548F\u9E45", author: "\u9A86\u5BBE\u738B", dynasty: "\u5510", lines: ["\u9E45\u9E45\u9E45", "\u66F2\u9879\u5411\u5929\u6B4C", "\u767D\u6BDB\u6D6E\u7EFF\u6C34", "\u7EA2\u638C\u62E8\u6E05\u6CE2"] },
+      { title: "\u6625\u6653", author: "\u5B5F\u6D69\u7136", dynasty: "\u5510", lines: ["\u6625\u7720\u4E0D\u89C9\u6653", "\u5904\u5904\u95FB\u557C\u9E1F", "\u591C\u6765\u98CE\u96E8\u58F0", "\u82B1\u843D\u77E5\u591A\u5C11"] },
+      { title: "\u60AF\u519C", author: "\u674E\u7EC5", dynasty: "\u5510", lines: ["\u9504\u79BE\u65E5\u5F53\u5348", "\u6C57\u6EF4\u79BE\u4E0B\u571F", "\u8C01\u77E5\u76D8\u4E2D\u9910", "\u7C92\u7C92\u7686\u8F9B\u82E6"] },
+      { title: "\u5C71\u884C", author: "\u675C\u7267", dynasty: "\u5510", lines: ["\u8FDC\u4E0A\u5BD2\u5C71\u77F3\u5F84\u659C", "\u767D\u4E91\u751F\u5904\u6709\u4EBA\u5BB6", "\u505C\u8F66\u5750\u7231\u67AB\u6797\u665A", "\u971C\u53F6\u7EA2\u4E8E\u4E8C\u6708\u82B1"] },
+      { title: "\u5143\u65E5", author: "\u738B\u5B89\u77F3", dynasty: "\u5B8B", lines: ["\u7206\u7AF9\u58F0\u4E2D\u4E00\u5C81\u9664", "\u6625\u98CE\u9001\u6696\u5165\u5C60\u82CF", "\u5343\u95E8\u4E07\u6237\u66C8\u66C8\u65E5", "\u603B\u628A\u65B0\u6843\u6362\u65E7\u7B26"] }
+    ]
+  };
+  var KNOWLEDGE_TYPES = Object.freeze(["idiom", "char", "xiehouyu", "word", "poetry"]);
+  var RAW_SOURCES = Object.freeze({
+    idiom: ["./src/data/knowledge/raw/idiom.json"],
+    char: ["./src/data/knowledge/raw/word.json"],
+    xiehouyu: ["./src/data/knowledge/raw/xiehouyu.json"],
+    word: ["./src/data/knowledge/raw/ci.json"],
+    poetry: []
+  });
+  var rawCache = /* @__PURE__ */ new Map();
+  var POETRY_BASE = "./src/data/knowledge/poetry";
+  var poetryShardCache = /* @__PURE__ */ new Map();
+  var poetryFilterCache = /* @__PURE__ */ new Map();
+  var poetryManifestCache;
+  function canFetchStaticAssets() {
+    return typeof fetch === "function" && globalThis.location?.protocol !== "file:";
+  }
+  async function fetchJson(path) {
+    if (!canFetchStaticAssets()) return void 0;
+    try {
+      const response = await fetch(path, { cache: "force-cache" });
+      if (!response.ok) throw new Error(`\u8D44\u6E90\u52A0\u8F7D\u5931\u8D25\uFF1A${response.status}`);
+      return response.json();
+    } catch (error) {
+      return void 0;
+    }
+  }
+  async function loadPoetryManifest() {
+    if (poetryManifestCache) return poetryManifestCache;
+    poetryManifestCache = await fetchJson(`${POETRY_BASE}/manifest.json`);
+    return poetryManifestCache;
+  }
+  async function loadPoetryShard(kind, shardIndex) {
+    const prefix = kind === "catalog" ? "catalog" : kind === "search" ? "search" : "poetry";
+    const key = `${kind}:${shardIndex}`;
+    if (poetryShardCache.has(key)) return poetryShardCache.get(key);
+    const data = await fetchJson(`${POETRY_BASE}/${kind}/${prefix}-${String(shardIndex).padStart(4, "0")}.json`);
+    const list = Array.isArray(data) ? data : [];
+    poetryShardCache.set(key, list);
+    return list;
+  }
+  function catalogRowToPoetry(row) {
+    return { id: row[0], title: row[1], author: row[2], dynasty: row[3], collection: row[4], shard: row[5], offset: row[6], excerpt: row[7] || [], lines: row[7] || [] };
+  }
+  async function loadPoetryCatalogRange(start, count) {
+    const manifest = await loadPoetryManifest();
+    const shardSize = Number(manifest?.shardSize || 1e3);
+    const end = Math.min(Number(manifest?.total || 0), start + count);
+    const items = [];
+    for (let index = start; index < end; ) {
+      const shardIndex = Math.floor(index / shardSize);
+      const offset = index % shardSize;
+      const shard = await loadPoetryShard("catalog", shardIndex);
+      const take = Math.min(end - index, shard.length - offset);
+      items.push(...shard.slice(offset, offset + take).map(catalogRowToPoetry));
+      index += take || 1;
+    }
+    return items;
+  }
+  async function filterPoetryCatalog(filters = {}) {
+    const manifest = await loadPoetryManifest();
+    if (!manifest) return filterKnowledge("poetry", filters);
+    const query = String(filters.query || "").trim();
+    const author = String(filters.author || "").trim();
+    const dynasty = String(filters.dynasty || "").trim();
+    const collection = String(filters.collection || "").trim();
+    const cacheKey = JSON.stringify({ query, author, dynasty, collection });
+    if (poetryFilterCache.has(cacheKey)) return poetryFilterCache.get(cacheKey);
+    const requiredCharacters = [...query].filter((item) => item.trim());
+    let matchedIds;
+    if (requiredCharacters.length) {
+      matchedIds = /* @__PURE__ */ new Set();
+      for (let shardIndex = 0; shardIndex < Number(manifest.shardCount || 0); shardIndex += 1) {
+        const shard = await loadPoetryShard("search", shardIndex);
+        for (const [id, characters] of shard) {
+          if (requiredCharacters.every((character) => String(characters).includes(character))) matchedIds.add(id);
+        }
+      }
+    }
+    const matched = [];
+    for (let shardIndex = 0; shardIndex < Number(manifest.shardCount || 0); shardIndex += 1) {
+      const shard = await loadPoetryShard("catalog", shardIndex);
+      for (const row of shard) {
+        if (matchedIds && !matchedIds.has(row[0])) continue;
+        if (author && row[2] !== author) continue;
+        if (dynasty && row[3] !== dynasty) continue;
+        if (collection && row[4] !== collection) continue;
+        matched.push(catalogRowToPoetry(row));
+      }
+    }
+    poetryFilterCache.set(cacheKey, matched);
+    return matched;
+  }
+  async function getPoetryById(id) {
+    const manifest = await loadPoetryManifest();
+    if (!manifest || !Number.isFinite(id)) return void 0;
+    const shardIndex = Math.floor(id / Number(manifest.shardSize || 1e3));
+    const offset = id % Number(manifest.shardSize || 1e3);
+    const shard = await loadPoetryShard("shards", shardIndex);
+    return shard[offset];
+  }
+  async function getPoetryMeta() {
+    const manifest = await loadPoetryManifest();
+    const collections = manifest?.sourceRootTypes || manifest?.collections || [];
+    return { authors: manifest?.authors || [], dynasties: manifest?.dynasties || [], collections };
+  }
+  function searchableText(item, type) {
+    if (type === "poetry") return [item.title, item.author, item.dynasty, ...item.lines || []].join("");
+    if (type === "xiehouyu") return [item.riddle, item.answer, item.explanation].join("");
+    if (type === "char") return [item.char, item.pinyin, item.radical, item.meaning, item.more].join("");
+    return [item.word, item.pinyin, item.explanation, item.example, item.meaning, item.derivation].join("");
+  }
+  function normalizeKnowledgeItem(type, item) {
+    if (type === "char") {
+      return {
+        char: item.word || item.char || "",
+        pinyin: item.pinyin || "",
+        radical: item.radicals || item.radical || "",
+        strokes: Number(item.strokes || item.stroke || 0) || "",
+        meaning: item.explanation || item.meaning || "",
+        more: item.more || ""
+      };
+    }
+    if (type === "word") return { word: item.ci || item.word || "", pinyin: item.pinyin || "", meaning: item.explanation || item.meaning || "" };
+    if (type === "poetry") {
+      return {
+        title: item.title || "",
+        author: item.author || "",
+        dynasty: item.dynasty || "\u5510",
+        collection: item.collection || "\u53E4\u8BD7",
+        lines: Array.isArray(item.lines) ? item.lines : Array.isArray(item.paragraphs) ? item.paragraphs : []
+      };
+    }
+    if (type === "xiehouyu") return { riddle: item.riddle || "", answer: item.answer || "", explanation: item.explanation || "" };
+    return { word: item.word || "", pinyin: item.pinyin || "", explanation: item.explanation || "", example: item.example || "", derivation: item.derivation || "" };
+  }
+  async function loadKnowledge(type) {
+    if (!KNOWLEDGE_TYPES.includes(type)) return [];
+    if (rawCache.has(type)) return rawCache.get(type);
+    const loaded = [];
+    if (canFetchStaticAssets()) {
+      for (const path of RAW_SOURCES[type] || []) {
+        try {
+          const response = await fetch(path, { cache: "force-cache" });
+          if (!response.ok) throw new Error(`\u77E5\u8BC6\u5E93\u52A0\u8F7D\u5931\u8D25\uFF1A${response.status}`);
+          const json = await response.json();
+          if (Array.isArray(json)) {
+            for (const item of json) loaded.push(normalizeKnowledgeItem(type, item));
+          }
+        } catch (error) {
+        }
+      }
+    }
+    const source = loaded.length ? loaded : (seed[type] || []).map((item) => normalizeKnowledgeItem(type, item));
+    rawCache.set(type, source);
+    return source;
+  }
+  function filterKnowledge(type, filters = {}) {
+    const source = Array.isArray(seed[type]) ? seed[type] : [];
+    const query = String(filters.query || "").trim();
+    const requiredCharacters = [...query].filter((item) => item.trim());
+    return source.filter((item) => {
+      if (type === "poetry") {
+        if (filters.author && item.author !== filters.author) return false;
+        if (filters.dynasty && item.dynasty !== filters.dynasty) return false;
+        if (filters.collection && item.collection !== filters.collection) return false;
+      }
+      const normalized = normalizeKnowledgeItem(type, item);
+      const text = searchableText(normalized, type);
+      return requiredCharacters.every((character) => text.includes(character));
+    }).map((item) => normalizeKnowledgeItem(type, item));
+  }
+  async function filterKnowledgeAsync(type, filters = {}) {
+    if (type === "poetry") return filterPoetryCatalog(filters);
+    const source = await loadKnowledge(type);
+    const query = String(filters.query || "").trim();
+    const requiredCharacters = [...query].filter((item) => item.trim());
+    return source.filter((item) => {
+      if (type === "poetry") {
+        if (filters.author && item.author !== filters.author) return false;
+        if (filters.dynasty && item.dynasty !== filters.dynasty) return false;
+        if (filters.collection && item.collection !== filters.collection) return false;
+      }
+      const text = searchableText(item, type);
+      return requiredCharacters.every((character) => text.includes(character));
+    });
+  }
+  async function pageKnowledge(type, filters = {}, page = 1, pageSize = 20) {
+    if (type === "poetry") {
+      const manifest = await loadPoetryManifest();
+      if (manifest) {
+        const size2 = Math.max(1, Number(pageSize) || 20);
+        const hasFilter = Boolean(String(filters.query || "").trim() || String(filters.author || "").trim() || String(filters.dynasty || "").trim() || String(filters.collection || "").trim());
+        if (!hasFilter) {
+          const total = Number(manifest.total || 0);
+          const pageCount3 = Math.max(1, Math.ceil(total / size2));
+          const currentPage3 = Math.max(1, Math.min(pageCount3, Number(page) || 1));
+          const start3 = (currentPage3 - 1) * size2;
+          const items = await loadPoetryCatalogRange(start3, size2);
+          return { items, total, page: currentPage3, pageSize: size2, pageCount: pageCount3 };
+        }
+        const matched2 = await filterPoetryCatalog(filters);
+        const pageCount2 = Math.max(1, Math.ceil(matched2.length / size2));
+        const currentPage2 = Math.max(1, Math.min(pageCount2, Number(page) || 1));
+        const start2 = (currentPage2 - 1) * size2;
+        return { items: matched2.slice(start2, start2 + size2), total: matched2.length, page: currentPage2, pageSize: size2, pageCount: pageCount2 };
+      }
+    }
+    const matched = await filterKnowledgeAsync(type, filters);
+    const size = Math.max(1, Number(pageSize) || 20);
+    const pageCount = Math.max(1, Math.ceil(matched.length / size));
+    const currentPage = Math.max(1, Math.min(pageCount, Number(page) || 1));
+    const start = (currentPage - 1) * size;
+    return { items: matched.slice(start, start + size), total: matched.length, page: currentPage, pageSize: size, pageCount };
+  }
+  async function getKnowledgeDetail(type, key) {
+    if (type === "poetry") {
+      const match = /^poetry:(\d+)$/u.exec(String(key || ""));
+      if (match) return getPoetryById(Number(match[1]));
+    }
+    const source = await loadKnowledge(type);
+    return source.find((item) => knowledgeKey(type, item) === key);
+  }
+  async function randomKnowledgeAsync(type, count = 1, excluded = /* @__PURE__ */ new Set()) {
+    if (type === "poetry") {
+      const manifest = await loadPoetryManifest();
+      if (manifest) {
+        const targetCount = Math.max(1, Number(count) || 1);
+        const total = Number(manifest.total || 0);
+        const selectedIds = /* @__PURE__ */ new Set();
+        const selected = [];
+        const maxAttempts = Math.min(total, targetCount * 20 + 100);
+        for (let attempt = 0; attempt < maxAttempts && selected.length < targetCount; attempt += 1) {
+          const id = Math.floor(Math.random() * total);
+          if (selectedIds.has(id)) continue;
+          selectedIds.add(id);
+          const item = await getPoetryById(id);
+          if (!item || excluded.has(knowledgeKey(type, item))) continue;
+          selected.push(item);
+        }
+        for (let id = 0; id < total && selected.length < targetCount; id += 1) {
+          if (selectedIds.has(id)) continue;
+          const item = await getPoetryById(id);
+          if (!item || excluded.has(knowledgeKey(type, item))) continue;
+          selected.push(item);
+        }
+        return selected;
+      }
+    }
+    const candidates = (await loadKnowledge(type)).filter((item) => !excluded.has(knowledgeKey(type, item)));
+    const shuffled = [...candidates].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, Math.max(1, Number(count) || 1));
+  }
+  function knowledgeKey(type, item) {
+    if (type === "poetry") {
+      if (item.id !== void 0 && item.id !== null) return `${type}:${item.id}`;
+      return `${type}:${item.dynasty || ""}:${item.author || ""}:${item.title || ""}`;
+    }
+    if (type === "xiehouyu") return `${type}:${item.riddle || ""}:${item.answer || ""}`;
+    return `${type}:${item.word || item.char || item.title || item.riddle || ""}`;
   }
 
   // src/vendor/pdfjs/pdf.min.mjs
@@ -5796,6 +6041,7 @@
       return shadow(this, "isBackdropFilterSupported", "undefined" != typeof CSS && CSS.supports("backdrop-filter", "blur(1px)"));
     }
   };
+  var _Util_static, t_fn, e_fn;
   var Util = class {
     static get hexNums() {
       return shadow(this, "hexNums", Array.from(Array(256).keys(), (t2) => t2.toString(16).padStart(2, "0")));
@@ -5885,34 +6131,36 @@
       s2[2] = Math.max(s2[2], t2, i2);
       s2[3] = Math.max(s2[3], e2, n2);
     }
-    static #t(t2, e2, i2, n2, s2, r2, a2, o2, l2, h2) {
-      if (l2 <= 0 || l2 >= 1) return;
-      const c2 = 1 - l2, d2 = l2 * l2, u2 = d2 * l2, p2 = c2 * (c2 * (c2 * t2 + 3 * l2 * e2) + 3 * d2 * i2) + u2 * n2, g2 = c2 * (c2 * (c2 * s2 + 3 * l2 * r2) + 3 * d2 * a2) + u2 * o2;
-      h2[0] = Math.min(h2[0], p2);
-      h2[1] = Math.min(h2[1], g2);
-      h2[2] = Math.max(h2[2], p2);
-      h2[3] = Math.max(h2[3], g2);
-    }
-    static #e(t2, e2, i2, n2, s2, r2, a2, o2, l2, h2, c2, d2) {
-      if (Math.abs(l2) < 1e-12) {
-        Math.abs(h2) >= 1e-12 && this.#t(t2, e2, i2, n2, s2, r2, a2, o2, -c2 / h2, d2);
-        return;
-      }
-      const u2 = h2 ** 2 - 4 * c2 * l2;
-      if (u2 < 0) return;
-      const p2 = Math.sqrt(u2), g2 = 2 * l2;
-      this.#t(t2, e2, i2, n2, s2, r2, a2, o2, (-h2 + p2) / g2, d2);
-      this.#t(t2, e2, i2, n2, s2, r2, a2, o2, (-h2 - p2) / g2, d2);
-    }
     static bezierBoundingBox(t2, e2, i2, n2, s2, r2, a2, o2, l2) {
       l2[0] = Math.min(l2[0], t2, a2);
       l2[1] = Math.min(l2[1], e2, o2);
       l2[2] = Math.max(l2[2], t2, a2);
       l2[3] = Math.max(l2[3], e2, o2);
-      this.#e(t2, i2, s2, a2, e2, n2, r2, o2, 3 * (3 * (i2 - s2) - t2 + a2), 6 * (t2 - 2 * i2 + s2), 3 * (i2 - t2), l2);
-      this.#e(t2, i2, s2, a2, e2, n2, r2, o2, 3 * (3 * (n2 - r2) - e2 + o2), 6 * (e2 - 2 * n2 + r2), 3 * (n2 - e2), l2);
+      __privateMethod(this, _Util_static, e_fn).call(this, t2, i2, s2, a2, e2, n2, r2, o2, 3 * (3 * (i2 - s2) - t2 + a2), 6 * (t2 - 2 * i2 + s2), 3 * (i2 - t2), l2);
+      __privateMethod(this, _Util_static, e_fn).call(this, t2, i2, s2, a2, e2, n2, r2, o2, 3 * (3 * (n2 - r2) - e2 + o2), 6 * (e2 - 2 * n2 + r2), 3 * (n2 - e2), l2);
     }
   };
+  _Util_static = new WeakSet();
+  t_fn = function(t2, e2, i2, n2, s2, r2, a2, o2, l2, h2) {
+    if (l2 <= 0 || l2 >= 1) return;
+    const c2 = 1 - l2, d2 = l2 * l2, u2 = d2 * l2, p2 = c2 * (c2 * (c2 * t2 + 3 * l2 * e2) + 3 * d2 * i2) + u2 * n2, g2 = c2 * (c2 * (c2 * s2 + 3 * l2 * r2) + 3 * d2 * a2) + u2 * o2;
+    h2[0] = Math.min(h2[0], p2);
+    h2[1] = Math.min(h2[1], g2);
+    h2[2] = Math.max(h2[2], p2);
+    h2[3] = Math.max(h2[3], g2);
+  };
+  e_fn = function(t2, e2, i2, n2, s2, r2, a2, o2, l2, h2, c2, d2) {
+    if (Math.abs(l2) < 1e-12) {
+      Math.abs(h2) >= 1e-12 && __privateMethod(this, _Util_static, t_fn).call(this, t2, e2, i2, n2, s2, r2, a2, o2, -c2 / h2, d2);
+      return;
+    }
+    const u2 = h2 ** 2 - 4 * c2 * l2;
+    if (u2 < 0) return;
+    const p2 = Math.sqrt(u2), g2 = 2 * l2;
+    __privateMethod(this, _Util_static, t_fn).call(this, t2, e2, i2, n2, s2, r2, a2, o2, (-h2 + p2) / g2, d2);
+    __privateMethod(this, _Util_static, t_fn).call(this, t2, e2, i2, n2, s2, r2, a2, o2, (-h2 - p2) / g2, d2);
+  };
+  __privateAdd(Util, _Util_static);
   var V = null;
   var $ = null;
   function normalizeUnicode(t2) {
@@ -6055,6 +6303,7 @@
   };
   var q = /url\(|image-set\(/i;
   var K = /^on/i;
+  var _XfaLayer_static, i_fn;
   var XfaLayer = class {
     static get _allowedHtmlElements() {
       return shadow(this, "_allowedHtmlElements", /* @__PURE__ */ new Set(["a", "b", "br", "button", "div", "i", "img", "input", "label", "li", "ol", "option", "p", "select", "span", "sub", "sup", "textarea", "ul"]));
@@ -6134,11 +6383,8 @@
       a2 && s2?.addLinkAttributes(t2, r2.href, r2.newWindow);
       i2 && r2.dataId && this.setupStorage(t2, r2.dataId, e2, i2);
     }
-    static #i(t2, e2, i2) {
-      return "richText" === i2 ? !e2 && this._allowedRichTextElements.has(t2) ? document.createElement(t2) : null : e2 ? e2 === a && this._allowedSvgElements.has(t2) ? document.createElementNS(a, t2) : null : this._allowedHtmlElements.has(t2) ? document.createElement(t2) : null;
-    }
     static render(t2) {
-      const e2 = t2.annotationStorage, i2 = t2.linkService, n2 = t2.xfaHtml, s2 = t2.intent || "display", r2 = this.#i(n2.name, n2.attributes?.xmlns, s2) ?? document.createElement("div");
+      const e2 = t2.annotationStorage, i2 = t2.linkService, n2 = t2.xfaHtml, s2 = t2.intent || "display", r2 = __privateMethod(this, _XfaLayer_static, i_fn).call(this, n2.name, n2.attributes?.xmlns, s2) ?? document.createElement("div");
       n2.attributes && this.setAttributes({ html: r2, element: n2, intent: s2, linkService: i2 });
       const a2 = "richText" !== s2, o2 = t2.div;
       o2.append(r2);
@@ -6172,7 +6418,7 @@
           r3.append(t4);
           continue;
         }
-        const d2 = this.#i(c2, o3.attributes?.xmlns, s2);
+        const d2 = __privateMethod(this, _XfaLayer_static, i_fn).call(this, c2, o3.attributes?.xmlns, s2);
         if (d2) {
           r3.append(d2);
           o3.attributes && this.setAttributes({ html: d2, element: o3, storage: e2, intent: s2, linkService: i2 });
@@ -6197,11 +6443,17 @@
       return new PageViewport({ viewBox: [0, 0, parseInt(n2, 10), parseInt(s2, 10)], userUnit: 1, scale: e2, rotation: i2 });
     }
   };
-  var PixelsPerInch = class {
-    static CSS = 96;
-    static PDF = 72;
-    static PDF_TO_CSS_UNITS = this.CSS / this.PDF;
+  _XfaLayer_static = new WeakSet();
+  i_fn = function(t2, e2, i2) {
+    return "richText" === i2 ? !e2 && this._allowedRichTextElements.has(t2) ? document.createElement(t2) : null : e2 ? e2 === a && this._allowedSvgElements.has(t2) ? document.createElementNS(a, t2) : null : this._allowedHtmlElements.has(t2) ? document.createElement(t2) : null;
   };
+  __privateAdd(XfaLayer, _XfaLayer_static);
+  var _PixelsPerInch = class _PixelsPerInch {
+  };
+  __publicField(_PixelsPerInch, "CSS", 96);
+  __publicField(_PixelsPerInch, "PDF", 72);
+  __publicField(_PixelsPerInch, "PDF_TO_CSS_UNITS", _PixelsPerInch.CSS / _PixelsPerInch.PDF);
+  var PixelsPerInch = _PixelsPerInch;
   async function fetchData(t2, e2 = "text") {
     if (isValidFetchUrl(t2, document.baseURI)) {
       const i2 = await fetch(t2);
@@ -6306,17 +6558,20 @@
     }
     return e2;
   }
+  var _n;
   var StatTimer = class {
-    #n = /* @__PURE__ */ new Map();
-    times = [];
+    constructor() {
+      __privateAdd(this, _n, /* @__PURE__ */ new Map());
+      __publicField(this, "times", []);
+    }
     time(t2) {
-      this.#n.has(t2) && warn(`Timer is already running for ${t2}`);
-      this.#n.set(t2, Date.now());
+      __privateGet(this, _n).has(t2) && warn(`Timer is already running for ${t2}`);
+      __privateGet(this, _n).set(t2, Date.now());
     }
     timeEnd(t2) {
-      this.#n.has(t2) || warn(`Timer has not been started for ${t2}`);
-      this.times.push({ name: t2, start: this.#n.get(t2), end: Date.now() });
-      this.#n.delete(t2);
+      __privateGet(this, _n).has(t2) || warn(`Timer has not been started for ${t2}`);
+      this.times.push({ name: t2, start: __privateGet(this, _n).get(t2), end: Date.now() });
+      __privateGet(this, _n).delete(t2);
     }
     toString() {
       const t2 = Math.max(...this.times.map((t3) => t3.name.length));
@@ -6324,6 +6579,7 @@
 `).join("");
     }
   };
+  _n = new WeakMap();
   function isValidFetchUrl(t2, e2) {
     const i2 = e2 ? URL.parse(t2, e2) : URL.parse(t2);
     return /https?:/.test(i2?.protocol ?? "");
@@ -6335,13 +6591,13 @@
     t2.preventDefault();
     t2.stopPropagation();
   }
+  var _s;
   var PDFDateString = class {
-    static #s;
     static toDateObject(t2) {
       if (t2 instanceof Date) return t2;
       if (!t2 || "string" != typeof t2) return null;
-      this.#s ||= new RegExp("^D:(\\d{4})(\\d{2})?(\\d{2})?(\\d{2})?(\\d{2})?(\\d{2})?([Z|+\\-])?(\\d{2})?'?(\\d{2})?'?");
-      const e2 = this.#s.exec(t2);
+      __privateGet(this, _s) || __privateSet(this, _s, new RegExp("^D:(\\d{4})(\\d{2})?(\\d{2})?(\\d{2})?(\\d{2})?(\\d{2})?([Z|+\\-])?(\\d{2})?'?(\\d{2})?'?"));
+      const e2 = __privateGet(this, _s).exec(t2);
       if (!e2) return null;
       const i2 = parseInt(e2[1], 10);
       let n2 = parseInt(e2[2], 10);
@@ -6369,6 +6625,8 @@
       return new Date(Date.UTC(i2, n2, s2, r2, a2, o2));
     }
   };
+  _s = new WeakMap();
+  __privateAdd(PDFDateString, _s);
   function getRGBA(t2) {
     if (t2.startsWith("#")) {
       const e3 = t2.slice(1);
@@ -6615,123 +6873,100 @@
     return e2;
   }
   __webpack_require__(4972), __webpack_require__(4628), __webpack_require__(8454), __webpack_require__(9452), __webpack_require__(4979), __webpack_require__(3579), __webpack_require__(3110), __webpack_require__(9314), __webpack_require__(1148), __webpack_require__(116), __webpack_require__(9112);
-  var EditorToolbar = class _EditorToolbar {
-    #r = null;
-    #a = null;
-    #o;
-    #l = null;
-    #h = null;
-    #c = null;
-    #d = null;
-    #u = null;
-    static #p = null;
+  var _r, _a, _o, _l, _h, _c, _d, _u, _p, _EditorToolbar_static, g_fn, _EditorToolbar_instances, m_fn, f_fn, b_fn, y_get;
+  var _EditorToolbar = class _EditorToolbar {
     constructor(t2) {
-      this.#o = t2;
-      _EditorToolbar.#p ||= Object.freeze({ freetext: "pdfjs-editor-remove-freetext-button", highlight: "pdfjs-editor-remove-highlight-button", ink: "pdfjs-editor-remove-ink-button", stamp: "pdfjs-editor-remove-stamp-button", signature: "pdfjs-editor-remove-signature-button" });
+      __privateAdd(this, _EditorToolbar_instances);
+      __privateAdd(this, _r, null);
+      __privateAdd(this, _a, null);
+      __privateAdd(this, _o);
+      __privateAdd(this, _l, null);
+      __privateAdd(this, _h, null);
+      __privateAdd(this, _c, null);
+      __privateAdd(this, _d, null);
+      __privateAdd(this, _u, null);
+      __privateSet(this, _o, t2);
+      __privateGet(_EditorToolbar, _p) || __privateSet(_EditorToolbar, _p, Object.freeze({ freetext: "pdfjs-editor-remove-freetext-button", highlight: "pdfjs-editor-remove-highlight-button", ink: "pdfjs-editor-remove-ink-button", stamp: "pdfjs-editor-remove-stamp-button", signature: "pdfjs-editor-remove-signature-button" }));
     }
     render() {
-      const t2 = this.#r = document.createElement("div");
+      const t2 = __privateSet(this, _r, document.createElement("div"));
       t2.classList.add("editToolbar", "hidden");
       t2.setAttribute("role", "toolbar");
-      const e2 = this.#o._uiManager._signal;
+      const e2 = __privateGet(this, _o)._uiManager._signal;
       if (e2 instanceof AbortSignal && !e2.aborted) {
         t2.addEventListener("contextmenu", noContextMenu, { signal: e2 });
-        t2.addEventListener("pointerdown", _EditorToolbar.#g, { signal: e2 });
+        t2.addEventListener("pointerdown", __privateMethod(_EditorToolbar, _EditorToolbar_static, g_fn), { signal: e2 });
       }
-      const i2 = this.#l = document.createElement("div");
+      const i2 = __privateSet(this, _l, document.createElement("div"));
       i2.className = "buttons";
       t2.append(i2);
-      const n2 = this.#o.toolbarPosition;
+      const n2 = __privateGet(this, _o).toolbarPosition;
       if (n2) {
-        const { style: e3 } = t2, i3 = "ltr" === this.#o._uiManager.direction ? 1 - n2[0] : n2[0];
+        const { style: e3 } = t2, i3 = "ltr" === __privateGet(this, _o)._uiManager.direction ? 1 - n2[0] : n2[0];
         e3.insetInlineEnd = 100 * i3 + "%";
         e3.top = `calc(${100 * n2[1]}% + var(--editor-toolbar-vert-offset))`;
       }
       return t2;
     }
     get div() {
-      return this.#r;
-    }
-    static #g(t2) {
-      t2.stopPropagation();
-    }
-    #m(t2) {
-      this.#o._focusEventsAllowed = false;
-      stopEvent(t2);
-    }
-    #f(t2) {
-      this.#o._focusEventsAllowed = true;
-      stopEvent(t2);
-    }
-    #b(t2) {
-      const e2 = this.#o._uiManager._signal;
-      if (!(e2 instanceof AbortSignal) || e2.aborted) return false;
-      t2.addEventListener("focusin", this.#m.bind(this), { capture: true, signal: e2 });
-      t2.addEventListener("focusout", this.#f.bind(this), { capture: true, signal: e2 });
-      t2.addEventListener("contextmenu", noContextMenu, { signal: e2 });
-      return true;
+      return __privateGet(this, _r);
     }
     hide() {
-      this.#r.classList.add("hidden");
-      this.#a?.hideDropdown();
+      __privateGet(this, _r).classList.add("hidden");
+      __privateGet(this, _a)?.hideDropdown();
     }
     show() {
-      this.#r.classList.remove("hidden");
-      this.#h?.shown();
-      this.#c?.shown();
+      __privateGet(this, _r).classList.remove("hidden");
+      __privateGet(this, _h)?.shown();
+      __privateGet(this, _c)?.shown();
     }
     addDeleteButton() {
-      const { editorType: t2, _uiManager: e2 } = this.#o, i2 = document.createElement("button");
+      const { editorType: t2, _uiManager: e2 } = __privateGet(this, _o), i2 = document.createElement("button");
       i2.classList.add("basic", "deleteButton");
       i2.tabIndex = 0;
-      i2.setAttribute("data-l10n-id", _EditorToolbar.#p[t2]);
-      this.#b(i2) && i2.addEventListener("click", (t3) => {
+      i2.setAttribute("data-l10n-id", __privateGet(_EditorToolbar, _p)[t2]);
+      __privateMethod(this, _EditorToolbar_instances, b_fn).call(this, i2) && i2.addEventListener("click", (t3) => {
         e2.delete();
       }, { signal: e2._signal });
-      this.#l.append(i2);
-    }
-    get #y() {
-      const t2 = document.createElement("div");
-      t2.className = "divider";
-      return t2;
+      __privateGet(this, _l).append(i2);
     }
     async addAltText(t2) {
       const e2 = await t2.render();
-      this.#b(e2);
-      this.#l.append(e2, this.#y);
-      this.#h = t2;
+      __privateMethod(this, _EditorToolbar_instances, b_fn).call(this, e2);
+      __privateGet(this, _l).append(e2, __privateGet(this, _EditorToolbar_instances, y_get));
+      __privateSet(this, _h, t2);
     }
     addComment(t2, e2 = null) {
-      if (this.#c) return;
+      if (__privateGet(this, _c)) return;
       const i2 = t2.renderForToolbar();
       if (!i2) return;
-      this.#b(i2);
-      const n2 = this.#d = this.#y;
+      __privateMethod(this, _EditorToolbar_instances, b_fn).call(this, i2);
+      const n2 = __privateSet(this, _d, __privateGet(this, _EditorToolbar_instances, y_get));
       if (e2) {
-        this.#l.insertBefore(i2, e2);
-        this.#l.insertBefore(n2, e2);
-      } else this.#l.append(i2, n2);
-      this.#c = t2;
+        __privateGet(this, _l).insertBefore(i2, e2);
+        __privateGet(this, _l).insertBefore(n2, e2);
+      } else __privateGet(this, _l).append(i2, n2);
+      __privateSet(this, _c, t2);
       t2.toolbar = this;
     }
     addColorPicker(t2) {
-      if (this.#a) return;
-      this.#a = t2;
+      if (__privateGet(this, _a)) return;
+      __privateSet(this, _a, t2);
       const e2 = t2.renderButton();
-      this.#b(e2);
-      this.#l.append(e2, this.#y);
+      __privateMethod(this, _EditorToolbar_instances, b_fn).call(this, e2);
+      __privateGet(this, _l).append(e2, __privateGet(this, _EditorToolbar_instances, y_get));
     }
     async addEditSignatureButton(t2) {
-      const e2 = this.#u = await t2.renderEditButton(this.#o);
-      this.#b(e2);
-      this.#l.append(e2, this.#y);
+      const e2 = __privateSet(this, _u, await t2.renderEditButton(__privateGet(this, _o)));
+      __privateMethod(this, _EditorToolbar_instances, b_fn).call(this, e2);
+      __privateGet(this, _l).append(e2, __privateGet(this, _EditorToolbar_instances, y_get));
     }
     removeButton(t2) {
       if ("comment" === t2) {
-        this.#c?.removeToolbarCommentButton();
-        this.#c = null;
-        this.#d?.remove();
-        this.#d = null;
+        __privateGet(this, _c)?.removeToolbarCommentButton();
+        __privateSet(this, _c, null);
+        __privateGet(this, _d)?.remove();
+        __privateSet(this, _d, null);
       }
     }
     async addButton(t2, e2) {
@@ -6754,141 +6989,199 @@
     }
     async addButtonBefore(t2, e2, i2) {
       if (!e2 && "comment" === t2) return;
-      const n2 = this.#l.querySelector(i2);
+      const n2 = __privateGet(this, _l).querySelector(i2);
       n2 && "comment" === t2 && this.addComment(e2, n2);
     }
     updateEditSignatureButton(t2) {
-      this.#u && (this.#u.title = t2);
+      __privateGet(this, _u) && (__privateGet(this, _u).title = t2);
     }
     remove() {
-      this.#r.remove();
-      this.#a?.destroy();
-      this.#a = null;
+      __privateGet(this, _r).remove();
+      __privateGet(this, _a)?.destroy();
+      __privateSet(this, _a, null);
     }
   };
+  _r = new WeakMap();
+  _a = new WeakMap();
+  _o = new WeakMap();
+  _l = new WeakMap();
+  _h = new WeakMap();
+  _c = new WeakMap();
+  _d = new WeakMap();
+  _u = new WeakMap();
+  _p = new WeakMap();
+  _EditorToolbar_static = new WeakSet();
+  g_fn = function(t2) {
+    t2.stopPropagation();
+  };
+  _EditorToolbar_instances = new WeakSet();
+  m_fn = function(t2) {
+    __privateGet(this, _o)._focusEventsAllowed = false;
+    stopEvent(t2);
+  };
+  f_fn = function(t2) {
+    __privateGet(this, _o)._focusEventsAllowed = true;
+    stopEvent(t2);
+  };
+  b_fn = function(t2) {
+    const e2 = __privateGet(this, _o)._uiManager._signal;
+    if (!(e2 instanceof AbortSignal) || e2.aborted) return false;
+    t2.addEventListener("focusin", __privateMethod(this, _EditorToolbar_instances, m_fn).bind(this), { capture: true, signal: e2 });
+    t2.addEventListener("focusout", __privateMethod(this, _EditorToolbar_instances, f_fn).bind(this), { capture: true, signal: e2 });
+    t2.addEventListener("contextmenu", noContextMenu, { signal: e2 });
+    return true;
+  };
+  y_get = function() {
+    const t2 = document.createElement("div");
+    t2.className = "divider";
+    return t2;
+  };
+  __privateAdd(_EditorToolbar, _EditorToolbar_static);
+  __privateAdd(_EditorToolbar, _p, null);
+  var EditorToolbar = _EditorToolbar;
+  var _l2, _r2, _v, _FloatingToolbar_instances, w_fn, A_fn, x_fn;
   var FloatingToolbar = class {
-    #l = null;
-    #r = null;
-    #v;
     constructor(t2) {
-      this.#v = t2;
-    }
-    #w() {
-      const t2 = this.#r = document.createElement("div");
-      t2.className = "editToolbar";
-      t2.setAttribute("role", "toolbar");
-      const e2 = this.#v._signal;
-      e2 instanceof AbortSignal && !e2.aborted && t2.addEventListener("contextmenu", noContextMenu, { signal: e2 });
-      const i2 = this.#l = document.createElement("div");
-      i2.className = "buttons";
-      t2.append(i2);
-      this.#v.hasCommentManager() && this.#x("commentButton", "pdfjs-comment-floating-button", "pdfjs-comment-floating-button-label", () => {
-        this.#v.commentSelection("floating_button");
-      });
-      this.#x("highlightButton", "pdfjs-highlight-floating-button1", "pdfjs-highlight-floating-button-label", () => {
-        this.#v.highlightSelection("floating_button");
-      });
-      return t2;
-    }
-    #A(t2, e2) {
-      let i2 = 0, n2 = 0;
-      for (const s2 of t2) {
-        const t3 = s2.y + s2.height;
-        if (t3 < i2) continue;
-        const r2 = s2.x + (e2 ? s2.width : 0);
-        if (t3 > i2) {
-          n2 = r2;
-          i2 = t3;
-        } else e2 ? r2 > n2 && (n2 = r2) : r2 < n2 && (n2 = r2);
-      }
-      return [e2 ? 1 - n2 : n2, i2];
+      __privateAdd(this, _FloatingToolbar_instances);
+      __privateAdd(this, _l2, null);
+      __privateAdd(this, _r2, null);
+      __privateAdd(this, _v);
+      __privateSet(this, _v, t2);
     }
     show(t2, e2, i2) {
-      const [n2, s2] = this.#A(e2, i2), { style: r2 } = this.#r ||= this.#w();
-      t2.append(this.#r);
+      const [n2, s2] = __privateMethod(this, _FloatingToolbar_instances, A_fn).call(this, e2, i2), { style: r2 } = __privateGet(this, _r2) || __privateSet(this, _r2, __privateMethod(this, _FloatingToolbar_instances, w_fn).call(this));
+      t2.append(__privateGet(this, _r2));
       r2.insetInlineEnd = 100 * n2 + "%";
       r2.top = `calc(${100 * s2}% + var(--editor-toolbar-vert-offset))`;
     }
     hide() {
-      this.#r.remove();
+      __privateGet(this, _r2).remove();
     }
-    #x(t2, e2, i2, n2) {
-      const s2 = document.createElement("button");
-      s2.classList.add("basic", t2);
-      s2.tabIndex = 0;
-      s2.setAttribute("data-l10n-id", e2);
-      const r2 = document.createElement("span");
-      s2.append(r2);
-      r2.className = "visuallyHidden";
-      r2.setAttribute("data-l10n-id", i2);
-      const a2 = this.#v._signal;
-      if (a2 instanceof AbortSignal && !a2.aborted) {
-        s2.addEventListener("contextmenu", noContextMenu, { signal: a2 });
-        s2.addEventListener("click", n2, { signal: a2 });
-      }
-      this.#l.append(s2);
+  };
+  _l2 = new WeakMap();
+  _r2 = new WeakMap();
+  _v = new WeakMap();
+  _FloatingToolbar_instances = new WeakSet();
+  w_fn = function() {
+    const t2 = __privateSet(this, _r2, document.createElement("div"));
+    t2.className = "editToolbar";
+    t2.setAttribute("role", "toolbar");
+    const e2 = __privateGet(this, _v)._signal;
+    e2 instanceof AbortSignal && !e2.aborted && t2.addEventListener("contextmenu", noContextMenu, { signal: e2 });
+    const i2 = __privateSet(this, _l2, document.createElement("div"));
+    i2.className = "buttons";
+    t2.append(i2);
+    __privateGet(this, _v).hasCommentManager() && __privateMethod(this, _FloatingToolbar_instances, x_fn).call(this, "commentButton", "pdfjs-comment-floating-button", "pdfjs-comment-floating-button-label", () => {
+      __privateGet(this, _v).commentSelection("floating_button");
+    });
+    __privateMethod(this, _FloatingToolbar_instances, x_fn).call(this, "highlightButton", "pdfjs-highlight-floating-button1", "pdfjs-highlight-floating-button-label", () => {
+      __privateGet(this, _v).highlightSelection("floating_button");
+    });
+    return t2;
+  };
+  A_fn = function(t2, e2) {
+    let i2 = 0, n2 = 0;
+    for (const s2 of t2) {
+      const t3 = s2.y + s2.height;
+      if (t3 < i2) continue;
+      const r2 = s2.x + (e2 ? s2.width : 0);
+      if (t3 > i2) {
+        n2 = r2;
+        i2 = t3;
+      } else e2 ? r2 > n2 && (n2 = r2) : r2 < n2 && (n2 = r2);
     }
+    return [e2 ? 1 - n2 : n2, i2];
+  };
+  x_fn = function(t2, e2, i2, n2) {
+    const s2 = document.createElement("button");
+    s2.classList.add("basic", t2);
+    s2.tabIndex = 0;
+    s2.setAttribute("data-l10n-id", e2);
+    const r2 = document.createElement("span");
+    s2.append(r2);
+    r2.className = "visuallyHidden";
+    r2.setAttribute("data-l10n-id", i2);
+    const a2 = __privateGet(this, _v)._signal;
+    if (a2 instanceof AbortSignal && !a2.aborted) {
+      s2.addEventListener("contextmenu", noContextMenu, { signal: a2 });
+      s2.addEventListener("click", n2, { signal: a2 });
+    }
+    __privateGet(this, _l2).append(s2);
   };
   var J = Object.freeze({ internal: "f63eb798-ea37-4556-98de-f8303ee5a694" });
   function bindEvents(t2, e2, i2) {
     for (const n2 of i2) e2.addEventListener(n2, t2[n2].bind(t2));
   }
-  var CurrentPointers = class _CurrentPointers {
-    static #E = NaN;
-    static #C = null;
-    static #S = NaN;
-    static #T = null;
+  var _E, _C, _S, _T;
+  var _CurrentPointers = class _CurrentPointers {
     static initializeAndAddPointerId(t2) {
-      (_CurrentPointers.#C ||= /* @__PURE__ */ new Set()).add(t2);
+      (__privateGet(_CurrentPointers, _C) || __privateSet(_CurrentPointers, _C, /* @__PURE__ */ new Set())).add(t2);
     }
     static setPointer(t2, e2) {
-      _CurrentPointers.#E ||= e2;
-      _CurrentPointers.#T ??= t2;
+      __privateGet(_CurrentPointers, _E) || __privateSet(_CurrentPointers, _E, e2);
+      __privateGet(_CurrentPointers, _T) ?? __privateSet(_CurrentPointers, _T, t2);
     }
     static setTimeStamp(t2) {
-      _CurrentPointers.#S = t2;
+      __privateSet(_CurrentPointers, _S, t2);
     }
     static isSamePointerId(t2) {
-      return _CurrentPointers.#E === t2;
+      return __privateGet(_CurrentPointers, _E) === t2;
     }
     static isSamePointerIdOrRemove(t2) {
-      if (_CurrentPointers.#E === t2) return true;
-      _CurrentPointers.#C?.delete(t2);
+      if (__privateGet(_CurrentPointers, _E) === t2) return true;
+      __privateGet(_CurrentPointers, _C)?.delete(t2);
       return false;
     }
     static isSamePointerType(t2) {
-      return _CurrentPointers.#T === t2;
+      return __privateGet(_CurrentPointers, _T) === t2;
     }
     static isInitializedAndDifferentPointerType(t2) {
-      return null !== _CurrentPointers.#T && !_CurrentPointers.isSamePointerType(t2);
+      return null !== __privateGet(_CurrentPointers, _T) && !_CurrentPointers.isSamePointerType(t2);
     }
     static isSameTimeStamp(t2) {
-      return _CurrentPointers.#S === t2;
+      return __privateGet(_CurrentPointers, _S) === t2;
     }
     static isUsingMultiplePointers() {
-      return _CurrentPointers.#C?.size >= 1;
+      return __privateGet(_CurrentPointers, _C)?.size >= 1;
     }
     static clearPointerType() {
-      _CurrentPointers.#T = null;
+      __privateSet(_CurrentPointers, _T, null);
     }
     static clearPointerIds() {
-      _CurrentPointers.#E = NaN;
-      _CurrentPointers.#C = null;
+      __privateSet(_CurrentPointers, _E, NaN);
+      __privateSet(_CurrentPointers, _C, null);
     }
     static clearTimeStamp() {
-      _CurrentPointers.#S = NaN;
+      __privateSet(_CurrentPointers, _S, NaN);
     }
   };
+  _E = new WeakMap();
+  _C = new WeakMap();
+  _S = new WeakMap();
+  _T = new WeakMap();
+  __privateAdd(_CurrentPointers, _E, NaN);
+  __privateAdd(_CurrentPointers, _C, null);
+  __privateAdd(_CurrentPointers, _S, NaN);
+  __privateAdd(_CurrentPointers, _T, null);
+  var CurrentPointers = _CurrentPointers;
+  var __;
   var IdManager = class {
-    #_ = 0;
+    constructor() {
+      __privateAdd(this, __, 0);
+    }
     get id() {
-      return `${b}${this.#_++}`;
+      return `${b}${__privateWrapper(this, __)._++}`;
     }
   };
-  var ImageManager = class _ImageManager {
-    #k = getUuid();
-    #_ = 0;
-    #D = null;
+  __ = new WeakMap();
+  var _k, __2, _D, _ImageManager_instances, M_fn;
+  var _ImageManager = class _ImageManager {
+    constructor() {
+      __privateAdd(this, _ImageManager_instances);
+      __privateAdd(this, _k, getUuid());
+      __privateAdd(this, __2, 0);
+      __privateAdd(this, _D, null);
+    }
     static get _isSVGFittingCanvas() {
       const t2 = `data:image/svg+xml;charset=UTF-8,<svg viewBox="0 0 1 1" width="1" height="1" xmlns="${a}"><rect width="1" height="1" style="fill:red;"/></svg>`, e2 = new OffscreenCanvas(1, 3).getContext("2d", { willReadFrequently: true }), i2 = new Image();
       i2.src = t2;
@@ -6897,60 +7190,20 @@
         return 0 === new Uint32Array(e2.getImageData(0, 0, 1, 1).data.buffer)[0];
       }));
     }
-    async #M(t2, e2) {
-      this.#D ||= /* @__PURE__ */ new Map();
-      let i2 = this.#D.get(t2);
-      if (null === i2) return null;
-      if (i2?.bitmap) {
-        i2.refCounter += 1;
-        return i2;
-      }
-      try {
-        i2 ||= { bitmap: null, id: `image_${this.#k}_${this.#_++}`, refCounter: 0, isSvg: false };
-        let t3;
-        if ("string" == typeof e2) {
-          i2.url = e2;
-          t3 = await fetchData(e2, "blob");
-        } else e2 instanceof File ? t3 = i2.file = e2 : e2 instanceof Blob && (t3 = e2);
-        if ("image/svg+xml" === t3.type) {
-          const e3 = _ImageManager._isSVGFittingCanvas, n2 = new FileReader(), s2 = new Image(), r2 = new Promise((t4, r3) => {
-            s2.onload = () => {
-              i2.bitmap = s2;
-              i2.isSvg = true;
-              t4();
-            };
-            n2.onload = async () => {
-              const t5 = i2.svgUrl = n2.result;
-              s2.src = await e3 ? `${t5}#svgView(preserveAspectRatio(none))` : t5;
-            };
-            s2.onerror = n2.onerror = r3;
-          });
-          n2.readAsDataURL(t3);
-          await r2;
-        } else i2.bitmap = await createImageBitmap(t3);
-        i2.refCounter = 1;
-      } catch (t3) {
-        warn(t3);
-        i2 = null;
-      }
-      this.#D.set(t2, i2);
-      i2 && this.#D.set(i2.id, i2);
-      return i2;
-    }
     async getFromFile(t2) {
       const { lastModified: e2, name: i2, size: n2, type: s2 } = t2;
-      return this.#M(`${e2}_${i2}_${n2}_${s2}`, t2);
+      return __privateMethod(this, _ImageManager_instances, M_fn).call(this, `${e2}_${i2}_${n2}_${s2}`, t2);
     }
     async getFromUrl(t2) {
-      return this.#M(t2, t2);
+      return __privateMethod(this, _ImageManager_instances, M_fn).call(this, t2, t2);
     }
     async getFromBlob(t2, e2) {
       const i2 = await e2;
-      return this.#M(t2, i2);
+      return __privateMethod(this, _ImageManager_instances, M_fn).call(this, t2, i2);
     }
     async getFromId(t2) {
-      this.#D ||= /* @__PURE__ */ new Map();
-      const e2 = this.#D.get(t2);
+      __privateGet(this, _D) || __privateSet(this, _D, /* @__PURE__ */ new Map());
+      const e2 = __privateGet(this, _D).get(t2);
       if (!e2) return null;
       if (e2.bitmap) {
         e2.refCounter += 1;
@@ -6965,26 +7218,26 @@
       return this.getFromUrl(e2.url);
     }
     getFromCanvas(t2, e2) {
-      this.#D ||= /* @__PURE__ */ new Map();
-      let i2 = this.#D.get(t2);
+      __privateGet(this, _D) || __privateSet(this, _D, /* @__PURE__ */ new Map());
+      let i2 = __privateGet(this, _D).get(t2);
       if (i2?.bitmap) {
         i2.refCounter += 1;
         return i2;
       }
       const n2 = new OffscreenCanvas(e2.width, e2.height);
       n2.getContext("2d").drawImage(e2, 0, 0);
-      i2 = { bitmap: n2.transferToImageBitmap(), id: `image_${this.#k}_${this.#_++}`, refCounter: 1, isSvg: false };
-      this.#D.set(t2, i2);
-      this.#D.set(i2.id, i2);
+      i2 = { bitmap: n2.transferToImageBitmap(), id: `image_${__privateGet(this, _k)}_${__privateWrapper(this, __2)._++}`, refCounter: 1, isSvg: false };
+      __privateGet(this, _D).set(t2, i2);
+      __privateGet(this, _D).set(i2.id, i2);
       return i2;
     }
     getSvgUrl(t2) {
-      const e2 = this.#D.get(t2);
+      const e2 = __privateGet(this, _D).get(t2);
       return e2?.isSvg ? e2.svgUrl : null;
     }
     deleteId(t2) {
-      this.#D ||= /* @__PURE__ */ new Map();
-      const e2 = this.#D.get(t2);
+      __privateGet(this, _D) || __privateSet(this, _D, /* @__PURE__ */ new Map());
+      const e2 = __privateGet(this, _D).get(t2);
       if (!e2) return;
       e2.refCounter -= 1;
       if (0 !== e2.refCounter) return;
@@ -6998,86 +7251,134 @@
       e2.bitmap = null;
     }
     isValidId(t2) {
-      return t2.startsWith(`image_${this.#k}_`);
+      return t2.startsWith(`image_${__privateGet(this, _k)}_`);
     }
   };
+  _k = new WeakMap();
+  __2 = new WeakMap();
+  _D = new WeakMap();
+  _ImageManager_instances = new WeakSet();
+  M_fn = async function(t2, e2) {
+    __privateGet(this, _D) || __privateSet(this, _D, /* @__PURE__ */ new Map());
+    let i2 = __privateGet(this, _D).get(t2);
+    if (null === i2) return null;
+    if (i2?.bitmap) {
+      i2.refCounter += 1;
+      return i2;
+    }
+    try {
+      i2 || (i2 = { bitmap: null, id: `image_${__privateGet(this, _k)}_${__privateWrapper(this, __2)._++}`, refCounter: 0, isSvg: false });
+      let t3;
+      if ("string" == typeof e2) {
+        i2.url = e2;
+        t3 = await fetchData(e2, "blob");
+      } else e2 instanceof File ? t3 = i2.file = e2 : e2 instanceof Blob && (t3 = e2);
+      if ("image/svg+xml" === t3.type) {
+        const e3 = _ImageManager._isSVGFittingCanvas, n2 = new FileReader(), s2 = new Image(), r2 = new Promise((t4, r3) => {
+          s2.onload = () => {
+            i2.bitmap = s2;
+            i2.isSvg = true;
+            t4();
+          };
+          n2.onload = async () => {
+            const t5 = i2.svgUrl = n2.result;
+            s2.src = await e3 ? `${t5}#svgView(preserveAspectRatio(none))` : t5;
+          };
+          s2.onerror = n2.onerror = r3;
+        });
+        n2.readAsDataURL(t3);
+        await r2;
+      } else i2.bitmap = await createImageBitmap(t3);
+      i2.refCounter = 1;
+    } catch (t3) {
+      warn(t3);
+      i2 = null;
+    }
+    __privateGet(this, _D).set(t2, i2);
+    i2 && __privateGet(this, _D).set(i2.id, i2);
+    return i2;
+  };
+  var ImageManager = _ImageManager;
+  var _P, _I, _F, _O;
   var CommandManager = class {
-    #P = [];
-    #I = false;
-    #F;
-    #O = -1;
     constructor(t2 = 128) {
-      this.#F = t2;
+      __privateAdd(this, _P, []);
+      __privateAdd(this, _I, false);
+      __privateAdd(this, _F);
+      __privateAdd(this, _O, -1);
+      __privateSet(this, _F, t2);
     }
     add({ cmd: t2, undo: e2, post: i2, mustExec: n2, type: s2 = NaN, overwriteIfSameType: r2 = false, keepUndo: a2 = false }) {
       n2 && t2();
-      if (this.#I) return;
+      if (__privateGet(this, _I)) return;
       const o2 = { cmd: t2, undo: e2, post: i2, type: s2 };
-      if (-1 === this.#O) {
-        this.#P.length > 0 && (this.#P.length = 0);
-        this.#O = 0;
-        this.#P.push(o2);
+      if (-1 === __privateGet(this, _O)) {
+        __privateGet(this, _P).length > 0 && (__privateGet(this, _P).length = 0);
+        __privateSet(this, _O, 0);
+        __privateGet(this, _P).push(o2);
         return;
       }
-      if (r2 && this.#P[this.#O].type === s2) {
-        a2 && (o2.undo = this.#P[this.#O].undo);
-        this.#P[this.#O] = o2;
+      if (r2 && __privateGet(this, _P)[__privateGet(this, _O)].type === s2) {
+        a2 && (o2.undo = __privateGet(this, _P)[__privateGet(this, _O)].undo);
+        __privateGet(this, _P)[__privateGet(this, _O)] = o2;
         return;
       }
-      const l2 = this.#O + 1;
-      if (l2 === this.#F) this.#P.splice(0, 1);
+      const l2 = __privateGet(this, _O) + 1;
+      if (l2 === __privateGet(this, _F)) __privateGet(this, _P).splice(0, 1);
       else {
-        this.#O = l2;
-        l2 < this.#P.length && this.#P.splice(l2);
+        __privateSet(this, _O, l2);
+        l2 < __privateGet(this, _P).length && __privateGet(this, _P).splice(l2);
       }
-      this.#P.push(o2);
+      __privateGet(this, _P).push(o2);
     }
     undo() {
-      if (-1 === this.#O) return;
-      this.#I = true;
-      const { undo: t2, post: e2 } = this.#P[this.#O];
+      if (-1 === __privateGet(this, _O)) return;
+      __privateSet(this, _I, true);
+      const { undo: t2, post: e2 } = __privateGet(this, _P)[__privateGet(this, _O)];
       t2();
       e2?.();
-      this.#I = false;
-      this.#O -= 1;
+      __privateSet(this, _I, false);
+      __privateSet(this, _O, __privateGet(this, _O) - 1);
     }
     redo() {
-      if (this.#O < this.#P.length - 1) {
-        this.#O += 1;
-        this.#I = true;
-        const { cmd: t2, post: e2 } = this.#P[this.#O];
+      if (__privateGet(this, _O) < __privateGet(this, _P).length - 1) {
+        __privateSet(this, _O, __privateGet(this, _O) + 1);
+        __privateSet(this, _I, true);
+        const { cmd: t2, post: e2 } = __privateGet(this, _P)[__privateGet(this, _O)];
         t2();
         e2?.();
-        this.#I = false;
+        __privateSet(this, _I, false);
       }
     }
     hasSomethingToUndo() {
-      return -1 !== this.#O;
+      return -1 !== __privateGet(this, _O);
     }
     hasSomethingToRedo() {
-      return this.#O < this.#P.length - 1;
+      return __privateGet(this, _O) < __privateGet(this, _P).length - 1;
     }
     cleanType(t2) {
-      if (-1 !== this.#O) {
-        for (let e2 = this.#O; e2 >= 0; e2--) if (this.#P[e2].type !== t2) {
-          this.#P.splice(e2 + 1, this.#O - e2);
-          this.#O = e2;
+      if (-1 !== __privateGet(this, _O)) {
+        for (let e2 = __privateGet(this, _O); e2 >= 0; e2--) if (__privateGet(this, _P)[e2].type !== t2) {
+          __privateGet(this, _P).splice(e2 + 1, __privateGet(this, _O) - e2);
+          __privateSet(this, _O, e2);
           return;
         }
-        this.#P.length = 0;
-        this.#O = -1;
+        __privateGet(this, _P).length = 0;
+        __privateSet(this, _O, -1);
       }
     }
     destroy() {
-      this.#P = null;
+      __privateSet(this, _P, null);
     }
   };
-  var KeyboardManager = class _KeyboardManager {
-    static ALT = 1;
-    static CTRL = 2;
-    static META = 4;
-    static SHIFT = 8;
+  _P = new WeakMap();
+  _I = new WeakMap();
+  _F = new WeakMap();
+  _O = new WeakMap();
+  var _KeyboardManager_static, R_fn, B_fn;
+  var _KeyboardManager = class _KeyboardManager {
     constructor(t2) {
+      var _a4;
       this.callbacks = /* @__PURE__ */ new Map();
       const { isMac: e2 } = FeatureTest.platform;
       for (const [i2, n2, s2 = {}] of t2) {
@@ -7089,38 +7390,17 @@
             if (e2 !== t4) continue;
             t4 && (i3 = r2.slice(4));
           }
-          const [a2, o2] = _KeyboardManager.#R(i3);
+          const [a2, o2] = __privateMethod(_a4 = _KeyboardManager, _KeyboardManager_static, R_fn).call(_a4, i3);
           null !== a2 && this.callbacks.getOrInsertComputed(a2, makeArr).push({ callback: n2, options: s2, modifiers: o2 });
         }
       }
     }
-    static #R(t2) {
-      let e2 = null, i2 = 0;
-      for (let n2 of t2.split("+")) {
-        n2 = n2.trim();
-        if (!n2) continue;
-        const s2 = n2.toUpperCase(), r2 = _KeyboardManager[s2];
-        if (r2) i2 |= r2;
-        else {
-          if (null !== e2) {
-            warn(`KeyboardManager: multiple keys in shortcut "${t2}"`);
-            break;
-          }
-          e2 = "SPACE" === s2 ? " " : n2;
-        }
-      }
-      null === e2 && warn(`KeyboardManager: no key found in shortcut "${t2}"`);
-      return [e2, i2];
-    }
-    static #B(t2) {
-      const e2 = /^(?:Key([A-Z])|(?:Digit|Numpad)(\d))$/.exec(t2);
-      return e2 ? e2[1]?.toLowerCase() ?? e2[2] : null;
-    }
     exec(t2, e2) {
+      var _a4;
       let i2 = this.callbacks.get(e2.key);
       if (!i2) {
         if (/^[a-z]$/i.test(e2.key)) return;
-        const t3 = _KeyboardManager.#B(e2.code);
+        const t3 = __privateMethod(_a4 = _KeyboardManager, _KeyboardManager_static, B_fn).call(_a4, e2.code);
         if (null === t3 || t3 === e2.key) return;
         i2 = this.callbacks.get(t3);
         if (!i2) return;
@@ -7134,8 +7414,36 @@
       }
     }
   };
-  var ColorManager = class _ColorManager {
-    static _colorsMapping = /* @__PURE__ */ new Map([["CanvasText", [0, 0, 0]], ["Canvas", [255, 255, 255]]]);
+  _KeyboardManager_static = new WeakSet();
+  R_fn = function(t2) {
+    let e2 = null, i2 = 0;
+    for (let n2 of t2.split("+")) {
+      n2 = n2.trim();
+      if (!n2) continue;
+      const s2 = n2.toUpperCase(), r2 = _KeyboardManager[s2];
+      if (r2) i2 |= r2;
+      else {
+        if (null !== e2) {
+          warn(`KeyboardManager: multiple keys in shortcut "${t2}"`);
+          break;
+        }
+        e2 = "SPACE" === s2 ? " " : n2;
+      }
+    }
+    null === e2 && warn(`KeyboardManager: no key found in shortcut "${t2}"`);
+    return [e2, i2];
+  };
+  B_fn = function(t2) {
+    const e2 = /^(?:Key([A-Z])|(?:Digit|Numpad)(\d))$/.exec(t2);
+    return e2 ? e2[1]?.toLowerCase() ?? e2[2] : null;
+  };
+  __privateAdd(_KeyboardManager, _KeyboardManager_static);
+  __publicField(_KeyboardManager, "ALT", 1);
+  __publicField(_KeyboardManager, "CTRL", 2);
+  __publicField(_KeyboardManager, "META", 4);
+  __publicField(_KeyboardManager, "SHIFT", 8);
+  var KeyboardManager = _KeyboardManager;
+  var _ColorManager = class _ColorManager {
     get _colors() {
       const t2 = /* @__PURE__ */ new Map([["CanvasText", null], ["Canvas", null]]);
       !(function getColorValues(t3) {
@@ -7163,79 +7471,71 @@
       return e2 ? Util.makeHexColor(...e2) : t2;
     }
   };
-  var AnnotationEditorUIManager = class _AnnotationEditorUIManager {
-    #L = new AbortController();
-    #N = null;
-    #U = null;
-    #H = /* @__PURE__ */ new Map();
-    #z = /* @__PURE__ */ new Map();
-    #G = null;
-    #j = null;
-    #W = null;
-    #V = null;
-    #$ = new CommandManager();
-    #q = null;
-    #K = null;
-    #X = null;
-    #Y = 0;
-    #J = /* @__PURE__ */ new Set();
-    #Q = null;
-    #Z = null;
-    #tt = /* @__PURE__ */ new Set();
-    _editorUndoBar = null;
-    #et = false;
-    #it = false;
-    #nt = false;
-    #st = null;
-    #rt = null;
-    #at = null;
-    #ot = null;
-    #lt = false;
-    #ht = null;
-    #ct = new IdManager();
-    #dt = false;
-    #ut = false;
-    #pt = false;
-    #gt = null;
-    #mt = null;
-    #ft = null;
-    #bt = null;
-    #yt = null;
-    #vt = y.NONE;
-    #wt = /* @__PURE__ */ new Set();
-    #xt = null;
-    #At = null;
-    #Et = null;
-    #Ct = null;
-    #St = null;
-    #Tt = { isEditing: false, isEmpty: true, hasSomethingToUndo: false, hasSomethingToRedo: false, hasSelectedEditor: false, hasSelectedText: false };
-    #_t = [0, 0];
-    #kt = null;
-    #Dt = null;
-    #Mt = null;
-    #Pt = null;
-    #It = null;
-    static TRANSLATE_SMALL = 1;
-    static TRANSLATE_BIG = 10;
-    static get _keyboardManager() {
-      const t2 = _AnnotationEditorUIManager.prototype, arrowChecker = (t3) => t3.#Dt.contains(document.activeElement) && "BUTTON" !== document.activeElement.tagName && t3.hasSomethingToControl(), textInputChecker = (t3, { target: e3 }) => {
-        if (e3 instanceof HTMLInputElement) {
-          const { type: t4 } = e3;
-          return "text" !== t4 && "number" !== t4;
-        }
-        return true;
-      }, e2 = this.TRANSLATE_SMALL, i2 = this.TRANSLATE_BIG;
-      return shadow(this, "_keyboardManager", new KeyboardManager([[["ctrl+a", "mac+meta+a"], t2.selectAll, { checker: textInputChecker }], [["ctrl+z", "mac+meta+z"], t2.undo, { checker: textInputChecker }], [["ctrl+y", "ctrl+shift+z", "mac+meta+shift+z", "ctrl+shift+Z", "mac+meta+shift+Z"], t2.redo, { checker: textInputChecker }], [["Backspace", "alt+Backspace", "ctrl+Backspace", "shift+Backspace", "mac+Backspace", "mac+alt+Backspace", "mac+ctrl+Backspace", "Delete", "ctrl+Delete", "shift+Delete", "mac+Delete"], t2.delete, { checker: textInputChecker }], [["Enter"], t2.addNewEditorFromKeyboard, { checker: (t3, { target: e3 }) => !(e3 instanceof HTMLButtonElement) && t3.#Dt.contains(e3) && !t3.isEnterHandled }], [["Space"], t2.addNewEditorFromKeyboard, { checker: (t3, { target: e3 }) => !(e3 instanceof HTMLButtonElement) && t3.#Dt.contains(document.activeElement) }], [["Escape"], t2.unselectAll], [["ArrowLeft"], t2.translateSelectedEditors, { args: [-e2, 0], checker: arrowChecker }], [["ctrl+ArrowLeft", "mac+shift+ArrowLeft"], t2.translateSelectedEditors, { args: [-i2, 0], checker: arrowChecker }], [["ArrowRight"], t2.translateSelectedEditors, { args: [e2, 0], checker: arrowChecker }], [["ctrl+ArrowRight", "mac+shift+ArrowRight"], t2.translateSelectedEditors, { args: [i2, 0], checker: arrowChecker }], [["ArrowUp"], t2.translateSelectedEditors, { args: [0, -e2], checker: arrowChecker }], [["ctrl+ArrowUp", "mac+shift+ArrowUp"], t2.translateSelectedEditors, { args: [0, -i2], checker: arrowChecker }], [["ArrowDown"], t2.translateSelectedEditors, { args: [0, e2], checker: arrowChecker }], [["ctrl+ArrowDown", "mac+shift+ArrowDown"], t2.translateSelectedEditors, { args: [0, i2], checker: arrowChecker }]]));
-    }
+  __publicField(_ColorManager, "_colorsMapping", /* @__PURE__ */ new Map([["CanvasText", [0, 0, 0]], ["Canvas", [255, 255, 255]]]));
+  var ColorManager = _ColorManager;
+  var _L, _N, _U, _H, _z, _G, _j, _W, _V, _$, _q, _K, _X, _Y, _J, _Q, _Z, _tt, _et, _it, _nt, _st, _rt, _at, _ot, _lt, _ht, _ct, _dt, _ut, _pt, _gt, _mt, _ft, _bt, _yt, _vt, _wt, _xt, _At, _Et, _Ct, _St, _Tt, __t, _kt, _Dt, _Mt, _Pt, _It, _AnnotationEditorUIManager_instances, Bt_fn, Lt_fn, Nt_fn, Ut_fn, zt_fn, Ft_fn, Gt_fn, jt_fn, Rt_fn, Wt_fn, Vt_fn, $t_fn, Ot_fn, Ht_fn, Xt_fn, Jt_fn, Qt_fn, qt_fn, Zt_get, Yt_fn, Kt_fn;
+  var _AnnotationEditorUIManager = class _AnnotationEditorUIManager {
     constructor(t2, e2, i2, n2, s2, r2, a2, o2, l2, h2, c2, d2, u2, p2, g2, m2) {
-      const f2 = this._signal = this.#L.signal;
-      this.#Dt = t2;
-      this.#Mt = e2;
-      this.#Pt = i2;
-      this.#j = n2;
-      this.#q = s2;
-      this.#At = r2;
-      this.#St = o2;
+      __privateAdd(this, _AnnotationEditorUIManager_instances);
+      __privateAdd(this, _L, new AbortController());
+      __privateAdd(this, _N, null);
+      __privateAdd(this, _U, null);
+      __privateAdd(this, _H, /* @__PURE__ */ new Map());
+      __privateAdd(this, _z, /* @__PURE__ */ new Map());
+      __privateAdd(this, _G, null);
+      __privateAdd(this, _j, null);
+      __privateAdd(this, _W, null);
+      __privateAdd(this, _V, null);
+      __privateAdd(this, _$, new CommandManager());
+      __privateAdd(this, _q, null);
+      __privateAdd(this, _K, null);
+      __privateAdd(this, _X, null);
+      __privateAdd(this, _Y, 0);
+      __privateAdd(this, _J, /* @__PURE__ */ new Set());
+      __privateAdd(this, _Q, null);
+      __privateAdd(this, _Z, null);
+      __privateAdd(this, _tt, /* @__PURE__ */ new Set());
+      __publicField(this, "_editorUndoBar", null);
+      __privateAdd(this, _et, false);
+      __privateAdd(this, _it, false);
+      __privateAdd(this, _nt, false);
+      __privateAdd(this, _st, null);
+      __privateAdd(this, _rt, null);
+      __privateAdd(this, _at, null);
+      __privateAdd(this, _ot, null);
+      __privateAdd(this, _lt, false);
+      __privateAdd(this, _ht, null);
+      __privateAdd(this, _ct, new IdManager());
+      __privateAdd(this, _dt, false);
+      __privateAdd(this, _ut, false);
+      __privateAdd(this, _pt, false);
+      __privateAdd(this, _gt, null);
+      __privateAdd(this, _mt, null);
+      __privateAdd(this, _ft, null);
+      __privateAdd(this, _bt, null);
+      __privateAdd(this, _yt, null);
+      __privateAdd(this, _vt, y.NONE);
+      __privateAdd(this, _wt, /* @__PURE__ */ new Set());
+      __privateAdd(this, _xt, null);
+      __privateAdd(this, _At, null);
+      __privateAdd(this, _Et, null);
+      __privateAdd(this, _Ct, null);
+      __privateAdd(this, _St, null);
+      __privateAdd(this, _Tt, { isEditing: false, isEmpty: true, hasSomethingToUndo: false, hasSomethingToRedo: false, hasSelectedEditor: false, hasSelectedText: false });
+      __privateAdd(this, __t, [0, 0]);
+      __privateAdd(this, _kt, null);
+      __privateAdd(this, _Dt, null);
+      __privateAdd(this, _Mt, null);
+      __privateAdd(this, _Pt, null);
+      __privateAdd(this, _It, null);
+      const f2 = this._signal = __privateGet(this, _L).signal;
+      __privateSet(this, _Dt, t2);
+      __privateSet(this, _Mt, e2);
+      __privateSet(this, _Pt, i2);
+      __privateSet(this, _j, n2);
+      __privateSet(this, _q, s2);
+      __privateSet(this, _At, r2);
+      __privateSet(this, _St, o2);
       this._eventBus = a2;
       const b2 = { signal: f2, ...J };
       a2.on("editingaction", this.onEditingAction.bind(this), b2);
@@ -7245,82 +7545,92 @@
       a2.on("setpreference", this.onSetPreference.bind(this), b2);
       a2.on("switchannotationeditorparams", (t3) => this.updateParams(t3.type, t3.value), b2);
       window.addEventListener("pointerdown", () => {
-        this.#ut = true;
+        __privateSet(this, _ut, true);
       }, { capture: true, signal: f2 });
       window.addEventListener("pointerup", () => {
-        this.#ut = false;
+        __privateSet(this, _ut, false);
       }, { capture: true, signal: f2 });
       window.addEventListener("beforeunload", this.endCurrentEditing.bind(this), { capture: true, signal: f2 });
-      this.#Ft();
-      this.#Ot();
-      this.#Rt();
-      this.#W = o2.annotationStorage;
-      this.#st = o2.filterFactory;
-      this.#Et = l2;
-      this.#ot = h2 || null;
-      this.#et = c2;
-      this.#it = d2;
-      this.#nt = u2;
-      this.#yt = p2 || null;
+      __privateMethod(this, _AnnotationEditorUIManager_instances, Ft_fn).call(this);
+      __privateMethod(this, _AnnotationEditorUIManager_instances, Ot_fn).call(this);
+      __privateMethod(this, _AnnotationEditorUIManager_instances, Rt_fn).call(this);
+      __privateSet(this, _W, o2.annotationStorage);
+      __privateSet(this, _st, o2.filterFactory);
+      __privateSet(this, _Et, l2);
+      __privateSet(this, _ot, h2 || null);
+      __privateSet(this, _et, c2);
+      __privateSet(this, _it, d2);
+      __privateSet(this, _nt, u2);
+      __privateSet(this, _yt, p2 || null);
       this.viewParameters = { realScale: PixelsPerInch.PDF_TO_CSS_UNITS, rotation: 0 };
       this.isShiftKeyDown = false;
       this._editorUndoBar = g2 || null;
       this._supportsPinchToZoom = false !== m2;
       s2?.setSidebarUiManager(this);
     }
+    static get _keyboardManager() {
+      const t2 = _AnnotationEditorUIManager.prototype, arrowChecker = (t3) => __privateGet(t3, _Dt).contains(document.activeElement) && "BUTTON" !== document.activeElement.tagName && t3.hasSomethingToControl(), textInputChecker = (t3, { target: e3 }) => {
+        if (e3 instanceof HTMLInputElement) {
+          const { type: t4 } = e3;
+          return "text" !== t4 && "number" !== t4;
+        }
+        return true;
+      }, e2 = this.TRANSLATE_SMALL, i2 = this.TRANSLATE_BIG;
+      return shadow(this, "_keyboardManager", new KeyboardManager([[["ctrl+a", "mac+meta+a"], t2.selectAll, { checker: textInputChecker }], [["ctrl+z", "mac+meta+z"], t2.undo, { checker: textInputChecker }], [["ctrl+y", "ctrl+shift+z", "mac+meta+shift+z", "ctrl+shift+Z", "mac+meta+shift+Z"], t2.redo, { checker: textInputChecker }], [["Backspace", "alt+Backspace", "ctrl+Backspace", "shift+Backspace", "mac+Backspace", "mac+alt+Backspace", "mac+ctrl+Backspace", "Delete", "ctrl+Delete", "shift+Delete", "mac+Delete"], t2.delete, { checker: textInputChecker }], [["Enter"], t2.addNewEditorFromKeyboard, { checker: (t3, { target: e3 }) => !(e3 instanceof HTMLButtonElement) && __privateGet(t3, _Dt).contains(e3) && !t3.isEnterHandled }], [["Space"], t2.addNewEditorFromKeyboard, { checker: (t3, { target: e3 }) => !(e3 instanceof HTMLButtonElement) && __privateGet(t3, _Dt).contains(document.activeElement) }], [["Escape"], t2.unselectAll], [["ArrowLeft"], t2.translateSelectedEditors, { args: [-e2, 0], checker: arrowChecker }], [["ctrl+ArrowLeft", "mac+shift+ArrowLeft"], t2.translateSelectedEditors, { args: [-i2, 0], checker: arrowChecker }], [["ArrowRight"], t2.translateSelectedEditors, { args: [e2, 0], checker: arrowChecker }], [["ctrl+ArrowRight", "mac+shift+ArrowRight"], t2.translateSelectedEditors, { args: [i2, 0], checker: arrowChecker }], [["ArrowUp"], t2.translateSelectedEditors, { args: [0, -e2], checker: arrowChecker }], [["ctrl+ArrowUp", "mac+shift+ArrowUp"], t2.translateSelectedEditors, { args: [0, -i2], checker: arrowChecker }], [["ArrowDown"], t2.translateSelectedEditors, { args: [0, e2], checker: arrowChecker }], [["ctrl+ArrowDown", "mac+shift+ArrowDown"], t2.translateSelectedEditors, { args: [0, i2], checker: arrowChecker }]]));
+    }
     destroy() {
-      this.#It?.resolve();
-      this.#It = null;
-      this.#L?.abort();
-      this.#L = null;
+      __privateGet(this, _It)?.resolve();
+      __privateSet(this, _It, null);
+      __privateGet(this, _L)?.abort();
+      __privateSet(this, _L, null);
       this._signal = null;
-      for (const t2 of this.#z.values()) t2.destroy();
-      this.#z.clear();
-      this.#H.clear();
-      this.#tt.clear();
-      this.#bt?.clear();
-      this.#N = null;
-      this.#wt.clear();
-      this.#$.destroy();
-      this.#j?.destroy();
-      this.#q?.destroy();
-      this.#At?.destroy();
-      this.#ht?.hide();
-      this.#ht = null;
-      this.#ft?.destroy();
-      this.#ft = null;
-      this.#U = null;
-      if (this.#rt) {
-        clearTimeout(this.#rt);
-        this.#rt = null;
+      for (const t2 of __privateGet(this, _z).values()) t2.destroy();
+      __privateGet(this, _z).clear();
+      __privateGet(this, _H).clear();
+      __privateGet(this, _tt).clear();
+      __privateGet(this, _bt)?.clear();
+      __privateSet(this, _N, null);
+      __privateGet(this, _wt).clear();
+      __privateGet(this, _$).destroy();
+      __privateGet(this, _j)?.destroy();
+      __privateGet(this, _q)?.destroy();
+      __privateGet(this, _At)?.destroy();
+      __privateGet(this, _ht)?.hide();
+      __privateSet(this, _ht, null);
+      __privateGet(this, _ft)?.destroy();
+      __privateSet(this, _ft, null);
+      __privateSet(this, _U, null);
+      if (__privateGet(this, _rt)) {
+        clearTimeout(__privateGet(this, _rt));
+        __privateSet(this, _rt, null);
       }
-      if (this.#kt) {
-        clearTimeout(this.#kt);
-        this.#kt = null;
+      if (__privateGet(this, _kt)) {
+        clearTimeout(__privateGet(this, _kt));
+        __privateSet(this, _kt, null);
       }
       this._editorUndoBar?.destroy();
-      this.#St = null;
+      __privateSet(this, _St, null);
     }
     combinedSignal(t2) {
       return AbortSignal.any([this._signal, t2.signal]);
     }
     get mlManager() {
-      return this.#yt;
+      return __privateGet(this, _yt);
     }
     get useNewAltTextFlow() {
-      return this.#it;
+      return __privateGet(this, _it);
     }
     get useNewAltTextWhenAddingImage() {
-      return this.#nt;
+      return __privateGet(this, _nt);
     }
     get hcmFilter() {
-      return shadow(this, "hcmFilter", this.#Et ? this.#st.addHCMFilter(this.#Et.foreground, this.#Et.background) : "none");
+      return shadow(this, "hcmFilter", __privateGet(this, _Et) ? __privateGet(this, _st).addHCMFilter(__privateGet(this, _Et).foreground, __privateGet(this, _Et).background) : "none");
     }
     get direction() {
-      return shadow(this, "direction", getComputedStyle(this.#Dt).direction);
+      return shadow(this, "direction", getComputedStyle(__privateGet(this, _Dt)).direction);
     }
     get _highlightColors() {
-      return shadow(this, "_highlightColors", this.#ot ? new Map(this.#ot.split(",").map((t2) => {
+      return shadow(this, "_highlightColors", __privateGet(this, _ot) ? new Map(__privateGet(this, _ot).split(",").map((t2) => {
         (t2 = t2.split("=").map((t3) => t3.trim()))[1] = t2[1].toUpperCase();
         return t2;
       })) : null);
@@ -7328,7 +7638,7 @@
     get highlightColors() {
       const { _highlightColors: t2 } = this;
       if (!t2) return shadow(this, "highlightColors", null);
-      const e2 = /* @__PURE__ */ new Map(), i2 = !!this.#Et;
+      const e2 = /* @__PURE__ */ new Map(), i2 = !!__privateGet(this, _Et);
       for (const [n2, s2] of t2) {
         const t3 = n2.endsWith("_HCM");
         i2 && t3 ? e2.set(n2.replace("_HCM", ""), s2) : i2 || t3 || e2.set(n2, s2);
@@ -7351,32 +7661,32 @@
         this.unselectAll();
         this.disableUserSelect(true);
       } else this.disableUserSelect(false);
-      this.#X = t2;
+      __privateSet(this, _X, t2);
     }
     setMainHighlightColorPicker(t2) {
-      this.#ft = t2;
+      __privateSet(this, _ft, t2);
     }
     editAltText(t2, e2 = false) {
-      this.#j?.editAltText(this, t2, e2);
+      __privateGet(this, _j)?.editAltText(this, t2, e2);
     }
     hasCommentManager() {
-      return !!this.#q;
+      return !!__privateGet(this, _q);
     }
     editComment(t2, e2, i2, n2) {
-      this.#q?.showDialog(this, t2, e2, i2, n2);
+      __privateGet(this, _q)?.showDialog(this, t2, e2, i2, n2);
     }
     selectComment(t2, e2) {
-      const i2 = this.#z.get(t2), n2 = i2?.getEditorByUID(e2);
+      const i2 = __privateGet(this, _z).get(t2), n2 = i2?.getEditorByUID(e2);
       n2?.toggleComment(true, true);
     }
     updateComment(t2) {
-      this.#q?.updateComment(t2.getData());
+      __privateGet(this, _q)?.updateComment(t2.getData());
     }
     updatePopupColor(t2) {
-      this.#q?.updatePopupColor(t2);
+      __privateGet(this, _q)?.updatePopupColor(t2);
     }
     removeComment(t2) {
-      this.#q?.removeComments([t2.uid]);
+      __privateGet(this, _q)?.removeComments([t2.uid]);
     }
     deleteComment(t2, e2) {
       const undo = () => {
@@ -7389,16 +7699,16 @@
       }, undo, mustExec: true });
     }
     toggleComment(t2, e2, i2 = void 0) {
-      this.#q?.toggleCommentPopup(t2, e2, i2);
+      __privateGet(this, _q)?.toggleCommentPopup(t2, e2, i2);
     }
     makeCommentColor(t2, e2) {
-      return t2 && this.#q?.makeCommentColor(t2, e2) || null;
+      return t2 && __privateGet(this, _q)?.makeCommentColor(t2, e2) || null;
     }
     getCommentDialogElement() {
-      return this.#q?.dialogElement || null;
+      return __privateGet(this, _q)?.dialogElement || null;
     }
     async waitForEditorsRendered(t2) {
-      if (this.#z.has(t2 - 1)) return;
+      if (__privateGet(this, _z).has(t2 - 1)) return;
       const { resolve: e2, promise: i2 } = Promise.withResolvers(), onEditorsRendered = (i3) => {
         if (i3.pageNumber === t2) {
           this._eventBus.off("editorsrendered", onEditorsRendered);
@@ -7409,10 +7719,10 @@
       await i2;
     }
     getSignature(t2) {
-      this.#At?.getSignature({ uiManager: this, editor: t2 });
+      __privateGet(this, _At)?.getSignature({ uiManager: this, editor: t2 });
     }
     get signatureManager() {
-      return this.#At;
+      return __privateGet(this, _At);
     }
     switchToMode(t2, e2) {
       this._eventBus.on("annotationeditormodechanged", e2, { once: true, signal: this._signal, ...J });
@@ -7422,61 +7732,52 @@
       this._eventBus.dispatch("setpreference", { source: this, name: t2, value: e2 });
     }
     onSetPreference({ name: t2, value: e2 }) {
-      if ("enableNewAltTextWhenAddingImage" === t2) this.#nt = e2;
+      if ("enableNewAltTextWhenAddingImage" === t2) __privateSet(this, _nt, e2);
     }
     onPageChanging({ pageNumber: t2 }) {
-      this.#Y = t2 - 1;
+      __privateSet(this, _Y, t2 - 1);
     }
     deletePage(t2) {
       for (const e2 of this.getEditors(t2)) e2.remove();
-      this.#z.delete(t2);
-      this.#Y === t2 && (this.#Y = 0);
+      __privateGet(this, _z).delete(t2);
+      __privateGet(this, _Y) === t2 && __privateSet(this, _Y, 0);
     }
     focusMainContainer() {
-      this.#Dt.focus();
+      __privateGet(this, _Dt).focus();
     }
     findParent(t2, e2) {
-      for (const i2 of this.#z.values()) {
+      for (const i2 of __privateGet(this, _z).values()) {
         const { x: n2, y: s2, width: r2, height: a2 } = i2.div.getBoundingClientRect();
         if (t2 >= n2 && t2 <= n2 + r2 && e2 >= s2 && e2 <= s2 + a2) return i2;
       }
       return null;
     }
     disableUserSelect(t2 = false) {
-      this.#Mt.classList.toggle("noUserSelect", t2);
+      __privateGet(this, _Mt).classList.toggle("noUserSelect", t2);
     }
     addShouldRescale(t2) {
-      this.#tt.add(t2);
+      __privateGet(this, _tt).add(t2);
     }
     removeShouldRescale(t2) {
-      this.#tt.delete(t2);
+      __privateGet(this, _tt).delete(t2);
     }
     onScaleChanging({ scale: t2 }) {
       this.commitOrRemove();
       this.viewParameters.realScale = t2 * PixelsPerInch.PDF_TO_CSS_UNITS;
-      for (const t3 of this.#tt) t3.onScaleChanging();
-      this.#X?.onScaleChanging();
+      for (const t3 of __privateGet(this, _tt)) t3.onScaleChanging();
+      __privateGet(this, _X)?.onScaleChanging();
     }
     onRotationChanging({ pagesRotation: t2 }) {
       this.commitOrRemove();
       this.viewParameters.rotation = t2;
     }
-    #Bt({ anchorNode: t2 }) {
-      return t2.nodeType === Node.TEXT_NODE ? t2.parentElement : t2;
-    }
-    #Lt(t2) {
-      const { currentLayer: e2 } = this;
-      if (e2.hasTextLayer(t2)) return e2;
-      for (const e3 of this.#z.values()) if (e3.hasTextLayer(t2)) return e3;
-      return null;
-    }
     highlightSelection(t2 = "", e2 = false) {
       const i2 = document.getSelection();
       if (!i2 || i2.isCollapsed) return;
-      const { anchorNode: n2, anchorOffset: s2, focusNode: r2, focusOffset: a2 } = i2, o2 = i2.toString(), l2 = this.#Bt(i2).closest(".textLayer"), h2 = this.getSelectionBoxes(l2);
+      const { anchorNode: n2, anchorOffset: s2, focusNode: r2, focusOffset: a2 } = i2, o2 = i2.toString(), l2 = __privateMethod(this, _AnnotationEditorUIManager_instances, Bt_fn).call(this, i2).closest(".textLayer"), h2 = this.getSelectionBoxes(l2);
       if (!h2) return;
       i2.empty();
-      const c2 = this.#Lt(l2), d2 = this.#vt === y.NONE, callback = () => {
+      const c2 = __privateMethod(this, _AnnotationEditorUIManager_instances, Lt_fn).call(this, l2), d2 = __privateGet(this, _vt) === y.NONE, callback = () => {
         const i3 = c2?.createAndAddNewEditor({ x: 0, y: 0 }, false, { methodOfCreation: t2, boxes: h2, anchorNode: n2, anchorOffset: s2, focusNode: r2, focusOffset: a2, text: o2 });
         d2 && this.showAllEditors("highlight", true, true);
         e2 && i3?.editComment();
@@ -7490,161 +7791,62 @@
       this.commitOrRemove();
       this.currentLayer?.endDrawingSession(false);
     }
-    #Nt() {
-      const t2 = document.getSelection();
-      if (!t2 || t2.isCollapsed) return;
-      const e2 = this.#Bt(t2).closest(".textLayer"), i2 = this.getSelectionBoxes(e2);
-      if (i2) {
-        this.#ht ||= new FloatingToolbar(this);
-        this.#ht.show(e2, i2, "ltr" === this.direction);
-      }
-    }
     getAndRemoveDataFromAnnotationStorage(t2) {
-      if (!this.#W) return null;
-      const e2 = `${b}${t2}`, i2 = this.#W.getRawValue(e2);
-      i2 && this.#W.remove(e2);
+      if (!__privateGet(this, _W)) return null;
+      const e2 = `${b}${t2}`, i2 = __privateGet(this, _W).getRawValue(e2);
+      i2 && __privateGet(this, _W).remove(e2);
       return i2;
     }
     addToAnnotationStorage(t2) {
-      t2.isEmpty() || !this.#W || this.#W.has(t2.id) || this.#W.setValue(t2.id, t2);
+      t2.isEmpty() || !__privateGet(this, _W) || __privateGet(this, _W).has(t2.id) || __privateGet(this, _W).setValue(t2.id, t2);
     }
     a11yAlert(t2, e2 = null) {
-      const i2 = this.#Pt;
+      const i2 = __privateGet(this, _Pt);
       if (i2) {
         i2.setAttribute("data-l10n-id", t2);
         e2 ? i2.setAttribute("data-l10n-args", JSON.stringify(e2)) : i2.removeAttribute("data-l10n-args");
       }
     }
-    #Ut() {
-      const t2 = document.getSelection();
-      if (!t2 || t2.isCollapsed) {
-        if (this.#xt) {
-          this.#ht?.hide();
-          this.#xt = null;
-          this.#Ht({ hasSelectedText: false });
-        }
-        return;
-      }
-      const { anchorNode: e2 } = t2;
-      if (e2 === this.#xt) return;
-      const i2 = this.#Bt(t2).closest(".textLayer");
-      if (i2) {
-        this.#ht?.hide();
-        this.#xt = e2;
-        this.#Ht({ hasSelectedText: true });
-        if (this.#vt === y.HIGHLIGHT || this.#vt === y.NONE) {
-          this.#vt === y.HIGHLIGHT && this.showAllEditors("highlight", true, true);
-          this.#lt = this.isShiftKeyDown;
-          if (!this.isShiftKeyDown) {
-            const t3 = this.#vt === y.HIGHLIGHT ? this.#Lt(i2) : null;
-            t3?.toggleDrawing();
-            if (this.#ut) {
-              const e3 = new AbortController(), i3 = this.combinedSignal(e3), pointerup = (i4) => {
-                if ("pointerup" !== i4.type || 0 === i4.button) {
-                  e3.abort();
-                  t3?.toggleDrawing(true);
-                  "pointerup" === i4.type && this.#zt("main_toolbar");
-                }
-              };
-              window.addEventListener("pointerup", pointerup, { signal: i3 });
-              window.addEventListener("blur", pointerup, { signal: i3 });
-            } else {
-              t3?.toggleDrawing(true);
-              this.#zt("main_toolbar");
-            }
-          }
-        }
-      } else if (this.#xt) {
-        this.#ht?.hide();
-        this.#xt = null;
-        this.#Ht({ hasSelectedText: false });
-      }
-    }
-    #zt(t2 = "") {
-      this.#vt === y.HIGHLIGHT ? this.highlightSelection(t2) : this.#et && this.#Nt();
-    }
-    #Ft() {
-      document.addEventListener("selectionchange", this.#Ut.bind(this), { signal: this._signal });
-    }
-    #Gt() {
-      if (this.#at) return;
-      this.#at = new AbortController();
-      const t2 = this.combinedSignal(this.#at);
-      window.addEventListener("focus", this.focus.bind(this), { signal: t2 });
-      window.addEventListener("blur", this.blur.bind(this), { signal: t2 });
-    }
-    #jt() {
-      this.#at?.abort();
-      this.#at = null;
-    }
     blur() {
       this.isShiftKeyDown = false;
-      if (this.#lt) {
-        this.#lt = false;
-        this.#zt("main_toolbar");
+      if (__privateGet(this, _lt)) {
+        __privateSet(this, _lt, false);
+        __privateMethod(this, _AnnotationEditorUIManager_instances, zt_fn).call(this, "main_toolbar");
       }
       if (!this.hasSelection) return;
       const { activeElement: t2 } = document;
-      for (const e2 of this.#wt) if (e2.div.contains(t2)) {
-        this.#mt = [e2, t2];
+      for (const e2 of __privateGet(this, _wt)) if (e2.div.contains(t2)) {
+        __privateSet(this, _mt, [e2, t2]);
         e2._focusEventsAllowed = false;
         break;
       }
     }
     focus() {
-      if (!this.#mt) return;
-      const [t2, e2] = this.#mt;
-      this.#mt = null;
+      if (!__privateGet(this, _mt)) return;
+      const [t2, e2] = __privateGet(this, _mt);
+      __privateSet(this, _mt, null);
       e2.addEventListener("focusin", () => {
         t2._focusEventsAllowed = true;
       }, { once: true, signal: this._signal });
       e2.focus();
     }
-    #Rt() {
-      if (this.#gt) return;
-      this.#gt = new AbortController();
-      const t2 = this.combinedSignal(this.#gt);
-      window.addEventListener("keydown", this.keydown.bind(this), { signal: t2 });
-      window.addEventListener("keyup", this.keyup.bind(this), { signal: t2 });
-    }
-    #Wt() {
-      this.#gt?.abort();
-      this.#gt = null;
-    }
-    #Vt() {
-      if (this.#K) return;
-      this.#K = new AbortController();
-      const t2 = this.combinedSignal(this.#K);
-      document.addEventListener("copy", this.copy.bind(this), { signal: t2 });
-      document.addEventListener("cut", this.cut.bind(this), { signal: t2 });
-      document.addEventListener("paste", this.paste.bind(this), { signal: t2 });
-    }
-    #$t() {
-      this.#K?.abort();
-      this.#K = null;
-    }
-    #Ot() {
-      const t2 = this._signal;
-      document.addEventListener("dragover", this.dragOver.bind(this), { signal: t2 });
-      document.addEventListener("drop", this.drop.bind(this), { signal: t2 });
-    }
     addEditListeners() {
-      this.#Rt();
+      __privateMethod(this, _AnnotationEditorUIManager_instances, Rt_fn).call(this);
       this.setEditingState(true);
     }
     removeEditListeners() {
-      this.#Wt();
+      __privateMethod(this, _AnnotationEditorUIManager_instances, Wt_fn).call(this);
       this.setEditingState(false);
     }
     dragOver(t2) {
-      for (const { type: e2 } of t2.dataTransfer.items) for (const i2 of this.#Z) if (i2.isHandlingMimeForPasting(e2)) {
+      for (const { type: e2 } of t2.dataTransfer.items) for (const i2 of __privateGet(this, _Z)) if (i2.isHandlingMimeForPasting(e2)) {
         t2.dataTransfer.dropEffect = "copy";
         t2.preventDefault();
         return;
       }
     }
     drop(t2) {
-      for (const e2 of t2.dataTransfer.items) for (const i2 of this.#Z) if (i2.isHandlingMimeForPasting(e2.type)) {
+      for (const e2 of t2.dataTransfer.items) for (const i2 of __privateGet(this, _Z)) if (i2.isHandlingMimeForPasting(e2.type)) {
         i2.paste(e2, this.currentLayer);
         t2.preventDefault();
         return;
@@ -7652,10 +7854,10 @@
     }
     copy(t2) {
       t2.preventDefault();
-      this.#N?.commitOrRemove();
+      __privateGet(this, _N)?.commitOrRemove();
       if (!this.hasSelection) return;
       const e2 = [];
-      for (const t3 of this.#wt) {
+      for (const t3 of __privateGet(this, _wt)) {
         const i2 = t3.serialize(true);
         i2 && e2.push(i2);
       }
@@ -7668,7 +7870,7 @@
     async paste(t2) {
       t2.preventDefault();
       const { clipboardData: e2 } = t2;
-      for (const t3 of e2.items) for (const e3 of this.#Z) if (e3.isHandlingMimeForPasting(t3.type)) {
+      for (const t3 of e2.items) for (const e3 of __privateGet(this, _Z)) if (e3.isHandlingMimeForPasting(t3.type)) {
         e3.paste(t3, this.currentLayer);
         return;
       }
@@ -7691,8 +7893,8 @@
           t3.push(i3);
         }
         const cmd = () => {
-          for (const e3 of t3) this.#qt(e3);
-          this.#Kt(t3);
+          for (const e3 of t3) __privateMethod(this, _AnnotationEditorUIManager_instances, qt_fn).call(this, e3);
+          __privateMethod(this, _AnnotationEditorUIManager_instances, Kt_fn).call(this, t3);
         }, undo = () => {
           for (const e3 of t3) e3.remove();
         };
@@ -7703,14 +7905,14 @@
     }
     keydown(t2) {
       this.isShiftKeyDown || "Shift" !== t2.key || (this.isShiftKeyDown = true);
-      this.#vt === y.NONE || this.isEditorHandlingKeyboard || _AnnotationEditorUIManager._keyboardManager.exec(this, t2);
+      __privateGet(this, _vt) === y.NONE || this.isEditorHandlingKeyboard || _AnnotationEditorUIManager._keyboardManager.exec(this, t2);
     }
     keyup(t2) {
       if (this.isShiftKeyDown && "Shift" === t2.key) {
         this.isShiftKeyDown = false;
-        if (this.#lt) {
-          this.#lt = false;
-          this.#zt("main_toolbar");
+        if (__privateGet(this, _lt)) {
+          __privateSet(this, _lt, false);
+          __privateMethod(this, _AnnotationEditorUIManager_instances, zt_fn).call(this, "main_toolbar");
         }
       }
     }
@@ -7731,19 +7933,19 @@
     }
     updatePageIndex(t2, e2) {
       for (const i3 of this.getEditors(t2)) i3.pageIndex = e2;
-      const i2 = this.#G.get(t2);
+      const i2 = __privateGet(this, _G).get(t2);
       if (i2) {
         i2.pageIndex = e2;
-        this.#z.set(e2, i2);
-        this.#dt ? i2.enable() : i2.disable();
+        __privateGet(this, _z).set(e2, i2);
+        __privateGet(this, _dt) ? i2.enable() : i2.disable();
       }
     }
     startUpdatePages() {
-      this.#G = new Map(this.#z);
-      this.#z.clear();
+      __privateSet(this, _G, new Map(__privateGet(this, _z)));
+      __privateGet(this, _z).clear();
     }
     endUpdatePages() {
-      this.#G = null;
+      __privateSet(this, _G, null);
     }
     clonePage(t2, e2) {
       for (const i2 of this.getEditors(t2)) {
@@ -7753,14 +7955,14 @@
           t3.id = this.getId();
           t3.isClone = true;
           delete t3.popupRef;
-          this.#W.setValue(t3.id, t3);
+          __privateGet(this, _W).setValue(t3.id, t3);
         }
       }
     }
     findClonesForPage(t2) {
       const e2 = [], { pageIndex: i2 } = t2;
-      for (const [n2, s2] of this.#W) if (s2.pageIndex === i2 && s2.isClone) {
-        this.#W.remove(n2);
+      for (const [n2, s2] of __privateGet(this, _W)) if (s2.pageIndex === i2 && s2.isClone) {
+        __privateGet(this, _W).remove(n2);
         e2.push(t2.deserialize(s2).then((e3) => {
           if (e3) {
             e3.isClone = true;
@@ -7770,102 +7972,93 @@
       }
       return Promise.all(e2);
     }
-    #Ht(t2) {
-      if (Object.entries(t2).some(([t3, e2]) => this.#Tt[t3] !== e2)) {
-        this._eventBus.dispatch("editingstateschanged", { source: this, details: Object.assign(this.#Tt, t2) });
-        this.#vt === y.HIGHLIGHT && false === t2.hasSelectedEditor && this.#Xt([[v.HIGHLIGHT_FREE, true]]);
-      }
-    }
-    #Xt(t2) {
-      this._eventBus.dispatch("annotationeditorparamschanged", { source: this, details: t2 });
-    }
     setEditingState(t2) {
       if (t2) {
-        this.#Gt();
-        this.#Vt();
-        this.#Ht({ isEditing: this.#vt !== y.NONE, isEmpty: this.#Yt(), hasSomethingToUndo: this.#$.hasSomethingToUndo(), hasSomethingToRedo: this.#$.hasSomethingToRedo(), hasSelectedEditor: false });
+        __privateMethod(this, _AnnotationEditorUIManager_instances, Gt_fn).call(this);
+        __privateMethod(this, _AnnotationEditorUIManager_instances, Vt_fn).call(this);
+        __privateMethod(this, _AnnotationEditorUIManager_instances, Ht_fn).call(this, { isEditing: __privateGet(this, _vt) !== y.NONE, isEmpty: __privateMethod(this, _AnnotationEditorUIManager_instances, Yt_fn).call(this), hasSomethingToUndo: __privateGet(this, _$).hasSomethingToUndo(), hasSomethingToRedo: __privateGet(this, _$).hasSomethingToRedo(), hasSelectedEditor: false });
       } else {
-        this.#jt();
-        this.#$t();
-        this.#Ht({ isEditing: false });
+        __privateMethod(this, _AnnotationEditorUIManager_instances, jt_fn).call(this);
+        __privateMethod(this, _AnnotationEditorUIManager_instances, $t_fn).call(this);
+        __privateMethod(this, _AnnotationEditorUIManager_instances, Ht_fn).call(this, { isEditing: false });
         this.disableUserSelect(false);
       }
     }
     registerEditorTypes(t2) {
-      if (!this.#Z) {
-        this.#Z = t2;
-        for (const t3 of this.#Z) this.#Xt(t3.defaultPropertiesToUpdate);
+      if (!__privateGet(this, _Z)) {
+        __privateSet(this, _Z, t2);
+        for (const t3 of __privateGet(this, _Z)) __privateMethod(this, _AnnotationEditorUIManager_instances, Xt_fn).call(this, t3.defaultPropertiesToUpdate);
       }
     }
     getId() {
-      return this.#ct.id;
+      return __privateGet(this, _ct).id;
     }
     get currentLayer() {
-      return this.#z.get(this.#Y);
+      return __privateGet(this, _z).get(__privateGet(this, _Y));
     }
     getLayer(t2) {
-      return this.#z.get(t2);
+      return __privateGet(this, _z).get(t2);
     }
     get currentPageIndex() {
-      return this.#Y;
+      return __privateGet(this, _Y);
     }
     addLayer(t2) {
-      this.#z.set(t2.pageIndex, t2);
-      this.#dt ? t2.enable() : t2.disable();
+      __privateGet(this, _z).set(t2.pageIndex, t2);
+      __privateGet(this, _dt) ? t2.enable() : t2.disable();
     }
     removeLayer(t2) {
-      this.#z.delete(t2.pageIndex);
+      __privateGet(this, _z).delete(t2.pageIndex);
     }
     async updateMode(t2, e2 = null, i2 = false, n2 = false, s2 = false, r2 = false) {
-      if (this.#vt !== t2) {
-        if (this.#It) {
-          await this.#It.promise;
-          if (!this.#It) return;
+      if (__privateGet(this, _vt) !== t2) {
+        if (__privateGet(this, _It)) {
+          await __privateGet(this, _It).promise;
+          if (!__privateGet(this, _It)) return;
         }
-        this.#It = Promise.withResolvers();
-        this.#X?.commitOrRemove();
-        this.#vt === y.POPUP && this.#q?.hideSidebar();
-        this.#q?.destroyPopup();
-        this.#vt = t2;
+        __privateSet(this, _It, Promise.withResolvers());
+        __privateGet(this, _X)?.commitOrRemove();
+        __privateGet(this, _vt) === y.POPUP && __privateGet(this, _q)?.hideSidebar();
+        __privateGet(this, _q)?.destroyPopup();
+        __privateSet(this, _vt, t2);
         if (t2 !== y.NONE) {
-          for (const t3 of this.#H.values()) t3.addStandaloneCommentButton();
-          t2 === y.SIGNATURE && await this.#At?.loadSignatures();
+          for (const t3 of __privateGet(this, _H).values()) t3.addStandaloneCommentButton();
+          t2 === y.SIGNATURE && await __privateGet(this, _At)?.loadSignatures();
           i2 && CurrentPointers.clearPointerType();
           this.setEditingState(true);
-          await this.#Jt();
+          await __privateMethod(this, _AnnotationEditorUIManager_instances, Jt_fn).call(this);
           this.unselectAll();
-          for (const e3 of this.#z.values()) e3.updateMode(t2);
+          for (const e3 of __privateGet(this, _z).values()) e3.updateMode(t2);
           if (t2 === y.POPUP) {
-            this.#U ||= await this.#St.getAnnotationsByType(new Set(this.#Z.map((t4) => t4._editorType)));
+            __privateGet(this, _U) || __privateSet(this, _U, await __privateGet(this, _St).getAnnotationsByType(new Set(__privateGet(this, _Z).map((t4) => t4._editorType))));
             const t3 = /* @__PURE__ */ new Set(), e3 = [];
-            for (const i3 of this.#H.values()) {
+            for (const i3 of __privateGet(this, _H).values()) {
               const { annotationElementId: n3, hasComment: s3, deleted: r3 } = i3;
               n3 && t3.add(n3);
               s3 && !r3 && e3.push(i3.getData());
             }
-            for (const i3 of this.#U) {
+            for (const i3 of __privateGet(this, _U)) {
               const { id: n3, popupRef: s3, contentsObj: r3 } = i3;
-              s3 && r3?.str && !t3.has(n3) && !this.#J.has(n3) && e3.push(i3);
+              s3 && r3?.str && !t3.has(n3) && !__privateGet(this, _J).has(n3) && e3.push(i3);
             }
-            this.#q?.showSidebar(e3);
+            __privateGet(this, _q)?.showSidebar(e3);
           }
           if (e2) {
-            for (const t3 of this.#H.values()) if (t3.uid === e2) {
+            for (const t3 of __privateGet(this, _H).values()) if (t3.uid === e2) {
               this.setSelected(t3);
               r2 ? t3.editComment() : s2 ? t3.enterInEditMode() : t3.focus();
             } else t3.unselect();
-            this.#It.resolve();
+            __privateGet(this, _It).resolve();
           } else {
             n2 && this.addNewEditorFromKeyboard();
-            this.#It.resolve();
+            __privateGet(this, _It).resolve();
           }
         } else {
           this.setEditingState(false);
-          this.#Qt();
-          for (const t3 of this.#H.values()) t3.hideStandaloneCommentButton();
+          __privateMethod(this, _AnnotationEditorUIManager_instances, Qt_fn).call(this);
+          for (const t3 of __privateGet(this, _H).values()) t3.hideStandaloneCommentButton();
           this._editorUndoBar?.hide();
           this.toggleComment(null);
-          this.#It.resolve();
+          __privateGet(this, _It).resolve();
         }
       }
     }
@@ -7873,177 +8066,142 @@
       this.currentLayer.canCreateNewEmptyEditor() && this.currentLayer.addNewEditor();
     }
     updateToolbar(t2) {
-      t2.mode !== this.#vt && this._eventBus.dispatch("switchannotationeditormode", { source: this, ...t2 });
+      t2.mode !== __privateGet(this, _vt) && this._eventBus.dispatch("switchannotationeditormode", { source: this, ...t2 });
     }
     updateParams(t2, e2) {
-      if (this.#Z) {
+      if (__privateGet(this, _Z)) {
         switch (t2) {
           case v.CREATE:
             this.currentLayer.addNewEditor(e2);
             return;
           case v.HIGHLIGHT_SHOW_ALL:
             this._eventBus.dispatch("reporttelemetry", { source: this, details: { type: "editing", data: { type: "highlight", action: "toggle_visibility" } } });
-            (this.#Ct ||= /* @__PURE__ */ new Map()).set(t2, e2);
+            (__privateGet(this, _Ct) || __privateSet(this, _Ct, /* @__PURE__ */ new Map())).set(t2, e2);
             this.showAllEditors("highlight", e2);
         }
-        if (this.hasSelection) for (const i2 of this.#wt) i2.updateParams(t2, e2);
-        else for (const i2 of this.#Z) i2.updateDefaultParams(t2, e2);
+        if (this.hasSelection) for (const i2 of __privateGet(this, _wt)) i2.updateParams(t2, e2);
+        else for (const i2 of __privateGet(this, _Z)) i2.updateDefaultParams(t2, e2);
       }
     }
     showAllEditors(t2, e2, i2 = false) {
-      for (const i3 of this.#H.values()) i3.editorType === t2 && i3.show(e2);
-      (this.#Ct?.get(v.HIGHLIGHT_SHOW_ALL) ?? true) !== e2 && this.#Xt([[v.HIGHLIGHT_SHOW_ALL, e2]]);
+      for (const i3 of __privateGet(this, _H).values()) i3.editorType === t2 && i3.show(e2);
+      (__privateGet(this, _Ct)?.get(v.HIGHLIGHT_SHOW_ALL) ?? true) !== e2 && __privateMethod(this, _AnnotationEditorUIManager_instances, Xt_fn).call(this, [[v.HIGHLIGHT_SHOW_ALL, e2]]);
     }
     enableWaiting(t2 = false) {
-      if (this.#pt !== t2) {
-        this.#pt = t2;
-        for (const e2 of this.#z.values()) {
+      if (__privateGet(this, _pt) !== t2) {
+        __privateSet(this, _pt, t2);
+        for (const e2 of __privateGet(this, _z).values()) {
           t2 ? e2.disableClick() : e2.enableClick();
           e2.div.classList.toggle("waiting", t2);
         }
       }
     }
-    async #Jt() {
-      if (!this.#dt) {
-        this.#dt = true;
-        const t2 = [];
-        for (const e2 of this.#z.values()) t2.push(e2.enable());
-        await Promise.all(t2);
-        for (const t3 of this.#H.values()) t3.enable();
-      }
-    }
-    #Qt() {
-      this.unselectAll();
-      if (this.#dt) {
-        this.#dt = false;
-        for (const t2 of this.#z.values()) t2.disable();
-        for (const t2 of this.#H.values()) t2.disable();
-      }
-    }
     *getEditors(t2) {
-      for (const e2 of this.#H.values()) e2.pageIndex === t2 && (yield e2);
+      for (const e2 of __privateGet(this, _H).values()) e2.pageIndex === t2 && (yield e2);
     }
     getEditor(t2) {
-      return this.#H.get(t2);
+      return __privateGet(this, _H).get(t2);
     }
     addEditor(t2) {
-      this.#H.set(t2.id, t2);
+      __privateGet(this, _H).set(t2.id, t2);
     }
     removeEditor(t2) {
       if (t2.div.contains(document.activeElement)) {
-        this.#rt && clearTimeout(this.#rt);
-        this.#rt = setTimeout(() => {
+        __privateGet(this, _rt) && clearTimeout(__privateGet(this, _rt));
+        __privateSet(this, _rt, setTimeout(() => {
           this.focusMainContainer();
-          this.#rt = null;
-        }, 0);
+          __privateSet(this, _rt, null);
+        }, 0));
       }
-      this.#H.delete(t2.id);
-      t2.annotationElementId && this.#bt?.delete(t2.annotationElementId);
+      __privateGet(this, _H).delete(t2.id);
+      t2.annotationElementId && __privateGet(this, _bt)?.delete(t2.annotationElementId);
       this.unselect(t2);
-      t2.annotationElementId && this.#J.has(t2.annotationElementId) || this.#W?.remove(t2.id);
+      t2.annotationElementId && __privateGet(this, _J).has(t2.annotationElementId) || __privateGet(this, _W)?.remove(t2.id);
     }
     addDeletedAnnotationElement(t2) {
-      this.#J.add(t2.annotationElementId);
+      __privateGet(this, _J).add(t2.annotationElementId);
       this.addChangedExistingAnnotation(t2);
       t2.deleted = true;
     }
     isDeletedAnnotationElement(t2) {
-      return this.#J.has(t2);
+      return __privateGet(this, _J).has(t2);
     }
     removeDeletedAnnotationElement(t2) {
-      this.#J.delete(t2.annotationElementId);
+      __privateGet(this, _J).delete(t2.annotationElementId);
       this.removeChangedExistingAnnotation(t2);
       t2.deleted = false;
     }
-    #qt(t2) {
-      const e2 = this.#z.get(t2.pageIndex);
-      if (e2) e2.addOrRebuild(t2);
-      else {
-        this.addEditor(t2);
-        this.addToAnnotationStorage(t2);
-      }
-    }
     setActiveEditor(t2) {
-      if (this.#N !== t2) {
-        this.#N = t2;
-        t2 && this.#Xt(t2.propertiesToUpdate);
+      if (__privateGet(this, _N) !== t2) {
+        __privateSet(this, _N, t2);
+        t2 && __privateMethod(this, _AnnotationEditorUIManager_instances, Xt_fn).call(this, t2.propertiesToUpdate);
       }
-    }
-    get #Zt() {
-      let t2 = null;
-      for (t2 of this.#wt) ;
-      return t2;
     }
     updateUI(t2) {
-      this.#Zt === t2 && this.#Xt(t2.propertiesToUpdate);
+      __privateGet(this, _AnnotationEditorUIManager_instances, Zt_get) === t2 && __privateMethod(this, _AnnotationEditorUIManager_instances, Xt_fn).call(this, t2.propertiesToUpdate);
     }
     updateUIForDefaultProperties(t2) {
-      this.#Xt(t2.defaultPropertiesToUpdate);
+      __privateMethod(this, _AnnotationEditorUIManager_instances, Xt_fn).call(this, t2.defaultPropertiesToUpdate);
     }
     toggleSelected(t2) {
-      if (this.#wt.has(t2)) {
-        this.#wt.delete(t2);
+      if (__privateGet(this, _wt).has(t2)) {
+        __privateGet(this, _wt).delete(t2);
         t2.unselect();
-        this.#Ht({ hasSelectedEditor: this.hasSelection });
+        __privateMethod(this, _AnnotationEditorUIManager_instances, Ht_fn).call(this, { hasSelectedEditor: this.hasSelection });
       } else {
-        this.#wt.add(t2);
+        __privateGet(this, _wt).add(t2);
         t2.select();
-        this.#Xt(t2.propertiesToUpdate);
-        this.#Ht({ hasSelectedEditor: true });
+        __privateMethod(this, _AnnotationEditorUIManager_instances, Xt_fn).call(this, t2.propertiesToUpdate);
+        __privateMethod(this, _AnnotationEditorUIManager_instances, Ht_fn).call(this, { hasSelectedEditor: true });
       }
     }
     setSelected(t2) {
       this.updateToolbar({ mode: t2.mode, editId: t2.uid });
-      this.#X?.commitOrRemove();
-      for (const e2 of this.#wt) e2 !== t2 && e2.unselect();
-      this.#q?.destroyPopup();
-      this.#wt.clear();
-      this.#wt.add(t2);
+      __privateGet(this, _X)?.commitOrRemove();
+      for (const e2 of __privateGet(this, _wt)) e2 !== t2 && e2.unselect();
+      __privateGet(this, _q)?.destroyPopup();
+      __privateGet(this, _wt).clear();
+      __privateGet(this, _wt).add(t2);
       t2.select();
-      this.#Xt(t2.propertiesToUpdate);
-      this.#Ht({ hasSelectedEditor: true });
+      __privateMethod(this, _AnnotationEditorUIManager_instances, Xt_fn).call(this, t2.propertiesToUpdate);
+      __privateMethod(this, _AnnotationEditorUIManager_instances, Ht_fn).call(this, { hasSelectedEditor: true });
     }
     get firstSelectedEditor() {
-      return this.#wt.values().next().value;
+      return __privateGet(this, _wt).values().next().value;
     }
     unselect(t2) {
       t2.unselect();
-      this.#wt.delete(t2);
-      this.#Ht({ hasSelectedEditor: this.hasSelection });
+      __privateGet(this, _wt).delete(t2);
+      __privateMethod(this, _AnnotationEditorUIManager_instances, Ht_fn).call(this, { hasSelectedEditor: this.hasSelection });
     }
     get hasSelection() {
-      return 0 !== this.#wt.size;
+      return 0 !== __privateGet(this, _wt).size;
     }
     get isEnterHandled() {
-      return 1 === this.#wt.size && this.firstSelectedEditor.isEnterHandled;
+      return 1 === __privateGet(this, _wt).size && this.firstSelectedEditor.isEnterHandled;
     }
     undo() {
-      this.#$.undo();
-      this.#Ht({ hasSomethingToUndo: this.#$.hasSomethingToUndo(), hasSomethingToRedo: true, isEmpty: this.#Yt() });
+      __privateGet(this, _$).undo();
+      __privateMethod(this, _AnnotationEditorUIManager_instances, Ht_fn).call(this, { hasSomethingToUndo: __privateGet(this, _$).hasSomethingToUndo(), hasSomethingToRedo: true, isEmpty: __privateMethod(this, _AnnotationEditorUIManager_instances, Yt_fn).call(this) });
       this._editorUndoBar?.hide();
     }
     redo() {
-      this.#$.redo();
-      this.#Ht({ hasSomethingToUndo: true, hasSomethingToRedo: this.#$.hasSomethingToRedo(), isEmpty: this.#Yt() });
+      __privateGet(this, _$).redo();
+      __privateMethod(this, _AnnotationEditorUIManager_instances, Ht_fn).call(this, { hasSomethingToUndo: true, hasSomethingToRedo: __privateGet(this, _$).hasSomethingToRedo(), isEmpty: __privateMethod(this, _AnnotationEditorUIManager_instances, Yt_fn).call(this) });
     }
     addCommands(t2) {
-      this.#$.add(t2);
-      this.#Ht({ hasSomethingToUndo: true, hasSomethingToRedo: false, isEmpty: this.#Yt() });
+      __privateGet(this, _$).add(t2);
+      __privateMethod(this, _AnnotationEditorUIManager_instances, Ht_fn).call(this, { hasSomethingToUndo: true, hasSomethingToRedo: false, isEmpty: __privateMethod(this, _AnnotationEditorUIManager_instances, Yt_fn).call(this) });
     }
     cleanUndoStack(t2) {
-      this.#$.cleanType(t2);
-    }
-    #Yt() {
-      if (0 === this.#H.size) return true;
-      if (1 === this.#H.size) for (const t2 of this.#H.values()) return t2.isEmpty();
-      return false;
+      __privateGet(this, _$).cleanType(t2);
     }
     delete() {
       this.commitOrRemove();
       const t2 = this.currentLayer?.endDrawingSession(true);
       if (!this.hasSelection && !t2) return;
-      const e2 = t2 ? [t2] : [...this.#wt], undo = () => {
-        for (const t3 of e2) this.#qt(t3);
+      const e2 = t2 ? [t2] : [...__privateGet(this, _wt)], undo = () => {
+        for (const t3 of e2) __privateMethod(this, _AnnotationEditorUIManager_instances, qt_fn).call(this, t3);
       };
       this.addCommands({ cmd: () => {
         this._editorUndoBar?.show(undo, 1 === e2.length ? e2[0].editorType : e2.length);
@@ -8051,60 +8209,51 @@
       }, undo, mustExec: true });
     }
     commitOrRemove() {
-      this.#N?.commitOrRemove();
+      __privateGet(this, _N)?.commitOrRemove();
     }
     hasSomethingToControl() {
-      return this.#N || this.hasSelection;
-    }
-    #Kt(t2) {
-      for (const t3 of this.#wt) t3.unselect();
-      this.#wt.clear();
-      for (const e2 of t2) if (!e2.isEmpty()) {
-        this.#wt.add(e2);
-        e2.select();
-      }
-      this.#Ht({ hasSelectedEditor: this.hasSelection });
+      return __privateGet(this, _N) || this.hasSelection;
     }
     selectAll() {
-      for (const t2 of this.#wt) t2.commit();
-      this.#Kt(this.#H.values());
+      for (const t2 of __privateGet(this, _wt)) t2.commit();
+      __privateMethod(this, _AnnotationEditorUIManager_instances, Kt_fn).call(this, __privateGet(this, _H).values());
     }
     unselectAll() {
-      if (this.#N) {
-        this.#N.commitOrRemove();
-        if (this.#vt !== y.NONE) return;
+      if (__privateGet(this, _N)) {
+        __privateGet(this, _N).commitOrRemove();
+        if (__privateGet(this, _vt) !== y.NONE) return;
       }
-      if (!this.#X?.commitOrRemove()) {
-        this.#q?.destroyPopup();
+      if (!__privateGet(this, _X)?.commitOrRemove()) {
+        __privateGet(this, _q)?.destroyPopup();
         if (this.hasSelection) {
-          for (const t2 of this.#wt) t2.unselect();
-          this.#wt.clear();
-          this.#Ht({ hasSelectedEditor: false });
+          for (const t2 of __privateGet(this, _wt)) t2.unselect();
+          __privateGet(this, _wt).clear();
+          __privateMethod(this, _AnnotationEditorUIManager_instances, Ht_fn).call(this, { hasSelectedEditor: false });
         }
       }
     }
     translateSelectedEditors(t2, e2, i2 = false) {
       i2 || this.commitOrRemove();
       if (!this.hasSelection) return;
-      this.#_t[0] += t2;
-      this.#_t[1] += e2;
-      const [n2, s2] = this.#_t, r2 = [...this.#wt];
-      this.#kt && clearTimeout(this.#kt);
-      this.#kt = setTimeout(() => {
-        this.#kt = null;
-        this.#_t[0] = this.#_t[1] = 0;
+      __privateGet(this, __t)[0] += t2;
+      __privateGet(this, __t)[1] += e2;
+      const [n2, s2] = __privateGet(this, __t), r2 = [...__privateGet(this, _wt)];
+      __privateGet(this, _kt) && clearTimeout(__privateGet(this, _kt));
+      __privateSet(this, _kt, setTimeout(() => {
+        __privateSet(this, _kt, null);
+        __privateGet(this, __t)[0] = __privateGet(this, __t)[1] = 0;
         this.addCommands({ cmd: () => {
-          for (const t3 of r2) if (this.#H.has(t3.id)) {
+          for (const t3 of r2) if (__privateGet(this, _H).has(t3.id)) {
             t3.translateInPage(n2, s2);
             t3.translationDone();
           }
         }, undo: () => {
-          for (const t3 of r2) if (this.#H.has(t3.id)) {
+          for (const t3 of r2) if (__privateGet(this, _H).has(t3.id)) {
             t3.translateInPage(-n2, -s2);
             t3.translationDone();
           }
         }, mustExec: false });
-      }, 1e3);
+      }, 1e3));
       for (const i3 of r2) {
         i3.translateInPage(t2, e2);
         i3.translationDone();
@@ -8113,26 +8262,26 @@
     setUpDragSession() {
       if (this.hasSelection) {
         this.disableUserSelect(true);
-        this.#Q = /* @__PURE__ */ new Map();
-        for (const t2 of this.#wt) this.#Q.set(t2, { savedX: t2.x, savedY: t2.y, savedPageIndex: t2.pageIndex, newX: 0, newY: 0, newPageIndex: -1 });
+        __privateSet(this, _Q, /* @__PURE__ */ new Map());
+        for (const t2 of __privateGet(this, _wt)) __privateGet(this, _Q).set(t2, { savedX: t2.x, savedY: t2.y, savedPageIndex: t2.pageIndex, newX: 0, newY: 0, newPageIndex: -1 });
       }
     }
     endDragSession() {
-      if (!this.#Q) return false;
+      if (!__privateGet(this, _Q)) return false;
       this.disableUserSelect(false);
-      const t2 = this.#Q;
-      this.#Q = null;
+      const t2 = __privateGet(this, _Q);
+      __privateSet(this, _Q, null);
       let e2 = false;
       for (const [{ x: i2, y: n2, pageIndex: s2 }, r2] of t2) {
         r2.newX = i2;
         r2.newY = n2;
         r2.newPageIndex = s2;
-        e2 ||= i2 !== r2.savedX || n2 !== r2.savedY || s2 !== r2.savedPageIndex;
+        e2 || (e2 = i2 !== r2.savedX || n2 !== r2.savedY || s2 !== r2.savedPageIndex);
       }
       if (!e2) return false;
       const move = (t3, e3, i2, n2) => {
-        if (this.#H.has(t3.id)) {
-          const s2 = this.#z.get(n2);
+        if (__privateGet(this, _H).has(t3.id)) {
+          const s2 = __privateGet(this, _z).get(n2);
           if (s2) t3._setParentAndPosition(s2, e3, i2);
           else {
             t3.pageIndex = n2;
@@ -8149,7 +8298,7 @@
       return true;
     }
     dragSelectedEditors(t2, e2) {
-      if (this.#Q) for (const i2 of this.#Q.keys()) i2.drag(t2, e2);
+      if (__privateGet(this, _Q)) for (const i2 of __privateGet(this, _Q).keys()) i2.drag(t2, e2);
     }
     rebuild(t2) {
       if (null === t2.parent) {
@@ -8165,19 +8314,19 @@
       } else t2.parent.addOrRebuild(t2);
     }
     get isEditorHandlingKeyboard() {
-      return this.getActive()?.shouldGetKeyboardEvents() || 1 === this.#wt.size && this.firstSelectedEditor.shouldGetKeyboardEvents();
+      return this.getActive()?.shouldGetKeyboardEvents() || 1 === __privateGet(this, _wt).size && this.firstSelectedEditor.shouldGetKeyboardEvents();
     }
     isActive(t2) {
-      return this.#N === t2;
+      return __privateGet(this, _N) === t2;
     }
     getActive() {
-      return this.#N;
+      return __privateGet(this, _N);
     }
     getMode() {
-      return this.#vt;
+      return __privateGet(this, _vt);
     }
     isEditingMode() {
-      return this.#vt !== y.NONE;
+      return __privateGet(this, _vt) !== y.NONE;
     }
     get imageManager() {
       return shadow(this, "imageManager", new ImageManager());
@@ -8209,562 +8358,817 @@
       return 0 === o2.length ? null : o2;
     }
     addChangedExistingAnnotation({ annotationElementId: t2, id: e2 }) {
-      (this.#V ||= /* @__PURE__ */ new Map()).set(t2, e2);
+      (__privateGet(this, _V) || __privateSet(this, _V, /* @__PURE__ */ new Map())).set(t2, e2);
     }
     removeChangedExistingAnnotation({ annotationElementId: t2 }) {
-      this.#V?.delete(t2);
+      __privateGet(this, _V)?.delete(t2);
     }
     renderAnnotationElement(t2) {
-      const e2 = this.#V?.get(t2.data.id);
+      const e2 = __privateGet(this, _V)?.get(t2.data.id);
       if (!e2) return;
-      const i2 = this.#W.getRawValue(e2);
-      i2 && (this.#vt !== y.NONE || i2.hasBeenModified) && i2.renderAnnotationElement(t2);
+      const i2 = __privateGet(this, _W).getRawValue(e2);
+      i2 && (__privateGet(this, _vt) !== y.NONE || i2.hasBeenModified) && i2.renderAnnotationElement(t2);
     }
     setMissingCanvas(t2, e2, i2) {
-      const n2 = this.#bt?.get(t2);
+      const n2 = __privateGet(this, _bt)?.get(t2);
       if (n2) {
         n2.setCanvas(e2, i2);
-        this.#bt.delete(t2);
+        __privateGet(this, _bt).delete(t2);
       }
     }
     addMissingCanvas(t2, e2) {
-      (this.#bt ||= /* @__PURE__ */ new Map()).set(t2, e2);
+      (__privateGet(this, _bt) || __privateSet(this, _bt, /* @__PURE__ */ new Map())).set(t2, e2);
     }
   };
-  var AltText = class _AltText {
-    #h = null;
-    #te = false;
-    #ee = null;
-    #ie = null;
-    #ne = null;
-    #se = null;
-    #re = false;
-    #ae = null;
-    #o = null;
-    #oe = null;
-    #le = null;
-    #he = false;
-    static #ce = null;
-    static _l10n = null;
+  _L = new WeakMap();
+  _N = new WeakMap();
+  _U = new WeakMap();
+  _H = new WeakMap();
+  _z = new WeakMap();
+  _G = new WeakMap();
+  _j = new WeakMap();
+  _W = new WeakMap();
+  _V = new WeakMap();
+  _$ = new WeakMap();
+  _q = new WeakMap();
+  _K = new WeakMap();
+  _X = new WeakMap();
+  _Y = new WeakMap();
+  _J = new WeakMap();
+  _Q = new WeakMap();
+  _Z = new WeakMap();
+  _tt = new WeakMap();
+  _et = new WeakMap();
+  _it = new WeakMap();
+  _nt = new WeakMap();
+  _st = new WeakMap();
+  _rt = new WeakMap();
+  _at = new WeakMap();
+  _ot = new WeakMap();
+  _lt = new WeakMap();
+  _ht = new WeakMap();
+  _ct = new WeakMap();
+  _dt = new WeakMap();
+  _ut = new WeakMap();
+  _pt = new WeakMap();
+  _gt = new WeakMap();
+  _mt = new WeakMap();
+  _ft = new WeakMap();
+  _bt = new WeakMap();
+  _yt = new WeakMap();
+  _vt = new WeakMap();
+  _wt = new WeakMap();
+  _xt = new WeakMap();
+  _At = new WeakMap();
+  _Et = new WeakMap();
+  _Ct = new WeakMap();
+  _St = new WeakMap();
+  _Tt = new WeakMap();
+  __t = new WeakMap();
+  _kt = new WeakMap();
+  _Dt = new WeakMap();
+  _Mt = new WeakMap();
+  _Pt = new WeakMap();
+  _It = new WeakMap();
+  _AnnotationEditorUIManager_instances = new WeakSet();
+  Bt_fn = function({ anchorNode: t2 }) {
+    return t2.nodeType === Node.TEXT_NODE ? t2.parentElement : t2;
+  };
+  Lt_fn = function(t2) {
+    const { currentLayer: e2 } = this;
+    if (e2.hasTextLayer(t2)) return e2;
+    for (const e3 of __privateGet(this, _z).values()) if (e3.hasTextLayer(t2)) return e3;
+    return null;
+  };
+  Nt_fn = function() {
+    const t2 = document.getSelection();
+    if (!t2 || t2.isCollapsed) return;
+    const e2 = __privateMethod(this, _AnnotationEditorUIManager_instances, Bt_fn).call(this, t2).closest(".textLayer"), i2 = this.getSelectionBoxes(e2);
+    if (i2) {
+      __privateGet(this, _ht) || __privateSet(this, _ht, new FloatingToolbar(this));
+      __privateGet(this, _ht).show(e2, i2, "ltr" === this.direction);
+    }
+  };
+  Ut_fn = function() {
+    const t2 = document.getSelection();
+    if (!t2 || t2.isCollapsed) {
+      if (__privateGet(this, _xt)) {
+        __privateGet(this, _ht)?.hide();
+        __privateSet(this, _xt, null);
+        __privateMethod(this, _AnnotationEditorUIManager_instances, Ht_fn).call(this, { hasSelectedText: false });
+      }
+      return;
+    }
+    const { anchorNode: e2 } = t2;
+    if (e2 === __privateGet(this, _xt)) return;
+    const i2 = __privateMethod(this, _AnnotationEditorUIManager_instances, Bt_fn).call(this, t2).closest(".textLayer");
+    if (i2) {
+      __privateGet(this, _ht)?.hide();
+      __privateSet(this, _xt, e2);
+      __privateMethod(this, _AnnotationEditorUIManager_instances, Ht_fn).call(this, { hasSelectedText: true });
+      if (__privateGet(this, _vt) === y.HIGHLIGHT || __privateGet(this, _vt) === y.NONE) {
+        __privateGet(this, _vt) === y.HIGHLIGHT && this.showAllEditors("highlight", true, true);
+        __privateSet(this, _lt, this.isShiftKeyDown);
+        if (!this.isShiftKeyDown) {
+          const t3 = __privateGet(this, _vt) === y.HIGHLIGHT ? __privateMethod(this, _AnnotationEditorUIManager_instances, Lt_fn).call(this, i2) : null;
+          t3?.toggleDrawing();
+          if (__privateGet(this, _ut)) {
+            const e3 = new AbortController(), i3 = this.combinedSignal(e3), pointerup = (i4) => {
+              if ("pointerup" !== i4.type || 0 === i4.button) {
+                e3.abort();
+                t3?.toggleDrawing(true);
+                "pointerup" === i4.type && __privateMethod(this, _AnnotationEditorUIManager_instances, zt_fn).call(this, "main_toolbar");
+              }
+            };
+            window.addEventListener("pointerup", pointerup, { signal: i3 });
+            window.addEventListener("blur", pointerup, { signal: i3 });
+          } else {
+            t3?.toggleDrawing(true);
+            __privateMethod(this, _AnnotationEditorUIManager_instances, zt_fn).call(this, "main_toolbar");
+          }
+        }
+      }
+    } else if (__privateGet(this, _xt)) {
+      __privateGet(this, _ht)?.hide();
+      __privateSet(this, _xt, null);
+      __privateMethod(this, _AnnotationEditorUIManager_instances, Ht_fn).call(this, { hasSelectedText: false });
+    }
+  };
+  zt_fn = function(t2 = "") {
+    __privateGet(this, _vt) === y.HIGHLIGHT ? this.highlightSelection(t2) : __privateGet(this, _et) && __privateMethod(this, _AnnotationEditorUIManager_instances, Nt_fn).call(this);
+  };
+  Ft_fn = function() {
+    document.addEventListener("selectionchange", __privateMethod(this, _AnnotationEditorUIManager_instances, Ut_fn).bind(this), { signal: this._signal });
+  };
+  Gt_fn = function() {
+    if (__privateGet(this, _at)) return;
+    __privateSet(this, _at, new AbortController());
+    const t2 = this.combinedSignal(__privateGet(this, _at));
+    window.addEventListener("focus", this.focus.bind(this), { signal: t2 });
+    window.addEventListener("blur", this.blur.bind(this), { signal: t2 });
+  };
+  jt_fn = function() {
+    __privateGet(this, _at)?.abort();
+    __privateSet(this, _at, null);
+  };
+  Rt_fn = function() {
+    if (__privateGet(this, _gt)) return;
+    __privateSet(this, _gt, new AbortController());
+    const t2 = this.combinedSignal(__privateGet(this, _gt));
+    window.addEventListener("keydown", this.keydown.bind(this), { signal: t2 });
+    window.addEventListener("keyup", this.keyup.bind(this), { signal: t2 });
+  };
+  Wt_fn = function() {
+    __privateGet(this, _gt)?.abort();
+    __privateSet(this, _gt, null);
+  };
+  Vt_fn = function() {
+    if (__privateGet(this, _K)) return;
+    __privateSet(this, _K, new AbortController());
+    const t2 = this.combinedSignal(__privateGet(this, _K));
+    document.addEventListener("copy", this.copy.bind(this), { signal: t2 });
+    document.addEventListener("cut", this.cut.bind(this), { signal: t2 });
+    document.addEventListener("paste", this.paste.bind(this), { signal: t2 });
+  };
+  $t_fn = function() {
+    __privateGet(this, _K)?.abort();
+    __privateSet(this, _K, null);
+  };
+  Ot_fn = function() {
+    const t2 = this._signal;
+    document.addEventListener("dragover", this.dragOver.bind(this), { signal: t2 });
+    document.addEventListener("drop", this.drop.bind(this), { signal: t2 });
+  };
+  Ht_fn = function(t2) {
+    if (Object.entries(t2).some(([t3, e2]) => __privateGet(this, _Tt)[t3] !== e2)) {
+      this._eventBus.dispatch("editingstateschanged", { source: this, details: Object.assign(__privateGet(this, _Tt), t2) });
+      __privateGet(this, _vt) === y.HIGHLIGHT && false === t2.hasSelectedEditor && __privateMethod(this, _AnnotationEditorUIManager_instances, Xt_fn).call(this, [[v.HIGHLIGHT_FREE, true]]);
+    }
+  };
+  Xt_fn = function(t2) {
+    this._eventBus.dispatch("annotationeditorparamschanged", { source: this, details: t2 });
+  };
+  Jt_fn = async function() {
+    if (!__privateGet(this, _dt)) {
+      __privateSet(this, _dt, true);
+      const t2 = [];
+      for (const e2 of __privateGet(this, _z).values()) t2.push(e2.enable());
+      await Promise.all(t2);
+      for (const t3 of __privateGet(this, _H).values()) t3.enable();
+    }
+  };
+  Qt_fn = function() {
+    this.unselectAll();
+    if (__privateGet(this, _dt)) {
+      __privateSet(this, _dt, false);
+      for (const t2 of __privateGet(this, _z).values()) t2.disable();
+      for (const t2 of __privateGet(this, _H).values()) t2.disable();
+    }
+  };
+  qt_fn = function(t2) {
+    const e2 = __privateGet(this, _z).get(t2.pageIndex);
+    if (e2) e2.addOrRebuild(t2);
+    else {
+      this.addEditor(t2);
+      this.addToAnnotationStorage(t2);
+    }
+  };
+  Zt_get = function() {
+    let t2 = null;
+    for (t2 of __privateGet(this, _wt)) ;
+    return t2;
+  };
+  Yt_fn = function() {
+    if (0 === __privateGet(this, _H).size) return true;
+    if (1 === __privateGet(this, _H).size) for (const t2 of __privateGet(this, _H).values()) return t2.isEmpty();
+    return false;
+  };
+  Kt_fn = function(t2) {
+    for (const t3 of __privateGet(this, _wt)) t3.unselect();
+    __privateGet(this, _wt).clear();
+    for (const e2 of t2) if (!e2.isEmpty()) {
+      __privateGet(this, _wt).add(e2);
+      e2.select();
+    }
+    __privateMethod(this, _AnnotationEditorUIManager_instances, Ht_fn).call(this, { hasSelectedEditor: this.hasSelection });
+  };
+  __publicField(_AnnotationEditorUIManager, "TRANSLATE_SMALL", 1);
+  __publicField(_AnnotationEditorUIManager, "TRANSLATE_BIG", 10);
+  var AnnotationEditorUIManager = _AnnotationEditorUIManager;
+  var _h2, _te, _ee, _ie, _ne, _se, _re, _ae, _o2, _oe, _le, _he, _ce, _AltText_instances, de_get, ue_fn;
+  var _AltText = class _AltText {
     constructor(t2) {
-      this.#o = t2;
-      this.#he = t2._uiManager.useNewAltTextFlow;
-      _AltText.#ce ||= Object.freeze({ added: "pdfjs-editor-new-alt-text-added-button", "added-label": "pdfjs-editor-new-alt-text-added-button-label", missing: "pdfjs-editor-new-alt-text-missing-button", "missing-label": "pdfjs-editor-new-alt-text-missing-button-label", review: "pdfjs-editor-new-alt-text-to-review-button", "review-label": "pdfjs-editor-new-alt-text-to-review-button-label" });
+      __privateAdd(this, _AltText_instances);
+      __privateAdd(this, _h2, null);
+      __privateAdd(this, _te, false);
+      __privateAdd(this, _ee, null);
+      __privateAdd(this, _ie, null);
+      __privateAdd(this, _ne, null);
+      __privateAdd(this, _se, null);
+      __privateAdd(this, _re, false);
+      __privateAdd(this, _ae, null);
+      __privateAdd(this, _o2, null);
+      __privateAdd(this, _oe, null);
+      __privateAdd(this, _le, null);
+      __privateAdd(this, _he, false);
+      __privateSet(this, _o2, t2);
+      __privateSet(this, _he, t2._uiManager.useNewAltTextFlow);
+      __privateGet(_AltText, _ce) || __privateSet(_AltText, _ce, Object.freeze({ added: "pdfjs-editor-new-alt-text-added-button", "added-label": "pdfjs-editor-new-alt-text-added-button-label", missing: "pdfjs-editor-new-alt-text-missing-button", "missing-label": "pdfjs-editor-new-alt-text-missing-button-label", review: "pdfjs-editor-new-alt-text-to-review-button", "review-label": "pdfjs-editor-new-alt-text-to-review-button-label" }));
     }
     static initialize(t2) {
-      _AltText._l10n ??= t2;
+      _AltText._l10n ?? (_AltText._l10n = t2);
     }
     async render() {
-      const t2 = this.#ee = document.createElement("button");
+      const t2 = __privateSet(this, _ee, document.createElement("button"));
       t2.className = "altText";
       t2.tabIndex = "0";
-      const e2 = this.#ie = document.createElement("span");
+      const e2 = __privateSet(this, _ie, document.createElement("span"));
       t2.append(e2);
-      if (this.#he) {
+      if (__privateGet(this, _he)) {
         t2.classList.add("new");
-        t2.setAttribute("data-l10n-id", _AltText.#ce.missing);
-        e2.setAttribute("data-l10n-id", _AltText.#ce["missing-label"]);
+        t2.setAttribute("data-l10n-id", __privateGet(_AltText, _ce).missing);
+        e2.setAttribute("data-l10n-id", __privateGet(_AltText, _ce)["missing-label"]);
       } else {
         t2.setAttribute("data-l10n-id", "pdfjs-editor-alt-text-button");
         e2.setAttribute("data-l10n-id", "pdfjs-editor-alt-text-button-label");
       }
-      const i2 = this.#o._uiManager._signal;
+      const i2 = __privateGet(this, _o2)._uiManager._signal;
       t2.addEventListener("contextmenu", noContextMenu, { signal: i2 });
       t2.addEventListener("pointerdown", (t3) => t3.stopPropagation(), { signal: i2 });
       const onClick = (t3) => {
         t3.preventDefault();
-        this.#o._uiManager.editAltText(this.#o);
-        this.#he && this.#o._reportTelemetry({ action: "pdfjs.image.alt_text.image_status_label_clicked", data: { label: this.#de } });
+        __privateGet(this, _o2)._uiManager.editAltText(__privateGet(this, _o2));
+        __privateGet(this, _he) && __privateGet(this, _o2)._reportTelemetry({ action: "pdfjs.image.alt_text.image_status_label_clicked", data: { label: __privateGet(this, _AltText_instances, de_get) } });
       };
       t2.addEventListener("click", onClick, { capture: true, signal: i2 });
       t2.addEventListener("keydown", (e3) => {
         if (e3.target === t2 && "Enter" === e3.key) {
-          this.#re = true;
+          __privateSet(this, _re, true);
           onClick(e3);
         }
       }, { signal: i2 });
-      await this.#ue();
+      await __privateMethod(this, _AltText_instances, ue_fn).call(this);
       return t2;
     }
-    get #de() {
-      return (this.#h ? "added" : null === this.#h && this.guessedText && "review") || "missing";
-    }
     finish() {
-      if (this.#ee) {
-        this.#ee.focus({ focusVisible: this.#re });
-        this.#re = false;
+      if (__privateGet(this, _ee)) {
+        __privateGet(this, _ee).focus({ focusVisible: __privateGet(this, _re) });
+        __privateSet(this, _re, false);
       }
     }
     isEmpty() {
-      return this.#he ? null === this.#h : !this.#h && !this.#te;
+      return __privateGet(this, _he) ? null === __privateGet(this, _h2) : !__privateGet(this, _h2) && !__privateGet(this, _te);
     }
     hasData() {
-      return this.#he ? null !== this.#h || !!this.#oe : this.isEmpty();
+      return __privateGet(this, _he) ? null !== __privateGet(this, _h2) || !!__privateGet(this, _oe) : this.isEmpty();
     }
     get guessedText() {
-      return this.#oe;
+      return __privateGet(this, _oe);
     }
     async setGuessedText(t2) {
-      if (null === this.#h) {
-        this.#oe = t2;
-        this.#le = await _AltText._l10n.get("pdfjs-editor-new-alt-text-generated-alt-text-with-disclaimer", { generatedAltText: t2 });
-        this.#ue();
+      if (null === __privateGet(this, _h2)) {
+        __privateSet(this, _oe, t2);
+        __privateSet(this, _le, await _AltText._l10n.get("pdfjs-editor-new-alt-text-generated-alt-text-with-disclaimer", { generatedAltText: t2 }));
+        __privateMethod(this, _AltText_instances, ue_fn).call(this);
       }
     }
     toggleAltTextBadge(t2 = false) {
-      if (this.#he && !this.#h) {
-        if (!this.#ae) {
-          const t3 = this.#ae = document.createElement("div");
+      if (__privateGet(this, _he) && !__privateGet(this, _h2)) {
+        if (!__privateGet(this, _ae)) {
+          const t3 = __privateSet(this, _ae, document.createElement("div"));
           t3.className = "noAltTextBadge";
-          this.#o.div.append(t3);
+          __privateGet(this, _o2).div.append(t3);
         }
-        this.#ae.classList.toggle("hidden", !t2);
+        __privateGet(this, _ae).classList.toggle("hidden", !t2);
       } else {
-        this.#ae?.remove();
-        this.#ae = null;
+        __privateGet(this, _ae)?.remove();
+        __privateSet(this, _ae, null);
       }
     }
     serialize(t2) {
-      let e2 = this.#h;
-      t2 || this.#oe !== e2 || (e2 = this.#le);
-      return { altText: e2, decorative: this.#te, guessedText: this.#oe, textWithDisclaimer: this.#le };
+      let e2 = __privateGet(this, _h2);
+      t2 || __privateGet(this, _oe) !== e2 || (e2 = __privateGet(this, _le));
+      return { altText: e2, decorative: __privateGet(this, _te), guessedText: __privateGet(this, _oe), textWithDisclaimer: __privateGet(this, _le) };
     }
     get data() {
-      return { altText: this.#h, decorative: this.#te };
+      return { altText: __privateGet(this, _h2), decorative: __privateGet(this, _te) };
     }
     set data({ altText: t2, decorative: e2, guessedText: i2, textWithDisclaimer: n2, cancel: s2 = false }) {
       if (i2) {
-        this.#oe = i2;
-        this.#le = n2;
+        __privateSet(this, _oe, i2);
+        __privateSet(this, _le, n2);
       }
-      if (this.#h !== t2 || this.#te !== e2) {
+      if (__privateGet(this, _h2) !== t2 || __privateGet(this, _te) !== e2) {
         if (!s2) {
-          this.#h = t2;
-          this.#te = e2;
+          __privateSet(this, _h2, t2);
+          __privateSet(this, _te, e2);
         }
-        this.#ue();
+        __privateMethod(this, _AltText_instances, ue_fn).call(this);
       }
     }
     toggle(t2 = false) {
-      if (this.#ee) {
-        if (!t2 && this.#se) {
-          clearTimeout(this.#se);
-          this.#se = null;
+      if (__privateGet(this, _ee)) {
+        if (!t2 && __privateGet(this, _se)) {
+          clearTimeout(__privateGet(this, _se));
+          __privateSet(this, _se, null);
         }
-        this.#ee.disabled = !t2;
+        __privateGet(this, _ee).disabled = !t2;
       }
     }
     shown() {
-      this.#o._reportTelemetry({ action: "pdfjs.image.alt_text.image_status_label_displayed", data: { label: this.#de } });
+      __privateGet(this, _o2)._reportTelemetry({ action: "pdfjs.image.alt_text.image_status_label_displayed", data: { label: __privateGet(this, _AltText_instances, de_get) } });
     }
     destroy() {
-      this.#ee?.remove();
-      this.#ee = null;
-      this.#ie = null;
-      this.#ne = null;
-      this.#ae?.remove();
-      this.#ae = null;
-    }
-    async #ue() {
-      const t2 = this.#ee;
-      if (!t2) return;
-      if (this.#he) {
-        t2.classList.toggle("done", !!this.#h);
-        t2.setAttribute("data-l10n-id", _AltText.#ce[this.#de]);
-        this.#ie?.setAttribute("data-l10n-id", _AltText.#ce[`${this.#de}-label`]);
-        if (!this.#h) {
-          this.#ne?.remove();
-          return;
-        }
-      } else {
-        if (!this.#h && !this.#te) {
-          t2.classList.remove("done");
-          this.#ne?.remove();
-          return;
-        }
-        t2.classList.add("done");
-        t2.setAttribute("data-l10n-id", "pdfjs-editor-alt-text-edit-button");
-      }
-      let e2 = this.#ne;
-      if (!e2) {
-        this.#ne = e2 = document.createElement("span");
-        e2.className = "tooltip";
-        e2.setAttribute("role", "tooltip");
-        e2.id = `alt-text-tooltip-${this.#o.id}`;
-        const i3 = 100, n2 = this.#o._uiManager._signal;
-        n2.addEventListener("abort", () => {
-          clearTimeout(this.#se);
-          this.#se = null;
-        }, { once: true });
-        t2.addEventListener("mouseenter", () => {
-          this.#se = setTimeout(() => {
-            this.#se = null;
-            this.#ne.classList.add("show");
-            this.#o._reportTelemetry({ action: "alt_text_tooltip" });
-          }, i3);
-        }, { signal: n2 });
-        t2.addEventListener("mouseleave", () => {
-          if (this.#se) {
-            clearTimeout(this.#se);
-            this.#se = null;
-          }
-          this.#ne?.classList.remove("show");
-        }, { signal: n2 });
-      }
-      if (this.#te) e2.setAttribute("data-l10n-id", "pdfjs-editor-alt-text-decorative-tooltip");
-      else {
-        e2.removeAttribute("data-l10n-id");
-        e2.textContent = this.#h;
-      }
-      e2.parentNode || t2.append(e2);
-      const i2 = this.#o.getElementForAltText();
-      i2?.setAttribute("aria-describedby", e2.id);
+      __privateGet(this, _ee)?.remove();
+      __privateSet(this, _ee, null);
+      __privateSet(this, _ie, null);
+      __privateSet(this, _ne, null);
+      __privateGet(this, _ae)?.remove();
+      __privateSet(this, _ae, null);
     }
   };
+  _h2 = new WeakMap();
+  _te = new WeakMap();
+  _ee = new WeakMap();
+  _ie = new WeakMap();
+  _ne = new WeakMap();
+  _se = new WeakMap();
+  _re = new WeakMap();
+  _ae = new WeakMap();
+  _o2 = new WeakMap();
+  _oe = new WeakMap();
+  _le = new WeakMap();
+  _he = new WeakMap();
+  _ce = new WeakMap();
+  _AltText_instances = new WeakSet();
+  de_get = function() {
+    return (__privateGet(this, _h2) ? "added" : null === __privateGet(this, _h2) && this.guessedText && "review") || "missing";
+  };
+  ue_fn = async function() {
+    const t2 = __privateGet(this, _ee);
+    if (!t2) return;
+    if (__privateGet(this, _he)) {
+      t2.classList.toggle("done", !!__privateGet(this, _h2));
+      t2.setAttribute("data-l10n-id", __privateGet(_AltText, _ce)[__privateGet(this, _AltText_instances, de_get)]);
+      __privateGet(this, _ie)?.setAttribute("data-l10n-id", __privateGet(_AltText, _ce)[`${__privateGet(this, _AltText_instances, de_get)}-label`]);
+      if (!__privateGet(this, _h2)) {
+        __privateGet(this, _ne)?.remove();
+        return;
+      }
+    } else {
+      if (!__privateGet(this, _h2) && !__privateGet(this, _te)) {
+        t2.classList.remove("done");
+        __privateGet(this, _ne)?.remove();
+        return;
+      }
+      t2.classList.add("done");
+      t2.setAttribute("data-l10n-id", "pdfjs-editor-alt-text-edit-button");
+    }
+    let e2 = __privateGet(this, _ne);
+    if (!e2) {
+      __privateSet(this, _ne, e2 = document.createElement("span"));
+      e2.className = "tooltip";
+      e2.setAttribute("role", "tooltip");
+      e2.id = `alt-text-tooltip-${__privateGet(this, _o2).id}`;
+      const i3 = 100, n2 = __privateGet(this, _o2)._uiManager._signal;
+      n2.addEventListener("abort", () => {
+        clearTimeout(__privateGet(this, _se));
+        __privateSet(this, _se, null);
+      }, { once: true });
+      t2.addEventListener("mouseenter", () => {
+        __privateSet(this, _se, setTimeout(() => {
+          __privateSet(this, _se, null);
+          __privateGet(this, _ne).classList.add("show");
+          __privateGet(this, _o2)._reportTelemetry({ action: "alt_text_tooltip" });
+        }, i3));
+      }, { signal: n2 });
+      t2.addEventListener("mouseleave", () => {
+        if (__privateGet(this, _se)) {
+          clearTimeout(__privateGet(this, _se));
+          __privateSet(this, _se, null);
+        }
+        __privateGet(this, _ne)?.classList.remove("show");
+      }, { signal: n2 });
+    }
+    if (__privateGet(this, _te)) e2.setAttribute("data-l10n-id", "pdfjs-editor-alt-text-decorative-tooltip");
+    else {
+      e2.removeAttribute("data-l10n-id");
+      e2.textContent = __privateGet(this, _h2);
+    }
+    e2.parentNode || t2.append(e2);
+    const i2 = __privateGet(this, _o2).getElementForAltText();
+    i2?.setAttribute("aria-describedby", e2.id);
+  };
+  __privateAdd(_AltText, _ce, null);
+  __publicField(_AltText, "_l10n", null);
+  var AltText = _AltText;
+  var _pe, _ge, _me, _o3, _fe, _be, _ye, _ve, _we, _xe, _Comment_instances, w_fn2;
   var Comment = class {
-    #pe = null;
-    #ge = null;
-    #me = false;
-    #o = null;
-    #fe = null;
-    #be = null;
-    #ye = null;
-    #ve = null;
-    #we = false;
-    #xe = null;
     constructor(t2) {
-      this.#o = t2;
+      __privateAdd(this, _Comment_instances);
+      __privateAdd(this, _pe, null);
+      __privateAdd(this, _ge, null);
+      __privateAdd(this, _me, false);
+      __privateAdd(this, _o3, null);
+      __privateAdd(this, _fe, null);
+      __privateAdd(this, _be, null);
+      __privateAdd(this, _ye, null);
+      __privateAdd(this, _ve, null);
+      __privateAdd(this, _we, false);
+      __privateAdd(this, _xe, null);
+      __privateSet(this, _o3, t2);
     }
     renderForToolbar() {
-      const t2 = this.#ge = document.createElement("button");
+      const t2 = __privateSet(this, _ge, document.createElement("button"));
       t2.className = "comment";
-      return this.#w(t2, false);
+      return __privateMethod(this, _Comment_instances, w_fn2).call(this, t2, false);
     }
     renderForStandalone() {
-      const t2 = this.#pe = document.createElement("button");
+      const t2 = __privateSet(this, _pe, document.createElement("button"));
       t2.className = "annotationCommentButton";
-      const e2 = this.#o.commentButtonPosition;
+      const e2 = __privateGet(this, _o3).commentButtonPosition;
       if (e2) {
         const { style: i2 } = t2;
-        i2.insetInlineEnd = `calc(${100 * ("ltr" === this.#o._uiManager.direction ? 1 - e2[0] : e2[0])}% - var(--comment-button-dim))`;
+        i2.insetInlineEnd = `calc(${100 * ("ltr" === __privateGet(this, _o3)._uiManager.direction ? 1 - e2[0] : e2[0])}% - var(--comment-button-dim))`;
         i2.top = `calc(${100 * e2[1]}% - var(--comment-button-dim))`;
-        const n2 = this.#o.commentButtonColor;
+        const n2 = __privateGet(this, _o3).commentButtonColor;
         n2 && (i2.backgroundColor = n2);
       }
-      return this.#w(t2, true);
+      return __privateMethod(this, _Comment_instances, w_fn2).call(this, t2, true);
     }
     focusButton() {
       setTimeout(() => {
-        (this.#pe ?? this.#ge)?.focus();
+        (__privateGet(this, _pe) ?? __privateGet(this, _ge))?.focus();
       }, 0);
     }
     onUpdatedColor() {
-      if (!this.#pe) return;
-      const t2 = this.#o.commentButtonColor;
-      t2 && (this.#pe.style.backgroundColor = t2);
-      this.#o._uiManager.updatePopupColor(this.#o);
+      if (!__privateGet(this, _pe)) return;
+      const t2 = __privateGet(this, _o3).commentButtonColor;
+      t2 && (__privateGet(this, _pe).style.backgroundColor = t2);
+      __privateGet(this, _o3)._uiManager.updatePopupColor(__privateGet(this, _o3));
     }
     get commentButtonWidth() {
-      return (this.#pe?.getBoundingClientRect().width ?? 0) / this.#o.parent.boundingClientRect.width;
+      return (__privateGet(this, _pe)?.getBoundingClientRect().width ?? 0) / __privateGet(this, _o3).parent.boundingClientRect.width;
     }
     get commentPopupPositionInLayer() {
-      if (this.#xe) return this.#xe;
-      if (!this.#pe) return null;
-      const { x: t2, y: e2, height: i2 } = this.#pe.getBoundingClientRect(), { x: n2, y: s2, width: r2, height: a2 } = this.#o.parent.boundingClientRect;
+      if (__privateGet(this, _xe)) return __privateGet(this, _xe);
+      if (!__privateGet(this, _pe)) return null;
+      const { x: t2, y: e2, height: i2 } = __privateGet(this, _pe).getBoundingClientRect(), { x: n2, y: s2, width: r2, height: a2 } = __privateGet(this, _o3).parent.boundingClientRect;
       return [(t2 - n2) / r2, (e2 + i2 - s2) / a2];
     }
     set commentPopupPositionInLayer(t2) {
-      this.#xe = t2;
+      __privateSet(this, _xe, t2);
     }
     hasDefaultPopupPosition() {
-      return null === this.#xe;
+      return null === __privateGet(this, _xe);
     }
     removeStandaloneCommentButton() {
-      this.#pe?.remove();
-      this.#pe = null;
+      __privateGet(this, _pe)?.remove();
+      __privateSet(this, _pe, null);
     }
     removeToolbarCommentButton() {
-      this.#ge?.remove();
-      this.#ge = null;
+      __privateGet(this, _ge)?.remove();
+      __privateSet(this, _ge, null);
     }
     setCommentButtonStates({ selected: t2, hasPopup: e2 }) {
-      if (this.#pe) {
-        this.#pe.classList.toggle("selected", t2);
-        this.#pe.ariaExpanded = e2;
+      if (__privateGet(this, _pe)) {
+        __privateGet(this, _pe).classList.toggle("selected", t2);
+        __privateGet(this, _pe).ariaExpanded = e2;
       }
-    }
-    #w(t2, e2) {
-      if (!this.#o._uiManager.hasCommentManager()) return null;
-      t2.tabIndex = "0";
-      t2.ariaHasPopup = "dialog";
-      if (e2) {
-        t2.ariaControls = "commentPopup";
-        t2.setAttribute("data-l10n-id", "pdfjs-show-comment-button");
-      } else {
-        t2.ariaControlsElements = [this.#o._uiManager.getCommentDialogElement()];
-        t2.setAttribute("data-l10n-id", "pdfjs-editor-add-comment-button");
-      }
-      const i2 = this.#o._uiManager._signal;
-      if (!(i2 instanceof AbortSignal) || i2.aborted) return t2;
-      t2.addEventListener("contextmenu", noContextMenu, { signal: i2 });
-      if (e2) {
-        t2.addEventListener("focusin", (t3) => {
-          this.#o._focusEventsAllowed = false;
-          stopEvent(t3);
-        }, { capture: true, signal: i2 });
-        t2.addEventListener("focusout", (t3) => {
-          this.#o._focusEventsAllowed = true;
-          stopEvent(t3);
-        }, { capture: true, signal: i2 });
-      }
-      t2.addEventListener("pointerdown", (t3) => t3.stopPropagation(), { signal: i2 });
-      const onClick = (e3) => {
-        e3.preventDefault();
-        t2 === this.#ge ? this.edit() : this.#o.toggleComment(true);
-      };
-      t2.addEventListener("click", onClick, { capture: true, signal: i2 });
-      t2.addEventListener("keydown", (e3) => {
-        if (e3.target === t2 && "Enter" === e3.key) {
-          this.#me = true;
-          onClick(e3);
-        }
-      }, { signal: i2 });
-      t2.addEventListener("pointerenter", () => {
-        this.#o.toggleComment(false, true);
-      }, { signal: i2 });
-      t2.addEventListener("pointerleave", () => {
-        this.#o.toggleComment(false, false);
-      }, { signal: i2 });
-      return t2;
     }
     edit(t2) {
       const e2 = this.commentPopupPositionInLayer;
       let i2, n2;
       if (e2) [i2, n2] = e2;
       else {
-        [i2, n2] = this.#o.commentButtonPosition;
-        const { width: t3, height: e3, x: s3, y: r3 } = this.#o;
+        [i2, n2] = __privateGet(this, _o3).commentButtonPosition;
+        const { width: t3, height: e3, x: s3, y: r3 } = __privateGet(this, _o3);
         i2 = s3 + i2 * t3;
         n2 = r3 + n2 * e3;
       }
-      const s2 = this.#o.parent.boundingClientRect, { x: r2, y: a2, width: o2, height: l2 } = s2;
-      this.#o._uiManager.editComment(this.#o, r2 + i2 * o2, a2 + n2 * l2, { ...t2, parentDimensions: s2 });
+      const s2 = __privateGet(this, _o3).parent.boundingClientRect, { x: r2, y: a2, width: o2, height: l2 } = s2;
+      __privateGet(this, _o3)._uiManager.editComment(__privateGet(this, _o3), r2 + i2 * o2, a2 + n2 * l2, { ...t2, parentDimensions: s2 });
     }
     finish() {
-      if (this.#ge) {
-        this.#ge.focus({ focusVisible: this.#me });
-        this.#me = false;
+      if (__privateGet(this, _ge)) {
+        __privateGet(this, _ge).focus({ focusVisible: __privateGet(this, _me) });
+        __privateSet(this, _me, false);
       }
     }
     isDeleted() {
-      return this.#we || "" === this.#ye;
+      return __privateGet(this, _we) || "" === __privateGet(this, _ye);
     }
     isEmpty() {
-      return null === this.#ye;
+      return null === __privateGet(this, _ye);
     }
     hasBeenEdited() {
-      return this.isDeleted() || this.#ye !== this.#fe;
+      return this.isDeleted() || __privateGet(this, _ye) !== __privateGet(this, _fe);
     }
     serialize() {
       return this.data;
     }
     get data() {
-      return { text: this.#ye, richText: this.#be, date: this.#ve, deleted: this.isDeleted() };
+      return { text: __privateGet(this, _ye), richText: __privateGet(this, _be), date: __privateGet(this, _ve), deleted: this.isDeleted() };
     }
     set data(t2) {
-      t2 !== this.#ye && (this.#be = null);
+      t2 !== __privateGet(this, _ye) && __privateSet(this, _be, null);
       if (null !== t2) {
-        this.#ye = t2;
-        this.#ve = /* @__PURE__ */ new Date();
-        this.#we = false;
+        __privateSet(this, _ye, t2);
+        __privateSet(this, _ve, /* @__PURE__ */ new Date());
+        __privateSet(this, _we, false);
       } else {
-        this.#ye = "";
-        this.#we = true;
+        __privateSet(this, _ye, "");
+        __privateSet(this, _we, true);
       }
     }
     restoreData({ text: t2, richText: e2, date: i2 }) {
-      this.#ye = t2;
-      this.#be = e2;
-      this.#ve = i2;
-      this.#we = false;
+      __privateSet(this, _ye, t2);
+      __privateSet(this, _be, e2);
+      __privateSet(this, _ve, i2);
+      __privateSet(this, _we, false);
     }
     setInitialText(t2, e2 = null) {
-      this.#fe = t2;
+      __privateSet(this, _fe, t2);
       this.data = t2;
-      this.#ve = null;
-      this.#be = e2;
+      __privateSet(this, _ve, null);
+      __privateSet(this, _be, e2);
     }
     shown() {
     }
     destroy() {
-      this.#ge?.remove();
-      this.#ge = null;
-      this.#pe?.remove();
-      this.#pe = null;
-      this.#ye = "";
-      this.#be = null;
-      this.#ve = null;
-      this.#o = null;
-      this.#me = false;
-      this.#we = false;
+      __privateGet(this, _ge)?.remove();
+      __privateSet(this, _ge, null);
+      __privateGet(this, _pe)?.remove();
+      __privateSet(this, _pe, null);
+      __privateSet(this, _ye, "");
+      __privateSet(this, _be, null);
+      __privateSet(this, _ve, null);
+      __privateSet(this, _o3, null);
+      __privateSet(this, _me, false);
+      __privateSet(this, _we, false);
     }
   };
-  var TouchManager = class _TouchManager {
-    #Dt;
-    #Ae = false;
-    #Ee = null;
-    #Ce;
-    #Se;
-    #Te;
-    #_e;
-    #ke = null;
-    #De;
-    #Me = null;
-    #Pe;
-    #Ie = null;
+  _pe = new WeakMap();
+  _ge = new WeakMap();
+  _me = new WeakMap();
+  _o3 = new WeakMap();
+  _fe = new WeakMap();
+  _be = new WeakMap();
+  _ye = new WeakMap();
+  _ve = new WeakMap();
+  _we = new WeakMap();
+  _xe = new WeakMap();
+  _Comment_instances = new WeakSet();
+  w_fn2 = function(t2, e2) {
+    if (!__privateGet(this, _o3)._uiManager.hasCommentManager()) return null;
+    t2.tabIndex = "0";
+    t2.ariaHasPopup = "dialog";
+    if (e2) {
+      t2.ariaControls = "commentPopup";
+      t2.setAttribute("data-l10n-id", "pdfjs-show-comment-button");
+    } else {
+      t2.ariaControlsElements = [__privateGet(this, _o3)._uiManager.getCommentDialogElement()];
+      t2.setAttribute("data-l10n-id", "pdfjs-editor-add-comment-button");
+    }
+    const i2 = __privateGet(this, _o3)._uiManager._signal;
+    if (!(i2 instanceof AbortSignal) || i2.aborted) return t2;
+    t2.addEventListener("contextmenu", noContextMenu, { signal: i2 });
+    if (e2) {
+      t2.addEventListener("focusin", (t3) => {
+        __privateGet(this, _o3)._focusEventsAllowed = false;
+        stopEvent(t3);
+      }, { capture: true, signal: i2 });
+      t2.addEventListener("focusout", (t3) => {
+        __privateGet(this, _o3)._focusEventsAllowed = true;
+        stopEvent(t3);
+      }, { capture: true, signal: i2 });
+    }
+    t2.addEventListener("pointerdown", (t3) => t3.stopPropagation(), { signal: i2 });
+    const onClick = (e3) => {
+      e3.preventDefault();
+      t2 === __privateGet(this, _ge) ? this.edit() : __privateGet(this, _o3).toggleComment(true);
+    };
+    t2.addEventListener("click", onClick, { capture: true, signal: i2 });
+    t2.addEventListener("keydown", (e3) => {
+      if (e3.target === t2 && "Enter" === e3.key) {
+        __privateSet(this, _me, true);
+        onClick(e3);
+      }
+    }, { signal: i2 });
+    t2.addEventListener("pointerenter", () => {
+      __privateGet(this, _o3).toggleComment(false, true);
+    }, { signal: i2 });
+    t2.addEventListener("pointerleave", () => {
+      __privateGet(this, _o3).toggleComment(false, false);
+    }, { signal: i2 });
+    return t2;
+  };
+  var _Dt2, _Ae, _Ee, _Ce, _Se, _Te, __e, _ke, _De, _Me, _Pe, _Ie, _TouchManager_instances, Fe_fn, Oe_fn, Re_fn;
+  var _TouchManager = class _TouchManager {
     constructor({ container: t2, isPinchingDisabled: e2 = null, isPinchingStopped: i2 = null, onPinchStart: n2 = null, onPinching: s2 = null, onPinchEnd: r2 = null, signal: a2 }) {
-      this.#Dt = t2;
-      this.#Ee = i2;
-      this.#Ce = e2;
-      this.#Se = n2;
-      this.#Te = s2;
-      this.#_e = r2;
-      this.#Pe = new AbortController();
-      this.#De = AbortSignal.any([a2, this.#Pe.signal]);
-      t2.addEventListener("touchstart", this.#Fe.bind(this), { passive: false, signal: this.#De });
+      __privateAdd(this, _TouchManager_instances);
+      __privateAdd(this, _Dt2);
+      __privateAdd(this, _Ae, false);
+      __privateAdd(this, _Ee, null);
+      __privateAdd(this, _Ce);
+      __privateAdd(this, _Se);
+      __privateAdd(this, _Te);
+      __privateAdd(this, __e);
+      __privateAdd(this, _ke, null);
+      __privateAdd(this, _De);
+      __privateAdd(this, _Me, null);
+      __privateAdd(this, _Pe);
+      __privateAdd(this, _Ie, null);
+      __privateSet(this, _Dt2, t2);
+      __privateSet(this, _Ee, i2);
+      __privateSet(this, _Ce, e2);
+      __privateSet(this, _Se, n2);
+      __privateSet(this, _Te, s2);
+      __privateSet(this, __e, r2);
+      __privateSet(this, _Pe, new AbortController());
+      __privateSet(this, _De, AbortSignal.any([a2, __privateGet(this, _Pe).signal]));
+      t2.addEventListener("touchstart", __privateMethod(this, _TouchManager_instances, Fe_fn).bind(this), { passive: false, signal: __privateGet(this, _De) });
     }
     get MIN_TOUCH_DISTANCE_TO_PINCH() {
       return 35 / OutputScale.pixelRatio;
     }
-    #Fe(t2) {
-      if (this.#Ce?.()) return;
-      if (1 === t2.touches.length) {
-        if (this.#ke) return;
-        const t3 = this.#ke = new AbortController(), e3 = AbortSignal.any([this.#De, t3.signal]), i3 = this.#Dt, n2 = { capture: true, signal: e3, passive: false }, cancelPointerDown = (t4) => {
-          if ("touch" === t4.pointerType) {
-            this.#ke?.abort();
-            this.#ke = null;
-          }
-        };
-        i3.addEventListener("pointerdown", (t4) => {
-          if ("touch" === t4.pointerType) {
-            stopEvent(t4);
-            cancelPointerDown(t4);
-          }
-        }, n2);
-        i3.addEventListener("pointerup", cancelPointerDown, n2);
-        i3.addEventListener("pointercancel", cancelPointerDown, n2);
-        return;
-      }
-      if (!this.#Ie) {
-        this.#Ie = new AbortController();
-        const t3 = AbortSignal.any([this.#De, this.#Ie.signal]), e3 = this.#Dt, i3 = { signal: t3, capture: false, passive: false };
-        e3.addEventListener("touchmove", this.#Oe.bind(this), i3);
-        const n2 = this.#Re.bind(this);
-        e3.addEventListener("touchend", n2, i3);
-        e3.addEventListener("touchcancel", n2, i3);
-        i3.capture = true;
-        e3.addEventListener("pointerdown", stopEvent, i3);
-        e3.addEventListener("pointermove", stopEvent, i3);
-        e3.addEventListener("pointercancel", stopEvent, i3);
-        e3.addEventListener("pointerup", stopEvent, i3);
-        this.#Se?.();
-      }
-      stopEvent(t2);
-      if (2 !== t2.touches.length || this.#Ee?.()) {
-        this.#Me = null;
-        return;
-      }
-      let [e2, i2] = t2.touches;
-      e2.identifier > i2.identifier && ([e2, i2] = [i2, e2]);
-      this.#Me = { touch0X: e2.screenX, touch0Y: e2.screenY, touch1X: i2.screenX, touch1Y: i2.screenY };
-    }
-    #Oe(t2) {
-      if (!this.#Me || 2 !== t2.touches.length) return;
-      stopEvent(t2);
-      let [e2, i2] = t2.touches;
-      e2.identifier > i2.identifier && ([e2, i2] = [i2, e2]);
-      const { screenX: n2, screenY: s2 } = e2, { screenX: r2, screenY: a2 } = i2, o2 = this.#Me, { touch0X: l2, touch0Y: h2, touch1X: c2, touch1Y: d2 } = o2, u2 = c2 - l2, p2 = d2 - h2, g2 = r2 - n2, m2 = a2 - s2, f2 = Math.hypot(g2, m2) || 1, b2 = Math.hypot(u2, p2) || 1;
-      if (!this.#Ae && Math.abs(b2 - f2) <= _TouchManager.MIN_TOUCH_DISTANCE_TO_PINCH) return;
-      o2.touch0X = n2;
-      o2.touch0Y = s2;
-      o2.touch1X = r2;
-      o2.touch1Y = a2;
-      if (!this.#Ae) {
-        this.#Ae = true;
-        return;
-      }
-      const y2 = [(n2 + r2) / 2, (s2 + a2) / 2];
-      this.#Te?.(y2, b2, f2);
-    }
-    #Re(t2) {
-      if (!(t2.touches.length >= 2)) {
-        if (this.#Ie) {
-          this.#Ie.abort();
-          this.#Ie = null;
-          this.#_e?.();
-        }
-        if (this.#Me) {
-          stopEvent(t2);
-          this.#Me = null;
-          this.#Ae = false;
-        }
-      }
-    }
     destroy() {
-      this.#Pe?.abort();
-      this.#Pe = null;
-      this.#ke?.abort();
-      this.#ke = null;
+      __privateGet(this, _Pe)?.abort();
+      __privateSet(this, _Pe, null);
+      __privateGet(this, _ke)?.abort();
+      __privateSet(this, _ke, null);
     }
   };
-  var AnnotationEditor = class _AnnotationEditor {
-    #Be = null;
-    #Le = null;
-    #h = null;
-    #c = null;
-    #pe = null;
-    #Ne = false;
-    #Ue = null;
-    #He = "";
-    #ze = null;
-    #Ge = null;
-    #je = null;
-    #We = null;
-    #Ve = null;
-    #$e = "";
-    #qe = false;
-    #Ke = null;
-    #Xe = false;
-    #Ye = false;
-    #Je = false;
-    #Qe = null;
-    #Ze = 0;
-    #ti = 0;
-    #ei = null;
-    #ii = null;
-    isSelected = false;
-    _isCopy = false;
-    _editToolbar = null;
-    _initialOptions = /* @__PURE__ */ Object.create(null);
-    _initialData = null;
-    _isVisible = true;
-    _uiManager = null;
-    _focusEventsAllowed = true;
-    static _l10n = null;
-    static _l10nAlert = null;
-    static _l10nResizer = null;
-    #ni = false;
-    #si = _AnnotationEditor._zIndex++;
-    static _borderLineWidth = -1;
-    static _colorManager = new ColorManager();
-    static _zIndex = 1;
-    static _telemetryTimeout = 1e3;
-    static get _resizerKeyboardManager() {
-      const t2 = _AnnotationEditor.prototype._resizeWithKeyboard, e2 = AnnotationEditorUIManager.TRANSLATE_SMALL, i2 = AnnotationEditorUIManager.TRANSLATE_BIG;
-      return shadow(this, "_resizerKeyboardManager", new KeyboardManager([[["ArrowLeft"], t2, { args: [-e2, 0] }], [["ctrl+ArrowLeft", "mac+shift+ArrowLeft"], t2, { args: [-i2, 0] }], [["ArrowRight"], t2, { args: [e2, 0] }], [["ctrl+ArrowRight", "mac+shift+ArrowRight"], t2, { args: [i2, 0] }], [["ArrowUp"], t2, { args: [0, -e2] }], [["ctrl+ArrowUp", "mac+shift+ArrowUp"], t2, { args: [0, -i2] }], [["ArrowDown"], t2, { args: [0, e2] }], [["ctrl+ArrowDown", "mac+shift+ArrowDown"], t2, { args: [0, i2] }], [["Escape"], _AnnotationEditor.prototype._stopResizingWithKeyboard]]));
+  _Dt2 = new WeakMap();
+  _Ae = new WeakMap();
+  _Ee = new WeakMap();
+  _Ce = new WeakMap();
+  _Se = new WeakMap();
+  _Te = new WeakMap();
+  __e = new WeakMap();
+  _ke = new WeakMap();
+  _De = new WeakMap();
+  _Me = new WeakMap();
+  _Pe = new WeakMap();
+  _Ie = new WeakMap();
+  _TouchManager_instances = new WeakSet();
+  Fe_fn = function(t2) {
+    var _a4, _b, _c3;
+    if ((_a4 = __privateGet(this, _Ce)) == null ? void 0 : _a4.call(this)) return;
+    if (1 === t2.touches.length) {
+      if (__privateGet(this, _ke)) return;
+      const t3 = __privateSet(this, _ke, new AbortController()), e3 = AbortSignal.any([__privateGet(this, _De), t3.signal]), i3 = __privateGet(this, _Dt2), n2 = { capture: true, signal: e3, passive: false }, cancelPointerDown = (t4) => {
+        if ("touch" === t4.pointerType) {
+          __privateGet(this, _ke)?.abort();
+          __privateSet(this, _ke, null);
+        }
+      };
+      i3.addEventListener("pointerdown", (t4) => {
+        if ("touch" === t4.pointerType) {
+          stopEvent(t4);
+          cancelPointerDown(t4);
+        }
+      }, n2);
+      i3.addEventListener("pointerup", cancelPointerDown, n2);
+      i3.addEventListener("pointercancel", cancelPointerDown, n2);
+      return;
     }
+    if (!__privateGet(this, _Ie)) {
+      __privateSet(this, _Ie, new AbortController());
+      const t3 = AbortSignal.any([__privateGet(this, _De), __privateGet(this, _Ie).signal]), e3 = __privateGet(this, _Dt2), i3 = { signal: t3, capture: false, passive: false };
+      e3.addEventListener("touchmove", __privateMethod(this, _TouchManager_instances, Oe_fn).bind(this), i3);
+      const n2 = __privateMethod(this, _TouchManager_instances, Re_fn).bind(this);
+      e3.addEventListener("touchend", n2, i3);
+      e3.addEventListener("touchcancel", n2, i3);
+      i3.capture = true;
+      e3.addEventListener("pointerdown", stopEvent, i3);
+      e3.addEventListener("pointermove", stopEvent, i3);
+      e3.addEventListener("pointercancel", stopEvent, i3);
+      e3.addEventListener("pointerup", stopEvent, i3);
+      (_b = __privateGet(this, _Se)) == null ? void 0 : _b.call(this);
+    }
+    stopEvent(t2);
+    if (2 !== t2.touches.length || ((_c3 = __privateGet(this, _Ee)) == null ? void 0 : _c3.call(this))) {
+      __privateSet(this, _Me, null);
+      return;
+    }
+    let [e2, i2] = t2.touches;
+    e2.identifier > i2.identifier && ([e2, i2] = [i2, e2]);
+    __privateSet(this, _Me, { touch0X: e2.screenX, touch0Y: e2.screenY, touch1X: i2.screenX, touch1Y: i2.screenY });
+  };
+  Oe_fn = function(t2) {
+    var _a4;
+    if (!__privateGet(this, _Me) || 2 !== t2.touches.length) return;
+    stopEvent(t2);
+    let [e2, i2] = t2.touches;
+    e2.identifier > i2.identifier && ([e2, i2] = [i2, e2]);
+    const { screenX: n2, screenY: s2 } = e2, { screenX: r2, screenY: a2 } = i2, o2 = __privateGet(this, _Me), { touch0X: l2, touch0Y: h2, touch1X: c2, touch1Y: d2 } = o2, u2 = c2 - l2, p2 = d2 - h2, g2 = r2 - n2, m2 = a2 - s2, f2 = Math.hypot(g2, m2) || 1, b2 = Math.hypot(u2, p2) || 1;
+    if (!__privateGet(this, _Ae) && Math.abs(b2 - f2) <= _TouchManager.MIN_TOUCH_DISTANCE_TO_PINCH) return;
+    o2.touch0X = n2;
+    o2.touch0Y = s2;
+    o2.touch1X = r2;
+    o2.touch1Y = a2;
+    if (!__privateGet(this, _Ae)) {
+      __privateSet(this, _Ae, true);
+      return;
+    }
+    const y2 = [(n2 + r2) / 2, (s2 + a2) / 2];
+    (_a4 = __privateGet(this, _Te)) == null ? void 0 : _a4.call(this, y2, b2, f2);
+  };
+  Re_fn = function(t2) {
+    var _a4;
+    if (!(t2.touches.length >= 2)) {
+      if (__privateGet(this, _Ie)) {
+        __privateGet(this, _Ie).abort();
+        __privateSet(this, _Ie, null);
+        (_a4 = __privateGet(this, __e)) == null ? void 0 : _a4.call(this);
+      }
+      if (__privateGet(this, _Me)) {
+        stopEvent(t2);
+        __privateSet(this, _Me, null);
+        __privateSet(this, _Ae, false);
+      }
+    }
+  };
+  var TouchManager = _TouchManager;
+  var _Be, _Le, _h3, _c2, _pe2, _Ne, _Ue, _He, _ze, _Ge, _je, _We, _Ve, _$e, _qe, _Ke, _Xe, _Ye, _Je, _Qe, _Ze, _ti, _ei, _ii, _ni, _si, _AnnotationEditor_instances, ai_fn, _AnnotationEditor_static, oi_fn, li_fn, hi_fn, ci_fn, pi_fn, ui_fn, di_fn, mi_fn, fi_fn, bi_fn, vi_fn, yi_fn, gi_fn, wi_fn, xi_fn, Ai_fn, Ei_fn, ri_fn;
+  var _AnnotationEditor = class _AnnotationEditor {
     constructor(t2) {
+      __privateAdd(this, _AnnotationEditor_instances);
+      __privateAdd(this, _Be, null);
+      __privateAdd(this, _Le, null);
+      __privateAdd(this, _h3, null);
+      __privateAdd(this, _c2, null);
+      __privateAdd(this, _pe2, null);
+      __privateAdd(this, _Ne, false);
+      __privateAdd(this, _Ue, null);
+      __privateAdd(this, _He, "");
+      __privateAdd(this, _ze, null);
+      __privateAdd(this, _Ge, null);
+      __privateAdd(this, _je, null);
+      __privateAdd(this, _We, null);
+      __privateAdd(this, _Ve, null);
+      __privateAdd(this, _$e, "");
+      __privateAdd(this, _qe, false);
+      __privateAdd(this, _Ke, null);
+      __privateAdd(this, _Xe, false);
+      __privateAdd(this, _Ye, false);
+      __privateAdd(this, _Je, false);
+      __privateAdd(this, _Qe, null);
+      __privateAdd(this, _Ze, 0);
+      __privateAdd(this, _ti, 0);
+      __privateAdd(this, _ei, null);
+      __privateAdd(this, _ii, null);
+      __publicField(this, "isSelected", false);
+      __publicField(this, "_isCopy", false);
+      __publicField(this, "_editToolbar", null);
+      __publicField(this, "_initialOptions", /* @__PURE__ */ Object.create(null));
+      __publicField(this, "_initialData", null);
+      __publicField(this, "_isVisible", true);
+      __publicField(this, "_uiManager", null);
+      __publicField(this, "_focusEventsAllowed", true);
+      __privateAdd(this, _ni, false);
+      __privateAdd(this, _si, _AnnotationEditor._zIndex++);
       this.parent = t2.parent;
       this.id = t2.id;
       this.width = this.height = null;
@@ -8791,6 +9195,10 @@
       this.isAttachedToDOM = false;
       this.deleted = false;
     }
+    static get _resizerKeyboardManager() {
+      const t2 = _AnnotationEditor.prototype._resizeWithKeyboard, e2 = AnnotationEditorUIManager.TRANSLATE_SMALL, i2 = AnnotationEditorUIManager.TRANSLATE_BIG;
+      return shadow(this, "_resizerKeyboardManager", new KeyboardManager([[["ArrowLeft"], t2, { args: [-e2, 0] }], [["ctrl+ArrowLeft", "mac+shift+ArrowLeft"], t2, { args: [-i2, 0] }], [["ArrowRight"], t2, { args: [e2, 0] }], [["ctrl+ArrowRight", "mac+shift+ArrowRight"], t2, { args: [i2, 0] }], [["ArrowUp"], t2, { args: [0, -e2] }], [["ctrl+ArrowUp", "mac+shift+ArrowUp"], t2, { args: [0, -i2] }], [["ArrowDown"], t2, { args: [0, e2] }], [["ctrl+ArrowDown", "mac+shift+ArrowDown"], t2, { args: [0, i2] }], [["Escape"], _AnnotationEditor.prototype._stopResizingWithKeyboard]]));
+    }
     updatePageIndex(t2) {
       this.pageIndex = t2;
     }
@@ -8813,9 +9221,9 @@
       e2._uiManager.addToAnnotationStorage(e2);
     }
     static initialize(t2, e2) {
-      _AnnotationEditor._l10n ??= t2;
-      _AnnotationEditor._l10nAlert ??= Object.freeze({ highlight: "pdfjs-editor-highlight-added-alert", freetext: "pdfjs-editor-freetext-added-alert", ink: "pdfjs-editor-ink-added-alert", stamp: "pdfjs-editor-stamp-added-alert", signature: "pdfjs-editor-signature-added-alert" });
-      _AnnotationEditor._l10nResizer ??= Object.freeze({ topLeft: "pdfjs-editor-resizer-top-left", topMiddle: "pdfjs-editor-resizer-top-middle", topRight: "pdfjs-editor-resizer-top-right", middleRight: "pdfjs-editor-resizer-middle-right", bottomRight: "pdfjs-editor-resizer-bottom-right", bottomMiddle: "pdfjs-editor-resizer-bottom-middle", bottomLeft: "pdfjs-editor-resizer-bottom-left", middleLeft: "pdfjs-editor-resizer-middle-left" });
+      _AnnotationEditor._l10n ?? (_AnnotationEditor._l10n = t2);
+      _AnnotationEditor._l10nAlert ?? (_AnnotationEditor._l10nAlert = Object.freeze({ highlight: "pdfjs-editor-highlight-added-alert", freetext: "pdfjs-editor-freetext-added-alert", ink: "pdfjs-editor-ink-added-alert", stamp: "pdfjs-editor-stamp-added-alert", signature: "pdfjs-editor-signature-added-alert" }));
+      _AnnotationEditor._l10nResizer ?? (_AnnotationEditor._l10nResizer = Object.freeze({ topLeft: "pdfjs-editor-resizer-top-left", topMiddle: "pdfjs-editor-resizer-top-middle", topRight: "pdfjs-editor-resizer-top-right", middleRight: "pdfjs-editor-resizer-middle-right", bottomRight: "pdfjs-editor-resizer-bottom-right", bottomMiddle: "pdfjs-editor-resizer-bottom-middle", bottomLeft: "pdfjs-editor-resizer-bottom-left", middleLeft: "pdfjs-editor-resizer-middle-left" }));
       if (-1 !== _AnnotationEditor._borderLineWidth) return;
       const i2 = getComputedStyle(document.documentElement);
       _AnnotationEditor._borderLineWidth = parseFloat(i2.getPropertyValue("--outline-width")) || 0;
@@ -8835,10 +9243,10 @@
       return [];
     }
     get _isDraggable() {
-      return this.#ni;
+      return __privateGet(this, _ni);
     }
     set _isDraggable(t2) {
-      this.#ni = t2;
+      __privateSet(this, _ni, t2);
       this.div?.classList.toggle("draggable", t2);
     }
     get uid() {
@@ -8878,21 +9286,21 @@
       this.div.style.zIndex = 0;
     }
     setInForeground() {
-      this.div.style.zIndex = this.#si;
+      this.div.style.zIndex = __privateGet(this, _si);
     }
     setParent(t2) {
       if (null !== t2) {
         this.pageIndex = t2.pageIndex;
         this.pageDimensions = t2.pageDimensions;
       } else {
-        this.#ri();
-        this.#We?.remove();
-        this.#We = null;
+        __privateMethod(this, _AnnotationEditor_instances, ri_fn).call(this);
+        __privateGet(this, _We)?.remove();
+        __privateSet(this, _We, null);
       }
       this.parent = t2;
     }
     focusin(t2) {
-      this._focusEventsAllowed && (this.#qe ? this.#qe = false : this.parent.setSelected(this));
+      this._focusEventsAllowed && (__privateGet(this, _qe) ? __privateSet(this, _qe, false) : this.parent.setSelected(this));
     }
     focusout(t2) {
       if (!this._focusEventsAllowed) return;
@@ -8928,26 +9336,19 @@
       this.setAt(t2 * i2, e2 * n2, this.width * i2, this.height * n2);
       this._onTranslated();
     }
-    #ai([t2, e2], i2, n2) {
-      [i2, n2] = this.screenToPageTranslation(i2, n2);
-      this.x += i2 / t2;
-      this.y += n2 / e2;
-      this._onTranslating(this.x, this.y);
-      this.fixAndSetPosition();
-    }
     translate(t2, e2) {
-      this.#ai(this.parentDimensions, t2, e2);
+      __privateMethod(this, _AnnotationEditor_instances, ai_fn).call(this, this.parentDimensions, t2, e2);
     }
     translateInPage(t2, e2) {
-      this.#Ke ||= [this.x, this.y, this.width, this.height];
-      this.#ai(this.pageDimensions, t2, e2);
+      __privateGet(this, _Ke) || __privateSet(this, _Ke, [this.x, this.y, this.width, this.height]);
+      __privateMethod(this, _AnnotationEditor_instances, ai_fn).call(this, this.pageDimensions, t2, e2);
       this.div.scrollIntoView({ block: "nearest" });
     }
     translationDone() {
       this._onTranslated(this.x, this.y);
     }
     drag(t2, e2) {
-      this.#Ke ||= [this.x, this.y, this.width, this.height];
+      __privateGet(this, _Ke) || __privateSet(this, _Ke, [this.x, this.y, this.width, this.height]);
       const { div: i2, parentDimensions: [n2, s2] } = this;
       this.x += t2 / n2;
       this.y += e2 / s2;
@@ -8973,10 +9374,10 @@
     _onTranslated(t2, e2) {
     }
     get _hasBeenMoved() {
-      return !!this.#Ke && (this.#Ke[0] !== this.x || this.#Ke[1] !== this.y);
+      return !!__privateGet(this, _Ke) && (__privateGet(this, _Ke)[0] !== this.x || __privateGet(this, _Ke)[1] !== this.y);
     }
     get _hasBeenResized() {
-      return !!this.#Ke && (this.#Ke[2] !== this.width || this.#Ke[3] !== this.height);
+      return !!__privateGet(this, _Ke) && (__privateGet(this, _Ke)[2] !== this.width || __privateGet(this, _Ke)[3] !== this.height);
     }
     getBaseTranslation() {
       const [t2, e2] = this.parentDimensions, { _borderLineWidth: i2 } = _AnnotationEditor, n2 = i2 / t2, s2 = i2 / e2;
@@ -9027,39 +9428,13 @@
       e2.top = `${(100 * r2).toFixed(2)}%`;
       this.moveInDOM();
     }
-    static #oi(t2, e2, i2) {
-      switch (i2) {
-        case 90:
-          return [e2, -t2];
-        case 180:
-          return [-t2, -e2];
-        case 270:
-          return [-e2, t2];
-        default:
-          return [t2, e2];
-      }
-    }
     screenToPageTranslation(t2, e2) {
-      return _AnnotationEditor.#oi(t2, e2, this.parentRotation);
+      var _a4;
+      return __privateMethod(_a4 = _AnnotationEditor, _AnnotationEditor_static, oi_fn).call(_a4, t2, e2, this.parentRotation);
     }
     pageTranslationToScreen(t2, e2) {
-      return _AnnotationEditor.#oi(t2, e2, 360 - this.parentRotation);
-    }
-    #li(t2) {
-      switch (t2) {
-        case 90: {
-          const [t3, e2] = this.pageDimensions;
-          return [0, -t3 / e2, e2 / t3, 0];
-        }
-        case 180:
-          return [-1, 0, 0, -1];
-        case 270: {
-          const [t3, e2] = this.pageDimensions;
-          return [0, t3 / e2, -e2 / t3, 0];
-        }
-        default:
-          return [1, 0, 0, 1];
-      }
+      var _a4;
+      return __privateMethod(_a4 = _AnnotationEditor, _AnnotationEditor_static, oi_fn).call(_a4, t2, e2, 360 - this.parentRotation);
     }
     get parentScale() {
       return this._uiManager.viewParameters.realScale;
@@ -9079,152 +9454,21 @@
     getInitialTranslation() {
       return [0, 0];
     }
-    #hi() {
-      if (this.#ze) return;
-      this.#ze = document.createElement("div");
-      this.#ze.classList.add("resizers");
-      const t2 = this._willKeepAspectRatio ? ["topLeft", "topRight", "bottomRight", "bottomLeft"] : ["topLeft", "topMiddle", "topRight", "middleRight", "bottomRight", "bottomMiddle", "bottomLeft", "middleLeft"], e2 = this._uiManager._signal;
-      for (const i2 of t2) {
-        const t3 = document.createElement("div");
-        this.#ze.append(t3);
-        t3.classList.add("resizer", i2);
-        t3.setAttribute("data-resizer-name", i2);
-        t3.addEventListener("pointerdown", this.#ci.bind(this, i2), { signal: e2 });
-        t3.addEventListener("contextmenu", noContextMenu, { signal: e2 });
-        t3.tabIndex = -1;
-      }
-      this.div.prepend(this.#ze);
-    }
-    #ci(t2, e2) {
-      e2.preventDefault();
-      const { isMac: i2 } = FeatureTest.platform;
-      if (0 !== e2.button || e2.ctrlKey && i2) return;
-      this.#h?.toggle(false);
-      const n2 = this._isDraggable;
-      this._isDraggable = false;
-      this.#Ge = [e2.screenX, e2.screenY];
-      const s2 = new AbortController(), r2 = this._uiManager.combinedSignal(s2);
-      this.parent.togglePointerEvents(false);
-      window.addEventListener("pointermove", this.#di.bind(this, t2), { passive: true, capture: true, signal: r2 });
-      window.addEventListener("touchmove", stopEvent, { passive: false, signal: r2 });
-      window.addEventListener("contextmenu", noContextMenu, { signal: r2 });
-      this.#je = { savedX: this.x, savedY: this.y, savedWidth: this.width, savedHeight: this.height };
-      const a2 = this.parent.div.style.cursor, o2 = this.div.style.cursor;
-      this.div.style.cursor = this.parent.div.style.cursor = window.getComputedStyle(e2.target).cursor;
-      const pointerUpCallback = () => {
-        s2.abort();
-        this.parent.togglePointerEvents(true);
-        this.#h?.toggle(true);
-        this._isDraggable = n2;
-        this.parent.div.style.cursor = a2;
-        this.div.style.cursor = o2;
-        this.#ui();
-      };
-      window.addEventListener("pointerup", pointerUpCallback, { signal: r2 });
-      window.addEventListener("blur", pointerUpCallback, { signal: r2 });
-    }
-    #pi(t2, e2, i2, n2) {
-      this.width = i2;
-      this.height = n2;
-      this.x = t2;
-      this.y = e2;
-      this.setDims();
-      this.fixAndSetPosition();
-      this._onResized();
-    }
     _onResized() {
-    }
-    #ui() {
-      if (!this.#je) return;
-      const { savedX: t2, savedY: e2, savedWidth: i2, savedHeight: n2 } = this.#je;
-      this.#je = null;
-      const s2 = this.x, r2 = this.y, a2 = this.width, o2 = this.height;
-      s2 === t2 && r2 === e2 && a2 === i2 && o2 === n2 || this.addCommands({ cmd: this.#pi.bind(this, s2, r2, a2, o2), undo: this.#pi.bind(this, t2, e2, i2, n2), mustExec: true });
     }
     static _round(t2) {
       return Math.round(1e4 * t2) / 1e4;
     }
-    #di(t2, e2) {
-      const [i2, n2] = this.parentDimensions, s2 = this.x, r2 = this.y, a2 = this.width, o2 = this.height, l2 = _AnnotationEditor.MIN_SIZE / i2, h2 = _AnnotationEditor.MIN_SIZE / n2, c2 = this.#li(this.rotation), transf = (t3, e3) => [c2[0] * t3 + c2[2] * e3, c2[1] * t3 + c2[3] * e3], d2 = this.#li(360 - this.rotation);
-      let u2, p2, g2 = false, m2 = false;
-      switch (t2) {
-        case "topLeft":
-          g2 = true;
-          u2 = (t3, e3) => [0, 0];
-          p2 = (t3, e3) => [t3, e3];
-          break;
-        case "topMiddle":
-          u2 = (t3, e3) => [t3 / 2, 0];
-          p2 = (t3, e3) => [t3 / 2, e3];
-          break;
-        case "topRight":
-          g2 = true;
-          u2 = (t3, e3) => [t3, 0];
-          p2 = (t3, e3) => [0, e3];
-          break;
-        case "middleRight":
-          m2 = true;
-          u2 = (t3, e3) => [t3, e3 / 2];
-          p2 = (t3, e3) => [0, e3 / 2];
-          break;
-        case "bottomRight":
-          g2 = true;
-          u2 = (t3, e3) => [t3, e3];
-          p2 = (t3, e3) => [0, 0];
-          break;
-        case "bottomMiddle":
-          u2 = (t3, e3) => [t3 / 2, e3];
-          p2 = (t3, e3) => [t3 / 2, 0];
-          break;
-        case "bottomLeft":
-          g2 = true;
-          u2 = (t3, e3) => [0, e3];
-          p2 = (t3, e3) => [t3, 0];
-          break;
-        case "middleLeft":
-          m2 = true;
-          u2 = (t3, e3) => [0, e3 / 2];
-          p2 = (t3, e3) => [t3, e3 / 2];
-      }
-      const f2 = u2(a2, o2), b2 = p2(a2, o2);
-      let y2 = transf(...b2);
-      const v2 = _AnnotationEditor._round(s2 + y2[0]), w2 = _AnnotationEditor._round(r2 + y2[1]);
-      let x2, A2, E2 = 1, C2 = 1;
-      if (e2.fromKeyboard) ({ deltaX: x2, deltaY: A2 } = e2);
-      else {
-        const { screenX: t3, screenY: i3 } = e2, [n3, s3] = this.#Ge;
-        [x2, A2] = this.screenToPageTranslation(t3 - n3, i3 - s3);
-        this.#Ge[0] = t3;
-        this.#Ge[1] = i3;
-      }
-      [x2, A2] = (S2 = x2 / i2, T2 = A2 / n2, [d2[0] * S2 + d2[2] * T2, d2[1] * S2 + d2[3] * T2]);
-      var S2, T2;
-      if (g2) {
-        const t3 = Math.hypot(a2, o2);
-        E2 = C2 = Math.max(Math.min(Math.hypot(b2[0] - f2[0] - x2, b2[1] - f2[1] - A2) / t3, 1 / a2, 1 / o2), l2 / a2, h2 / o2);
-      } else m2 ? E2 = MathClamp(Math.abs(b2[0] - f2[0] - x2), l2, 1) / a2 : C2 = MathClamp(Math.abs(b2[1] - f2[1] - A2), h2, 1) / o2;
-      const _2 = _AnnotationEditor._round(a2 * E2), k2 = _AnnotationEditor._round(o2 * C2);
-      y2 = transf(...p2(_2, k2));
-      const D2 = v2 - y2[0], M2 = w2 - y2[1];
-      this.#Ke ||= [this.x, this.y, this.width, this.height];
-      this.width = _2;
-      this.height = k2;
-      this.x = D2;
-      this.y = M2;
-      this.setDims();
-      this.fixAndSetPosition();
-      this._onResizing();
-    }
     _onResizing() {
     }
     altTextFinish() {
-      this.#h?.finish();
+      __privateGet(this, _h3)?.finish();
     }
     get toolbarButtons() {
       return null;
     }
     async addEditToolbar() {
-      if (this._editToolbar || this.#Ye) return this._editToolbar;
+      if (this._editToolbar || __privateGet(this, _Ye)) return this._editToolbar;
       this._editToolbar = new EditorToolbar(this);
       this.div.append(this._editToolbar.render());
       const { toolbarButtons: t2 } = this;
@@ -9242,7 +9486,7 @@
     removeEditToolbar() {
       this._editToolbar?.remove();
       this._editToolbar = null;
-      this.#h?.destroy();
+      __privateGet(this, _h3)?.destroy();
     }
     addContainer(t2) {
       const e2 = this._editToolbar?.div;
@@ -9252,67 +9496,67 @@
       return this.div.getBoundingClientRect();
     }
     createAltText() {
-      if (!this.#h) {
+      if (!__privateGet(this, _h3)) {
         AltText.initialize(_AnnotationEditor._l10n);
-        this.#h = new AltText(this);
-        if (this.#Be) {
-          this.#h.data = this.#Be;
-          this.#Be = null;
+        __privateSet(this, _h3, new AltText(this));
+        if (__privateGet(this, _Be)) {
+          __privateGet(this, _h3).data = __privateGet(this, _Be);
+          __privateSet(this, _Be, null);
         }
       }
-      return this.#h;
+      return __privateGet(this, _h3);
     }
     get altTextData() {
-      return this.#h?.data;
+      return __privateGet(this, _h3)?.data;
     }
     set altTextData(t2) {
-      this.#h && (this.#h.data = t2);
+      __privateGet(this, _h3) && (__privateGet(this, _h3).data = t2);
     }
     get guessedAltText() {
-      return this.#h?.guessedText;
+      return __privateGet(this, _h3)?.guessedText;
     }
     async setGuessedAltText(t2) {
-      await this.#h?.setGuessedText(t2);
+      await __privateGet(this, _h3)?.setGuessedText(t2);
     }
     serializeAltText(t2) {
-      return this.#h?.serialize(t2);
+      return __privateGet(this, _h3)?.serialize(t2);
     }
     hasAltText() {
-      return !!this.#h && !this.#h.isEmpty();
+      return !!__privateGet(this, _h3) && !__privateGet(this, _h3).isEmpty();
     }
     hasAltTextData() {
-      return this.#h?.hasData() ?? false;
+      return __privateGet(this, _h3)?.hasData() ?? false;
     }
     focusCommentButton() {
-      this.#c?.focusButton();
+      __privateGet(this, _c2)?.focusButton();
     }
     addCommentButton() {
-      return this.canAddComment ? this.#c ||= new Comment(this) : null;
+      return this.canAddComment ? __privateGet(this, _c2) || __privateSet(this, _c2, new Comment(this)) : null;
     }
     addStandaloneCommentButton() {
       if (this._uiManager.hasCommentManager()) {
-        if (this.#pe) this._uiManager.isEditingMode() && this.#pe.classList.remove("hidden");
+        if (__privateGet(this, _pe2)) this._uiManager.isEditingMode() && __privateGet(this, _pe2).classList.remove("hidden");
         else if (this.hasComment) {
-          this.#pe = this.#c.renderForStandalone();
-          this.div.append(this.#pe);
+          __privateSet(this, _pe2, __privateGet(this, _c2).renderForStandalone());
+          this.div.append(__privateGet(this, _pe2));
         }
       }
     }
     removeStandaloneCommentButton() {
-      this.#c.removeStandaloneCommentButton();
-      this.#pe = null;
+      __privateGet(this, _c2).removeStandaloneCommentButton();
+      __privateSet(this, _pe2, null);
     }
     hideStandaloneCommentButton() {
-      this.#pe?.classList.add("hidden");
+      __privateGet(this, _pe2)?.classList.add("hidden");
     }
     get comment() {
-      if (!this.#c) return null;
-      const { data: { richText: t2, text: e2, date: i2, deleted: n2 } } = this.#c;
+      if (!__privateGet(this, _c2)) return null;
+      const { data: { richText: t2, text: e2, date: i2, deleted: n2 } } = __privateGet(this, _c2);
       return { text: e2, richText: t2, date: i2, deleted: n2, color: this.getNonHCMColor(), opacity: this.opacity ?? 1 };
     }
     set comment(t2) {
-      this.#c ||= new Comment(this);
-      "object" == typeof t2 && null !== t2 ? this.#c.restoreData(t2) : this.#c.data = t2;
+      __privateGet(this, _c2) || __privateSet(this, _c2, new Comment(this));
+      "object" == typeof t2 && null !== t2 ? __privateGet(this, _c2).restoreData(t2) : __privateGet(this, _c2).data = t2;
       if (this.hasComment) {
         this.removeCommentButtonFromToolbar();
         this.addStandaloneCommentButton();
@@ -9325,30 +9569,30 @@
     }
     setCommentData({ comment: t2, popupRef: e2, richText: i2 }) {
       if (!e2) return;
-      this.#c ||= new Comment(this);
-      this.#c.setInitialText(t2, i2);
+      __privateGet(this, _c2) || __privateSet(this, _c2, new Comment(this));
+      __privateGet(this, _c2).setInitialText(t2, i2);
       if (!this.annotationElementId) return;
       const n2 = this._uiManager.getAndRemoveDataFromAnnotationStorage(this.annotationElementId);
       n2 && this.updateFromAnnotationLayer(n2);
     }
     get hasEditedComment() {
-      return this.#c?.hasBeenEdited();
+      return __privateGet(this, _c2)?.hasBeenEdited();
     }
     get hasDeletedComment() {
-      return this.#c?.isDeleted();
+      return __privateGet(this, _c2)?.isDeleted();
     }
     get hasComment() {
-      return !!this.#c && !this.#c.isEmpty() && !this.#c.isDeleted();
+      return !!__privateGet(this, _c2) && !__privateGet(this, _c2).isEmpty() && !__privateGet(this, _c2).isDeleted();
     }
     async editComment(t2) {
-      this.#c ||= new Comment(this);
-      this.#c.edit(t2);
+      __privateGet(this, _c2) || __privateSet(this, _c2, new Comment(this));
+      __privateGet(this, _c2).edit(t2);
     }
     toggleComment(t2, e2 = void 0) {
       this.hasComment && this._uiManager.toggleComment(this, t2, e2);
     }
     setSelectedCommentButton(t2) {
-      this.#c.setSelectedButton(t2);
+      __privateGet(this, _c2).setSelectedButton(t2);
     }
     addComment(t2) {
       if (this.hasEditedComment) {
@@ -9357,7 +9601,7 @@
       }
     }
     updateFromAnnotationLayer({ popup: { contents: t2, deleted: e2 } }) {
-      this.#c.data = e2 ? null : t2;
+      __privateGet(this, _c2).data = e2 ? null : t2;
     }
     get parentBoundingClientRect() {
       return this.parent.boundingClientRect;
@@ -9367,12 +9611,12 @@
       t2.setAttribute("data-editor-rotation", (360 - this.rotation) % 360);
       t2.className = this.name;
       t2.setAttribute("id", this.id);
-      t2.tabIndex = this.#Ne ? -1 : 0;
+      t2.tabIndex = __privateGet(this, _Ne) ? -1 : 0;
       t2.setAttribute("role", "application");
       this.defaultL10nId && t2.setAttribute("data-l10n-id", this.defaultL10nId);
       this._isVisible || t2.classList.add("hidden");
       this.setInForeground();
-      this.#gi();
+      __privateMethod(this, _AnnotationEditor_instances, gi_fn).call(this);
       const [e2, i2] = this.parentDimensions;
       if (this.parentRotation % 180 != 0) {
         t2.style.maxWidth = `${(100 * i2 / e2).toFixed(2)}%`;
@@ -9381,104 +9625,29 @@
       const [n2, s2] = this.getInitialTranslation();
       this.translate(n2, s2);
       bindEvents(this, t2, ["keydown", "pointerdown", "dblclick"]);
-      this.isResizable && this._uiManager._supportsPinchToZoom && (this.#ii ||= new TouchManager({ container: t2, isPinchingDisabled: () => !this.isSelected, onPinchStart: this.#mi.bind(this), onPinching: this.#fi.bind(this), onPinchEnd: this.#bi.bind(this), signal: this._uiManager._signal }));
+      this.isResizable && this._uiManager._supportsPinchToZoom && (__privateGet(this, _ii) || __privateSet(this, _ii, new TouchManager({ container: t2, isPinchingDisabled: () => !this.isSelected, onPinchStart: __privateMethod(this, _AnnotationEditor_instances, mi_fn).bind(this), onPinching: __privateMethod(this, _AnnotationEditor_instances, fi_fn).bind(this), onPinchEnd: __privateMethod(this, _AnnotationEditor_instances, bi_fn).bind(this), signal: this._uiManager._signal })));
       this.addStandaloneCommentButton();
       this._uiManager._editorUndoBar?.hide();
       return t2;
-    }
-    #mi() {
-      this.#je = { savedX: this.x, savedY: this.y, savedWidth: this.width, savedHeight: this.height };
-      this.#h?.toggle(false);
-      this.parent.togglePointerEvents(false);
-    }
-    #fi(t2, e2, i2) {
-      let n2 = i2 / e2 * 0.7 + 1 - 0.7;
-      if (1 === n2) return;
-      const s2 = this.#li(this.rotation), transf = (t3, e3) => [s2[0] * t3 + s2[2] * e3, s2[1] * t3 + s2[3] * e3], [r2, a2] = this.parentDimensions, o2 = this.x, l2 = this.y, h2 = this.width, c2 = this.height, d2 = _AnnotationEditor.MIN_SIZE / r2, u2 = _AnnotationEditor.MIN_SIZE / a2;
-      n2 = Math.max(Math.min(n2, 1 / h2, 1 / c2), d2 / h2, u2 / c2);
-      const p2 = _AnnotationEditor._round(h2 * n2), g2 = _AnnotationEditor._round(c2 * n2);
-      if (p2 === h2 && g2 === c2) return;
-      this.#Ke ||= [o2, l2, h2, c2];
-      const m2 = transf(h2 / 2, c2 / 2), f2 = _AnnotationEditor._round(o2 + m2[0]), b2 = _AnnotationEditor._round(l2 + m2[1]), y2 = transf(p2 / 2, g2 / 2);
-      this.x = f2 - y2[0];
-      this.y = b2 - y2[1];
-      this.width = p2;
-      this.height = g2;
-      this.setDims();
-      this.fixAndSetPosition();
-      this._onResizing();
-    }
-    #bi() {
-      this.#h?.toggle(true);
-      this.parent.togglePointerEvents(true);
-      this.#ui();
     }
     pointerdown(t2) {
       const { isMac: e2 } = FeatureTest.platform;
       if (0 !== t2.button || t2.ctrlKey && e2) t2.preventDefault();
       else {
-        this.#qe = true;
-        this._isDraggable ? this.#yi(t2) : this.#vi(t2);
+        __privateSet(this, _qe, true);
+        this._isDraggable ? __privateMethod(this, _AnnotationEditor_instances, yi_fn).call(this, t2) : __privateMethod(this, _AnnotationEditor_instances, vi_fn).call(this, t2);
       }
-    }
-    #vi(t2) {
-      const { isMac: e2 } = FeatureTest.platform;
-      t2.ctrlKey && !e2 || t2.shiftKey || t2.metaKey && e2 ? this.parent.toggleSelected(this) : this.parent.setSelected(this);
-    }
-    #yi(t2) {
-      const { isSelected: e2 } = this;
-      this._uiManager.setUpDragSession();
-      let i2 = false;
-      const n2 = new AbortController(), s2 = this._uiManager.combinedSignal(n2), r2 = { capture: true, passive: false, signal: s2 }, cancelDrag = (t3) => {
-        n2.abort();
-        this.#Ue = null;
-        this.#qe = false;
-        this._uiManager.endDragSession() || this.#vi(t3);
-        i2 && this._onStopDragging();
-      };
-      if (e2) {
-        this.#Ze = t2.clientX;
-        this.#ti = t2.clientY;
-        this.#Ue = t2.pointerId;
-        this.#He = t2.pointerType;
-        window.addEventListener("pointermove", (t3) => {
-          if (!i2) {
-            i2 = true;
-            this._uiManager.toggleComment(this, true, false);
-            this._onStartDragging();
-          }
-          const { clientX: e3, clientY: n3, pointerId: s3 } = t3;
-          if (s3 !== this.#Ue) {
-            stopEvent(t3);
-            return;
-          }
-          const [r3, a2] = this.screenToPageTranslation(e3 - this.#Ze, n3 - this.#ti);
-          this.#Ze = e3;
-          this.#ti = n3;
-          this._uiManager.dragSelectedEditors(r3, a2);
-        }, r2);
-        window.addEventListener("touchmove", stopEvent, r2);
-        window.addEventListener("pointerdown", (t3) => {
-          t3.pointerType === this.#He && (this.#ii || t3.isPrimary) && cancelDrag(t3);
-          stopEvent(t3);
-        }, r2);
-      }
-      const pointerUpCallback = (t3) => {
-        this.#Ue && this.#Ue !== t3.pointerId ? stopEvent(t3) : cancelDrag(t3);
-      };
-      window.addEventListener("pointerup", pointerUpCallback, { signal: s2 });
-      window.addEventListener("blur", pointerUpCallback, { signal: s2 });
     }
     _onStartDragging() {
     }
     _onStopDragging() {
     }
     moveInDOM() {
-      this.#Qe && clearTimeout(this.#Qe);
-      this.#Qe = setTimeout(() => {
-        this.#Qe = null;
+      __privateGet(this, _Qe) && clearTimeout(__privateGet(this, _Qe));
+      __privateSet(this, _Qe, setTimeout(() => {
+        __privateSet(this, _Qe, null);
         this.parent?.moveEditorInDOM(this);
-      }, 0);
+      }, 0));
     }
     _setParentAndPosition(t2, e2, i2) {
       t2.changeParent(this);
@@ -9524,7 +9693,7 @@
       return this.color && _AnnotationEditor._colorManager.convert(this._uiManager.getNonHCMColor(this.color));
     }
     onUpdatedColor() {
-      this.#c?.onUpdatedColor();
+      __privateGet(this, _c2)?.onUpdatedColor();
     }
     getData() {
       const { comment: { text: t2, color: e2, date: i2, opacity: n2, deleted: s2, richText: r2 }, uid: a2, pageIndex: o2, creationDate: l2, modificationDate: h2 } = this;
@@ -9538,20 +9707,20 @@
     enableEditMode() {
       if (this.isInEditMode()) return false;
       this.parent.setEditingState(false);
-      this.#Ye = true;
+      __privateSet(this, _Ye, true);
       return true;
     }
     disableEditMode() {
       if (!this.isInEditMode()) return false;
       this.parent.setEditingState(true);
-      this.#Ye = false;
+      __privateSet(this, _Ye, false);
       return true;
     }
     isInEditMode() {
-      return this.#Ye;
+      return __privateGet(this, _Ye);
     }
     shouldGetKeyboardEvents() {
-      return this.#Je;
+      return __privateGet(this, _Je);
     }
     needsToBeRebuilt() {
       return this.div && !this.isAttachedToDOM;
@@ -9560,15 +9729,8 @@
       const { top: t2, left: e2, bottom: i2, right: n2 } = this.getClientDimensions(), { innerHeight: s2, innerWidth: r2 } = window;
       return e2 < r2 && n2 > 0 && t2 < s2 && i2 > 0;
     }
-    #gi() {
-      if (this.#Ve || !this.div) return;
-      this.#Ve = new AbortController();
-      const t2 = this._uiManager.combinedSignal(this.#Ve);
-      this.div.addEventListener("focusin", this.focusin.bind(this), { signal: t2 });
-      this.div.addEventListener("focusout", this.focusout.bind(this), { signal: t2 });
-    }
     rebuild() {
-      this.#gi();
+      __privateMethod(this, _AnnotationEditor_instances, gi_fn).call(this);
     }
     rotate(t2) {
     }
@@ -9583,7 +9745,7 @@
     static async deserialize(t2, e2, i2) {
       const n2 = new this.prototype.constructor({ parent: e2, id: i2.getId(), uiManager: i2, annotationElementId: t2.annotationElementId, creationDate: t2.creationDate, modificationDate: t2.modificationDate });
       n2.rotation = t2.rotation;
-      n2.#Be = t2.accessibilityData;
+      __privateSet(n2, _Be, t2.accessibilityData);
       n2._isCopy = t2.isCopy || false;
       const [s2, r2] = n2.pageDimensions, [a2, o2, l2, h2] = n2.getRectInCurrentCoords(t2.rect, r2);
       n2.x = a2 / s2;
@@ -9596,34 +9758,34 @@
       return !!this.annotationElementId && (this.deleted || null !== this.serialize());
     }
     remove() {
-      this.#Ve?.abort();
-      this.#Ve = null;
+      __privateGet(this, _Ve)?.abort();
+      __privateSet(this, _Ve, null);
       this.isEmpty() || this.commit();
       this.parent ? this.parent.remove(this) : this._uiManager.removeEditor(this);
       this.hideCommentPopup();
-      if (this.#Qe) {
-        clearTimeout(this.#Qe);
-        this.#Qe = null;
+      if (__privateGet(this, _Qe)) {
+        clearTimeout(__privateGet(this, _Qe));
+        __privateSet(this, _Qe, null);
       }
-      this.#ri();
+      __privateMethod(this, _AnnotationEditor_instances, ri_fn).call(this);
       this.removeEditToolbar();
-      if (this.#ei) {
-        for (const t2 of this.#ei.values()) clearTimeout(t2);
-        this.#ei = null;
+      if (__privateGet(this, _ei)) {
+        for (const t2 of __privateGet(this, _ei).values()) clearTimeout(t2);
+        __privateSet(this, _ei, null);
       }
       this.parent = null;
-      this.#ii?.destroy();
-      this.#ii = null;
-      this.#We?.remove();
-      this.#We = null;
+      __privateGet(this, _ii)?.destroy();
+      __privateSet(this, _ii, null);
+      __privateGet(this, _We)?.remove();
+      __privateSet(this, _We, null);
     }
     get isResizable() {
       return false;
     }
     makeResizable() {
       if (this.isResizable) {
-        this.#hi();
-        this.#ze.classList.remove("hidden");
+        __privateMethod(this, _AnnotationEditor_instances, hi_fn).call(this);
+        __privateGet(this, _ze).classList.remove("hidden");
       }
     }
     get toolbarPosition() {
@@ -9640,84 +9802,67 @@
       return this._uiManager.makeCommentColor(this.getNonHCMColor(), this.opacity);
     }
     get commentPopupPosition() {
-      return this.#c.commentPopupPositionInLayer;
+      return __privateGet(this, _c2).commentPopupPositionInLayer;
     }
     set commentPopupPosition(t2) {
-      this.#c.commentPopupPositionInLayer = t2;
+      __privateGet(this, _c2).commentPopupPositionInLayer = t2;
     }
     hasDefaultPopupPosition() {
-      return this.#c.hasDefaultPopupPosition();
+      return __privateGet(this, _c2).hasDefaultPopupPosition();
     }
     get commentButtonWidth() {
-      return this.#c.commentButtonWidth;
+      return __privateGet(this, _c2).commentButtonWidth;
     }
     get elementBeforePopup() {
       return this.div;
     }
     setCommentButtonStates(t2) {
-      this.#c?.setCommentButtonStates(t2);
+      __privateGet(this, _c2)?.setCommentButtonStates(t2);
     }
     keydown(t2) {
       if (!this.isResizable || t2.target !== this.div || "Enter" !== t2.key) return;
       this._uiManager.setSelected(this);
-      this.#je = { savedX: this.x, savedY: this.y, savedWidth: this.width, savedHeight: this.height };
-      const e2 = this.#ze.children;
-      if (!this.#Le) {
-        this.#Le = Array.from(e2);
-        const t3 = this.#wi.bind(this), i3 = this.#xi.bind(this), n3 = this._uiManager._signal;
-        for (const e3 of this.#Le) {
+      __privateSet(this, _je, { savedX: this.x, savedY: this.y, savedWidth: this.width, savedHeight: this.height });
+      const e2 = __privateGet(this, _ze).children;
+      if (!__privateGet(this, _Le)) {
+        __privateSet(this, _Le, Array.from(e2));
+        const t3 = __privateMethod(this, _AnnotationEditor_instances, wi_fn).bind(this), i3 = __privateMethod(this, _AnnotationEditor_instances, xi_fn).bind(this), n3 = this._uiManager._signal;
+        for (const e3 of __privateGet(this, _Le)) {
           const s3 = e3.getAttribute("data-resizer-name");
           e3.setAttribute("role", "spinbutton");
           e3.addEventListener("keydown", t3, { signal: n3 });
           e3.addEventListener("blur", i3, { signal: n3 });
-          e3.addEventListener("focus", this.#Ai.bind(this, s3), { signal: n3 });
+          e3.addEventListener("focus", __privateMethod(this, _AnnotationEditor_instances, Ai_fn).bind(this, s3), { signal: n3 });
           e3.setAttribute("data-l10n-id", _AnnotationEditor._l10nResizer[s3]);
         }
       }
-      const i2 = this.#Le[0];
+      const i2 = __privateGet(this, _Le)[0];
       let n2 = 0;
       for (const t3 of e2) {
         if (t3 === i2) break;
         n2++;
       }
-      const s2 = (360 - this.rotation + this.parentRotation) % 360 / 90 * (this.#Le.length / 4);
+      const s2 = (360 - this.rotation + this.parentRotation) % 360 / 90 * (__privateGet(this, _Le).length / 4);
       if (s2 !== n2) {
-        if (s2 < n2) for (let t4 = 0; t4 < n2 - s2; t4++) this.#ze.append(this.#ze.firstElementChild);
-        else if (s2 > n2) for (let t4 = 0; t4 < s2 - n2; t4++) this.#ze.firstElementChild.before(this.#ze.lastElementChild);
+        if (s2 < n2) for (let t4 = 0; t4 < n2 - s2; t4++) __privateGet(this, _ze).append(__privateGet(this, _ze).firstElementChild);
+        else if (s2 > n2) for (let t4 = 0; t4 < s2 - n2; t4++) __privateGet(this, _ze).firstElementChild.before(__privateGet(this, _ze).lastElementChild);
         let t3 = 0;
         for (const i3 of e2) {
-          const e3 = this.#Le[t3++].getAttribute("data-resizer-name");
+          const e3 = __privateGet(this, _Le)[t3++].getAttribute("data-resizer-name");
           i3.setAttribute("data-l10n-id", _AnnotationEditor._l10nResizer[e3]);
         }
       }
-      this.#Ei(0);
-      this.#Je = true;
-      this.#ze.firstElementChild.focus({ focusVisible: true });
+      __privateMethod(this, _AnnotationEditor_instances, Ei_fn).call(this, 0);
+      __privateSet(this, _Je, true);
+      __privateGet(this, _ze).firstElementChild.focus({ focusVisible: true });
       t2.preventDefault();
       t2.stopImmediatePropagation();
     }
-    #wi(t2) {
-      _AnnotationEditor._resizerKeyboardManager.exec(this, t2);
-    }
-    #xi(t2) {
-      this.#Je && t2.relatedTarget?.parentNode !== this.#ze && this.#ri();
-    }
-    #Ai(t2) {
-      this.#$e = this.#Je ? t2 : "";
-    }
-    #Ei(t2) {
-      if (this.#Le) for (const e2 of this.#Le) e2.tabIndex = t2;
-    }
     _resizeWithKeyboard(t2, e2) {
-      this.#Je && this.#di(this.#$e, { deltaX: t2, deltaY: e2, fromKeyboard: true });
-    }
-    #ri() {
-      this.#Je = false;
-      this.#Ei(-1);
-      this.#ui();
+      __privateGet(this, _Je) && __privateMethod(this, _AnnotationEditor_instances, di_fn).call(this, __privateGet(this, _$e), { deltaX: t2, deltaY: e2, fromKeyboard: true });
     }
     _stopResizingWithKeyboard() {
-      this.#ri();
+      __privateMethod(this, _AnnotationEditor_instances, ri_fn).call(this);
       this.div.focus();
     }
     select() {
@@ -9728,7 +9873,7 @@
         this.div?.classList.add("selectedEditor");
         if (this._editToolbar) {
           this._editToolbar?.show();
-          this.#h?.toggleAltTextBadge(false);
+          __privateGet(this, _h3)?.toggleAltTextBadge(false);
         } else this.addEditToolbar().then(() => {
           this.div?.classList.contains("selectedEditor") && this._editToolbar?.show();
         });
@@ -9740,11 +9885,11 @@
     unselect() {
       if (this.isSelected) {
         this.isSelected = false;
-        this.#ze?.classList.add("hidden");
+        __privateGet(this, _ze)?.classList.add("hidden");
         this.div?.classList.remove("selectedEditor");
         this.div?.contains(document.activeElement) && this._uiManager.currentLayer.div.focus({ preventScroll: true });
         this._editToolbar?.hide();
-        this.#h?.toggleAltTextBadge(true);
+        __privateGet(this, _h3)?.toggleAltTextBadge(true);
         this.hideCommentPopup();
       }
     }
@@ -9779,10 +9924,10 @@
       return this.div;
     }
     get isEditing() {
-      return this.#Xe;
+      return __privateGet(this, _Xe);
     }
     set isEditing(t2) {
-      this.#Xe = t2;
+      __privateSet(this, _Xe, t2);
       if (this.parent) if (t2) {
         this.parent.setSelected(this);
         this.parent.setActiveEditor(this);
@@ -9802,19 +9947,19 @@
     }
     _reportTelemetry(t2, e2 = false) {
       if (e2) {
-        this.#ei ||= /* @__PURE__ */ new Map();
+        __privateGet(this, _ei) || __privateSet(this, _ei, /* @__PURE__ */ new Map());
         const { action: e3 } = t2;
-        let i2 = this.#ei.get(e3);
+        let i2 = __privateGet(this, _ei).get(e3);
         i2 && clearTimeout(i2);
         i2 = setTimeout(() => {
           this._reportTelemetry(t2);
-          this.#ei.delete(e3);
-          0 === this.#ei.size && (this.#ei = null);
+          __privateGet(this, _ei).delete(e3);
+          0 === __privateGet(this, _ei).size && __privateSet(this, _ei, null);
         }, _AnnotationEditor._telemetryTimeout);
-        this.#ei.set(e3, i2);
+        __privateGet(this, _ei).set(e3, i2);
         return;
       }
-      t2.type ||= this.editorType;
+      t2.type || (t2.type = this.editorType);
       this._uiManager._eventBus.dispatch("reporttelemetry", { source: this, details: { type: "editing", data: t2 } });
     }
     show(t2 = this._isVisible) {
@@ -9823,18 +9968,18 @@
     }
     enable() {
       this.div && (this.div.tabIndex = 0);
-      this.#Ne = false;
+      __privateSet(this, _Ne, false);
     }
     disable() {
       this.div && (this.div.tabIndex = -1);
-      this.#Ne = true;
+      __privateSet(this, _Ne, true);
     }
     updateFakeAnnotationElement(t2) {
-      if (this.#We || this.deleted) if (this.deleted) {
-        this.#We.remove();
-        this.#We = null;
-      } else (this.hasEditedComment || this._hasBeenMoved || this._hasBeenResized) && this.#We.updateEdited({ rect: this.getPDFRect(), popup: this.comment });
-      else this.#We = t2.addFakeAnnotation(this);
+      if (__privateGet(this, _We) || this.deleted) if (this.deleted) {
+        __privateGet(this, _We).remove();
+        __privateSet(this, _We, null);
+      } else (this.hasEditedComment || this._hasBeenMoved || this._hasBeenResized) && __privateGet(this, _We).updateEdited({ rect: this.getPDFRect(), popup: this.comment });
+      else __privateSet(this, _We, t2.addFakeAnnotation(this));
     }
     renderAnnotationElement(t2) {
       if (this.deleted) {
@@ -9861,6 +10006,308 @@
       "DIV" === e2?.nodeName && e2.classList.contains("annotationContent") && e2.remove();
     }
   };
+  _Be = new WeakMap();
+  _Le = new WeakMap();
+  _h3 = new WeakMap();
+  _c2 = new WeakMap();
+  _pe2 = new WeakMap();
+  _Ne = new WeakMap();
+  _Ue = new WeakMap();
+  _He = new WeakMap();
+  _ze = new WeakMap();
+  _Ge = new WeakMap();
+  _je = new WeakMap();
+  _We = new WeakMap();
+  _Ve = new WeakMap();
+  _$e = new WeakMap();
+  _qe = new WeakMap();
+  _Ke = new WeakMap();
+  _Xe = new WeakMap();
+  _Ye = new WeakMap();
+  _Je = new WeakMap();
+  _Qe = new WeakMap();
+  _Ze = new WeakMap();
+  _ti = new WeakMap();
+  _ei = new WeakMap();
+  _ii = new WeakMap();
+  _ni = new WeakMap();
+  _si = new WeakMap();
+  _AnnotationEditor_instances = new WeakSet();
+  ai_fn = function([t2, e2], i2, n2) {
+    [i2, n2] = this.screenToPageTranslation(i2, n2);
+    this.x += i2 / t2;
+    this.y += n2 / e2;
+    this._onTranslating(this.x, this.y);
+    this.fixAndSetPosition();
+  };
+  _AnnotationEditor_static = new WeakSet();
+  oi_fn = function(t2, e2, i2) {
+    switch (i2) {
+      case 90:
+        return [e2, -t2];
+      case 180:
+        return [-t2, -e2];
+      case 270:
+        return [-e2, t2];
+      default:
+        return [t2, e2];
+    }
+  };
+  li_fn = function(t2) {
+    switch (t2) {
+      case 90: {
+        const [t3, e2] = this.pageDimensions;
+        return [0, -t3 / e2, e2 / t3, 0];
+      }
+      case 180:
+        return [-1, 0, 0, -1];
+      case 270: {
+        const [t3, e2] = this.pageDimensions;
+        return [0, t3 / e2, -e2 / t3, 0];
+      }
+      default:
+        return [1, 0, 0, 1];
+    }
+  };
+  hi_fn = function() {
+    if (__privateGet(this, _ze)) return;
+    __privateSet(this, _ze, document.createElement("div"));
+    __privateGet(this, _ze).classList.add("resizers");
+    const t2 = this._willKeepAspectRatio ? ["topLeft", "topRight", "bottomRight", "bottomLeft"] : ["topLeft", "topMiddle", "topRight", "middleRight", "bottomRight", "bottomMiddle", "bottomLeft", "middleLeft"], e2 = this._uiManager._signal;
+    for (const i2 of t2) {
+      const t3 = document.createElement("div");
+      __privateGet(this, _ze).append(t3);
+      t3.classList.add("resizer", i2);
+      t3.setAttribute("data-resizer-name", i2);
+      t3.addEventListener("pointerdown", __privateMethod(this, _AnnotationEditor_instances, ci_fn).bind(this, i2), { signal: e2 });
+      t3.addEventListener("contextmenu", noContextMenu, { signal: e2 });
+      t3.tabIndex = -1;
+    }
+    this.div.prepend(__privateGet(this, _ze));
+  };
+  ci_fn = function(t2, e2) {
+    e2.preventDefault();
+    const { isMac: i2 } = FeatureTest.platform;
+    if (0 !== e2.button || e2.ctrlKey && i2) return;
+    __privateGet(this, _h3)?.toggle(false);
+    const n2 = this._isDraggable;
+    this._isDraggable = false;
+    __privateSet(this, _Ge, [e2.screenX, e2.screenY]);
+    const s2 = new AbortController(), r2 = this._uiManager.combinedSignal(s2);
+    this.parent.togglePointerEvents(false);
+    window.addEventListener("pointermove", __privateMethod(this, _AnnotationEditor_instances, di_fn).bind(this, t2), { passive: true, capture: true, signal: r2 });
+    window.addEventListener("touchmove", stopEvent, { passive: false, signal: r2 });
+    window.addEventListener("contextmenu", noContextMenu, { signal: r2 });
+    __privateSet(this, _je, { savedX: this.x, savedY: this.y, savedWidth: this.width, savedHeight: this.height });
+    const a2 = this.parent.div.style.cursor, o2 = this.div.style.cursor;
+    this.div.style.cursor = this.parent.div.style.cursor = window.getComputedStyle(e2.target).cursor;
+    const pointerUpCallback = () => {
+      s2.abort();
+      this.parent.togglePointerEvents(true);
+      __privateGet(this, _h3)?.toggle(true);
+      this._isDraggable = n2;
+      this.parent.div.style.cursor = a2;
+      this.div.style.cursor = o2;
+      __privateMethod(this, _AnnotationEditor_instances, ui_fn).call(this);
+    };
+    window.addEventListener("pointerup", pointerUpCallback, { signal: r2 });
+    window.addEventListener("blur", pointerUpCallback, { signal: r2 });
+  };
+  pi_fn = function(t2, e2, i2, n2) {
+    this.width = i2;
+    this.height = n2;
+    this.x = t2;
+    this.y = e2;
+    this.setDims();
+    this.fixAndSetPosition();
+    this._onResized();
+  };
+  ui_fn = function() {
+    if (!__privateGet(this, _je)) return;
+    const { savedX: t2, savedY: e2, savedWidth: i2, savedHeight: n2 } = __privateGet(this, _je);
+    __privateSet(this, _je, null);
+    const s2 = this.x, r2 = this.y, a2 = this.width, o2 = this.height;
+    s2 === t2 && r2 === e2 && a2 === i2 && o2 === n2 || this.addCommands({ cmd: __privateMethod(this, _AnnotationEditor_instances, pi_fn).bind(this, s2, r2, a2, o2), undo: __privateMethod(this, _AnnotationEditor_instances, pi_fn).bind(this, t2, e2, i2, n2), mustExec: true });
+  };
+  di_fn = function(t2, e2) {
+    const [i2, n2] = this.parentDimensions, s2 = this.x, r2 = this.y, a2 = this.width, o2 = this.height, l2 = _AnnotationEditor.MIN_SIZE / i2, h2 = _AnnotationEditor.MIN_SIZE / n2, c2 = __privateMethod(this, _AnnotationEditor_instances, li_fn).call(this, this.rotation), transf = (t3, e3) => [c2[0] * t3 + c2[2] * e3, c2[1] * t3 + c2[3] * e3], d2 = __privateMethod(this, _AnnotationEditor_instances, li_fn).call(this, 360 - this.rotation);
+    let u2, p2, g2 = false, m2 = false;
+    switch (t2) {
+      case "topLeft":
+        g2 = true;
+        u2 = (t3, e3) => [0, 0];
+        p2 = (t3, e3) => [t3, e3];
+        break;
+      case "topMiddle":
+        u2 = (t3, e3) => [t3 / 2, 0];
+        p2 = (t3, e3) => [t3 / 2, e3];
+        break;
+      case "topRight":
+        g2 = true;
+        u2 = (t3, e3) => [t3, 0];
+        p2 = (t3, e3) => [0, e3];
+        break;
+      case "middleRight":
+        m2 = true;
+        u2 = (t3, e3) => [t3, e3 / 2];
+        p2 = (t3, e3) => [0, e3 / 2];
+        break;
+      case "bottomRight":
+        g2 = true;
+        u2 = (t3, e3) => [t3, e3];
+        p2 = (t3, e3) => [0, 0];
+        break;
+      case "bottomMiddle":
+        u2 = (t3, e3) => [t3 / 2, e3];
+        p2 = (t3, e3) => [t3 / 2, 0];
+        break;
+      case "bottomLeft":
+        g2 = true;
+        u2 = (t3, e3) => [0, e3];
+        p2 = (t3, e3) => [t3, 0];
+        break;
+      case "middleLeft":
+        m2 = true;
+        u2 = (t3, e3) => [0, e3 / 2];
+        p2 = (t3, e3) => [t3, e3 / 2];
+    }
+    const f2 = u2(a2, o2), b2 = p2(a2, o2);
+    let y2 = transf(...b2);
+    const v2 = _AnnotationEditor._round(s2 + y2[0]), w2 = _AnnotationEditor._round(r2 + y2[1]);
+    let x2, A2, E2 = 1, C2 = 1;
+    if (e2.fromKeyboard) ({ deltaX: x2, deltaY: A2 } = e2);
+    else {
+      const { screenX: t3, screenY: i3 } = e2, [n3, s3] = __privateGet(this, _Ge);
+      [x2, A2] = this.screenToPageTranslation(t3 - n3, i3 - s3);
+      __privateGet(this, _Ge)[0] = t3;
+      __privateGet(this, _Ge)[1] = i3;
+    }
+    [x2, A2] = (S2 = x2 / i2, T2 = A2 / n2, [d2[0] * S2 + d2[2] * T2, d2[1] * S2 + d2[3] * T2]);
+    var S2, T2;
+    if (g2) {
+      const t3 = Math.hypot(a2, o2);
+      E2 = C2 = Math.max(Math.min(Math.hypot(b2[0] - f2[0] - x2, b2[1] - f2[1] - A2) / t3, 1 / a2, 1 / o2), l2 / a2, h2 / o2);
+    } else m2 ? E2 = MathClamp(Math.abs(b2[0] - f2[0] - x2), l2, 1) / a2 : C2 = MathClamp(Math.abs(b2[1] - f2[1] - A2), h2, 1) / o2;
+    const _2 = _AnnotationEditor._round(a2 * E2), k2 = _AnnotationEditor._round(o2 * C2);
+    y2 = transf(...p2(_2, k2));
+    const D2 = v2 - y2[0], M2 = w2 - y2[1];
+    __privateGet(this, _Ke) || __privateSet(this, _Ke, [this.x, this.y, this.width, this.height]);
+    this.width = _2;
+    this.height = k2;
+    this.x = D2;
+    this.y = M2;
+    this.setDims();
+    this.fixAndSetPosition();
+    this._onResizing();
+  };
+  mi_fn = function() {
+    __privateSet(this, _je, { savedX: this.x, savedY: this.y, savedWidth: this.width, savedHeight: this.height });
+    __privateGet(this, _h3)?.toggle(false);
+    this.parent.togglePointerEvents(false);
+  };
+  fi_fn = function(t2, e2, i2) {
+    let n2 = i2 / e2 * 0.7 + 1 - 0.7;
+    if (1 === n2) return;
+    const s2 = __privateMethod(this, _AnnotationEditor_instances, li_fn).call(this, this.rotation), transf = (t3, e3) => [s2[0] * t3 + s2[2] * e3, s2[1] * t3 + s2[3] * e3], [r2, a2] = this.parentDimensions, o2 = this.x, l2 = this.y, h2 = this.width, c2 = this.height, d2 = _AnnotationEditor.MIN_SIZE / r2, u2 = _AnnotationEditor.MIN_SIZE / a2;
+    n2 = Math.max(Math.min(n2, 1 / h2, 1 / c2), d2 / h2, u2 / c2);
+    const p2 = _AnnotationEditor._round(h2 * n2), g2 = _AnnotationEditor._round(c2 * n2);
+    if (p2 === h2 && g2 === c2) return;
+    __privateGet(this, _Ke) || __privateSet(this, _Ke, [o2, l2, h2, c2]);
+    const m2 = transf(h2 / 2, c2 / 2), f2 = _AnnotationEditor._round(o2 + m2[0]), b2 = _AnnotationEditor._round(l2 + m2[1]), y2 = transf(p2 / 2, g2 / 2);
+    this.x = f2 - y2[0];
+    this.y = b2 - y2[1];
+    this.width = p2;
+    this.height = g2;
+    this.setDims();
+    this.fixAndSetPosition();
+    this._onResizing();
+  };
+  bi_fn = function() {
+    __privateGet(this, _h3)?.toggle(true);
+    this.parent.togglePointerEvents(true);
+    __privateMethod(this, _AnnotationEditor_instances, ui_fn).call(this);
+  };
+  vi_fn = function(t2) {
+    const { isMac: e2 } = FeatureTest.platform;
+    t2.ctrlKey && !e2 || t2.shiftKey || t2.metaKey && e2 ? this.parent.toggleSelected(this) : this.parent.setSelected(this);
+  };
+  yi_fn = function(t2) {
+    const { isSelected: e2 } = this;
+    this._uiManager.setUpDragSession();
+    let i2 = false;
+    const n2 = new AbortController(), s2 = this._uiManager.combinedSignal(n2), r2 = { capture: true, passive: false, signal: s2 }, cancelDrag = (t3) => {
+      n2.abort();
+      __privateSet(this, _Ue, null);
+      __privateSet(this, _qe, false);
+      this._uiManager.endDragSession() || __privateMethod(this, _AnnotationEditor_instances, vi_fn).call(this, t3);
+      i2 && this._onStopDragging();
+    };
+    if (e2) {
+      __privateSet(this, _Ze, t2.clientX);
+      __privateSet(this, _ti, t2.clientY);
+      __privateSet(this, _Ue, t2.pointerId);
+      __privateSet(this, _He, t2.pointerType);
+      window.addEventListener("pointermove", (t3) => {
+        if (!i2) {
+          i2 = true;
+          this._uiManager.toggleComment(this, true, false);
+          this._onStartDragging();
+        }
+        const { clientX: e3, clientY: n3, pointerId: s3 } = t3;
+        if (s3 !== __privateGet(this, _Ue)) {
+          stopEvent(t3);
+          return;
+        }
+        const [r3, a2] = this.screenToPageTranslation(e3 - __privateGet(this, _Ze), n3 - __privateGet(this, _ti));
+        __privateSet(this, _Ze, e3);
+        __privateSet(this, _ti, n3);
+        this._uiManager.dragSelectedEditors(r3, a2);
+      }, r2);
+      window.addEventListener("touchmove", stopEvent, r2);
+      window.addEventListener("pointerdown", (t3) => {
+        t3.pointerType === __privateGet(this, _He) && (__privateGet(this, _ii) || t3.isPrimary) && cancelDrag(t3);
+        stopEvent(t3);
+      }, r2);
+    }
+    const pointerUpCallback = (t3) => {
+      __privateGet(this, _Ue) && __privateGet(this, _Ue) !== t3.pointerId ? stopEvent(t3) : cancelDrag(t3);
+    };
+    window.addEventListener("pointerup", pointerUpCallback, { signal: s2 });
+    window.addEventListener("blur", pointerUpCallback, { signal: s2 });
+  };
+  gi_fn = function() {
+    if (__privateGet(this, _Ve) || !this.div) return;
+    __privateSet(this, _Ve, new AbortController());
+    const t2 = this._uiManager.combinedSignal(__privateGet(this, _Ve));
+    this.div.addEventListener("focusin", this.focusin.bind(this), { signal: t2 });
+    this.div.addEventListener("focusout", this.focusout.bind(this), { signal: t2 });
+  };
+  wi_fn = function(t2) {
+    _AnnotationEditor._resizerKeyboardManager.exec(this, t2);
+  };
+  xi_fn = function(t2) {
+    __privateGet(this, _Je) && t2.relatedTarget?.parentNode !== __privateGet(this, _ze) && __privateMethod(this, _AnnotationEditor_instances, ri_fn).call(this);
+  };
+  Ai_fn = function(t2) {
+    __privateSet(this, _$e, __privateGet(this, _Je) ? t2 : "");
+  };
+  Ei_fn = function(t2) {
+    if (__privateGet(this, _Le)) for (const e2 of __privateGet(this, _Le)) e2.tabIndex = t2;
+  };
+  ri_fn = function() {
+    __privateSet(this, _Je, false);
+    __privateMethod(this, _AnnotationEditor_instances, Ei_fn).call(this, -1);
+    __privateMethod(this, _AnnotationEditor_instances, ui_fn).call(this);
+  };
+  __privateAdd(_AnnotationEditor, _AnnotationEditor_static);
+  __publicField(_AnnotationEditor, "_l10n", null);
+  __publicField(_AnnotationEditor, "_l10nAlert", null);
+  __publicField(_AnnotationEditor, "_l10nResizer", null);
+  __publicField(_AnnotationEditor, "_borderLineWidth", -1);
+  __publicField(_AnnotationEditor, "_colorManager", new ColorManager());
+  __publicField(_AnnotationEditor, "_zIndex", 1);
+  __publicField(_AnnotationEditor, "_telemetryTimeout", 1e3);
+  var AnnotationEditor = _AnnotationEditor;
   var FakeEditor = class extends AnnotationEditor {
     constructor(t2) {
       super(t2);
@@ -9946,32 +10393,36 @@
     }
   };
   var et = Object.freeze({ map: null, hash: "", transfer: void 0 });
+  var _Ci, _Si, _Ti, __i, _AnnotationStorage_instances, ki_fn;
   var AnnotationStorage = class {
-    #Ci = false;
-    #Si = null;
-    #Ti = null;
-    #_i = /* @__PURE__ */ new Map();
-    onSetModified = null;
-    onResetModified = null;
-    onAnnotationEditor = null;
+    constructor() {
+      __privateAdd(this, _AnnotationStorage_instances);
+      __privateAdd(this, _Ci, false);
+      __privateAdd(this, _Si, null);
+      __privateAdd(this, _Ti, null);
+      __privateAdd(this, __i, /* @__PURE__ */ new Map());
+      __publicField(this, "onSetModified", null);
+      __publicField(this, "onResetModified", null);
+      __publicField(this, "onAnnotationEditor", null);
+    }
     getValue(t2, e2) {
-      const i2 = this.#_i.get(t2);
+      const i2 = __privateGet(this, __i).get(t2);
       return void 0 === i2 ? e2 : Object.assign(e2, i2);
     }
     getRawValue(t2) {
-      return this.#_i.get(t2);
+      return __privateGet(this, __i).get(t2);
     }
     remove(t2) {
-      const e2 = this.#_i.get(t2);
+      const e2 = __privateGet(this, __i).get(t2);
       if (void 0 !== e2) {
-        e2 instanceof AnnotationEditor && this.#Ti.delete(e2.annotationElementId);
-        this.#_i.delete(t2);
-        0 === this.#_i.size && this.resetModified();
-        this.#_i.values().some((t3) => t3 instanceof AnnotationEditor) || this.onAnnotationEditor?.(null);
+        e2 instanceof AnnotationEditor && __privateGet(this, _Ti).delete(e2.annotationElementId);
+        __privateGet(this, __i).delete(t2);
+        0 === __privateGet(this, __i).size && this.resetModified();
+        __privateGet(this, __i).values().some((t3) => t3 instanceof AnnotationEditor) || this.onAnnotationEditor?.(null);
       }
     }
     setValue(t2, e2) {
-      const i2 = this.#_i.get(t2);
+      const i2 = __privateGet(this, __i).get(t2);
       let n2 = false;
       if (void 0 !== i2) {
         for (const [t3, s2] of Object.entries(e2)) if (i2[t3] !== s2) {
@@ -9980,29 +10431,23 @@
         }
       } else {
         n2 = true;
-        this.#_i.set(t2, e2);
+        __privateGet(this, __i).set(t2, e2);
       }
-      n2 && this.#ki();
+      n2 && __privateMethod(this, _AnnotationStorage_instances, ki_fn).call(this);
       if (e2 instanceof AnnotationEditor) {
-        (this.#Ti ||= /* @__PURE__ */ new Map()).set(e2.annotationElementId, e2);
+        (__privateGet(this, _Ti) || __privateSet(this, _Ti, /* @__PURE__ */ new Map())).set(e2.annotationElementId, e2);
         this.onAnnotationEditor?.(e2.constructor._type);
       }
     }
     has(t2) {
-      return this.#_i.has(t2);
+      return __privateGet(this, __i).has(t2);
     }
     get size() {
-      return this.#_i.size;
-    }
-    #ki() {
-      if (!this.#Ci) {
-        this.#Ci = true;
-        this.onSetModified?.();
-      }
+      return __privateGet(this, __i).size;
     }
     resetModified() {
-      if (this.#Ci) {
-        this.#Ci = false;
+      if (__privateGet(this, _Ci)) {
+        __privateSet(this, _Ci, false);
         this.onResetModified?.();
       }
     }
@@ -10010,10 +10455,10 @@
       return new PrintAnnotationStorage(this);
     }
     get serializable() {
-      if (0 === this.#_i.size) return et;
+      if (0 === __privateGet(this, __i).size) return et;
       const t2 = /* @__PURE__ */ new Map(), e2 = new MurmurHash3_64(), i2 = [], n2 = /* @__PURE__ */ Object.create(null);
       let s2 = false;
-      for (const [i3, r2] of this.#_i) {
+      for (const [i3, r2] of __privateGet(this, __i)) {
         const a2 = r2 instanceof AnnotationEditor ? r2.serialize(false, n2) : r2;
         if (r2.page) {
           r2.pageIndex = r2.page._pageIndex;
@@ -10022,7 +10467,7 @@
         if (a2) {
           t2.set(i3, a2);
           e2.update(`${i3}:${JSON.stringify(a2)}`);
-          s2 ||= !!a2.bitmap;
+          s2 || (s2 = !!a2.bitmap);
         }
       }
       if (s2) for (const e3 of t2.values()) e3.bitmap && i2.push(e3.bitmap);
@@ -10032,7 +10477,7 @@
       let t2 = null;
       const e2 = /* @__PURE__ */ new Map();
       let i2 = 0, n2 = 0;
-      for (const s2 of this.#_i.values()) {
+      for (const s2 of __privateGet(this, __i).values()) {
         if (!(s2 instanceof AnnotationEditor)) {
           s2.popup && (s2.popup.deleted ? n2 += 1 : i2 += 1);
           continue;
@@ -10042,8 +10487,8 @@
         if (!r2) continue;
         const { type: a2 } = r2;
         e2.getOrInsertComputed(a2, () => Object.getPrototypeOf(s2).constructor);
-        t2 ||= /* @__PURE__ */ Object.create(null);
-        const o2 = t2[a2] ||= /* @__PURE__ */ new Map();
+        t2 || (t2 = /* @__PURE__ */ Object.create(null));
+        const o2 = t2[a2] || (t2[a2] = /* @__PURE__ */ new Map());
         for (const [t3, e3] of Object.entries(r2)) {
           if ("type" === t3) continue;
           const i3 = o2.getOrInsertComputed(t3, makeMap);
@@ -10051,7 +10496,7 @@
         }
       }
       if (n2 > 0 || i2 > 0) {
-        t2 ||= /* @__PURE__ */ Object.create(null);
+        t2 || (t2 = /* @__PURE__ */ Object.create(null));
         t2.comments = { deleted: n2, edited: i2 };
       }
       if (!t2) return null;
@@ -10059,10 +10504,10 @@
       return t2;
     }
     resetModifiedIds() {
-      this.#Si = null;
+      __privateSet(this, _Si, null);
     }
     updateEditor(t2, e2) {
-      const i2 = this.#Ti?.get(t2);
+      const i2 = __privateGet(this, _Ti)?.get(t2);
       if (i2) {
         i2.updateFromAnnotationLayer(e2);
         return true;
@@ -10070,43 +10515,56 @@
       return false;
     }
     getEditor(t2) {
-      return this.#Ti?.get(t2) || null;
+      return __privateGet(this, _Ti)?.get(t2) || null;
     }
     get modifiedIds() {
-      if (this.#Si) return this.#Si;
+      if (__privateGet(this, _Si)) return __privateGet(this, _Si);
       const t2 = [];
-      if (this.#Ti) for (const e3 of this.#Ti.values()) e3.serialize() && t2.push(e3.annotationElementId);
+      if (__privateGet(this, _Ti)) for (const e3 of __privateGet(this, _Ti).values()) e3.serialize() && t2.push(e3.annotationElementId);
       let e2 = "";
       if (t2.length) {
         const i2 = new MurmurHash3_64();
         i2.update(t2.join(","));
         e2 = i2.hexdigest();
       }
-      return this.#Si = { ids: new Set(t2), hash: e2 };
+      return __privateSet(this, _Si, { ids: new Set(t2), hash: e2 });
     }
     [Symbol.iterator]() {
-      return this.#_i.entries();
+      return __privateGet(this, __i).entries();
     }
   };
+  _Ci = new WeakMap();
+  _Si = new WeakMap();
+  _Ti = new WeakMap();
+  __i = new WeakMap();
+  _AnnotationStorage_instances = new WeakSet();
+  ki_fn = function() {
+    if (!__privateGet(this, _Ci)) {
+      __privateSet(this, _Ci, true);
+      this.onSetModified?.();
+    }
+  };
+  var _Di;
   var PrintAnnotationStorage = class extends AnnotationStorage {
-    #Di = et;
     constructor(t2) {
       super();
+      __privateAdd(this, _Di, et);
       const { serializable: e2 } = t2;
       if (e2 === et) return;
       const { map: i2, hash: n2, transfer: s2 } = e2, r2 = structuredClone(i2, s2 ? { transfer: s2 } : null);
-      this.#Di = { map: r2, hash: n2, transfer: [] };
+      __privateSet(this, _Di, { map: r2, hash: n2, transfer: [] });
     }
     get print() {
       unreachable("Should not call PrintAnnotationStorage.print");
     }
     get serializable() {
-      return this.#Di;
+      return __privateGet(this, _Di);
     }
     get modifiedIds() {
       return shadow(this, "modifiedIds", { ids: /* @__PURE__ */ new Set(), hash: "" });
     }
   };
+  _Di = new WeakMap();
   __webpack_require__(7588);
   var it = "__forcedDependency";
   var { floor: nt, ceil: st } = Math;
@@ -10117,77 +10575,73 @@
     t2[4 * e2 + 3] = Math.max(t2[4 * e2 + 3], r2);
   }
   var rt = new Uint32Array(new Uint8Array([255, 255, 0, 0]).buffer)[0];
+  var _Mi, _Pi;
   var BBoxReader = class {
-    #Mi;
-    #Pi;
     constructor(t2, e2) {
-      this.#Mi = t2;
-      this.#Pi = e2;
+      __privateAdd(this, _Mi);
+      __privateAdd(this, _Pi);
+      __privateSet(this, _Mi, t2);
+      __privateSet(this, _Pi, e2);
     }
     get length() {
-      return this.#Mi.length;
+      return __privateGet(this, _Mi).length;
     }
     isEmpty(t2) {
-      return this.#Mi[t2] === rt;
+      return __privateGet(this, _Mi)[t2] === rt;
     }
     minX(t2) {
-      return this.#Pi[4 * t2 + 0] / 256;
+      return __privateGet(this, _Pi)[4 * t2 + 0] / 256;
     }
     minY(t2) {
-      return this.#Pi[4 * t2 + 1] / 256;
+      return __privateGet(this, _Pi)[4 * t2 + 1] / 256;
     }
     maxX(t2) {
-      return (this.#Pi[4 * t2 + 2] + 1) / 256;
+      return (__privateGet(this, _Pi)[4 * t2 + 2] + 1) / 256;
     }
     maxY(t2) {
-      return (this.#Pi[4 * t2 + 3] + 1) / 256;
+      return (__privateGet(this, _Pi)[4 * t2 + 3] + 1) / 256;
     }
   };
+  _Mi = new WeakMap();
+  _Pi = new WeakMap();
   var ensureDebugMetadata = (t2, e2) => t2?.getOrInsertComputed(e2, () => ({ dependencies: /* @__PURE__ */ new Set(), isRenderingOperation: false }));
+  var _Ii, _Fi, _Oi, _Ri, _Bi, _Li, _Mi2, _CanvasBBoxTracker_instances, Ni_fn;
   var CanvasBBoxTracker = class {
-    #Ii = [[1, 0, 0, 1, 0, 0]];
-    #Fi = [-1 / 0, -1 / 0, 1 / 0, 1 / 0];
-    #Oi = new Float64Array(n);
-    _pendingBBoxIdx = -1;
-    #Ri;
-    #Bi;
-    #Li;
-    #Mi;
-    _savesStack = [];
-    _markedContentStack = [];
     constructor(t2, e2) {
-      this.#Ri = t2.width;
-      this.#Bi = t2.height;
-      this.#Ni(e2);
+      __privateAdd(this, _CanvasBBoxTracker_instances);
+      __privateAdd(this, _Ii, [[1, 0, 0, 1, 0, 0]]);
+      __privateAdd(this, _Fi, [-1 / 0, -1 / 0, 1 / 0, 1 / 0]);
+      __privateAdd(this, _Oi, new Float64Array(n));
+      __publicField(this, "_pendingBBoxIdx", -1);
+      __privateAdd(this, _Ri);
+      __privateAdd(this, _Bi);
+      __privateAdd(this, _Li);
+      __privateAdd(this, _Mi2);
+      __publicField(this, "_savesStack", []);
+      __publicField(this, "_markedContentStack", []);
+      __privateSet(this, _Ri, t2.width);
+      __privateSet(this, _Bi, t2.height);
+      __privateMethod(this, _CanvasBBoxTracker_instances, Ni_fn).call(this, e2);
     }
     growOperationsCount(t2) {
-      t2 >= this.#Mi.length && this.#Ni(t2, this.#Mi);
-    }
-    #Ni(t2, e2) {
-      const i2 = new ArrayBuffer(4 * t2);
-      this.#Li = new Uint8ClampedArray(i2);
-      this.#Mi = new Uint32Array(i2);
-      if (e2 && e2.length > 0) {
-        this.#Mi.set(e2);
-        this.#Mi.fill(rt, e2.length);
-      } else this.#Mi.fill(rt);
+      t2 >= __privateGet(this, _Mi2).length && __privateMethod(this, _CanvasBBoxTracker_instances, Ni_fn).call(this, t2, __privateGet(this, _Mi2));
     }
     get clipBox() {
-      return this.#Fi;
+      return __privateGet(this, _Fi);
     }
     save(t2) {
-      this.#Fi = { __proto__: this.#Fi };
+      __privateSet(this, _Fi, { __proto__: __privateGet(this, _Fi) });
       this._savesStack.push(t2);
       return this;
     }
     restore(t2, e2) {
-      const i2 = Object.getPrototypeOf(this.#Fi);
+      const i2 = Object.getPrototypeOf(__privateGet(this, _Fi));
       if (null === i2) return this;
-      this.#Fi = i2;
+      __privateSet(this, _Fi, i2);
       const n2 = this._savesStack.pop();
       if (void 0 !== n2) {
         e2?.(n2, t2);
-        this.#Mi[t2] = this.#Mi[n2];
+        __privateGet(this, _Mi2)[t2] = __privateGet(this, _Mi2)[n2];
       }
       return this;
     }
@@ -10202,7 +10656,7 @@
       const i2 = this._savesStack.pop();
       if (void 0 !== i2) {
         e2?.(i2, t2);
-        this.#Mi[t2] = this.#Mi[i2];
+        __privateGet(this, _Mi2)[t2] = __privateGet(this, _Mi2)[i2];
       }
       return this;
     }
@@ -10214,83 +10668,83 @@
       const i2 = this._markedContentStack.pop();
       if (void 0 !== i2) {
         e2?.(i2, t2);
-        this.#Mi[t2] = this.#Mi[i2];
+        __privateGet(this, _Mi2)[t2] = __privateGet(this, _Mi2)[i2];
       }
       return this;
     }
     pushBaseTransform(t2) {
-      this.#Ii.push(Util.multiplyByDOMMatrix(this.#Ii.at(-1), t2.getTransform()));
+      __privateGet(this, _Ii).push(Util.multiplyByDOMMatrix(__privateGet(this, _Ii).at(-1), t2.getTransform()));
       return this;
     }
     popBaseTransform() {
-      this.#Ii.length > 1 && this.#Ii.pop();
+      __privateGet(this, _Ii).length > 1 && __privateGet(this, _Ii).pop();
       return this;
     }
     resetBBox(t2) {
       if (this._pendingBBoxIdx !== t2) {
         this._pendingBBoxIdx = t2;
-        this.#Oi.set(n, 0);
+        __privateGet(this, _Oi).set(n, 0);
       }
       return this;
     }
     recordClipBox(t2, e2, i2, s2, r2, a2) {
-      const o2 = Util.multiplyByDOMMatrix(this.#Ii.at(-1), e2.getTransform()), l2 = n.slice();
+      const o2 = Util.multiplyByDOMMatrix(__privateGet(this, _Ii).at(-1), e2.getTransform()), l2 = n.slice();
       Util.axialAlignedBoundingBox([i2, r2, s2, a2], o2, l2);
-      const h2 = Util.intersect(this.#Fi, l2);
+      const h2 = Util.intersect(__privateGet(this, _Fi), l2);
       if (h2) {
-        this.#Fi[0] = h2[0];
-        this.#Fi[1] = h2[1];
-        this.#Fi[2] = h2[2];
-        this.#Fi[3] = h2[3];
+        __privateGet(this, _Fi)[0] = h2[0];
+        __privateGet(this, _Fi)[1] = h2[1];
+        __privateGet(this, _Fi)[2] = h2[2];
+        __privateGet(this, _Fi)[3] = h2[3];
       } else {
-        this.#Fi[0] = this.#Fi[1] = 1 / 0;
-        this.#Fi[2] = this.#Fi[3] = -1 / 0;
+        __privateGet(this, _Fi)[0] = __privateGet(this, _Fi)[1] = 1 / 0;
+        __privateGet(this, _Fi)[2] = __privateGet(this, _Fi)[3] = -1 / 0;
       }
       return this;
     }
     recordBBox(t2, e2, i2, s2, r2, a2) {
-      const o2 = this.#Fi;
+      const o2 = __privateGet(this, _Fi);
       if (o2[0] === 1 / 0) return this;
-      const l2 = Util.multiplyByDOMMatrix(this.#Ii.at(-1), e2.getTransform());
+      const l2 = Util.multiplyByDOMMatrix(__privateGet(this, _Ii).at(-1), e2.getTransform());
       if (o2[0] === -1 / 0) {
-        Util.axialAlignedBoundingBox([i2, r2, s2, a2], l2, this.#Oi);
+        Util.axialAlignedBoundingBox([i2, r2, s2, a2], l2, __privateGet(this, _Oi));
         return this;
       }
       const h2 = n.slice();
       Util.axialAlignedBoundingBox([i2, r2, s2, a2], l2, h2);
-      this.#Oi[0] = MathClamp(h2[0], o2[0], this.#Oi[0]);
-      this.#Oi[1] = MathClamp(h2[1], o2[1], this.#Oi[1]);
-      this.#Oi[2] = MathClamp(h2[2], this.#Oi[2], o2[2]);
-      this.#Oi[3] = MathClamp(h2[3], this.#Oi[3], o2[3]);
+      __privateGet(this, _Oi)[0] = MathClamp(h2[0], o2[0], __privateGet(this, _Oi)[0]);
+      __privateGet(this, _Oi)[1] = MathClamp(h2[1], o2[1], __privateGet(this, _Oi)[1]);
+      __privateGet(this, _Oi)[2] = MathClamp(h2[2], __privateGet(this, _Oi)[2], o2[2]);
+      __privateGet(this, _Oi)[3] = MathClamp(h2[3], __privateGet(this, _Oi)[3], o2[3]);
       return this;
     }
     recordFullPageBBox(t2) {
-      this.#Oi[0] = Math.max(0, this.#Fi[0]);
-      this.#Oi[1] = Math.max(0, this.#Fi[1]);
-      this.#Oi[2] = Math.min(this.#Ri, this.#Fi[2]);
-      this.#Oi[3] = Math.min(this.#Bi, this.#Fi[3]);
+      __privateGet(this, _Oi)[0] = Math.max(0, __privateGet(this, _Fi)[0]);
+      __privateGet(this, _Oi)[1] = Math.max(0, __privateGet(this, _Fi)[1]);
+      __privateGet(this, _Oi)[2] = Math.min(__privateGet(this, _Ri), __privateGet(this, _Fi)[2]);
+      __privateGet(this, _Oi)[3] = Math.min(__privateGet(this, _Bi), __privateGet(this, _Fi)[3]);
       return this;
     }
     recordOperation(t2, e2 = false, i2) {
       if (this._pendingBBoxIdx !== t2) return this;
-      const n2 = nt(256 * this.#Oi[0] / this.#Ri), s2 = nt(256 * this.#Oi[1] / this.#Bi), r2 = st(256 * this.#Oi[2] / this.#Ri), a2 = st(256 * this.#Oi[3] / this.#Bi);
-      expandBBox(this.#Li, t2, n2, s2, r2, a2);
-      if (i2) for (const e3 of i2) for (const i3 of e3) i3 !== t2 && expandBBox(this.#Li, i3, n2, s2, r2, a2);
+      const n2 = nt(256 * __privateGet(this, _Oi)[0] / __privateGet(this, _Ri)), s2 = nt(256 * __privateGet(this, _Oi)[1] / __privateGet(this, _Bi)), r2 = st(256 * __privateGet(this, _Oi)[2] / __privateGet(this, _Ri)), a2 = st(256 * __privateGet(this, _Oi)[3] / __privateGet(this, _Bi));
+      expandBBox(__privateGet(this, _Li), t2, n2, s2, r2, a2);
+      if (i2) for (const e3 of i2) for (const i3 of e3) i3 !== t2 && expandBBox(__privateGet(this, _Li), i3, n2, s2, r2, a2);
       e2 || (this._pendingBBoxIdx = -1);
       return this;
     }
     bboxToClipBoxDropOperation(t2) {
       if (this._pendingBBoxIdx === t2) {
         this._pendingBBoxIdx = -1;
-        this.#Fi[0] = Math.max(this.#Fi[0], this.#Oi[0]);
-        this.#Fi[1] = Math.max(this.#Fi[1], this.#Oi[1]);
-        this.#Fi[2] = Math.min(this.#Fi[2], this.#Oi[2]);
-        this.#Fi[3] = Math.min(this.#Fi[3], this.#Oi[3]);
+        __privateGet(this, _Fi)[0] = Math.max(__privateGet(this, _Fi)[0], __privateGet(this, _Oi)[0]);
+        __privateGet(this, _Fi)[1] = Math.max(__privateGet(this, _Fi)[1], __privateGet(this, _Oi)[1]);
+        __privateGet(this, _Fi)[2] = Math.min(__privateGet(this, _Fi)[2], __privateGet(this, _Oi)[2]);
+        __privateGet(this, _Fi)[3] = Math.min(__privateGet(this, _Fi)[3], __privateGet(this, _Oi)[3]);
       }
       return this;
     }
     take() {
-      return new BBoxReader(this.#Mi, this.#Li);
+      return new BBoxReader(__privateGet(this, _Mi2), __privateGet(this, _Li));
     }
     takeDebugMetadata() {
       throw new Error("Unreachable");
@@ -10334,119 +10788,137 @@
       return this;
     }
   };
+  _Ii = new WeakMap();
+  _Fi = new WeakMap();
+  _Oi = new WeakMap();
+  _Ri = new WeakMap();
+  _Bi = new WeakMap();
+  _Li = new WeakMap();
+  _Mi2 = new WeakMap();
+  _CanvasBBoxTracker_instances = new WeakSet();
+  Ni_fn = function(t2, e2) {
+    const i2 = new ArrayBuffer(4 * t2);
+    __privateSet(this, _Li, new Uint8ClampedArray(i2));
+    __privateSet(this, _Mi2, new Uint32Array(i2));
+    if (e2 && e2.length > 0) {
+      __privateGet(this, _Mi2).set(e2);
+      __privateGet(this, _Mi2).fill(rt, e2.length);
+    } else __privateGet(this, _Mi2).fill(rt);
+  };
+  var _Ui, _Hi, _zi, _Gi, _ji, _Wi, _Vi, _$i;
   var CanvasDependencyTracker = class {
-    #Ui = { __proto__: null };
-    #Hi = { __proto__: null, transform: [], moveText: [], sameLineText: [], [it]: [] };
-    #zi = /* @__PURE__ */ new Map();
-    #Gi = /* @__PURE__ */ new Set();
-    #ji = /* @__PURE__ */ new Map();
-    #Wi;
-    #Vi;
-    #$i;
     constructor(t2, e2 = false) {
-      this.#$i = t2;
+      __privateAdd(this, _Ui, { __proto__: null });
+      __privateAdd(this, _Hi, { __proto__: null, transform: [], moveText: [], sameLineText: [], [it]: [] });
+      __privateAdd(this, _zi, /* @__PURE__ */ new Map());
+      __privateAdd(this, _Gi, /* @__PURE__ */ new Set());
+      __privateAdd(this, _ji, /* @__PURE__ */ new Map());
+      __privateAdd(this, _Wi);
+      __privateAdd(this, _Vi);
+      __privateAdd(this, _$i);
+      __privateSet(this, _$i, t2);
       if (e2) {
-        this.#Wi = /* @__PURE__ */ new Map();
-        this.#Vi = (t3, e3) => {
-          ensureDebugMetadata(this.#Wi, e3).dependencies.add(t3);
-        };
+        __privateSet(this, _Wi, /* @__PURE__ */ new Map());
+        __privateSet(this, _Vi, (t3, e3) => {
+          ensureDebugMetadata(__privateGet(this, _Wi), e3).dependencies.add(t3);
+        });
       }
     }
     get clipBox() {
-      return this.#$i.clipBox;
+      return __privateGet(this, _$i).clipBox;
     }
     growOperationsCount(t2) {
-      this.#$i.growOperationsCount(t2);
+      __privateGet(this, _$i).growOperationsCount(t2);
     }
     save(t2) {
-      this.#Ui = { __proto__: this.#Ui };
-      this.#Hi = { __proto__: this.#Hi, transform: { __proto__: this.#Hi.transform }, moveText: { __proto__: this.#Hi.moveText }, sameLineText: { __proto__: this.#Hi.sameLineText }, [it]: { __proto__: this.#Hi[it] } };
-      this.#$i.save(t2);
+      __privateSet(this, _Ui, { __proto__: __privateGet(this, _Ui) });
+      __privateSet(this, _Hi, { __proto__: __privateGet(this, _Hi), transform: { __proto__: __privateGet(this, _Hi).transform }, moveText: { __proto__: __privateGet(this, _Hi).moveText }, sameLineText: { __proto__: __privateGet(this, _Hi).sameLineText }, [it]: { __proto__: __privateGet(this, _Hi)[it] } });
+      __privateGet(this, _$i).save(t2);
       return this;
     }
     restore(t2) {
-      this.#$i.restore(t2, this.#Vi);
-      const e2 = Object.getPrototypeOf(this.#Ui);
+      __privateGet(this, _$i).restore(t2, __privateGet(this, _Vi));
+      const e2 = Object.getPrototypeOf(__privateGet(this, _Ui));
       if (null === e2) return this;
-      this.#Ui = e2;
-      this.#Hi = Object.getPrototypeOf(this.#Hi);
+      __privateSet(this, _Ui, e2);
+      __privateSet(this, _Hi, Object.getPrototypeOf(__privateGet(this, _Hi)));
       return this;
     }
     recordOpenMarker(t2) {
-      this.#$i.recordOpenMarker(t2, this.#Vi);
+      __privateGet(this, _$i).recordOpenMarker(t2, __privateGet(this, _Vi));
       return this;
     }
     getOpenMarker() {
-      return this.#$i.getOpenMarker();
+      return __privateGet(this, _$i).getOpenMarker();
     }
     recordCloseMarker(t2) {
-      this.#$i.recordCloseMarker(t2, this.#Vi);
+      __privateGet(this, _$i).recordCloseMarker(t2, __privateGet(this, _Vi));
       return this;
     }
     beginMarkedContent(t2) {
-      this.#$i.beginMarkedContent(t2);
+      __privateGet(this, _$i).beginMarkedContent(t2);
       return this;
     }
     endMarkedContent(t2) {
-      this.#$i.endMarkedContent(t2, this.#Vi);
+      __privateGet(this, _$i).endMarkedContent(t2, __privateGet(this, _Vi));
       return this;
     }
     pushBaseTransform(t2) {
-      this.#$i.pushBaseTransform(t2);
+      __privateGet(this, _$i).pushBaseTransform(t2);
       return this;
     }
     popBaseTransform() {
-      this.#$i.popBaseTransform();
+      __privateGet(this, _$i).popBaseTransform();
       return this;
     }
     recordSimpleData(t2, e2) {
-      this.#Ui[t2] = e2;
+      __privateGet(this, _Ui)[t2] = e2;
       return this;
     }
     recordIncrementalData(t2, e2) {
-      this.#Hi[t2].push(e2);
+      __privateGet(this, _Hi)[t2].push(e2);
       return this;
     }
     resetIncrementalData(t2, e2) {
-      this.#Hi[t2].length = 0;
+      __privateGet(this, _Hi)[t2].length = 0;
       return this;
     }
     recordNamedData(t2, e2) {
-      this.#zi.set(t2, e2);
+      __privateGet(this, _zi).set(t2, e2);
       return this;
     }
     recordSimpleDataFromNamed(t2, e2, i2) {
-      this.#Ui[t2] = this.#zi.get(e2) ?? i2;
+      __privateGet(this, _Ui)[t2] = __privateGet(this, _zi).get(e2) ?? i2;
     }
     recordFutureForcedDependency(t2, e2) {
       this.recordIncrementalData(it, e2);
       return this;
     }
     inheritSimpleDataAsFutureForcedDependencies(t2) {
-      for (const e2 of t2) e2 in this.#Ui && this.recordFutureForcedDependency(e2, this.#Ui[e2]);
+      for (const e2 of t2) e2 in __privateGet(this, _Ui) && this.recordFutureForcedDependency(e2, __privateGet(this, _Ui)[e2]);
       return this;
     }
     inheritPendingDependenciesAsFutureForcedDependencies() {
-      for (const t2 of this.#Gi) this.recordFutureForcedDependency(it, t2);
+      for (const t2 of __privateGet(this, _Gi)) this.recordFutureForcedDependency(it, t2);
       return this;
     }
     resetBBox(t2) {
-      this.#$i.resetBBox(t2);
+      __privateGet(this, _$i).resetBBox(t2);
       return this;
     }
     recordClipBox(t2, e2, i2, n2, s2, r2) {
-      this.#$i.recordClipBox(t2, e2, i2, n2, s2, r2);
+      __privateGet(this, _$i).recordClipBox(t2, e2, i2, n2, s2, r2);
       return this;
     }
     recordBBox(t2, e2, i2, n2, s2, r2) {
-      this.#$i.recordBBox(t2, e2, i2, n2, s2, r2);
+      __privateGet(this, _$i).recordBBox(t2, e2, i2, n2, s2, r2);
       return this;
     }
     recordCharacterBBox(t2, e2, i2, n2 = 1, s2 = 0, r2 = 0, a2) {
       const o2 = i2.bbox;
       let l2, h2;
       if (o2) {
-        l2 = o2[2] !== o2[0] && o2[3] !== o2[1] && this.#ji.get(i2);
+        l2 = o2[2] !== o2[0] && o2[3] !== o2[1] && __privateGet(this, _ji).get(i2);
         if (false !== l2) {
           h2 = [0, 0, 0, 0];
           Util.axialAlignedBoundingBox(o2, i2.fontMatrix, h2);
@@ -10480,102 +10952,111 @@
       const c2 = a2();
       if (o2 && h2 && void 0 === l2) {
         l2 = h2[0] <= s2 - c2.actualBoundingBoxLeft && h2[2] >= s2 + c2.actualBoundingBoxRight && h2[1] <= r2 - c2.actualBoundingBoxAscent && h2[3] >= r2 + c2.actualBoundingBoxDescent;
-        this.#ji.set(i2, l2);
+        __privateGet(this, _ji).set(i2, l2);
         if (l2) return this.recordBBox(t2, e2, h2[0], h2[2], h2[1], h2[3]);
       }
       return this.recordBBox(t2, e2, s2 - c2.actualBoundingBoxLeft, s2 + c2.actualBoundingBoxRight, r2 - c2.actualBoundingBoxAscent, r2 + c2.actualBoundingBoxDescent);
     }
     recordFullPageBBox(t2) {
-      this.#$i.recordFullPageBBox(t2);
+      __privateGet(this, _$i).recordFullPageBBox(t2);
       return this;
     }
     getSimpleIndex(t2) {
-      return this.#Ui[t2];
+      return __privateGet(this, _Ui)[t2];
     }
     recordDependencies(t2, e2) {
-      const i2 = this.#Gi, n2 = this.#Ui, s2 = this.#Hi;
-      for (const t3 of e2) t3 in this.#Ui ? i2.add(n2[t3]) : t3 in s2 && s2[t3].forEach(i2.add, i2);
+      const i2 = __privateGet(this, _Gi), n2 = __privateGet(this, _Ui), s2 = __privateGet(this, _Hi);
+      for (const t3 of e2) t3 in __privateGet(this, _Ui) ? i2.add(n2[t3]) : t3 in s2 && s2[t3].forEach(i2.add, i2);
       return this;
     }
     recordNamedDependency(t2, e2) {
-      this.#zi.has(e2) && this.#Gi.add(this.#zi.get(e2));
+      __privateGet(this, _zi).has(e2) && __privateGet(this, _Gi).add(__privateGet(this, _zi).get(e2));
       return this;
     }
     recordOperation(t2, e2 = false) {
       this.recordDependencies(t2, [it]);
-      if (this.#Wi) {
-        const e3 = ensureDebugMetadata(this.#Wi, t2), { dependencies: i3 } = e3;
-        this.#Gi.forEach(i3.add, i3);
-        this.#$i._savesStack.forEach(i3.add, i3);
-        this.#$i._markedContentStack.forEach(i3.add, i3);
+      if (__privateGet(this, _Wi)) {
+        const e3 = ensureDebugMetadata(__privateGet(this, _Wi), t2), { dependencies: i3 } = e3;
+        __privateGet(this, _Gi).forEach(i3.add, i3);
+        __privateGet(this, _$i)._savesStack.forEach(i3.add, i3);
+        __privateGet(this, _$i)._markedContentStack.forEach(i3.add, i3);
         i3.delete(t2);
         e3.isRenderingOperation = true;
       }
-      const i2 = !e2 && t2 === this.#$i._pendingBBoxIdx;
-      this.#$i.recordOperation(t2, e2, [this.#Gi, this.#$i._savesStack, this.#$i._markedContentStack]);
-      i2 && this.#Gi.clear();
+      const i2 = !e2 && t2 === __privateGet(this, _$i)._pendingBBoxIdx;
+      __privateGet(this, _$i).recordOperation(t2, e2, [__privateGet(this, _Gi), __privateGet(this, _$i)._savesStack, __privateGet(this, _$i)._markedContentStack]);
+      i2 && __privateGet(this, _Gi).clear();
       return this;
     }
     recordShowTextOperation(t2, e2 = false) {
-      const i2 = Array.from(this.#Gi);
+      const i2 = Array.from(__privateGet(this, _Gi));
       this.recordOperation(t2, e2);
       this.recordIncrementalData("sameLineText", t2);
       for (const t3 of i2) this.recordIncrementalData("sameLineText", t3);
       return this;
     }
     bboxToClipBoxDropOperation(t2, e2 = false) {
-      const i2 = !e2 && t2 === this.#$i._pendingBBoxIdx;
-      this.#$i.bboxToClipBoxDropOperation(t2);
-      i2 && this.#Gi.clear();
+      const i2 = !e2 && t2 === __privateGet(this, _$i)._pendingBBoxIdx;
+      __privateGet(this, _$i).bboxToClipBoxDropOperation(t2);
+      i2 && __privateGet(this, _Gi).clear();
       return this;
     }
     take() {
-      this.#ji.clear();
-      return this.#$i.take();
+      __privateGet(this, _ji).clear();
+      return __privateGet(this, _$i).take();
     }
     takeDebugMetadata() {
-      return this.#Wi;
+      return __privateGet(this, _Wi);
     }
   };
-  var CanvasNestedDependencyTracker = class _CanvasNestedDependencyTracker {
-    #qi;
-    #Ki;
-    #Xi;
-    #Yi = 0;
-    #Ji = 0;
+  _Ui = new WeakMap();
+  _Hi = new WeakMap();
+  _zi = new WeakMap();
+  _Gi = new WeakMap();
+  _ji = new WeakMap();
+  _Wi = new WeakMap();
+  _Vi = new WeakMap();
+  _$i = new WeakMap();
+  var _qi, _Ki, _Xi, _Yi, _Ji;
+  var _CanvasNestedDependencyTracker = class _CanvasNestedDependencyTracker {
     constructor(t2, e2, i2) {
-      if (t2 instanceof _CanvasNestedDependencyTracker && t2.#Xi === !!i2) return t2;
-      this.#qi = t2;
-      this.#Ki = e2;
-      this.#Xi = !!i2;
+      __privateAdd(this, _qi);
+      __privateAdd(this, _Ki);
+      __privateAdd(this, _Xi);
+      __privateAdd(this, _Yi, 0);
+      __privateAdd(this, _Ji, 0);
+      if (t2 instanceof _CanvasNestedDependencyTracker && __privateGet(t2, _Xi) === !!i2) return t2;
+      __privateSet(this, _qi, t2);
+      __privateSet(this, _Ki, e2);
+      __privateSet(this, _Xi, !!i2);
     }
     get clipBox() {
-      return this.#qi.clipBox;
+      return __privateGet(this, _qi).clipBox;
     }
     growOperationsCount() {
       throw new Error("Unreachable");
     }
     save(t2) {
-      this.#Ji++;
-      this.#qi.save(this.#Ki);
+      __privateWrapper(this, _Ji)._++;
+      __privateGet(this, _qi).save(__privateGet(this, _Ki));
       return this;
     }
     restore(t2) {
-      if (this.#Ji > 0) {
-        this.#qi.restore(this.#Ki);
-        this.#Ji--;
+      if (__privateGet(this, _Ji) > 0) {
+        __privateGet(this, _qi).restore(__privateGet(this, _Ki));
+        __privateWrapper(this, _Ji)._--;
       }
       return this;
     }
     recordOpenMarker(t2) {
-      this.#Yi++;
+      __privateWrapper(this, _Yi)._++;
       return this;
     }
     getOpenMarker() {
-      return this.#Yi > 0 ? this.#Ki : this.#qi.getOpenMarker();
+      return __privateGet(this, _Yi) > 0 ? __privateGet(this, _Ki) : __privateGet(this, _qi).getOpenMarker();
     }
     recordCloseMarker(t2) {
-      this.#Yi--;
+      __privateWrapper(this, _Yi)._--;
       return this;
     }
     beginMarkedContent(t2) {
@@ -10585,85 +11066,85 @@
       return this;
     }
     pushBaseTransform(t2) {
-      this.#qi.pushBaseTransform(t2);
+      __privateGet(this, _qi).pushBaseTransform(t2);
       return this;
     }
     popBaseTransform() {
-      this.#qi.popBaseTransform();
+      __privateGet(this, _qi).popBaseTransform();
       return this;
     }
     recordSimpleData(t2, e2) {
-      this.#qi.recordSimpleData(t2, this.#Ki);
+      __privateGet(this, _qi).recordSimpleData(t2, __privateGet(this, _Ki));
       return this;
     }
     recordIncrementalData(t2, e2) {
-      this.#qi.recordIncrementalData(t2, this.#Ki);
+      __privateGet(this, _qi).recordIncrementalData(t2, __privateGet(this, _Ki));
       return this;
     }
     resetIncrementalData(t2, e2) {
-      this.#qi.resetIncrementalData(t2, this.#Ki);
+      __privateGet(this, _qi).resetIncrementalData(t2, __privateGet(this, _Ki));
       return this;
     }
     recordNamedData(t2, e2) {
       return this;
     }
     recordSimpleDataFromNamed(t2, e2, i2) {
-      this.#qi.recordSimpleDataFromNamed(t2, e2, this.#Ki);
+      __privateGet(this, _qi).recordSimpleDataFromNamed(t2, e2, __privateGet(this, _Ki));
       return this;
     }
     recordFutureForcedDependency(t2, e2) {
-      this.#qi.recordFutureForcedDependency(t2, this.#Ki);
+      __privateGet(this, _qi).recordFutureForcedDependency(t2, __privateGet(this, _Ki));
       return this;
     }
     inheritSimpleDataAsFutureForcedDependencies(t2) {
-      this.#qi.inheritSimpleDataAsFutureForcedDependencies(t2);
+      __privateGet(this, _qi).inheritSimpleDataAsFutureForcedDependencies(t2);
       return this;
     }
     inheritPendingDependenciesAsFutureForcedDependencies() {
-      this.#qi.inheritPendingDependenciesAsFutureForcedDependencies();
+      __privateGet(this, _qi).inheritPendingDependenciesAsFutureForcedDependencies();
       return this;
     }
     resetBBox(t2) {
-      this.#Xi || this.#qi.resetBBox(this.#Ki);
+      __privateGet(this, _Xi) || __privateGet(this, _qi).resetBBox(__privateGet(this, _Ki));
       return this;
     }
     recordClipBox(t2, e2, i2, n2, s2, r2) {
-      this.#Xi || this.#qi.recordClipBox(this.#Ki, e2, i2, n2, s2, r2);
+      __privateGet(this, _Xi) || __privateGet(this, _qi).recordClipBox(__privateGet(this, _Ki), e2, i2, n2, s2, r2);
       return this;
     }
     recordBBox(t2, e2, i2, n2, s2, r2) {
-      this.#Xi || this.#qi.recordBBox(this.#Ki, e2, i2, n2, s2, r2);
+      __privateGet(this, _Xi) || __privateGet(this, _qi).recordBBox(__privateGet(this, _Ki), e2, i2, n2, s2, r2);
       return this;
     }
     recordCharacterBBox(t2, e2, i2, n2, s2, r2, a2) {
-      this.#Xi || this.#qi.recordCharacterBBox(this.#Ki, e2, i2, n2, s2, r2, a2);
+      __privateGet(this, _Xi) || __privateGet(this, _qi).recordCharacterBBox(__privateGet(this, _Ki), e2, i2, n2, s2, r2, a2);
       return this;
     }
     recordFullPageBBox(t2) {
-      this.#Xi || this.#qi.recordFullPageBBox(this.#Ki);
+      __privateGet(this, _Xi) || __privateGet(this, _qi).recordFullPageBBox(__privateGet(this, _Ki));
       return this;
     }
     getSimpleIndex(t2) {
-      return this.#qi.getSimpleIndex(t2);
+      return __privateGet(this, _qi).getSimpleIndex(t2);
     }
     recordDependencies(t2, e2) {
-      this.#qi.recordDependencies(this.#Ki, e2);
+      __privateGet(this, _qi).recordDependencies(__privateGet(this, _Ki), e2);
       return this;
     }
     recordNamedDependency(t2, e2) {
-      this.#qi.recordNamedDependency(this.#Ki, e2);
+      __privateGet(this, _qi).recordNamedDependency(__privateGet(this, _Ki), e2);
       return this;
     }
     recordOperation(t2) {
-      this.#qi.recordOperation(this.#Ki, true);
+      __privateGet(this, _qi).recordOperation(__privateGet(this, _Ki), true);
       return this;
     }
     recordShowTextOperation(t2) {
-      this.#qi.recordShowTextOperation(this.#Ki, true);
+      __privateGet(this, _qi).recordShowTextOperation(__privateGet(this, _Ki), true);
       return this;
     }
     bboxToClipBoxDropOperation(t2) {
-      this.#Xi || this.#qi.bboxToClipBoxDropOperation(this.#Ki, true);
+      __privateGet(this, _Xi) || __privateGet(this, _qi).bboxToClipBoxDropOperation(__privateGet(this, _Ki), true);
       return this;
     }
     take() {
@@ -10673,6 +11154,12 @@
       throw new Error("Unreachable");
     }
   };
+  _qi = new WeakMap();
+  _Ki = new WeakMap();
+  _Xi = new WeakMap();
+  _Yi = new WeakMap();
+  _Ji = new WeakMap();
+  var CanvasNestedDependencyTracker = _CanvasNestedDependencyTracker;
   var ot = ["path", "transform", "filter", "strokeColor", "strokeAlpha", "lineWidth", "lineCap", "lineJoin", "miterLimit", "dash"];
   var lt = ["path", "transform", "filter", "fillColor", "fillAlpha", "globalCompositeOperation", "SMask"];
   var ht = ["transform", "SMask", "filter", "fillAlpha", "strokeAlpha", "globalCompositeOperation"];
@@ -10680,23 +11167,23 @@
   var dt = ["transform", "leading", "charSpacing", "wordSpacing", "hScale", "textRise", "moveText", "textMatrix", "font", "fontObj", "filter", "fillColor", "textRenderingMode", "SMask", "fillAlpha", "strokeAlpha", "globalCompositeOperation", "sameLineText"];
   var ut = ["transform"];
   var pt = ["transform", "fillColor"];
-  var CanvasImagesTracker = class _CanvasImagesTracker {
-    #Ri;
-    #Bi;
-    #Qi = 4;
-    #Zi = 0;
-    #Pi = new _CanvasImagesTracker.#tn(6 * this.#Qi);
-    static #tn = FeatureTest.isFloat16ArraySupported ? Float16Array : Float32Array;
+  var _Ri2, _Bi2, _Qi, _Zi, _Pi2, _tn;
+  var _CanvasImagesTracker = class _CanvasImagesTracker {
     constructor(t2) {
-      this.#Ri = t2.width;
-      this.#Bi = t2.height;
+      __privateAdd(this, _Ri2);
+      __privateAdd(this, _Bi2);
+      __privateAdd(this, _Qi, 4);
+      __privateAdd(this, _Zi, 0);
+      __privateAdd(this, _Pi2, new (__privateGet(_CanvasImagesTracker, _tn))(6 * __privateGet(this, _Qi)));
+      __privateSet(this, _Ri2, t2.width);
+      __privateSet(this, _Bi2, t2.height);
     }
     record(t2, e2, i2, s2) {
-      if (this.#Zi === this.#Qi) {
-        this.#Qi *= 2;
-        const t3 = new _CanvasImagesTracker.#tn(6 * this.#Qi);
-        t3.set(this.#Pi);
-        this.#Pi = t3;
+      if (__privateGet(this, _Zi) === __privateGet(this, _Qi)) {
+        __privateSet(this, _Qi, __privateGet(this, _Qi) * 2);
+        const t3 = new (__privateGet(_CanvasImagesTracker, _tn))(6 * __privateGet(this, _Qi));
+        t3.set(__privateGet(this, _Pi2));
+        __privateSet(this, _Pi2, t3);
       }
       const r2 = getCurrentTransform(t2);
       let a2;
@@ -10721,23 +11208,33 @@
         Util.applyTransform(a2, r2, 2);
         Util.applyTransform(a2, r2, 4);
       }
-      a2[0] /= this.#Ri;
-      a2[1] /= this.#Bi;
-      a2[2] /= this.#Ri;
-      a2[3] /= this.#Bi;
-      a2[4] /= this.#Ri;
-      a2[5] /= this.#Bi;
-      this.#Pi.set(a2, 6 * this.#Zi);
-      this.#Zi++;
+      a2[0] /= __privateGet(this, _Ri2);
+      a2[1] /= __privateGet(this, _Bi2);
+      a2[2] /= __privateGet(this, _Ri2);
+      a2[3] /= __privateGet(this, _Bi2);
+      a2[4] /= __privateGet(this, _Ri2);
+      a2[5] /= __privateGet(this, _Bi2);
+      __privateGet(this, _Pi2).set(a2, 6 * __privateGet(this, _Zi));
+      __privateWrapper(this, _Zi)._++;
     }
     take() {
-      return this.#Pi.subarray(0, 6 * this.#Zi);
+      return __privateGet(this, _Pi2).subarray(0, 6 * __privateGet(this, _Zi));
     }
   };
+  _Ri2 = new WeakMap();
+  _Bi2 = new WeakMap();
+  _Qi = new WeakMap();
+  _Zi = new WeakMap();
+  _Pi2 = new WeakMap();
+  _tn = new WeakMap();
+  __privateAdd(_CanvasImagesTracker, _tn, FeatureTest.isFloat16ArraySupported ? Float16Array : Float32Array);
+  var CanvasImagesTracker = _CanvasImagesTracker;
+  var _en, _in, _FontLoader_instances, nn_fn;
   var FontLoader = class {
-    #en = /* @__PURE__ */ new Set();
-    #in = null;
     constructor({ ownerDocument: t2 = globalThis.document, styleElement: e2 = null }) {
+      __privateAdd(this, _FontLoader_instances);
+      __privateAdd(this, _en, /* @__PURE__ */ new Set());
+      __privateAdd(this, _in, null);
       this._document = t2;
       this.nativeFontFaces = /* @__PURE__ */ new Set();
       this.styleElement = null;
@@ -10753,34 +11250,17 @@
       this._document.fonts.delete(t2);
     }
     insertRule(t2) {
-      const e2 = this.#nn();
+      const e2 = __privateMethod(this, _FontLoader_instances, nn_fn).call(this);
       e2.insertRule(t2, e2.cssRules.length);
-    }
-    #nn() {
-      if (this.#in) return this.#in;
-      const t2 = this._document.defaultView?.CSSStyleSheet || globalThis.CSSStyleSheet;
-      if (!this.styleElement && t2) {
-        const { adoptedStyleSheets: e2 } = this._document;
-        if (e2) {
-          const i2 = new t2();
-          e2.push(i2);
-          return this.#in = i2;
-        }
-      }
-      if (!this.styleElement) {
-        this.styleElement = this._document.createElement("style");
-        this._document.documentElement.getElementsByTagName("head")[0].append(this.styleElement);
-      }
-      return this.#in = this.styleElement.sheet;
     }
     clear() {
       for (const t2 of this.nativeFontFaces) this._document.fonts.delete(t2);
       this.nativeFontFaces.clear();
-      this.#en.clear();
-      if (this.#in) {
+      __privateGet(this, _en).clear();
+      if (__privateGet(this, _in)) {
         const { adoptedStyleSheets: t2 } = this._document;
-        t2?.includes(this.#in) && (this._document.adoptedStyleSheets = t2.filter((t3) => t3 !== this.#in));
-        this.#in = null;
+        t2?.includes(__privateGet(this, _in)) && (this._document.adoptedStyleSheets = t2.filter((t3) => t3 !== __privateGet(this, _in)));
+        __privateSet(this, _in, null);
       }
       if (this.styleElement) {
         this.styleElement.remove();
@@ -10788,14 +11268,14 @@
       }
     }
     async loadSystemFont({ systemFontInfo: t2, disableFontFace: e2, _inspectFont: i2 }) {
-      if (t2 && !this.#en.has(t2.loadedName)) {
+      if (t2 && !__privateGet(this, _en).has(t2.loadedName)) {
         assert(!e2, "loadSystemFont shouldn't be called when `disableFontFace` is set.");
         if (this.isFontLoadingAPISupported) {
           const { loadedName: e3, src: n2, style: s2 } = t2, r2 = new FontFace(e3, n2, s2);
           this.addNativeFontFace(r2);
           try {
             await r2.load();
-            this.#en.add(e3);
+            __privateGet(this, _en).add(e3);
             i2?.(t2);
           } catch {
             warn(`Cannot load system font: ${t2.baseFontName}, installing it could help to improve PDF rendering.`);
@@ -10910,11 +11390,32 @@
       });
     }
   };
+  _en = new WeakMap();
+  _in = new WeakMap();
+  _FontLoader_instances = new WeakSet();
+  nn_fn = function() {
+    if (__privateGet(this, _in)) return __privateGet(this, _in);
+    const t2 = this._document.defaultView?.CSSStyleSheet || globalThis.CSSStyleSheet;
+    if (!this.styleElement && t2) {
+      const { adoptedStyleSheets: e2 } = this._document;
+      if (e2) {
+        const i2 = new t2();
+        e2.push(i2);
+        return __privateSet(this, _in, i2);
+      }
+    }
+    if (!this.styleElement) {
+      this.styleElement = this._document.createElement("style");
+      this._document.documentElement.getElementsByTagName("head")[0].append(this.styleElement);
+    }
+    return __privateSet(this, _in, this.styleElement.sheet);
+  };
+  var _sn;
   var FontFaceObject = class {
-    compiledGlyphs = /* @__PURE__ */ Object.create(null);
-    #sn;
     constructor(t2, e2 = null, i2, n2) {
-      this.#sn = t2;
+      __publicField(this, "compiledGlyphs", /* @__PURE__ */ Object.create(null));
+      __privateAdd(this, _sn);
+      __privateSet(this, _sn, t2);
       this._inspectFont = e2;
       i2 && (this.charProcOperatorList = i2);
       n2 && Object.assign(this, n2);
@@ -10956,306 +11457,326 @@
       return this.compiledGlyphs[e2] = s2;
     }
     get black() {
-      return this.#sn.black;
+      return __privateGet(this, _sn).black;
     }
     get bold() {
-      return this.#sn.bold;
+      return __privateGet(this, _sn).bold;
     }
     get disableFontFace() {
-      return this.#sn.disableFontFace;
+      return __privateGet(this, _sn).disableFontFace;
     }
     set disableFontFace(t2) {
       shadow(this, "disableFontFace", !!t2);
     }
     get fontExtraProperties() {
-      return this.#sn.fontExtraProperties;
+      return __privateGet(this, _sn).fontExtraProperties;
     }
     get isInvalidPDFjsFont() {
-      return this.#sn.isInvalidPDFjsFont;
+      return __privateGet(this, _sn).isInvalidPDFjsFont;
     }
     get isType3Font() {
-      return this.#sn.isType3Font;
+      return __privateGet(this, _sn).isType3Font;
     }
     get italic() {
-      return this.#sn.italic;
+      return __privateGet(this, _sn).italic;
     }
     get missingFile() {
-      return this.#sn.missingFile;
+      return __privateGet(this, _sn).missingFile;
     }
     get remeasure() {
-      return this.#sn.remeasure;
+      return __privateGet(this, _sn).remeasure;
     }
     get vertical() {
-      return this.#sn.vertical;
+      return __privateGet(this, _sn).vertical;
     }
     get ascent() {
-      return this.#sn.ascent;
+      return __privateGet(this, _sn).ascent;
     }
     get defaultWidth() {
-      return this.#sn.defaultWidth;
+      return __privateGet(this, _sn).defaultWidth;
     }
     get descent() {
-      return this.#sn.descent;
+      return __privateGet(this, _sn).descent;
     }
     get bbox() {
-      return this.#sn.bbox;
+      return __privateGet(this, _sn).bbox;
     }
     get fontMatrix() {
-      return this.#sn.fontMatrix;
+      return __privateGet(this, _sn).fontMatrix;
     }
     get fallbackName() {
-      return this.#sn.fallbackName;
+      return __privateGet(this, _sn).fallbackName;
     }
     get loadedName() {
-      return this.#sn.loadedName;
+      return __privateGet(this, _sn).loadedName;
     }
     get mimetype() {
-      return this.#sn.mimetype;
+      return __privateGet(this, _sn).mimetype;
     }
     get name() {
-      return this.#sn.name;
+      return __privateGet(this, _sn).name;
     }
     get data() {
-      return this.#sn.data;
+      return __privateGet(this, _sn).data;
     }
     clearData() {
-      this.#sn.clearData();
+      __privateGet(this, _sn).clearData();
     }
     get cssFontInfo() {
-      return this.#sn.cssFontInfo;
+      return __privateGet(this, _sn).cssFontInfo;
     }
     get systemFontInfo() {
-      return this.#sn.systemFontInfo;
+      return __privateGet(this, _sn).systemFontInfo;
     }
     get defaultVMetrics() {
-      return this.#sn.defaultVMetrics;
+      return __privateGet(this, _sn).defaultVMetrics;
     }
   };
+  _sn = new WeakMap();
   var CSS_FONT_INFO = class {
-    static strings = ["fontFamily", "fontWeight", "italicAngle"];
   };
+  __publicField(CSS_FONT_INFO, "strings", ["fontFamily", "fontWeight", "italicAngle"]);
   var SYSTEM_FONT_INFO = class {
-    static strings = ["css", "loadedName", "baseFontName", "src"];
   };
-  var FONT_INFO = class {
-    static bools = ["black", "bold", "disableFontFace", "fontExtraProperties", "isInvalidPDFjsFont", "isType3Font", "italic", "missingFile", "remeasure", "vertical"];
-    static numbers = ["ascent", "defaultWidth", "descent"];
-    static strings = ["fallbackName", "loadedName", "mimetype", "name"];
-    static OFFSET_NUMBERS = Math.ceil(2 * this.bools.length / 8);
-    static OFFSET_BBOX = this.OFFSET_NUMBERS + 8 * this.numbers.length;
-    static OFFSET_FONT_MATRIX = this.OFFSET_BBOX + 1 + 8;
-    static OFFSET_DEFAULT_VMETRICS = this.OFFSET_FONT_MATRIX + 1 + 48;
-    static OFFSET_STRINGS = this.OFFSET_DEFAULT_VMETRICS + 1 + 6;
+  __publicField(SYSTEM_FONT_INFO, "strings", ["css", "loadedName", "baseFontName", "src"]);
+  var _FONT_INFO = class _FONT_INFO {
   };
+  __publicField(_FONT_INFO, "bools", ["black", "bold", "disableFontFace", "fontExtraProperties", "isInvalidPDFjsFont", "isType3Font", "italic", "missingFile", "remeasure", "vertical"]);
+  __publicField(_FONT_INFO, "numbers", ["ascent", "defaultWidth", "descent"]);
+  __publicField(_FONT_INFO, "strings", ["fallbackName", "loadedName", "mimetype", "name"]);
+  __publicField(_FONT_INFO, "OFFSET_NUMBERS", Math.ceil(2 * _FONT_INFO.bools.length / 8));
+  __publicField(_FONT_INFO, "OFFSET_BBOX", _FONT_INFO.OFFSET_NUMBERS + 8 * _FONT_INFO.numbers.length);
+  __publicField(_FONT_INFO, "OFFSET_FONT_MATRIX", _FONT_INFO.OFFSET_BBOX + 1 + 8);
+  __publicField(_FONT_INFO, "OFFSET_DEFAULT_VMETRICS", _FONT_INFO.OFFSET_FONT_MATRIX + 1 + 48);
+  __publicField(_FONT_INFO, "OFFSET_STRINGS", _FONT_INFO.OFFSET_DEFAULT_VMETRICS + 1 + 6);
+  var FONT_INFO = _FONT_INFO;
   var PATTERN_INFO = class {
-    static KIND = 0;
-    static HAS_BBOX = 1;
-    static HAS_BACKGROUND = 2;
-    static SHADING_TYPE = 3;
-    static N_COORD = 4;
-    static N_COLOR = 8;
-    static N_STOP = 12;
-    static N_FIGURES = 16;
   };
+  __publicField(PATTERN_INFO, "KIND", 0);
+  __publicField(PATTERN_INFO, "HAS_BBOX", 1);
+  __publicField(PATTERN_INFO, "HAS_BACKGROUND", 2);
+  __publicField(PATTERN_INFO, "SHADING_TYPE", 3);
+  __publicField(PATTERN_INFO, "N_COORD", 4);
+  __publicField(PATTERN_INFO, "N_COLOR", 8);
+  __publicField(PATTERN_INFO, "N_STOP", 12);
+  __publicField(PATTERN_INFO, "N_FIGURES", 16);
+  var _rn, _an, _on, _CssFontInfo_instances, ln_fn;
   var CssFontInfo = class {
-    #rn;
-    #an = new TextDecoder();
-    #on;
     constructor(t2) {
-      this.#rn = t2;
-      this.#on = new DataView(t2);
-    }
-    #ln(t2) {
-      assert(t2 < CSS_FONT_INFO.strings.length, "Invalid string index");
-      let e2 = 0;
-      for (let i3 = 0; i3 < t2; i3++) e2 += this.#on.getUint32(e2) + 4;
-      const i2 = this.#on.getUint32(e2);
-      return this.#an.decode(new Uint8Array(this.#rn, e2 + 4, i2));
+      __privateAdd(this, _CssFontInfo_instances);
+      __privateAdd(this, _rn);
+      __privateAdd(this, _an, new TextDecoder());
+      __privateAdd(this, _on);
+      __privateSet(this, _rn, t2);
+      __privateSet(this, _on, new DataView(t2));
     }
     get fontFamily() {
-      return this.#ln(0);
+      return __privateMethod(this, _CssFontInfo_instances, ln_fn).call(this, 0);
     }
     get fontWeight() {
-      return this.#ln(1);
+      return __privateMethod(this, _CssFontInfo_instances, ln_fn).call(this, 1);
     }
     get italicAngle() {
-      return this.#ln(2);
+      return __privateMethod(this, _CssFontInfo_instances, ln_fn).call(this, 2);
     }
   };
+  _rn = new WeakMap();
+  _an = new WeakMap();
+  _on = new WeakMap();
+  _CssFontInfo_instances = new WeakSet();
+  ln_fn = function(t2) {
+    assert(t2 < CSS_FONT_INFO.strings.length, "Invalid string index");
+    let e2 = 0;
+    for (let i3 = 0; i3 < t2; i3++) e2 += __privateGet(this, _on).getUint32(e2) + 4;
+    const i2 = __privateGet(this, _on).getUint32(e2);
+    return __privateGet(this, _an).decode(new Uint8Array(__privateGet(this, _rn), e2 + 4, i2));
+  };
+  var _rn2, _an2, _on2, _SystemFontInfo_instances, ln_fn2;
   var SystemFontInfo = class {
-    #rn;
-    #an = new TextDecoder();
-    #on;
     constructor(t2) {
-      this.#rn = t2;
-      this.#on = new DataView(t2);
+      __privateAdd(this, _SystemFontInfo_instances);
+      __privateAdd(this, _rn2);
+      __privateAdd(this, _an2, new TextDecoder());
+      __privateAdd(this, _on2);
+      __privateSet(this, _rn2, t2);
+      __privateSet(this, _on2, new DataView(t2));
     }
     get guessFallback() {
-      return 0 !== this.#on.getUint8(0);
-    }
-    #ln(t2) {
-      assert(t2 < SYSTEM_FONT_INFO.strings.length, "Invalid string index");
-      let e2 = 5;
-      for (let i3 = 0; i3 < t2; i3++) e2 += this.#on.getUint32(e2) + 4;
-      const i2 = this.#on.getUint32(e2);
-      return this.#an.decode(new Uint8Array(this.#rn, e2 + 4, i2));
+      return 0 !== __privateGet(this, _on2).getUint8(0);
     }
     get css() {
-      return this.#ln(0);
+      return __privateMethod(this, _SystemFontInfo_instances, ln_fn2).call(this, 0);
     }
     get loadedName() {
-      return this.#ln(1);
+      return __privateMethod(this, _SystemFontInfo_instances, ln_fn2).call(this, 1);
     }
     get baseFontName() {
-      return this.#ln(2);
+      return __privateMethod(this, _SystemFontInfo_instances, ln_fn2).call(this, 2);
     }
     get src() {
-      return this.#ln(3);
+      return __privateMethod(this, _SystemFontInfo_instances, ln_fn2).call(this, 3);
     }
     get style() {
       let t2 = 1;
-      t2 += 4 + this.#on.getUint32(t2);
-      const e2 = this.#on.getUint32(t2), i2 = this.#an.decode(new Uint8Array(this.#rn, t2 + 4, e2));
+      t2 += 4 + __privateGet(this, _on2).getUint32(t2);
+      const e2 = __privateGet(this, _on2).getUint32(t2), i2 = __privateGet(this, _an2).decode(new Uint8Array(__privateGet(this, _rn2), t2 + 4, e2));
       t2 += 4 + e2;
-      const n2 = this.#on.getUint32(t2);
-      return { style: i2, weight: this.#an.decode(new Uint8Array(this.#rn, t2 + 4, n2)) };
+      const n2 = __privateGet(this, _on2).getUint32(t2);
+      return { style: i2, weight: __privateGet(this, _an2).decode(new Uint8Array(__privateGet(this, _rn2), t2 + 4, n2)) };
     }
   };
+  _rn2 = new WeakMap();
+  _an2 = new WeakMap();
+  _on2 = new WeakMap();
+  _SystemFontInfo_instances = new WeakSet();
+  ln_fn2 = function(t2) {
+    assert(t2 < SYSTEM_FONT_INFO.strings.length, "Invalid string index");
+    let e2 = 5;
+    for (let i3 = 0; i3 < t2; i3++) e2 += __privateGet(this, _on2).getUint32(e2) + 4;
+    const i2 = __privateGet(this, _on2).getUint32(e2);
+    return __privateGet(this, _an2).decode(new Uint8Array(__privateGet(this, _rn2), e2 + 4, i2));
+  };
+  var _rn3, _an3, _on3, _FontInfo_instances, hn_fn, cn_fn, dn_fn, ln_fn3, un_fn;
   var FontInfo = class {
-    #rn;
-    #an = new TextDecoder();
-    #on;
     constructor({ buffer: t2, extra: e2 }) {
-      this.#rn = t2;
-      this.#on = new DataView(t2);
+      __privateAdd(this, _FontInfo_instances);
+      __privateAdd(this, _rn3);
+      __privateAdd(this, _an3, new TextDecoder());
+      __privateAdd(this, _on3);
+      __privateSet(this, _rn3, t2);
+      __privateSet(this, _on3, new DataView(t2));
       e2 && Object.assign(this, e2);
     }
-    #hn(t2) {
-      assert(t2 < FONT_INFO.bools.length, "Invalid boolean index");
-      const e2 = Math.floor(t2 / 4), i2 = 2 * t2 % 8, n2 = this.#on.getUint8(e2) >> i2 & 3;
-      return 0 === n2 ? void 0 : 2 === n2;
-    }
     get black() {
-      return this.#hn(0);
+      return __privateMethod(this, _FontInfo_instances, hn_fn).call(this, 0);
     }
     get bold() {
-      return this.#hn(1);
+      return __privateMethod(this, _FontInfo_instances, hn_fn).call(this, 1);
     }
     get disableFontFace() {
-      return this.#hn(2);
+      return __privateMethod(this, _FontInfo_instances, hn_fn).call(this, 2);
     }
     get fontExtraProperties() {
-      return this.#hn(3);
+      return __privateMethod(this, _FontInfo_instances, hn_fn).call(this, 3);
     }
     get isInvalidPDFjsFont() {
-      return this.#hn(4);
+      return __privateMethod(this, _FontInfo_instances, hn_fn).call(this, 4);
     }
     get isType3Font() {
-      return this.#hn(5);
+      return __privateMethod(this, _FontInfo_instances, hn_fn).call(this, 5);
     }
     get italic() {
-      return this.#hn(6);
+      return __privateMethod(this, _FontInfo_instances, hn_fn).call(this, 6);
     }
     get missingFile() {
-      return this.#hn(7);
+      return __privateMethod(this, _FontInfo_instances, hn_fn).call(this, 7);
     }
     get remeasure() {
-      return this.#hn(8);
+      return __privateMethod(this, _FontInfo_instances, hn_fn).call(this, 8);
     }
     get vertical() {
-      return this.#hn(9);
-    }
-    #cn(t2) {
-      assert(t2 < FONT_INFO.numbers.length, "Invalid number index");
-      return this.#on.getFloat64(FONT_INFO.OFFSET_NUMBERS + 8 * t2);
+      return __privateMethod(this, _FontInfo_instances, hn_fn).call(this, 9);
     }
     get ascent() {
-      return this.#cn(0);
+      return __privateMethod(this, _FontInfo_instances, cn_fn).call(this, 0);
     }
     get defaultWidth() {
-      return this.#cn(1);
+      return __privateMethod(this, _FontInfo_instances, cn_fn).call(this, 1);
     }
     get descent() {
-      return this.#cn(2);
-    }
-    #dn(t2, e2, i2, n2) {
-      const s2 = this.#on.getUint8(t2);
-      if (0 === s2) return;
-      assert(s2 === e2, "Invalid array length.");
-      t2 += 1;
-      const r2 = new Array(s2);
-      for (let e3 = 0; e3 < s2; e3++) {
-        r2[e3] = this.#on[i2](t2, true);
-        t2 += n2;
-      }
-      return r2;
+      return __privateMethod(this, _FontInfo_instances, cn_fn).call(this, 2);
     }
     get bbox() {
-      return this.#dn(FONT_INFO.OFFSET_BBOX, 4, "getInt16", 2);
+      return __privateMethod(this, _FontInfo_instances, dn_fn).call(this, FONT_INFO.OFFSET_BBOX, 4, "getInt16", 2);
     }
     get fontMatrix() {
-      return this.#dn(FONT_INFO.OFFSET_FONT_MATRIX, 6, "getFloat64", 8);
+      return __privateMethod(this, _FontInfo_instances, dn_fn).call(this, FONT_INFO.OFFSET_FONT_MATRIX, 6, "getFloat64", 8);
     }
     get defaultVMetrics() {
-      return this.#dn(FONT_INFO.OFFSET_DEFAULT_VMETRICS, 3, "getInt16", 2);
-    }
-    #ln(t2) {
-      assert(t2 < FONT_INFO.strings.length, "Invalid string index");
-      let e2 = FONT_INFO.OFFSET_STRINGS + 4;
-      for (let i3 = 0; i3 < t2; i3++) e2 += this.#on.getUint32(e2) + 4;
-      const i2 = this.#on.getUint32(e2);
-      return this.#an.decode(new Uint8Array(this.#rn, e2 + 4, i2));
+      return __privateMethod(this, _FontInfo_instances, dn_fn).call(this, FONT_INFO.OFFSET_DEFAULT_VMETRICS, 3, "getInt16", 2);
     }
     get fallbackName() {
-      return this.#ln(0);
+      return __privateMethod(this, _FontInfo_instances, ln_fn3).call(this, 0);
     }
     get loadedName() {
-      return this.#ln(1);
+      return __privateMethod(this, _FontInfo_instances, ln_fn3).call(this, 1);
     }
     get mimetype() {
-      return this.#ln(2);
+      return __privateMethod(this, _FontInfo_instances, ln_fn3).call(this, 2);
     }
     get name() {
-      return this.#ln(3);
-    }
-    #un() {
-      let t2 = FONT_INFO.OFFSET_STRINGS;
-      t2 += 4 + this.#on.getUint32(t2);
-      t2 += 4 + this.#on.getUint32(t2);
-      t2 += 4 + this.#on.getUint32(t2);
-      return { offset: t2, length: this.#on.getUint32(t2) };
+      return __privateMethod(this, _FontInfo_instances, ln_fn3).call(this, 3);
     }
     get data() {
-      const { offset: t2, length: e2 } = this.#un();
-      return 0 === e2 ? void 0 : new Uint8Array(this.#rn, t2 + 4, e2);
+      const { offset: t2, length: e2 } = __privateMethod(this, _FontInfo_instances, un_fn).call(this);
+      return 0 === e2 ? void 0 : new Uint8Array(__privateGet(this, _rn3), t2 + 4, e2);
     }
     clearData() {
-      const { offset: t2, length: e2 } = this.#un();
+      const { offset: t2, length: e2 } = __privateMethod(this, _FontInfo_instances, un_fn).call(this);
       if (0 !== e2) {
-        this.#on.setUint32(t2, 0);
-        this.#rn = new Uint8Array(this.#rn, 0, t2 + 4).slice().buffer;
-        this.#on = new DataView(this.#rn);
+        __privateGet(this, _on3).setUint32(t2, 0);
+        __privateSet(this, _rn3, new Uint8Array(__privateGet(this, _rn3), 0, t2 + 4).slice().buffer);
+        __privateSet(this, _on3, new DataView(__privateGet(this, _rn3)));
       }
     }
     get cssFontInfo() {
       let t2 = FONT_INFO.OFFSET_STRINGS;
-      t2 += 4 + this.#on.getUint32(t2);
-      t2 += 4 + this.#on.getUint32(t2);
-      const e2 = this.#on.getUint32(t2);
+      t2 += 4 + __privateGet(this, _on3).getUint32(t2);
+      t2 += 4 + __privateGet(this, _on3).getUint32(t2);
+      const e2 = __privateGet(this, _on3).getUint32(t2);
       if (0 === e2) return null;
       const i2 = new Uint8Array(e2);
-      i2.set(new Uint8Array(this.#rn, t2 + 4, e2));
+      i2.set(new Uint8Array(__privateGet(this, _rn3), t2 + 4, e2));
       return new CssFontInfo(i2.buffer);
     }
     get systemFontInfo() {
       let t2 = FONT_INFO.OFFSET_STRINGS;
-      t2 += 4 + this.#on.getUint32(t2);
-      const e2 = this.#on.getUint32(t2);
+      t2 += 4 + __privateGet(this, _on3).getUint32(t2);
+      const e2 = __privateGet(this, _on3).getUint32(t2);
       if (0 === e2) return null;
       const i2 = new Uint8Array(e2);
-      i2.set(new Uint8Array(this.#rn, t2 + 4, e2));
+      i2.set(new Uint8Array(__privateGet(this, _rn3), t2 + 4, e2));
       return new SystemFontInfo(i2.buffer);
     }
+  };
+  _rn3 = new WeakMap();
+  _an3 = new WeakMap();
+  _on3 = new WeakMap();
+  _FontInfo_instances = new WeakSet();
+  hn_fn = function(t2) {
+    assert(t2 < FONT_INFO.bools.length, "Invalid boolean index");
+    const e2 = Math.floor(t2 / 4), i2 = 2 * t2 % 8, n2 = __privateGet(this, _on3).getUint8(e2) >> i2 & 3;
+    return 0 === n2 ? void 0 : 2 === n2;
+  };
+  cn_fn = function(t2) {
+    assert(t2 < FONT_INFO.numbers.length, "Invalid number index");
+    return __privateGet(this, _on3).getFloat64(FONT_INFO.OFFSET_NUMBERS + 8 * t2);
+  };
+  dn_fn = function(t2, e2, i2, n2) {
+    const s2 = __privateGet(this, _on3).getUint8(t2);
+    if (0 === s2) return;
+    assert(s2 === e2, "Invalid array length.");
+    t2 += 1;
+    const r2 = new Array(s2);
+    for (let e3 = 0; e3 < s2; e3++) {
+      r2[e3] = __privateGet(this, _on3)[i2](t2, true);
+      t2 += n2;
+    }
+    return r2;
+  };
+  ln_fn3 = function(t2) {
+    assert(t2 < FONT_INFO.strings.length, "Invalid string index");
+    let e2 = FONT_INFO.OFFSET_STRINGS + 4;
+    for (let i3 = 0; i3 < t2; i3++) e2 += __privateGet(this, _on3).getUint32(e2) + 4;
+    const i2 = __privateGet(this, _on3).getUint32(e2);
+    return __privateGet(this, _an3).decode(new Uint8Array(__privateGet(this, _rn3), e2 + 4, i2));
+  };
+  un_fn = function() {
+    let t2 = FONT_INFO.OFFSET_STRINGS;
+    t2 += 4 + __privateGet(this, _on3).getUint32(t2);
+    t2 += 4 + __privateGet(this, _on3).getUint32(t2);
+    t2 += 4 + __privateGet(this, _on3).getUint32(t2);
+    return { offset: t2, length: __privateGet(this, _on3).getUint32(t2) };
   };
   var PatternInfo = class {
     constructor(t2) {
@@ -11305,15 +11826,17 @@
       throw new Error(`Unsupported pattern kind: ${e2}`);
     }
   };
+  var _rn4;
   var FontPathInfo = class {
-    #rn;
     constructor(t2) {
-      this.#rn = t2;
+      __privateAdd(this, _rn4);
+      __privateSet(this, _rn4, t2);
     }
     get path() {
-      return FeatureTest.isFloat16ArraySupported ? new Float16Array(this.#rn) : new Float32Array(this.#rn);
+      return FeatureTest.isFloat16ArraySupported ? new Float16Array(__privateGet(this, _rn4)) : new Float32Array(__privateGet(this, _rn4));
     }
   };
+  _rn4 = new WeakMap();
   function getFactoryUrlProp(t2) {
     if ("string" != typeof t2) return null;
     if (t2.endsWith("/")) return t2;
@@ -11350,13 +11873,16 @@
     for (const t3 of r2) if (!("number" == typeof t3 || o2 && null === t3)) return false;
     return true;
   }.bind(null, isRefProxy, (t2) => "object" == typeof t2 && "string" == typeof t2?.name);
+  var _pn, _gn;
   var LoopbackPort = class {
-    #pn = /* @__PURE__ */ new Map();
-    #gn = Promise.resolve();
+    constructor() {
+      __privateAdd(this, _pn, /* @__PURE__ */ new Map());
+      __privateAdd(this, _gn, Promise.resolve());
+    }
     postMessage(t2, e2) {
       const i2 = { data: structuredClone(t2, e2 ? { transfer: e2 } : null) };
-      this.#gn.then(() => {
-        for (const [t3] of this.#pn) t3.call(this, i2);
+      __privateGet(this, _gn).then(() => {
+        for (const [t3] of __privateGet(this, _pn)) t3.call(this, i2);
       });
     }
     addEventListener(t2, e2, i2 = null) {
@@ -11371,18 +11897,20 @@
         n2 = () => s2.removeEventListener("abort", onAbort);
         s2.addEventListener("abort", onAbort);
       }
-      this.#pn.set(e2, n2);
+      __privateGet(this, _pn).set(e2, n2);
     }
     removeEventListener(t2, e2) {
-      const i2 = this.#pn.get(e2);
+      const i2 = __privateGet(this, _pn).get(e2);
       i2?.();
-      this.#pn.delete(e2);
+      __privateGet(this, _pn).delete(e2);
     }
     terminate() {
-      for (const [, t2] of this.#pn) t2?.();
-      this.#pn.clear();
+      for (const [, t2] of __privateGet(this, _pn)) t2?.();
+      __privateGet(this, _pn).clear();
     }
   };
+  _pn = new WeakMap();
+  _gn = new WeakMap();
   __webpack_require__(1689);
   var mt = 1;
   var ft = 2;
@@ -11413,9 +11941,11 @@
     }
     return new UnknownErrorException(t2.message, t2.toString());
   }
+  var _mn, _MessageHandler_instances, fn_fn, yn_fn, bn_fn, vn_fn;
   var MessageHandler = class {
-    #mn = new AbortController();
     constructor(t2, e2, i2) {
+      __privateAdd(this, _MessageHandler_instances);
+      __privateAdd(this, _mn, new AbortController());
       this.sourceName = t2;
       this.targetName = e2;
       this.comObj = i2;
@@ -11425,37 +11955,7 @@
       this.streamControllers = /* @__PURE__ */ Object.create(null);
       this.callbackCapabilities = /* @__PURE__ */ Object.create(null);
       this.actionHandler = /* @__PURE__ */ Object.create(null);
-      i2.addEventListener("message", this.#fn.bind(this), { signal: this.#mn.signal });
-    }
-    #fn({ data: t2 }) {
-      if (t2.targetName !== this.sourceName) return;
-      if (t2.stream) {
-        this.#bn(t2);
-        return;
-      }
-      if (t2.callback) {
-        const e3 = t2.callbackId, i2 = this.callbackCapabilities[e3];
-        if (!i2) throw new Error(`Cannot resolve callback ${e3}`);
-        delete this.callbackCapabilities[e3];
-        if (t2.callback === mt) i2.resolve(t2.data);
-        else {
-          if (t2.callback !== ft) throw new Error("Unexpected callback case");
-          i2.reject(wrapReason(t2.reason));
-        }
-        return;
-      }
-      const e2 = this.actionHandler[t2.action];
-      if (!e2) throw new Error(`Unknown action from worker: ${t2.action}`);
-      if (t2.callbackId) {
-        const i2 = this.sourceName, n2 = t2.sourceName, s2 = this.comObj;
-        Promise.try(e2, t2.data).then(function(e3) {
-          s2.postMessage({ sourceName: i2, targetName: n2, callback: mt, callbackId: t2.callbackId, data: e3 });
-        }, function(e3) {
-          s2.postMessage({ sourceName: i2, targetName: n2, callback: ft, callbackId: t2.callbackId, reason: wrapReason(e3) });
-        });
-        return;
-      }
-      t2.streamId ? this.#yn(t2) : e2(t2.data);
+      i2.addEventListener("message", __privateMethod(this, _MessageHandler_instances, fn_fn).bind(this), { signal: __privateGet(this, _mn).signal });
     }
     on(t2, e2) {
       const i2 = this.actionHandler;
@@ -11496,109 +11996,142 @@
         return e3.promise;
       } }, i2);
     }
-    #yn(t2) {
-      const e2 = t2.streamId, i2 = this.sourceName, n2 = t2.sourceName, s2 = this.comObj, r2 = this, a2 = this.actionHandler[t2.action], o2 = { enqueue(t3, r3 = 1, a3) {
-        if (this.isCancelled) return;
-        const o3 = this.desiredSize;
-        this.desiredSize -= r3;
-        if (o3 > 0 && this.desiredSize <= 0) {
-          this.sinkCapability = Promise.withResolvers();
-          this.ready = this.sinkCapability.promise;
-        }
-        s2.postMessage({ sourceName: i2, targetName: n2, stream: wt, streamId: e2, chunk: t3 }, a3);
-      }, close() {
-        if (!this.isCancelled) {
-          this.isCancelled = true;
-          s2.postMessage({ sourceName: i2, targetName: n2, stream: vt, streamId: e2 });
-          delete r2.streamSinks[e2];
-        }
-      }, error(t3) {
-        assert(t3 instanceof Error, "error must have a valid reason");
-        if (!this.isCancelled) {
-          this.isCancelled = true;
-          s2.postMessage({ sourceName: i2, targetName: n2, stream: xt, streamId: e2, reason: wrapReason(t3) });
-        }
-      }, sinkCapability: Promise.withResolvers(), onPull: null, onCancel: null, isCancelled: false, desiredSize: t2.desiredSize, ready: null };
-      o2.sinkCapability.resolve();
-      o2.ready = o2.sinkCapability.promise;
-      this.streamSinks[e2] = o2;
-      Promise.try(a2, t2.data, o2).then(function() {
-        s2.postMessage({ sourceName: i2, targetName: n2, stream: Ct, streamId: e2, success: true });
-      }, function(t3) {
-        s2.postMessage({ sourceName: i2, targetName: n2, stream: Ct, streamId: e2, reason: wrapReason(t3) });
-      });
-    }
-    #bn(t2) {
-      const e2 = t2.streamId, i2 = this.sourceName, n2 = t2.sourceName, s2 = this.comObj, r2 = this.streamControllers[e2], a2 = this.streamSinks[e2];
-      switch (t2.stream) {
-        case Ct:
-          t2.success ? r2.startCall.resolve() : r2.startCall.reject(wrapReason(t2.reason));
-          break;
-        case Et:
-          t2.success ? r2.pullCall.resolve() : r2.pullCall.reject(wrapReason(t2.reason));
-          break;
-        case At:
-          if (!a2) {
-            s2.postMessage({ sourceName: i2, targetName: n2, stream: Et, streamId: e2, success: true });
-            break;
-          }
-          a2.desiredSize <= 0 && t2.desiredSize > 0 && a2.sinkCapability.resolve();
-          a2.desiredSize = t2.desiredSize;
-          Promise.try(a2.onPull || onFn).then(function() {
-            s2.postMessage({ sourceName: i2, targetName: n2, stream: Et, streamId: e2, success: true });
-          }, function(t3) {
-            s2.postMessage({ sourceName: i2, targetName: n2, stream: Et, streamId: e2, reason: wrapReason(t3) });
-          });
-          break;
-        case wt:
-          assert(r2, "enqueue should have stream controller");
-          if (r2.isClosed) break;
-          r2.controller.enqueue(t2.chunk);
-          break;
-        case vt:
-          assert(r2, "close should have stream controller");
-          if (r2.isClosed) break;
-          r2.isClosed = true;
-          r2.controller.close();
-          this.#vn(r2, e2);
-          break;
-        case xt:
-          assert(r2, "error should have stream controller");
-          r2.controller.error(wrapReason(t2.reason));
-          this.#vn(r2, e2);
-          break;
-        case yt:
-          t2.success ? r2.cancelCall.resolve() : r2.cancelCall.reject(wrapReason(t2.reason));
-          this.#vn(r2, e2);
-          break;
-        case bt:
-          if (!a2) break;
-          const o2 = wrapReason(t2.reason);
-          Promise.try(a2.onCancel || onFn, o2).then(function() {
-            s2.postMessage({ sourceName: i2, targetName: n2, stream: yt, streamId: e2, success: true });
-          }, function(t3) {
-            s2.postMessage({ sourceName: i2, targetName: n2, stream: yt, streamId: e2, reason: wrapReason(t3) });
-          });
-          a2.sinkCapability.reject(o2);
-          a2.isCancelled = true;
-          delete this.streamSinks[e2];
-          break;
-        default:
-          throw new Error("Unexpected stream case");
-      }
-    }
-    async #vn(t2, e2) {
-      await Promise.allSettled([t2.startCall?.promise, t2.pullCall?.promise, t2.cancelCall?.promise]);
-      delete this.streamControllers[e2];
-    }
     destroy() {
-      this.#mn?.abort();
-      this.#mn = null;
+      __privateGet(this, _mn)?.abort();
+      __privateSet(this, _mn, null);
     }
   };
+  _mn = new WeakMap();
+  _MessageHandler_instances = new WeakSet();
+  fn_fn = function({ data: t2 }) {
+    if (t2.targetName !== this.sourceName) return;
+    if (t2.stream) {
+      __privateMethod(this, _MessageHandler_instances, bn_fn).call(this, t2);
+      return;
+    }
+    if (t2.callback) {
+      const e3 = t2.callbackId, i2 = this.callbackCapabilities[e3];
+      if (!i2) throw new Error(`Cannot resolve callback ${e3}`);
+      delete this.callbackCapabilities[e3];
+      if (t2.callback === mt) i2.resolve(t2.data);
+      else {
+        if (t2.callback !== ft) throw new Error("Unexpected callback case");
+        i2.reject(wrapReason(t2.reason));
+      }
+      return;
+    }
+    const e2 = this.actionHandler[t2.action];
+    if (!e2) throw new Error(`Unknown action from worker: ${t2.action}`);
+    if (t2.callbackId) {
+      const i2 = this.sourceName, n2 = t2.sourceName, s2 = this.comObj;
+      Promise.try(e2, t2.data).then(function(e3) {
+        s2.postMessage({ sourceName: i2, targetName: n2, callback: mt, callbackId: t2.callbackId, data: e3 });
+      }, function(e3) {
+        s2.postMessage({ sourceName: i2, targetName: n2, callback: ft, callbackId: t2.callbackId, reason: wrapReason(e3) });
+      });
+      return;
+    }
+    t2.streamId ? __privateMethod(this, _MessageHandler_instances, yn_fn).call(this, t2) : e2(t2.data);
+  };
+  yn_fn = function(t2) {
+    const e2 = t2.streamId, i2 = this.sourceName, n2 = t2.sourceName, s2 = this.comObj, r2 = this, a2 = this.actionHandler[t2.action], o2 = { enqueue(t3, r3 = 1, a3) {
+      if (this.isCancelled) return;
+      const o3 = this.desiredSize;
+      this.desiredSize -= r3;
+      if (o3 > 0 && this.desiredSize <= 0) {
+        this.sinkCapability = Promise.withResolvers();
+        this.ready = this.sinkCapability.promise;
+      }
+      s2.postMessage({ sourceName: i2, targetName: n2, stream: wt, streamId: e2, chunk: t3 }, a3);
+    }, close() {
+      if (!this.isCancelled) {
+        this.isCancelled = true;
+        s2.postMessage({ sourceName: i2, targetName: n2, stream: vt, streamId: e2 });
+        delete r2.streamSinks[e2];
+      }
+    }, error(t3) {
+      assert(t3 instanceof Error, "error must have a valid reason");
+      if (!this.isCancelled) {
+        this.isCancelled = true;
+        s2.postMessage({ sourceName: i2, targetName: n2, stream: xt, streamId: e2, reason: wrapReason(t3) });
+      }
+    }, sinkCapability: Promise.withResolvers(), onPull: null, onCancel: null, isCancelled: false, desiredSize: t2.desiredSize, ready: null };
+    o2.sinkCapability.resolve();
+    o2.ready = o2.sinkCapability.promise;
+    this.streamSinks[e2] = o2;
+    Promise.try(a2, t2.data, o2).then(function() {
+      s2.postMessage({ sourceName: i2, targetName: n2, stream: Ct, streamId: e2, success: true });
+    }, function(t3) {
+      s2.postMessage({ sourceName: i2, targetName: n2, stream: Ct, streamId: e2, reason: wrapReason(t3) });
+    });
+  };
+  bn_fn = function(t2) {
+    const e2 = t2.streamId, i2 = this.sourceName, n2 = t2.sourceName, s2 = this.comObj, r2 = this.streamControllers[e2], a2 = this.streamSinks[e2];
+    switch (t2.stream) {
+      case Ct:
+        t2.success ? r2.startCall.resolve() : r2.startCall.reject(wrapReason(t2.reason));
+        break;
+      case Et:
+        t2.success ? r2.pullCall.resolve() : r2.pullCall.reject(wrapReason(t2.reason));
+        break;
+      case At:
+        if (!a2) {
+          s2.postMessage({ sourceName: i2, targetName: n2, stream: Et, streamId: e2, success: true });
+          break;
+        }
+        a2.desiredSize <= 0 && t2.desiredSize > 0 && a2.sinkCapability.resolve();
+        a2.desiredSize = t2.desiredSize;
+        Promise.try(a2.onPull || onFn).then(function() {
+          s2.postMessage({ sourceName: i2, targetName: n2, stream: Et, streamId: e2, success: true });
+        }, function(t3) {
+          s2.postMessage({ sourceName: i2, targetName: n2, stream: Et, streamId: e2, reason: wrapReason(t3) });
+        });
+        break;
+      case wt:
+        assert(r2, "enqueue should have stream controller");
+        if (r2.isClosed) break;
+        r2.controller.enqueue(t2.chunk);
+        break;
+      case vt:
+        assert(r2, "close should have stream controller");
+        if (r2.isClosed) break;
+        r2.isClosed = true;
+        r2.controller.close();
+        __privateMethod(this, _MessageHandler_instances, vn_fn).call(this, r2, e2);
+        break;
+      case xt:
+        assert(r2, "error should have stream controller");
+        r2.controller.error(wrapReason(t2.reason));
+        __privateMethod(this, _MessageHandler_instances, vn_fn).call(this, r2, e2);
+        break;
+      case yt:
+        t2.success ? r2.cancelCall.resolve() : r2.cancelCall.reject(wrapReason(t2.reason));
+        __privateMethod(this, _MessageHandler_instances, vn_fn).call(this, r2, e2);
+        break;
+      case bt:
+        if (!a2) break;
+        const o2 = wrapReason(t2.reason);
+        Promise.try(a2.onCancel || onFn, o2).then(function() {
+          s2.postMessage({ sourceName: i2, targetName: n2, stream: yt, streamId: e2, success: true });
+        }, function(t3) {
+          s2.postMessage({ sourceName: i2, targetName: n2, stream: yt, streamId: e2, reason: wrapReason(t3) });
+        });
+        a2.sinkCapability.reject(o2);
+        a2.isCancelled = true;
+        delete this.streamSinks[e2];
+        break;
+      default:
+        throw new Error("Unexpected stream case");
+    }
+  };
+  vn_fn = async function(t2, e2) {
+    await Promise.allSettled([t2.startCall?.promise, t2.pullCall?.promise, t2.cancelCall?.promise]);
+    delete this.streamControllers[e2];
+  };
+  var _wn;
   var BaseBinaryDataFactory = class {
-    #wn = Object.freeze({ cMapUrl: "CMap", standardFontDataUrl: "font", wasmUrl: "wasm" });
     constructor({ cMapUrl: t2 = null, standardFontDataUrl: e2 = null, wasmUrl: i2 = null }) {
+      __privateAdd(this, _wn, Object.freeze({ cMapUrl: "CMap", standardFontDataUrl: "font", wasmUrl: "wasm" }));
       this.cMapUrl = t2;
       this.standardFontDataUrl = e2;
       this.wasmUrl = i2;
@@ -11616,28 +12149,30 @@
       if (!i2) throw new Error(`Ensure that the \`${t2}\` API parameter is provided.`);
       const n2 = `${i2}${e2}`;
       return this._fetch(n2, t2).catch((e3) => {
-        throw new Error(`Unable to load ${this.#wn[t2]} data at: ${n2}`);
+        throw new Error(`Unable to load ${__privateGet(this, _wn)[t2]} data at: ${n2}`);
       });
     }
     async _fetch(t2, e2) {
       unreachable("Abstract method `_fetch` called.");
     }
   };
+  _wn = new WeakMap();
   var DOMBinaryDataFactory = class extends BaseBinaryDataFactory {
     async _fetch(t2, e2) {
       const i2 = "cMapUrl" !== e2 || t2.endsWith(".bcmap") ? "bytes" : "text", n2 = await fetchData(t2, i2);
       return n2 instanceof Uint8Array ? n2 : stringToBytes(n2);
     }
   };
+  var _xn;
   var BaseCanvasFactory = class {
-    #xn = false;
     constructor({ enableHWA: t2 = false }) {
-      this.#xn = t2;
+      __privateAdd(this, _xn, false);
+      __privateSet(this, _xn, t2);
     }
     create(t2, e2) {
       if (t2 <= 0 || e2 <= 0) throw new Error("Invalid canvas size");
       const i2 = this._createCanvas(t2, e2);
-      return { canvas: i2, context: i2.getContext("2d", { willReadFrequently: !this.#xn }) };
+      return { canvas: i2, context: i2.getContext("2d", { willReadFrequently: !__privateGet(this, _xn) }) };
     }
     reset({ canvas: t2 }, e2, i2) {
       if (!t2) throw new Error("Canvas is not specified");
@@ -11656,6 +12191,7 @@
       unreachable("Abstract method `_createCanvas` called.");
     }
   };
+  _xn = new WeakMap();
   var DOMCanvasFactory = class extends BaseCanvasFactory {
     constructor({ ownerDocument: t2 = globalThis.document, enableHWA: e2 = false }) {
       super({ enableHWA: e2 });
@@ -11699,88 +12235,41 @@
     destroy(t2 = false) {
     }
   };
+  var _An, _En, _Cn, _Sn, _Tn, __n, __3, _DOMFilterFactory_instances, D_get, kn_get, Dn_get, Mn_fn, Pn_fn, Nn_fn, Bn_fn, In_fn, Hn_fn, Fn_fn, Ln_fn, On_fn, zn_fn, Rn_fn, Un_fn;
   var DOMFilterFactory = class extends BaseFilterFactory {
-    #An;
-    #En;
-    #Cn;
-    #Sn;
-    #Tn;
-    #_n;
-    #_ = 0;
     constructor({ docId: t2, ownerDocument: e2 = globalThis.document }) {
       super();
-      this.#Sn = t2;
-      this.#Tn = e2;
-    }
-    get #D() {
-      return this.#En ||= /* @__PURE__ */ new Map();
-    }
-    get #kn() {
-      return this.#_n ||= /* @__PURE__ */ new Map();
-    }
-    get #Dn() {
-      if (!this.#Cn) {
-        const t2 = this.#Tn.createElement("div"), { style: e2 } = t2;
-        e2.colorScheme = "only light";
-        e2.visibility = "hidden";
-        e2.contain = "strict";
-        e2.width = e2.height = 0;
-        e2.position = "absolute";
-        e2.top = e2.left = 0;
-        e2.zIndex = -1;
-        const i2 = this.#Tn.createElementNS(a, "svg");
-        i2.setAttribute("width", 0);
-        i2.setAttribute("height", 0);
-        this.#Cn = this.#Tn.createElementNS(a, "defs");
-        t2.append(i2);
-        i2.append(this.#Cn);
-        this.#Tn.body.append(t2);
-      }
-      return this.#Cn;
-    }
-    #Mn(t2) {
-      if (1 === t2.length) {
-        const e3 = t2[0], i3 = new Array(256);
-        for (let t3 = 0; t3 < 256; t3++) i3[t3] = e3[t3] / 255;
-        const n3 = i3.join(",");
-        return [n3, n3, n3];
-      }
-      const [e2, i2, n2] = t2, s2 = new Array(256), r2 = new Array(256), a2 = new Array(256);
-      for (let t3 = 0; t3 < 256; t3++) {
-        s2[t3] = e2[t3] / 255;
-        r2[t3] = i2[t3] / 255;
-        a2[t3] = n2[t3] / 255;
-      }
-      return [s2.join(","), r2.join(","), a2.join(",")];
-    }
-    #Pn(t2) {
-      if (void 0 === this.#An) {
-        this.#An = "";
-        const t3 = this.#Tn.URL;
-        t3 !== this.#Tn.baseURI && (isDataScheme(t3) ? warn('#createUrl: ignore "data:"-URL for performance reasons.') : this.#An = updateUrlHash(t3, ""));
-      }
-      return `url(${this.#An}#${t2})`;
+      __privateAdd(this, _DOMFilterFactory_instances);
+      __privateAdd(this, _An);
+      __privateAdd(this, _En);
+      __privateAdd(this, _Cn);
+      __privateAdd(this, _Sn);
+      __privateAdd(this, _Tn);
+      __privateAdd(this, __n);
+      __privateAdd(this, __3, 0);
+      __privateSet(this, _Sn, t2);
+      __privateSet(this, _Tn, e2);
     }
     addFilter(t2) {
       if (!t2) return "none";
-      let e2 = this.#D.get(t2);
+      let e2 = __privateGet(this, _DOMFilterFactory_instances, D_get).get(t2);
       if (e2) return e2;
-      const [i2, n2, s2] = this.#Mn(t2), r2 = 1 === t2.length ? i2 : `${i2}${n2}${s2}`;
-      e2 = this.#D.get(r2);
+      const [i2, n2, s2] = __privateMethod(this, _DOMFilterFactory_instances, Mn_fn).call(this, t2), r2 = 1 === t2.length ? i2 : `${i2}${n2}${s2}`;
+      e2 = __privateGet(this, _DOMFilterFactory_instances, D_get).get(r2);
       if (e2) {
-        this.#D.set(t2, e2);
+        __privateGet(this, _DOMFilterFactory_instances, D_get).set(t2, e2);
         return e2;
       }
-      const a2 = `g_${this.#Sn}_transfer_map_${this.#_++}`, o2 = this.#Pn(a2);
-      this.#D.set(t2, o2);
-      this.#D.set(r2, o2);
-      const l2 = this.#In(a2);
-      this.#Fn(i2, n2, s2, l2);
+      const a2 = `g_${__privateGet(this, _Sn)}_transfer_map_${__privateWrapper(this, __3)._++}`, o2 = __privateMethod(this, _DOMFilterFactory_instances, Pn_fn).call(this, a2);
+      __privateGet(this, _DOMFilterFactory_instances, D_get).set(t2, o2);
+      __privateGet(this, _DOMFilterFactory_instances, D_get).set(r2, o2);
+      const l2 = __privateMethod(this, _DOMFilterFactory_instances, In_fn).call(this, a2);
+      __privateMethod(this, _DOMFilterFactory_instances, Fn_fn).call(this, i2, n2, s2, l2);
       return o2;
     }
     addHCMFilter(t2, e2) {
       const i2 = `${t2}-${e2}`, n2 = "base";
-      let s2 = this.#kn.get(n2);
+      let s2 = __privateGet(this, _DOMFilterFactory_instances, kn_get).get(n2);
       if (s2?.key === i2) return s2.url;
       if (s2) {
         s2.filter?.remove();
@@ -11789,30 +12278,30 @@
         s2.filter = null;
       } else {
         s2 = { key: i2, url: "none", filter: null };
-        this.#kn.set(n2, s2);
+        __privateGet(this, _DOMFilterFactory_instances, kn_get).set(n2, s2);
       }
       if (!t2 || !e2) return s2.url;
-      const r2 = this.#On(t2);
+      const r2 = __privateMethod(this, _DOMFilterFactory_instances, On_fn).call(this, t2);
       t2 = Util.makeHexColor(...r2);
-      const a2 = this.#On(e2);
+      const a2 = __privateMethod(this, _DOMFilterFactory_instances, On_fn).call(this, e2);
       e2 = Util.makeHexColor(...a2);
-      this.#Rn();
+      __privateMethod(this, _DOMFilterFactory_instances, Rn_fn).call(this);
       if ("#000000" === t2 && "#ffffff" === e2 || t2 === e2) return s2.url;
       const o2 = new Array(256);
       for (let t3 = 0; t3 <= 255; t3++) {
         const e3 = t3 / 255;
         o2[t3] = e3 <= 0.03928 ? e3 / 12.92 : ((e3 + 0.055) / 1.055) ** 2.4;
       }
-      const l2 = o2.join(","), h2 = `g_${this.#Sn}_hcm_filter`, c2 = s2.filter = this.#In(h2);
-      this.#Fn(l2, l2, l2, c2);
-      this.#Bn(c2);
+      const l2 = o2.join(","), h2 = `g_${__privateGet(this, _Sn)}_hcm_filter`, c2 = s2.filter = __privateMethod(this, _DOMFilterFactory_instances, In_fn).call(this, h2);
+      __privateMethod(this, _DOMFilterFactory_instances, Fn_fn).call(this, l2, l2, l2, c2);
+      __privateMethod(this, _DOMFilterFactory_instances, Bn_fn).call(this, c2);
       const getSteps = (t3, e3) => {
         const i3 = r2[t3] / 255, n3 = a2[t3] / 255, s3 = new Array(e3 + 1);
         for (let t4 = 0; t4 <= e3; t4++) s3[t4] = i3 + t4 / e3 * (n3 - i3);
         return s3.join(",");
       };
-      this.#Fn(getSteps(0, 5), getSteps(1, 5), getSteps(2, 5), c2);
-      s2.url = this.#Pn(h2);
+      __privateMethod(this, _DOMFilterFactory_instances, Fn_fn).call(this, getSteps(0, 5), getSteps(1, 5), getSteps(2, 5), c2);
+      s2.url = __privateMethod(this, _DOMFilterFactory_instances, Pn_fn).call(this, h2);
       return s2.url;
     }
     addSelectionHCMFilter(t2, e2) {
@@ -11826,49 +12315,49 @@
       return "none" !== e2 && FeatureTest.platform.isFirefox ? { "backdrop-filter": e2, "background-color": "transparent" } : null;
     }
     addAlphaFilter(t2) {
-      let e2 = this.#D.get(t2);
+      let e2 = __privateGet(this, _DOMFilterFactory_instances, D_get).get(t2);
       if (e2) return e2;
-      const [i2] = this.#Mn([t2]), n2 = `alpha_${i2}`;
-      e2 = this.#D.get(n2);
+      const [i2] = __privateMethod(this, _DOMFilterFactory_instances, Mn_fn).call(this, [t2]), n2 = `alpha_${i2}`;
+      e2 = __privateGet(this, _DOMFilterFactory_instances, D_get).get(n2);
       if (e2) {
-        this.#D.set(t2, e2);
+        __privateGet(this, _DOMFilterFactory_instances, D_get).set(t2, e2);
         return e2;
       }
-      const s2 = `g_${this.#Sn}_alpha_map_${this.#_++}`, r2 = this.#Pn(s2);
-      this.#D.set(t2, r2);
-      this.#D.set(n2, r2);
-      const a2 = this.#In(s2);
-      this.#Ln(i2, a2);
+      const s2 = `g_${__privateGet(this, _Sn)}_alpha_map_${__privateWrapper(this, __3)._++}`, r2 = __privateMethod(this, _DOMFilterFactory_instances, Pn_fn).call(this, s2);
+      __privateGet(this, _DOMFilterFactory_instances, D_get).set(t2, r2);
+      __privateGet(this, _DOMFilterFactory_instances, D_get).set(n2, r2);
+      const a2 = __privateMethod(this, _DOMFilterFactory_instances, In_fn).call(this, s2);
+      __privateMethod(this, _DOMFilterFactory_instances, Ln_fn).call(this, i2, a2);
       return r2;
     }
     addLuminosityFilter(t2) {
-      let e2, i2, n2 = this.#D.get(t2 || "luminosity");
+      let e2, i2, n2 = __privateGet(this, _DOMFilterFactory_instances, D_get).get(t2 || "luminosity");
       if (n2) return n2;
       if (t2) {
-        [e2] = this.#Mn([t2]);
+        [e2] = __privateMethod(this, _DOMFilterFactory_instances, Mn_fn).call(this, [t2]);
         i2 = `luminosity_${e2}`;
       } else i2 = "luminosity";
-      n2 = this.#D.get(i2);
+      n2 = __privateGet(this, _DOMFilterFactory_instances, D_get).get(i2);
       if (n2) {
-        this.#D.set(t2, n2);
+        __privateGet(this, _DOMFilterFactory_instances, D_get).set(t2, n2);
         return n2;
       }
-      const s2 = `g_${this.#Sn}_luminosity_map_${this.#_++}`, r2 = this.#Pn(s2);
-      this.#D.set(t2, r2);
-      this.#D.set(i2, r2);
-      const a2 = this.#In(s2);
-      this.#Nn(a2);
-      t2 && this.#Ln(e2, a2);
+      const s2 = `g_${__privateGet(this, _Sn)}_luminosity_map_${__privateWrapper(this, __3)._++}`, r2 = __privateMethod(this, _DOMFilterFactory_instances, Pn_fn).call(this, s2);
+      __privateGet(this, _DOMFilterFactory_instances, D_get).set(t2, r2);
+      __privateGet(this, _DOMFilterFactory_instances, D_get).set(i2, r2);
+      const a2 = __privateMethod(this, _DOMFilterFactory_instances, In_fn).call(this, s2);
+      __privateMethod(this, _DOMFilterFactory_instances, Nn_fn).call(this, a2);
+      t2 && __privateMethod(this, _DOMFilterFactory_instances, Ln_fn).call(this, e2, a2);
       return r2;
     }
     addKnockoutFilter(t2 = 0) {
-      const e2 = t2 > 0 ? Math.min(1 / t2, 1e6) : 1e6, i2 = `knockout_${e2}`, n2 = this.#D.get(i2);
+      const e2 = t2 > 0 ? Math.min(1 / t2, 1e6) : 1e6, i2 = `knockout_${e2}`, n2 = __privateGet(this, _DOMFilterFactory_instances, D_get).get(i2);
       if (n2) return n2;
-      const s2 = `g_${this.#Sn}_knockout_filter_${this.#_++}`, r2 = this.#Pn(s2);
-      this.#D.set(i2, r2);
-      const o2 = this.#In(s2), l2 = this.#Tn.createElementNS(a, "feComponentTransfer");
+      const s2 = `g_${__privateGet(this, _Sn)}_knockout_filter_${__privateWrapper(this, __3)._++}`, r2 = __privateMethod(this, _DOMFilterFactory_instances, Pn_fn).call(this, s2);
+      __privateGet(this, _DOMFilterFactory_instances, D_get).set(i2, r2);
+      const o2 = __privateMethod(this, _DOMFilterFactory_instances, In_fn).call(this, s2), l2 = __privateGet(this, _Tn).createElementNS(a, "feComponentTransfer");
       o2.append(l2);
-      const h2 = this.#Tn.createElementNS(a, "feFuncA");
+      const h2 = __privateGet(this, _Tn).createElementNS(a, "feFuncA");
       h2.setAttribute("type", "linear");
       h2.setAttribute("slope", `${e2}`);
       h2.setAttribute("intercept", "0");
@@ -11877,7 +12366,7 @@
     }
     addHighlightHCMFilter(t2, e2, i2, n2, s2) {
       const r2 = `${e2}-${i2}-${n2}-${s2}`;
-      let a2 = this.#kn.get(t2);
+      let a2 = __privateGet(this, _DOMFilterFactory_instances, kn_get).get(t2);
       if (a2?.key === r2) return a2.url;
       if (a2) {
         a2.filter?.remove();
@@ -11886,13 +12375,13 @@
         a2.filter = null;
       } else {
         a2 = { key: r2, url: "none", filter: null };
-        this.#kn.set(t2, a2);
+        __privateGet(this, _DOMFilterFactory_instances, kn_get).set(t2, a2);
       }
       if (!e2 || !i2) return a2.url;
-      const [o2, l2] = [e2, i2].map(this.#On.bind(this));
-      let h2 = Math.round(0.2126 * o2[0] + 0.7152 * o2[1] + 0.0722 * o2[2]), c2 = Math.round(0.2126 * l2[0] + 0.7152 * l2[1] + 0.0722 * l2[2]), [d2, u2] = [n2, s2].map(this.#Un.bind(this));
+      const [o2, l2] = [e2, i2].map(__privateMethod(this, _DOMFilterFactory_instances, On_fn).bind(this));
+      let h2 = Math.round(0.2126 * o2[0] + 0.7152 * o2[1] + 0.0722 * o2[2]), c2 = Math.round(0.2126 * l2[0] + 0.7152 * l2[1] + 0.0722 * l2[2]), [d2, u2] = [n2, s2].map(__privateMethod(this, _DOMFilterFactory_instances, Un_fn).bind(this));
       c2 < h2 && ([h2, c2, d2, u2] = [c2, h2, u2, d2]);
-      this.#Rn();
+      __privateMethod(this, _DOMFilterFactory_instances, Rn_fn).call(this);
       const getSteps = (t3, e3, i3) => {
         const n3 = new Array(256), s3 = (c2 - h2) / i3, r3 = t3 / 255, a3 = (e3 - t3) / (255 * i3);
         let o3 = 0;
@@ -11903,80 +12392,137 @@
         }
         for (let t4 = o3; t4 < 256; t4++) n3[t4] = n3[o3 - 1];
         return n3.join(",");
-      }, p2 = `g_${this.#Sn}_hcm_${t2}_filter`, g2 = a2.filter = this.#In(p2);
-      this.#Bn(g2);
-      this.#Fn(getSteps(d2[0], u2[0], 5), getSteps(d2[1], u2[1], 5), getSteps(d2[2], u2[2], 5), g2);
-      a2.url = this.#Pn(p2);
+      }, p2 = `g_${__privateGet(this, _Sn)}_hcm_${t2}_filter`, g2 = a2.filter = __privateMethod(this, _DOMFilterFactory_instances, In_fn).call(this, p2);
+      __privateMethod(this, _DOMFilterFactory_instances, Bn_fn).call(this, g2);
+      __privateMethod(this, _DOMFilterFactory_instances, Fn_fn).call(this, getSteps(d2[0], u2[0], 5), getSteps(d2[1], u2[1], 5), getSteps(d2[2], u2[2], 5), g2);
+      a2.url = __privateMethod(this, _DOMFilterFactory_instances, Pn_fn).call(this, p2);
       return a2.url;
     }
     destroy(t2 = false) {
-      if (!t2 || !this.#_n?.size) {
-        this.#Cn?.parentNode.parentNode.remove();
-        this.#Cn = null;
-        this.#En?.clear();
-        this.#En = null;
-        this.#_n?.clear();
-        this.#_n = null;
-        this.#_ = 0;
+      if (!t2 || !__privateGet(this, __n)?.size) {
+        __privateGet(this, _Cn)?.parentNode.parentNode.remove();
+        __privateSet(this, _Cn, null);
+        __privateGet(this, _En)?.clear();
+        __privateSet(this, _En, null);
+        __privateGet(this, __n)?.clear();
+        __privateSet(this, __n, null);
+        __privateSet(this, __3, 0);
       }
     }
-    #Nn(t2) {
-      const e2 = this.#Tn.createElementNS(a, "feColorMatrix");
-      e2.setAttribute("type", "matrix");
-      e2.setAttribute("values", "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.3 0.59 0.11 0 0");
-      t2.append(e2);
+  };
+  _An = new WeakMap();
+  _En = new WeakMap();
+  _Cn = new WeakMap();
+  _Sn = new WeakMap();
+  _Tn = new WeakMap();
+  __n = new WeakMap();
+  __3 = new WeakMap();
+  _DOMFilterFactory_instances = new WeakSet();
+  D_get = function() {
+    return __privateGet(this, _En) || __privateSet(this, _En, /* @__PURE__ */ new Map());
+  };
+  kn_get = function() {
+    return __privateGet(this, __n) || __privateSet(this, __n, /* @__PURE__ */ new Map());
+  };
+  Dn_get = function() {
+    if (!__privateGet(this, _Cn)) {
+      const t2 = __privateGet(this, _Tn).createElement("div"), { style: e2 } = t2;
+      e2.colorScheme = "only light";
+      e2.visibility = "hidden";
+      e2.contain = "strict";
+      e2.width = e2.height = 0;
+      e2.position = "absolute";
+      e2.top = e2.left = 0;
+      e2.zIndex = -1;
+      const i2 = __privateGet(this, _Tn).createElementNS(a, "svg");
+      i2.setAttribute("width", 0);
+      i2.setAttribute("height", 0);
+      __privateSet(this, _Cn, __privateGet(this, _Tn).createElementNS(a, "defs"));
+      t2.append(i2);
+      i2.append(__privateGet(this, _Cn));
+      __privateGet(this, _Tn).body.append(t2);
     }
-    #Bn(t2) {
-      const e2 = this.#Tn.createElementNS(a, "feColorMatrix");
-      e2.setAttribute("type", "matrix");
-      e2.setAttribute("values", "0.2126 0.7152 0.0722 0 0 0.2126 0.7152 0.0722 0 0 0.2126 0.7152 0.0722 0 0 0 0 0 1 0");
-      t2.append(e2);
+    return __privateGet(this, _Cn);
+  };
+  Mn_fn = function(t2) {
+    if (1 === t2.length) {
+      const e3 = t2[0], i3 = new Array(256);
+      for (let t3 = 0; t3 < 256; t3++) i3[t3] = e3[t3] / 255;
+      const n3 = i3.join(",");
+      return [n3, n3, n3];
     }
-    #In(t2) {
-      const e2 = this.#Tn.createElementNS(a, "filter");
-      e2.setAttribute("color-interpolation-filters", "sRGB");
-      e2.setAttribute("id", t2);
-      this.#Dn.append(e2);
-      return e2;
+    const [e2, i2, n2] = t2, s2 = new Array(256), r2 = new Array(256), a2 = new Array(256);
+    for (let t3 = 0; t3 < 256; t3++) {
+      s2[t3] = e2[t3] / 255;
+      r2[t3] = i2[t3] / 255;
+      a2[t3] = n2[t3] / 255;
     }
-    #Hn(t2, e2, i2) {
-      const n2 = this.#Tn.createElementNS(a, e2);
-      n2.setAttribute("type", "discrete");
-      n2.setAttribute("tableValues", i2);
-      t2.append(n2);
+    return [s2.join(","), r2.join(","), a2.join(",")];
+  };
+  Pn_fn = function(t2) {
+    if (void 0 === __privateGet(this, _An)) {
+      __privateSet(this, _An, "");
+      const t3 = __privateGet(this, _Tn).URL;
+      t3 !== __privateGet(this, _Tn).baseURI && (isDataScheme(t3) ? warn('#createUrl: ignore "data:"-URL for performance reasons.') : __privateSet(this, _An, updateUrlHash(t3, "")));
     }
-    #Fn(t2, e2, i2, n2) {
-      const s2 = this.#Tn.createElementNS(a, "feComponentTransfer");
-      n2.append(s2);
-      this.#Hn(s2, "feFuncR", t2);
-      this.#Hn(s2, "feFuncG", e2);
-      this.#Hn(s2, "feFuncB", i2);
-    }
-    #Ln(t2, e2) {
-      const i2 = this.#Tn.createElementNS(a, "feComponentTransfer");
-      e2.append(i2);
-      this.#Hn(i2, "feFuncA", t2);
-    }
-    #On(t2) {
-      this.#Dn.style.color = "CanvasText";
-      this.#Dn.style.backgroundColor = t2;
-      return getRGB(getComputedStyle(this.#Dn).getPropertyValue("background-color"));
-    }
-    #zn(t2) {
-      this.#Dn.style.color = "CanvasText";
-      this.#Dn.style.backgroundColor = t2;
-      return getRGBA(getComputedStyle(this.#Dn).getPropertyValue("background-color"));
-    }
-    #Rn() {
-      this.#Dn.style.color = "";
-      this.#Dn.style.backgroundColor = "";
-    }
-    #Un(t2) {
-      const [e2, i2, n2, s2] = this.#zn(t2);
-      if (1 === s2) return [e2, i2, n2];
-      const [r2, a2, o2] = this.#On("Canvas");
-      return [blend(e2, r2, s2), blend(i2, a2, s2), blend(n2, o2, s2)];
-    }
+    return `url(${__privateGet(this, _An)}#${t2})`;
+  };
+  Nn_fn = function(t2) {
+    const e2 = __privateGet(this, _Tn).createElementNS(a, "feColorMatrix");
+    e2.setAttribute("type", "matrix");
+    e2.setAttribute("values", "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.3 0.59 0.11 0 0");
+    t2.append(e2);
+  };
+  Bn_fn = function(t2) {
+    const e2 = __privateGet(this, _Tn).createElementNS(a, "feColorMatrix");
+    e2.setAttribute("type", "matrix");
+    e2.setAttribute("values", "0.2126 0.7152 0.0722 0 0 0.2126 0.7152 0.0722 0 0 0.2126 0.7152 0.0722 0 0 0 0 0 1 0");
+    t2.append(e2);
+  };
+  In_fn = function(t2) {
+    const e2 = __privateGet(this, _Tn).createElementNS(a, "filter");
+    e2.setAttribute("color-interpolation-filters", "sRGB");
+    e2.setAttribute("id", t2);
+    __privateGet(this, _DOMFilterFactory_instances, Dn_get).append(e2);
+    return e2;
+  };
+  Hn_fn = function(t2, e2, i2) {
+    const n2 = __privateGet(this, _Tn).createElementNS(a, e2);
+    n2.setAttribute("type", "discrete");
+    n2.setAttribute("tableValues", i2);
+    t2.append(n2);
+  };
+  Fn_fn = function(t2, e2, i2, n2) {
+    const s2 = __privateGet(this, _Tn).createElementNS(a, "feComponentTransfer");
+    n2.append(s2);
+    __privateMethod(this, _DOMFilterFactory_instances, Hn_fn).call(this, s2, "feFuncR", t2);
+    __privateMethod(this, _DOMFilterFactory_instances, Hn_fn).call(this, s2, "feFuncG", e2);
+    __privateMethod(this, _DOMFilterFactory_instances, Hn_fn).call(this, s2, "feFuncB", i2);
+  };
+  Ln_fn = function(t2, e2) {
+    const i2 = __privateGet(this, _Tn).createElementNS(a, "feComponentTransfer");
+    e2.append(i2);
+    __privateMethod(this, _DOMFilterFactory_instances, Hn_fn).call(this, i2, "feFuncA", t2);
+  };
+  On_fn = function(t2) {
+    __privateGet(this, _DOMFilterFactory_instances, Dn_get).style.color = "CanvasText";
+    __privateGet(this, _DOMFilterFactory_instances, Dn_get).style.backgroundColor = t2;
+    return getRGB(getComputedStyle(__privateGet(this, _DOMFilterFactory_instances, Dn_get)).getPropertyValue("background-color"));
+  };
+  zn_fn = function(t2) {
+    __privateGet(this, _DOMFilterFactory_instances, Dn_get).style.color = "CanvasText";
+    __privateGet(this, _DOMFilterFactory_instances, Dn_get).style.backgroundColor = t2;
+    return getRGBA(getComputedStyle(__privateGet(this, _DOMFilterFactory_instances, Dn_get)).getPropertyValue("background-color"));
+  };
+  Rn_fn = function() {
+    __privateGet(this, _DOMFilterFactory_instances, Dn_get).style.color = "";
+    __privateGet(this, _DOMFilterFactory_instances, Dn_get).style.backgroundColor = "";
+  };
+  Un_fn = function(t2) {
+    const [e2, i2, n2, s2] = __privateMethod(this, _DOMFilterFactory_instances, zn_fn).call(this, t2);
+    if (1 === s2) return [e2, i2, n2];
+    const [r2, a2, o2] = __privateMethod(this, _DOMFilterFactory_instances, On_fn).call(this, "Canvas");
+    return [blend(e2, r2, s2), blend(i2, a2, s2), blend(n2, o2, s2)];
   };
   function blend(t2, e2, i2) {
     return Math.round(i2 * t2 + (1 - i2) * e2);
@@ -12058,47 +12604,39 @@
     }
     return { srcPos: e2 + o2, destPos: n2 };
   }
-  var St = new class WebGPU {
-    #Gn = null;
-    #jn = null;
-    #Wn = null;
-    #Vn = null;
-    async #$n() {
-      if (!globalThis.navigator?.gpu) return false;
-      try {
-        const t2 = await navigator.gpu.requestAdapter();
-        if (!t2) return false;
-        this.#Vn = navigator.gpu.getPreferredCanvasFormat();
-        this.#jn = await t2.requestDevice();
-        return true;
-      } catch {
-        return false;
-      }
+  var _Gn, _jn, _Wn, _Vn, _WebGPU_instances, $n_fn, _a2;
+  var St = new (_a2 = class {
+    constructor() {
+      __privateAdd(this, _WebGPU_instances);
+      __privateAdd(this, _Gn, null);
+      __privateAdd(this, _jn, null);
+      __privateAdd(this, _Wn, null);
+      __privateAdd(this, _Vn, null);
     }
     init() {
-      return this.#Gn ||= this.#$n();
+      return __privateGet(this, _Gn) || __privateSet(this, _Gn, __privateMethod(this, _WebGPU_instances, $n_fn).call(this));
     }
     get isReady() {
-      return null !== this.#jn;
+      return null !== __privateGet(this, _jn);
     }
     loadMeshShader() {
-      if (!this.#jn || this.#Wn) return;
-      const t2 = this.#jn.createShaderModule({ code: "\nstruct Uniforms {\n  offsetX      : f32,\n  offsetY      : f32,\n  scaleX       : f32,\n  scaleY       : f32,\n  paddedWidth  : f32,\n  paddedHeight : f32,\n  borderSize   : f32,\n  _pad         : f32,\n};\n\n@group(0) @binding(0) var<uniform> u : Uniforms;\n\nstruct VertexInput {\n  @location(0) position : vec2<f32>,\n  @location(1) color    : vec4<f32>,\n};\n\nstruct VertexOutput {\n  @builtin(position) position : vec4<f32>,\n  @location(0)       color    : vec3<f32>,\n};\n\n@vertex\nfn vs_main(in : VertexInput) -> VertexOutput {\n  var out : VertexOutput;\n  let cx = (in.position.x + u.offsetX) * u.scaleX;\n  let cy = (in.position.y + u.offsetY) * u.scaleY;\n  out.position = vec4<f32>(\n    ((cx + u.borderSize) / u.paddedWidth) * 2.0 - 1.0,\n    1.0 - ((cy + u.borderSize) / u.paddedHeight) * 2.0,\n    0.0,\n    1.0\n  );\n  out.color = in.color.rgb;\n  return out;\n}\n\n@fragment\nfn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {\n  return vec4<f32>(in.color, 1.0);\n}\n" });
-      this.#Wn = this.#jn.createRenderPipeline({ layout: "auto", vertex: { module: t2, entryPoint: "vs_main", buffers: [{ arrayStride: 8, attributes: [{ shaderLocation: 0, offset: 0, format: "float32x2" }] }, { arrayStride: 4, attributes: [{ shaderLocation: 1, offset: 0, format: "unorm8x4" }] }] }, fragment: { module: t2, entryPoint: "fs_main", targets: [{ format: this.#Vn }] }, primitive: { topology: "triangle-list" } });
+      if (!__privateGet(this, _jn) || __privateGet(this, _Wn)) return;
+      const t2 = __privateGet(this, _jn).createShaderModule({ code: "\nstruct Uniforms {\n  offsetX      : f32,\n  offsetY      : f32,\n  scaleX       : f32,\n  scaleY       : f32,\n  paddedWidth  : f32,\n  paddedHeight : f32,\n  borderSize   : f32,\n  _pad         : f32,\n};\n\n@group(0) @binding(0) var<uniform> u : Uniforms;\n\nstruct VertexInput {\n  @location(0) position : vec2<f32>,\n  @location(1) color    : vec4<f32>,\n};\n\nstruct VertexOutput {\n  @builtin(position) position : vec4<f32>,\n  @location(0)       color    : vec3<f32>,\n};\n\n@vertex\nfn vs_main(in : VertexInput) -> VertexOutput {\n  var out : VertexOutput;\n  let cx = (in.position.x + u.offsetX) * u.scaleX;\n  let cy = (in.position.y + u.offsetY) * u.scaleY;\n  out.position = vec4<f32>(\n    ((cx + u.borderSize) / u.paddedWidth) * 2.0 - 1.0,\n    1.0 - ((cy + u.borderSize) / u.paddedHeight) * 2.0,\n    0.0,\n    1.0\n  );\n  out.color = in.color.rgb;\n  return out;\n}\n\n@fragment\nfn fs_main(in : VertexOutput) -> @location(0) vec4<f32> {\n  return vec4<f32>(in.color, 1.0);\n}\n" });
+      __privateSet(this, _Wn, __privateGet(this, _jn).createRenderPipeline({ layout: "auto", vertex: { module: t2, entryPoint: "vs_main", buffers: [{ arrayStride: 8, attributes: [{ shaderLocation: 0, offset: 0, format: "float32x2" }] }, { arrayStride: 4, attributes: [{ shaderLocation: 1, offset: 0, format: "unorm8x4" }] }] }, fragment: { module: t2, entryPoint: "fs_main", targets: [{ format: __privateGet(this, _Vn) }] }, primitive: { topology: "triangle-list" } }));
     }
     draw(t2, e2, i2, n2, s2, r2, a2, o2) {
       this.loadMeshShader();
-      const l2 = this.#jn, { offsetX: h2, offsetY: c2, scaleX: d2, scaleY: u2 } = n2, p2 = l2.createBuffer({ size: Math.max(t2.byteLength, 4), usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
+      const l2 = __privateGet(this, _jn), { offsetX: h2, offsetY: c2, scaleX: d2, scaleY: u2 } = n2, p2 = l2.createBuffer({ size: Math.max(t2.byteLength, 4), usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
       t2.byteLength > 0 && l2.queue.writeBuffer(p2, 0, t2);
       const g2 = l2.createBuffer({ size: Math.max(e2.byteLength, 4), usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
       e2.byteLength > 0 && l2.queue.writeBuffer(g2, 0, e2);
       const m2 = l2.createBuffer({ size: 32, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
       l2.queue.writeBuffer(m2, 0, new Float32Array([h2, c2, d2, u2, r2, a2, o2, 0]));
-      const f2 = l2.createBindGroup({ layout: this.#Wn.getBindGroupLayout(0), entries: [{ binding: 0, resource: { buffer: m2 } }] }), b2 = new OffscreenCanvas(r2, a2), y2 = b2.getContext("webgpu");
-      y2.configure({ device: l2, format: this.#Vn, alphaMode: s2 ? "opaque" : "premultiplied" });
+      const f2 = l2.createBindGroup({ layout: __privateGet(this, _Wn).getBindGroupLayout(0), entries: [{ binding: 0, resource: { buffer: m2 } }] }), b2 = new OffscreenCanvas(r2, a2), y2 = b2.getContext("webgpu");
+      y2.configure({ device: l2, format: __privateGet(this, _Vn), alphaMode: s2 ? "opaque" : "premultiplied" });
       const v2 = s2 ? { r: s2[0] / 255, g: s2[1] / 255, b: s2[2] / 255, a: 1 } : { r: 0, g: 0, b: 0, a: 0 }, w2 = l2.createCommandEncoder(), x2 = w2.beginRenderPass({ colorAttachments: [{ view: y2.getCurrentTexture().createView(), clearValue: v2, loadOp: "clear", storeOp: "store" }] });
       if (i2 > 0) {
-        x2.setPipeline(this.#Wn);
+        x2.setPipeline(__privateGet(this, _Wn));
         x2.setBindGroup(0, f2);
         x2.setVertexBuffer(0, p2);
         x2.setVertexBuffer(1, g2);
@@ -12111,7 +12649,18 @@
       m2.destroy();
       return b2.transferToImageBitmap();
     }
-  }();
+  }, _Gn = new WeakMap(), _jn = new WeakMap(), _Wn = new WeakMap(), _Vn = new WeakMap(), _WebGPU_instances = new WeakSet(), $n_fn = async function() {
+    if (!globalThis.navigator?.gpu) return false;
+    try {
+      const t2 = await navigator.gpu.requestAdapter();
+      if (!t2) return false;
+      __privateSet(this, _Vn, navigator.gpu.getPreferredCanvasFormat());
+      __privateSet(this, _jn, await t2.requestDevice());
+      return true;
+    } catch {
+      return false;
+    }
+  }, _a2)();
   var Tt = "Fill";
   var _t = "Stroke";
   var kt = "Shading";
@@ -12122,7 +12671,9 @@
     t2.clip(s2);
   }
   var BaseShadingPattern = class {
-    matrix = null;
+    constructor() {
+      __publicField(this, "matrix", null);
+    }
     isModifyingCurrentTransform() {
       return false;
     }
@@ -12371,8 +12922,7 @@
   };
   var Dt = 1;
   var Mt = 2;
-  var TilingPattern = class _TilingPattern {
-    static MAX_PATTERN_SIZE = 3e3;
+  var _TilingPattern = class _TilingPattern {
     constructor(t2, e2, i2, n2) {
       this.color = t2[1];
       this.operatorList = t2[2];
@@ -12514,6 +13064,8 @@
       return l2;
     }
   };
+  __publicField(_TilingPattern, "MAX_PATTERN_SIZE", 3e3);
+  var TilingPattern = _TilingPattern;
   var Pt = 16;
   var It = new DOMMatrix();
   var Ft = new Float32Array(2);
@@ -12555,34 +13107,34 @@
     return [Math.hypot(c2, d2) * l2, Math.hypot(u2, p2) * h2];
   }
   var CanvasExtraState = class {
-    alphaIsShape = false;
-    fontSize = 0;
-    fontSizeScale = 1;
-    textMatrix = null;
-    textMatrixScale = 1;
-    fontMatrix = r;
-    leading = 0;
-    x = 0;
-    y = 0;
-    lineX = 0;
-    lineY = 0;
-    charSpacing = 0;
-    wordSpacing = 0;
-    textHScale = 1;
-    textRenderingMode = x;
-    textRise = 0;
-    fillColor = "#000000";
-    strokeColor = "#000000";
-    tilingPatternDims = null;
-    patternFill = false;
-    patternStroke = false;
-    fillAlpha = 1;
-    strokeAlpha = 1;
-    lineWidth = 1;
-    activeSMask = null;
-    transferMaps = "none";
-    minMax = s.slice();
     constructor(t2, e2) {
+      __publicField(this, "alphaIsShape", false);
+      __publicField(this, "fontSize", 0);
+      __publicField(this, "fontSizeScale", 1);
+      __publicField(this, "textMatrix", null);
+      __publicField(this, "textMatrixScale", 1);
+      __publicField(this, "fontMatrix", r);
+      __publicField(this, "leading", 0);
+      __publicField(this, "x", 0);
+      __publicField(this, "y", 0);
+      __publicField(this, "lineX", 0);
+      __publicField(this, "lineY", 0);
+      __publicField(this, "charSpacing", 0);
+      __publicField(this, "wordSpacing", 0);
+      __publicField(this, "textHScale", 1);
+      __publicField(this, "textRenderingMode", x);
+      __publicField(this, "textRise", 0);
+      __publicField(this, "fillColor", "#000000");
+      __publicField(this, "strokeColor", "#000000");
+      __publicField(this, "tilingPatternDims", null);
+      __publicField(this, "patternFill", false);
+      __publicField(this, "patternStroke", false);
+      __publicField(this, "fillAlpha", 1);
+      __publicField(this, "strokeAlpha", 1);
+      __publicField(this, "lineWidth", 1);
+      __publicField(this, "activeSMask", null);
+      __publicField(this, "transferMaps", "none");
+      __publicField(this, "minMax", s.slice());
       this.clipBox = new Float32Array([0, 0, t2, e2]);
     }
     clone() {
@@ -12698,18 +13250,20 @@
   var Rt = ["miter", "round", "bevel"];
   var Bt = {};
   var Lt = {};
-  var CanvasGraphics = class _CanvasGraphics {
-    #qn = 0;
-    #Kn = 0;
-    #Xn = null;
-    #Yn = null;
-    #Jn = null;
-    #Qn = null;
-    #Zn = 1;
-    #ts;
-    #es = null;
-    #is = [];
+  var _qn, _Kn, _Xn, _Yn, _Jn, _Qn, _Zn, _ts, _es, _is, _CanvasGraphics_instances, ns_fn, rs_fn, as_fn, os_fn, ls_fn, hs_fn, cs_fn, ds_fn, us_fn, ss_fn;
+  var _CanvasGraphics = class _CanvasGraphics {
     constructor(t2, e2, i2, n2, s2, { optionalContentConfig: r2, markedContentStack: a2 = null }, o2, l2, h2, c2) {
+      __privateAdd(this, _CanvasGraphics_instances);
+      __privateAdd(this, _qn, 0);
+      __privateAdd(this, _Kn, 0);
+      __privateAdd(this, _Xn, null);
+      __privateAdd(this, _Yn, null);
+      __privateAdd(this, _Jn, null);
+      __privateAdd(this, _Qn, null);
+      __privateAdd(this, _Zn, 1);
+      __privateAdd(this, _ts);
+      __privateAdd(this, _es, null);
+      __privateAdd(this, _is, []);
       this.ctx = t2;
       this.current = new CanvasExtraState(this.ctx.canvas.width, this.ctx.canvas.height);
       this.stateStack = [];
@@ -12821,56 +13375,30 @@
         }
       }
     }
-    #ns() {
-      for (; this.stateStack.length || this.inSMaskMode; ) this.restore();
-      this.current.activeSMask = null;
-      this.ctx.restore();
-      if (this.transparentCanvas) {
-        this.ctx = this.compositeCtx;
-        this.ctx.save();
-        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
-        this.ctx.drawImage(this.transparentCanvas, 0, 0);
-        this.ctx.restore();
-        this.canvasFactory.destroy(this.transparentCanvasEntry);
-        this.transparentCanvas = null;
-        this.transparentCanvasEntry = null;
-      }
-    }
     endDrawing() {
-      this.#ns();
+      __privateMethod(this, _CanvasGraphics_instances, ns_fn).call(this);
       for (const t2 of this.smaskGroupCanvases) this.canvasFactory.destroy(t2);
       this.smaskGroupCanvases.length = 0;
       this._clearPreparedSMask();
       this.tempSMask = null;
       this.smaskStack.length = 0;
-      for (const t2 of this.#is) this.#ss(t2);
-      this.#is.length = 0;
-      this.#Xn = null;
-      this.#Yn = null;
-      this.#Jn = null;
-      this.#Qn = null;
-      this.#Zn = 1;
-      this.#es = null;
-      this.#Kn = 0;
-      this.#qn = 0;
+      for (const t2 of __privateGet(this, _is)) __privateMethod(this, _CanvasGraphics_instances, ss_fn).call(this, t2);
+      __privateGet(this, _is).length = 0;
+      __privateSet(this, _Xn, null);
+      __privateSet(this, _Yn, null);
+      __privateSet(this, _Jn, null);
+      __privateSet(this, _Qn, null);
+      __privateSet(this, _Zn, 1);
+      __privateSet(this, _es, null);
+      __privateSet(this, _Kn, 0);
+      __privateSet(this, _qn, 0);
       this.cachedPatterns.clear();
       for (const t2 of this._cachedBitmapsMap.values()) {
         for (const e2 of t2.values()) "undefined" != typeof HTMLCanvasElement && e2 instanceof HTMLCanvasElement && (e2.width = e2.height = 0);
         t2.clear();
       }
       this._cachedBitmapsMap.clear();
-      this.#rs();
-    }
-    #rs() {
-      if (this.pageColors) {
-        const t2 = this.filterFactory.addHCMFilter(this.pageColors.foreground, this.pageColors.background);
-        if ("none" !== t2) {
-          const e2 = this.ctx.filter;
-          this.ctx.filter = t2;
-          this.ctx.drawImage(this.ctx.canvas, 0, 0);
-          this.ctx.filter = e2;
-        }
-      }
+      __privateMethod(this, _CanvasGraphics_instances, rs_fn).call(this);
     }
     _scaleImage(t2, e2) {
       const i2 = t2.width ?? t2.displayWidth, n2 = t2.height ?? t2.displayHeight, s2 = [];
@@ -13141,120 +13669,10 @@
       this.smaskScratchCanvas = null;
       this._clearPreparedSMask();
     }
-    #as(t2, e2 = null, i2 = 1) {
-      const { width: n2, height: s2 } = t2, r2 = e2 ?? this.canvasFactory.create(n2, s2), a2 = r2.context, o2 = (i2 = Math.round(255 * i2) / 255) < 1;
-      o2 && void 0 === this.#ts && (this.#ts = FeatureTest.isCanvasFilterSupported ? /* @__PURE__ */ new Map() : "none");
-      let l2 = "none";
-      o2 && this.#ts instanceof Map && (l2 = this.#ts.getOrInsertComputed(i2, () => this.filterFactory.addKnockoutFilter(i2)));
-      if (!o2 || "none" !== l2) {
-        if (e2) {
-          a2.save();
-          a2.setTransform(1, 0, 0, 1, 0, 0);
-          a2.clearRect(0, 0, n2, s2);
-          a2.restore();
-        }
-        a2.filter = l2;
-        a2.drawImage(t2, 0, 0);
-        a2.filter = "none";
-        return r2;
-      }
-      const h2 = t2.getContext("2d", { willReadFrequently: true }).getImageData(0, 0, n2, s2), c2 = a2.createImageData(n2, s2), d2 = h2.data, u2 = c2.data, p2 = i2 > 0 ? 1 / i2 : 1e6;
-      for (let t3 = 3, e3 = d2.length; t3 < e3; t3 += 4) u2[t3] = Math.min(Math.round(d2[t3] * p2), 255);
-      a2.putImageData(c2, 0, 0);
-      return r2;
-    }
-    #os(t2, e2, i2, n2) {
-      let s2 = t2?.[e2] ?? null;
-      if (s2 && (s2.canvas.width !== i2 || s2.canvas.height !== n2)) {
-        this.canvasFactory.destroy(s2);
-        s2 = null;
-      }
-      if (!s2) {
-        s2 = this.canvasFactory.create(i2, n2);
-        t2 && (t2[e2] = s2);
-        return s2;
-      }
-      const r2 = s2.context;
-      r2.save();
-      r2.setTransform(1, 0, 0, 1, 0, 0);
-      r2.clearRect(0, 0, i2, n2);
-      r2.restore();
-      return s2;
-    }
-    #ls(t2, e2, i2 = {}) {
-      const { backdropCanvas: n2 = null, destTransform: s2 = [1, 0, 0, 1, 0, 0], backdropOffset: r2 = [0, 0], reuseMaskEntry: a2 = null, poolMeta: o2 = null, sourceAlpha: l2 = 1, sourceFilter: h2 = "none", knockoutAlpha: c2 = 1 } = i2, { width: d2, height: u2 } = e2, p2 = this.#as(e2, a2, c2), g2 = t2.globalCompositeOperation;
-      t2.save();
-      t2.setTransform(...s2);
-      t2.globalAlpha = 1;
-      FeatureTest.isCanvasFilterSupported && (t2.filter = "none");
-      t2.globalCompositeOperation = "destination-out";
-      t2.drawImage(p2.canvas, 0, 0);
-      if (n2) {
-        const [e3, i3] = r2, s3 = this.#os(o2, "knockoutBackdropEntry", d2, u2), a3 = s3.context;
-        a3.drawImage(n2, e3, i3, d2, u2, 0, 0, d2, u2);
-        a3.globalCompositeOperation = "destination-in";
-        a3.drawImage(p2.canvas, 0, 0);
-        a3.globalCompositeOperation = "source-over";
-        t2.globalCompositeOperation = "destination-over";
-        t2.drawImage(s3.canvas, 0, 0);
-        o2 || this.canvasFactory.destroy(s3);
-      }
-      t2.globalCompositeOperation = g2;
-      t2.globalAlpha = l2;
-      FeatureTest.isCanvasFilterSupported && (t2.filter = h2 ?? "none");
-      t2.drawImage(e2, 0, 0);
-      t2.restore();
-      a2 || this.canvasFactory.destroy(p2);
-    }
-    #hs(t2 = 1) {
-      if (0 === this.#qn || this.#Kn > 0 || !this.contentVisible) return false;
-      this.#Kn++;
-      this.#Zn = t2;
-      const e2 = this.#is.at(-1), { canvas: i2 } = this.ctx, n2 = this.#os(e2, "knockoutTempEntry", i2.width, i2.height);
-      this.#Xn = n2;
-      const s2 = n2.context;
-      s2.save();
-      s2.setTransform(this.ctx.getTransform());
-      copyCtxState(this.ctx, s2);
-      this.#Qn = s2.globalCompositeOperation;
-      s2.globalCompositeOperation = "source-over";
-      mirrorContextOperations(s2, this.ctx);
-      this.#es = e2;
-      this.#Yn = this.ctx;
-      this.#Jn = this.suspendedCtx;
-      this.ctx = s2;
-      this.inSMaskMode && (this.suspendedCtx = s2);
-      return true;
-    }
-    #cs(t2) {
-      if (!t2) return;
-      const e2 = this.#Xn, i2 = this.#Yn, n2 = this.#Jn, s2 = e2.context;
-      this.#Xn = null;
-      this.#Yn = null;
-      this.#Jn = null;
-      this.inSMaskMode && this.suspendedCtx === s2 && this.ctx !== s2 && this.endSMaskMode();
-      this.inSMaskMode && (this.suspendedCtx = n2);
-      this.ctx._removeMirroring();
-      this.ctx.globalCompositeOperation = this.#Qn;
-      this.#Qn = null;
-      copyCtxState(this.ctx, i2);
-      this.ctx = i2;
-      const r2 = this.#es;
-      this.#es = null;
-      const a2 = this.#Zn;
-      this.#Zn = 1;
-      try {
-        this.#ls(n2 ?? i2, e2.canvas, { backdropCanvas: r2?.backdropCtx?.canvas ?? null, backdropOffset: r2?.backdropCtx ? [r2.offsetX, r2.offsetY] : [0, 0], reuseMaskEntry: r2?.knockoutMaskEntry ?? null, poolMeta: r2, knockoutAlpha: a2 });
-      } finally {
-        s2.restore();
-        this.#Kn--;
-        r2 || this.canvasFactory.destroy(e2);
-      }
-    }
     compose(t2) {
       if (!this.current.activeSMask) return;
       t2 = t2 ? [Math.floor(t2[0]), Math.floor(t2[1]), Math.ceil(t2[2]), Math.ceil(t2[3])] : [0, 0, this.ctx.canvas.width, this.ctx.canvas.height];
-      const e2 = this.current.activeSMask, i2 = this.suspendedCtx, n2 = this.#Kn > 0 && i2 === this.ctx;
+      const e2 = this.current.activeSMask, i2 = this.suspendedCtx, n2 = __privateGet(this, _Kn) > 0 && i2 === this.ctx;
       this.composeSMask(n2 ? null : i2, e2, this.ctx, t2);
       if (!n2) {
         this.ctx.save();
@@ -13358,7 +13776,7 @@
     constructPath(t2, e2, i2, n2) {
       let [s2] = i2;
       if (!n2) {
-        s2 ||= i2[0] = new Path2D();
+        s2 || (s2 = i2[0] = new Path2D());
         e2 !== B.stroke && e2 !== B.closeStroke && (this.current.tilingPatternDims = null);
         this[e2](t2, s2);
         return;
@@ -13381,7 +13799,7 @@
       this.ctx.closePath();
     }
     stroke(t2, e2, i2 = true) {
-      const n2 = i2 && this.#hs(this.current.strokeAlpha), s2 = this.ctx, r2 = this.current.strokeColor;
+      const n2 = i2 && __privateMethod(this, _CanvasGraphics_instances, hs_fn).call(this, this.current.strokeAlpha), s2 = this.ctx, r2 = this.current.strokeColor;
       s2.globalAlpha = this.current.strokeAlpha;
       if (this.contentVisible) if ("object" == typeof r2 && r2?.getPattern) {
         const i3 = r2.isModifyingCurrentTransform() ? s2.getTransform() : null;
@@ -13398,13 +13816,13 @@
       this.dependencyTracker?.recordDependencies(t2, ot);
       i2 && this.consumePath(t2, e2, this.current.getClippedPathBoundingBox(_t, getCurrentTransform(this.ctx)));
       s2.globalAlpha = this.current.fillAlpha;
-      this.#cs(n2);
+      __privateMethod(this, _CanvasGraphics_instances, cs_fn).call(this, n2);
     }
     closeStroke(t2, e2) {
       this.stroke(t2, e2);
     }
     fill(t2, e2, i2 = true) {
-      const n2 = i2 && this.#hs(this.current.fillAlpha), s2 = this.ctx, r2 = this.current.fillColor, a2 = this.current.patternFill;
+      const n2 = i2 && __privateMethod(this, _CanvasGraphics_instances, hs_fn).call(this, this.current.fillAlpha), s2 = this.ctx, r2 = this.current.fillColor, a2 = this.current.patternFill;
       let o2 = false;
       const l2 = this.current.getClippedPathBoundingBox();
       this.dependencyTracker?.recordDependencies(t2, lt);
@@ -13415,7 +13833,7 @@
           this.pendingEOFill = false;
           i2 && this.consumePath(t2, e2, l2);
           this.current.tilingPatternDims = null;
-          this.#cs(n2);
+          __privateMethod(this, _CanvasGraphics_instances, cs_fn).call(this, n2);
           return;
         }
         const c2 = r2.isModifyingCurrentTransform() ? s2.getTransform() : null;
@@ -13438,18 +13856,18 @@
         this.dependencyTracker?.restore(t2);
       }
       i2 && this.consumePath(t2, e2, l2);
-      this.#cs(n2);
+      __privateMethod(this, _CanvasGraphics_instances, cs_fn).call(this, n2);
     }
     eoFill(t2, e2) {
       this.pendingEOFill = true;
       this.fill(t2, e2);
     }
     fillStroke(t2, e2) {
-      const i2 = this.#hs(Math.min(this.current.fillAlpha, this.current.strokeAlpha));
+      const i2 = __privateMethod(this, _CanvasGraphics_instances, hs_fn).call(this, Math.min(this.current.fillAlpha, this.current.strokeAlpha));
       this.fill(t2, e2, false);
       this.stroke(t2, e2, false);
       this.consumePath(t2, e2);
-      this.#cs(i2);
+      __privateMethod(this, _CanvasGraphics_instances, cs_fn).call(this, i2);
     }
     eoFillStroke(t2, e2) {
       this.pendingEOFill = true;
@@ -13466,10 +13884,10 @@
       this.consumePath(t2, e2);
     }
     rawFillPath(t2, e2) {
-      const i2 = this.#hs(this.current.fillAlpha);
+      const i2 = __privateMethod(this, _CanvasGraphics_instances, hs_fn).call(this, this.current.fillAlpha);
       this.ctx.fill(e2);
       this.dependencyTracker?.recordDependencies(t2, ct).recordOperation(t2);
-      this.#cs(i2);
+      __privateMethod(this, _CanvasGraphics_instances, cs_fn).call(this, i2);
     }
     clip(t2) {
       this.dependencyTracker?.recordFutureForcedDependency("clipMode", t2);
@@ -13565,11 +13983,6 @@
       this.moveText(t2, 0, this.current.leading);
       this.dependencyTracker?.recordIncrementalData("moveText", this.dependencyTracker.getSimpleIndex("leading") ?? t2);
     }
-    #ds(t2, e2, i2) {
-      const n2 = new Path2D();
-      n2.addPath(t2, new DOMMatrix(i2).invertSelf().multiplySelf(e2));
-      return n2;
-    }
     paintChar(t2, e2, i2, n2, s2, r2) {
       const a2 = this.ctx, o2 = this.current, l2 = o2.font, h2 = o2.textRenderingMode, c2 = o2.fontSize / o2.fontSizeScale, d2 = h2 & S, u2 = !!(h2 & T), p2 = o2.patternFill && !l2.missingFile, g2 = o2.patternStroke && !l2.missingFile;
       let m2;
@@ -13583,16 +13996,16 @@
         if (d2 === x || d2 === E) if (s2) {
           e3 = a2.getTransform();
           a2.setTransform(...s2);
-          const t3 = this.#ds(m2, e3, s2);
+          const t3 = __privateMethod(this, _CanvasGraphics_instances, ds_fn).call(this, m2, e3, s2);
           a2.fill(t3);
         } else a2.fill(m2);
         if (d2 === A || d2 === E) if (r2) {
-          e3 ||= a2.getTransform();
+          e3 || (e3 = a2.getTransform());
           a2.setTransform(...r2);
           const { a: t3, b: i3, c: n3, d: s3 } = e3, o3 = Util.inverseTransform(r2), l3 = Util.transform([t3, i3, n3, s3, 0, 0], o3);
           Util.singularValueDecompose2dScale(l3, Ft);
           a2.lineWidth *= Math.max(Ft[0], Ft[1]) / c2;
-          a2.stroke(this.#ds(m2, e3, r2));
+          a2.stroke(__privateMethod(this, _CanvasGraphics_instances, ds_fn).call(this, m2, e3, r2));
         } else {
           a2.lineWidth /= c2;
           a2.stroke(m2);
@@ -13609,7 +14022,7 @@
         }
       }
       if (u2) {
-        (this.pendingTextPaths ||= []).push({ transform: getCurrentTransform(a2), x: i2, y: n2, fontSize: c2, path: m2 });
+        (this.pendingTextPaths || (this.pendingTextPaths = [])).push({ transform: getCurrentTransform(a2), x: i2, y: n2, fontSize: c2, path: m2 });
         this.dependencyTracker?.recordCharacterBBox(t2, a2, l2, c2, i2, n2);
       }
     }
@@ -13633,10 +14046,10 @@
       }
       const i2 = this.current, n2 = i2.font;
       if (n2.isType3Font) {
-        const n3 = this.#hs(i2.fillAlpha);
+        const n3 = __privateMethod(this, _CanvasGraphics_instances, hs_fn).call(this, i2.fillAlpha);
         this.showType3Text(t2, e2);
         this.dependencyTracker?.recordShowTextOperation(t2);
-        this.#cs(n3);
+        __privateMethod(this, _CanvasGraphics_instances, cs_fn).call(this, n3);
         return;
       }
       const s2 = i2.fontSize;
@@ -13644,7 +14057,7 @@
         this.dependencyTracker?.recordOperation(t2);
         return;
       }
-      const r2 = this.#hs(i2.fillAlpha), a2 = this.ctx, o2 = i2.fontSizeScale, l2 = i2.charSpacing, h2 = i2.wordSpacing, c2 = i2.fontDirection, d2 = i2.textHScale * c2, u2 = e2.length, p2 = n2.vertical, g2 = p2 ? 1 : -1, m2 = n2.defaultVMetrics, f2 = s2 * i2.fontMatrix[0], b2 = i2.textRenderingMode === x && !n2.disableFontFace && !i2.patternFill;
+      const r2 = __privateMethod(this, _CanvasGraphics_instances, hs_fn).call(this, i2.fillAlpha), a2 = this.ctx, o2 = i2.fontSizeScale, l2 = i2.charSpacing, h2 = i2.wordSpacing, c2 = i2.fontDirection, d2 = i2.textHScale * c2, u2 = e2.length, p2 = n2.vertical, g2 = p2 ? 1 : -1, m2 = n2.defaultVMetrics, f2 = s2 * i2.fontMatrix[0], b2 = i2.textRenderingMode === x && !n2.disableFontFace && !i2.patternFill;
       a2.save();
       i2.textMatrix && a2.transform(...i2.textMatrix);
       a2.translate(i2.x, i2.y + i2.textRise);
@@ -13689,7 +14102,7 @@
         i2.x += s3 * f2 * d2;
         a2.restore();
         this.compose();
-        this.#cs(r2);
+        __privateMethod(this, _CanvasGraphics_instances, cs_fn).call(this, r2);
         return;
       }
       let M2, P2 = 0;
@@ -13739,7 +14152,7 @@
       a2.restore();
       this.compose();
       this.dependencyTracker?.recordShowTextOperation(t2);
-      this.#cs(r2);
+      __privateMethod(this, _CanvasGraphics_instances, cs_fn).call(this, r2);
     }
     showType3Text(t2, e2) {
       const i2 = this.ctx, n2 = this.current, s2 = n2.font, a2 = n2.fontSize, o2 = n2.fontDirection, l2 = s2.vertical ? 1 : -1, h2 = n2.charSpacing, c2 = n2.wordSpacing, d2 = n2.textHScale * o2, u2 = n2.fontMatrix || r, p2 = e2.length;
@@ -13851,7 +14264,7 @@
     }
     shadingFill(t2, e2) {
       if (!this.contentVisible) return;
-      const i2 = this.#hs(this.current.fillAlpha), n2 = this.ctx;
+      const i2 = __privateMethod(this, _CanvasGraphics_instances, hs_fn).call(this, this.current.fillAlpha), n2 = this.ctx;
       this.save(t2);
       const r2 = this._getPattern(t2, e2);
       n2.fillStyle = r2.getPattern(n2, this, getCurrentTransformInverse(n2), kt, t2);
@@ -13865,7 +14278,7 @@
       this.dependencyTracker?.resetBBox(t2).recordFullPageBBox(t2).recordDependencies(t2, ut).recordDependencies(t2, lt).recordOperation(t2);
       this.compose(this.current.getClippedPathBoundingBox());
       this.restore(t2);
-      this.#cs(i2);
+      __privateMethod(this, _CanvasGraphics_instances, cs_fn).call(this, i2);
     }
     beginInlineImage() {
       unreachable("Should not call beginInlineImage");
@@ -13904,7 +14317,7 @@
         this.current.activeSMask = null;
       }
       const n2 = this.ctx;
-      if (!(e2.needsIsolation && (e2.isolated || e2.hasSoftMask) || e2.knockout || e2.isGray || 0 !== this.#qn || 1 !== n2.globalAlpha || "source-over" !== n2.globalCompositeOperation || i2)) {
+      if (!(e2.needsIsolation && (e2.isolated || e2.hasSoftMask) || e2.knockout || e2.isGray || 0 !== __privateGet(this, _qn) || 1 !== n2.globalAlpha || "source-over" !== n2.globalCompositeOperation || i2)) {
         if (e2.bbox) {
           let t3 = new Path2D();
           const [i3, s2, r3, a3] = e2.bbox;
@@ -13917,11 +14330,11 @@
           n2.clip(t3);
         }
         this.groupStack.push(null);
-        this.#is.push(null);
+        __privateGet(this, _is).push(null);
         this.groupLevel++;
         return;
       }
-      e2.isolated || e2.knockout || 0 !== this.#qn || info("TODO: Fully support non-isolated non-knockout groups.");
+      e2.isolated || e2.knockout || 0 !== __privateGet(this, _qn) || info("TODO: Fully support non-isolated non-knockout groups.");
       const r2 = getCurrentTransform(n2);
       e2.matrix && n2.transform(...e2.matrix);
       const a2 = [0, 0, n2.canvas.width, n2.canvas.height];
@@ -13935,8 +14348,8 @@
       this.current.startNewPathAndClipBox([0, 0, c2, d2]);
       const u2 = this.canvasFactory.create(c2, d2);
       e2.smask && this.smaskGroupCanvases.push(u2);
-      const p2 = u2.context, g2 = e2.knockout && !e2.isolated ? n2 : null, m2 = !e2.isolated && !e2.knockout && !e2.smask && e2.needsIsolation && this.#qn > 0, f2 = e2.knockout ? this.canvasFactory.create(c2, d2) : null, b2 = this.#qn;
-      e2.knockout ? this.#qn++ : this.#qn = 0;
+      const p2 = u2.context, g2 = e2.knockout && !e2.isolated ? n2 : null, m2 = !e2.isolated && !e2.knockout && !e2.smask && e2.needsIsolation && __privateGet(this, _qn) > 0, f2 = e2.knockout ? this.canvasFactory.create(c2, d2) : null, b2 = __privateGet(this, _qn);
+      e2.knockout ? __privateWrapper(this, _qn)._++ : __privateSet(this, _qn, 0);
       p2.translate(-l2, -h2);
       p2.transform(...r2);
       const y2 = !e2.isolated && !e2.smask && e2.needsIsolation, v2 = y2 && !i2 && 0 === b2 && !e2.knockout && !e2.isGray && e2.hasSoftMask && 1 === n2.globalAlpha && "source-over" === n2.globalCompositeOperation && "none" === this.current.transferMaps;
@@ -13968,16 +14381,16 @@
       this.dependencyTracker?.inheritSimpleDataAsFutureForcedDependencies(["fillAlpha", "strokeAlpha", "globalCompositeOperation"]).pushBaseTransform(n2);
       this.setGState(t2, [["BM", "source-over"], ["ca", 1], ["CA", 1], ["TR", null]]);
       this.groupStack.push(n2);
-      this.#is.push({ backdropCtx: g2, savedKnockoutLevel: b2, offsetX: l2, offsetY: h2, hasInnerBackdrop: m2, replaceBackdrop: v2, knockoutMaskEntry: f2, knockoutTempEntry: null, knockoutBackdropEntry: null });
+      __privateGet(this, _is).push({ backdropCtx: g2, savedKnockoutLevel: b2, offsetX: l2, offsetY: h2, hasInnerBackdrop: m2, replaceBackdrop: v2, knockoutMaskEntry: f2, knockoutTempEntry: null, knockoutBackdropEntry: null });
       this.groupLevel++;
     }
     endGroup(t2, e2) {
       if (!this.contentVisible) return;
       this.groupLevel--;
-      const i2 = this.ctx, n2 = this.groupStack.pop(), r2 = this.#is.pop();
-      r2 && (this.#qn = r2.savedKnockoutLevel);
+      const i2 = this.ctx, n2 = this.groupStack.pop(), r2 = __privateGet(this, _is).pop();
+      r2 && __privateSet(this, _qn, r2.savedKnockoutLevel);
       if (null !== n2) {
-        e2.isGray && this.#us(i2);
+        e2.isGray && __privateMethod(this, _CanvasGraphics_instances, us_fn).call(this, i2);
         this.ctx = n2;
         this.ctx.imageSmoothingEnabled = false;
         this.dependencyTracker?.popBaseTransform();
@@ -13988,7 +14401,7 @@
             this.ctx.restore();
             this.inSMaskMode && this.ctx.setTransform(this.suspendedCtx.getTransform());
           }
-          this.#ss(r2);
+          __privateMethod(this, _CanvasGraphics_instances, ss_fn).call(this, r2);
         } else {
           this.ctx.restore();
           const e3 = getCurrentTransform(this.ctx);
@@ -13997,13 +14410,13 @@
           this.ctx.setTransform(...e3);
           const a2 = s.slice();
           Util.axialAlignedBoundingBox([0, 0, i2.canvas.width, i2.canvas.height], e3, a2);
-          const o2 = this.#is.at(-1);
-          if (this.#qn > 0) if (r2.hasInnerBackdrop) {
+          const o2 = __privateGet(this, _is).at(-1);
+          if (__privateGet(this, _qn) > 0) if (r2.hasInnerBackdrop) {
             const { width: t3, height: s2 } = i2.canvas, a3 = this.canvasFactory.create(t3, s2), o3 = a3.context;
             o3.drawImage(n2.canvas, r2.offsetX, r2.offsetY, t3, s2, 0, 0, t3, s2);
             o3.globalCompositeOperation = "source-over";
             o3.drawImage(i2.canvas, 0, 0);
-            const l2 = this.#as(i2.canvas);
+            const l2 = __privateMethod(this, _CanvasGraphics_instances, as_fn).call(this, i2.canvas);
             o3.globalCompositeOperation = "destination-in";
             o3.drawImage(l2.canvas, 0, 0);
             const h2 = this.ctx.globalCompositeOperation, c2 = this.ctx.globalAlpha, d2 = this.ctx.filter;
@@ -14022,7 +14435,7 @@
             this.canvasFactory.destroy(a3);
           } else {
             const t3 = o2?.backdropCtx ?? null;
-            this.#ls(this.ctx, i2.canvas, { backdropCanvas: t3?.canvas ?? null, destTransform: e3, backdropOffset: t3 ? [o2.offsetX + r2.offsetX, o2.offsetY + r2.offsetY] : [0, 0], sourceAlpha: this.ctx.globalAlpha, sourceFilter: this.ctx.filter });
+            __privateMethod(this, _CanvasGraphics_instances, ls_fn).call(this, this.ctx, i2.canvas, { backdropCanvas: t3?.canvas ?? null, destTransform: e3, backdropOffset: t3 ? [o2.offsetX + r2.offsetX, o2.offsetY + r2.offsetY] : [0, 0], sourceAlpha: this.ctx.globalAlpha, sourceFilter: this.ctx.filter });
           }
           else {
             if (r2.replaceBackdrop) {
@@ -14035,48 +14448,13 @@
           }
           this.ctx.restore();
           this.canvasFactory.destroy({ canvas: i2.canvas, context: i2 });
-          this.#ss(r2);
+          __privateMethod(this, _CanvasGraphics_instances, ss_fn).call(this, r2);
           this.compose(a2);
         }
       } else this.restore(t2);
     }
-    #us(t2) {
-      const { canvas: e2 } = t2, { width: i2, height: n2 } = e2;
-      if (FeatureTest.isCanvasFilterSupported) {
-        t2.save();
-        t2.setTransform(1, 0, 0, 1, 0, 0);
-        t2.filter = "grayscale(1)";
-        t2.globalAlpha = 1;
-        t2.globalCompositeOperation = "copy";
-        t2.drawImage(e2, 0, 0);
-        t2.restore();
-        return;
-      }
-      const s2 = t2.getImageData(0, 0, i2, n2), { data: r2 } = s2;
-      for (let t3 = 0, e3 = r2.length; t3 < e3; t3 += 4) {
-        const e4 = 0.2126 * r2[t3] + 0.7152 * r2[t3 + 1] + 0.0722 * r2[t3 + 2] + 0.5 | 0;
-        r2[t3] = r2[t3 + 1] = r2[t3 + 2] = e4;
-      }
-      t2.putImageData(s2, 0, 0);
-    }
-    #ss(t2) {
-      if (t2) {
-        if (t2.knockoutMaskEntry) {
-          this.canvasFactory.destroy(t2.knockoutMaskEntry);
-          t2.knockoutMaskEntry = null;
-        }
-        if (t2.knockoutTempEntry) {
-          this.canvasFactory.destroy(t2.knockoutTempEntry);
-          t2.knockoutTempEntry = null;
-        }
-        if (t2.knockoutBackdropEntry) {
-          this.canvasFactory.destroy(t2.knockoutBackdropEntry);
-          t2.knockoutBackdropEntry = null;
-        }
-      }
-    }
     beginAnnotation(t2, e2, i2, n2, s2, r2, a2) {
-      this.#ns();
+      __privateMethod(this, _CanvasGraphics_instances, ns_fn).call(this);
       resetCtxToDefault(this.ctx);
       this.ctx.save();
       this.save(t2);
@@ -14121,7 +14499,7 @@
     endAnnotation(t2) {
       if (this.annotationCanvas) {
         this.ctx.restore();
-        this.#rs();
+        __privateMethod(this, _CanvasGraphics_instances, rs_fn).call(this);
         this.ctx = this.annotationCanvas.savedCtx;
         delete this.annotationCanvas.savedCtx;
         delete this.annotationCanvas;
@@ -14132,7 +14510,7 @@
       if (!this.contentVisible) return;
       const i2 = e2.count;
       (e2 = this.getObject(t2, e2.data, e2)).count = i2;
-      const n2 = this.#hs(this.current.fillAlpha), s2 = this.ctx, r2 = this._createMaskCanvas(t2, e2), a2 = r2.canvas;
+      const n2 = __privateMethod(this, _CanvasGraphics_instances, hs_fn).call(this, this.current.fillAlpha), s2 = this.ctx, r2 = this._createMaskCanvas(t2, e2), a2 = r2.canvas;
       s2.save();
       s2.setTransform(1, 0, 0, 1, 0, 0);
       s2.drawImage(a2, r2.offsetX, r2.offsetY);
@@ -14140,12 +14518,12 @@
       s2.restore();
       r2.canvasEntry && this.canvasFactory.destroy(r2.canvasEntry);
       this.compose();
-      this.#cs(n2);
+      __privateMethod(this, _CanvasGraphics_instances, cs_fn).call(this, n2);
     }
     paintImageMaskXObjectRepeat(t2, e2, i2, n2 = 0, s2 = 0, r2, a2) {
       if (!this.contentVisible) return;
       e2 = this.getObject(t2, e2.data, e2);
-      const o2 = this.#hs(this.current.fillAlpha), l2 = this.ctx;
+      const o2 = __privateMethod(this, _CanvasGraphics_instances, hs_fn).call(this, this.current.fillAlpha), l2 = this.ctx;
       l2.save();
       const h2 = getCurrentTransform(l2);
       l2.transform(i2, n2, s2, r2, 0, 0);
@@ -14161,11 +14539,11 @@
       c2.canvasEntry && this.canvasFactory.destroy(c2.canvasEntry);
       this.compose();
       this.dependencyTracker?.recordOperation(t2);
-      this.#cs(o2);
+      __privateMethod(this, _CanvasGraphics_instances, cs_fn).call(this, o2);
     }
     paintImageMaskXObjectGroup(t2, e2) {
       if (!this.contentVisible) return;
-      const i2 = this.#hs(this.current.fillAlpha), n2 = this.ctx, s2 = this.current.fillColor, r2 = this.current.patternFill;
+      const i2 = __privateMethod(this, _CanvasGraphics_instances, hs_fn).call(this, this.current.fillAlpha), n2 = this.ctx, s2 = this.current.fillColor, r2 = this.current.patternFill;
       this.dependencyTracker?.resetBBox(t2).recordDependencies(t2, pt);
       for (const i3 of e2) {
         const { data: e3, width: a2, height: o2, transform: l2 } = i3, h2 = this.canvasFactory.create(a2, o2), c2 = h2.context;
@@ -14185,7 +14563,7 @@
       }
       this.compose();
       this.dependencyTracker?.recordOperation(t2);
-      this.#cs(i2);
+      __privateMethod(this, _CanvasGraphics_instances, cs_fn).call(this, i2);
     }
     paintImageXObject(t2, e2) {
       if (!this.contentVisible) return;
@@ -14221,7 +14599,7 @@
     }
     paintInlineImageXObject(t2, e2) {
       if (!this.contentVisible) return;
-      const i2 = e2.width, n2 = e2.height, s2 = this.#hs(this.current.fillAlpha), r2 = this.ctx;
+      const i2 = e2.width, n2 = e2.height, s2 = __privateMethod(this, _CanvasGraphics_instances, hs_fn).call(this, this.current.fillAlpha), r2 = this.ctx;
       this.save(t2);
       const { filter: a2 } = r2;
       "none" !== a2 && "" !== a2 && (r2.filter = "none");
@@ -14248,11 +14626,11 @@
       l2 && this.canvasFactory.destroy(l2);
       this.compose();
       this.restore(t2);
-      this.#cs(s2);
+      __privateMethod(this, _CanvasGraphics_instances, cs_fn).call(this, s2);
     }
     paintInlineImageXObjectGroup(t2, e2, i2) {
       if (!this.contentVisible) return;
-      const n2 = this.#hs(this.current.fillAlpha), s2 = this.ctx;
+      const n2 = __privateMethod(this, _CanvasGraphics_instances, hs_fn).call(this, this.current.fillAlpha), s2 = this.ctx;
       let r2, a2 = null;
       if (e2.bitmap) r2 = e2.bitmap;
       else {
@@ -14273,15 +14651,15 @@
       a2 && this.canvasFactory.destroy(a2);
       this.dependencyTracker?.recordOperation(t2);
       this.compose();
-      this.#cs(n2);
+      __privateMethod(this, _CanvasGraphics_instances, cs_fn).call(this, n2);
     }
     paintSolidColorImageMask(t2) {
       if (!this.contentVisible) return;
-      const e2 = this.#hs(this.current.fillAlpha);
+      const e2 = __privateMethod(this, _CanvasGraphics_instances, hs_fn).call(this, this.current.fillAlpha);
       this.dependencyTracker?.resetBBox(t2).recordBBox(t2, this.ctx, 0, 1, 0, 1).recordDependencies(t2, lt).recordOperation(t2);
       this.ctx.fillRect(0, 0, 1, 1);
       this.compose();
-      this.#cs(e2);
+      __privateMethod(this, _CanvasGraphics_instances, cs_fn).call(this, e2);
     }
     markPoint(t2, e2) {
     }
@@ -14391,28 +14769,217 @@
       return true;
     }
   };
+  _qn = new WeakMap();
+  _Kn = new WeakMap();
+  _Xn = new WeakMap();
+  _Yn = new WeakMap();
+  _Jn = new WeakMap();
+  _Qn = new WeakMap();
+  _Zn = new WeakMap();
+  _ts = new WeakMap();
+  _es = new WeakMap();
+  _is = new WeakMap();
+  _CanvasGraphics_instances = new WeakSet();
+  ns_fn = function() {
+    for (; this.stateStack.length || this.inSMaskMode; ) this.restore();
+    this.current.activeSMask = null;
+    this.ctx.restore();
+    if (this.transparentCanvas) {
+      this.ctx = this.compositeCtx;
+      this.ctx.save();
+      this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+      this.ctx.drawImage(this.transparentCanvas, 0, 0);
+      this.ctx.restore();
+      this.canvasFactory.destroy(this.transparentCanvasEntry);
+      this.transparentCanvas = null;
+      this.transparentCanvasEntry = null;
+    }
+  };
+  rs_fn = function() {
+    if (this.pageColors) {
+      const t2 = this.filterFactory.addHCMFilter(this.pageColors.foreground, this.pageColors.background);
+      if ("none" !== t2) {
+        const e2 = this.ctx.filter;
+        this.ctx.filter = t2;
+        this.ctx.drawImage(this.ctx.canvas, 0, 0);
+        this.ctx.filter = e2;
+      }
+    }
+  };
+  as_fn = function(t2, e2 = null, i2 = 1) {
+    const { width: n2, height: s2 } = t2, r2 = e2 ?? this.canvasFactory.create(n2, s2), a2 = r2.context, o2 = (i2 = Math.round(255 * i2) / 255) < 1;
+    o2 && void 0 === __privateGet(this, _ts) && __privateSet(this, _ts, FeatureTest.isCanvasFilterSupported ? /* @__PURE__ */ new Map() : "none");
+    let l2 = "none";
+    o2 && __privateGet(this, _ts) instanceof Map && (l2 = __privateGet(this, _ts).getOrInsertComputed(i2, () => this.filterFactory.addKnockoutFilter(i2)));
+    if (!o2 || "none" !== l2) {
+      if (e2) {
+        a2.save();
+        a2.setTransform(1, 0, 0, 1, 0, 0);
+        a2.clearRect(0, 0, n2, s2);
+        a2.restore();
+      }
+      a2.filter = l2;
+      a2.drawImage(t2, 0, 0);
+      a2.filter = "none";
+      return r2;
+    }
+    const h2 = t2.getContext("2d", { willReadFrequently: true }).getImageData(0, 0, n2, s2), c2 = a2.createImageData(n2, s2), d2 = h2.data, u2 = c2.data, p2 = i2 > 0 ? 1 / i2 : 1e6;
+    for (let t3 = 3, e3 = d2.length; t3 < e3; t3 += 4) u2[t3] = Math.min(Math.round(d2[t3] * p2), 255);
+    a2.putImageData(c2, 0, 0);
+    return r2;
+  };
+  os_fn = function(t2, e2, i2, n2) {
+    let s2 = t2?.[e2] ?? null;
+    if (s2 && (s2.canvas.width !== i2 || s2.canvas.height !== n2)) {
+      this.canvasFactory.destroy(s2);
+      s2 = null;
+    }
+    if (!s2) {
+      s2 = this.canvasFactory.create(i2, n2);
+      t2 && (t2[e2] = s2);
+      return s2;
+    }
+    const r2 = s2.context;
+    r2.save();
+    r2.setTransform(1, 0, 0, 1, 0, 0);
+    r2.clearRect(0, 0, i2, n2);
+    r2.restore();
+    return s2;
+  };
+  ls_fn = function(t2, e2, i2 = {}) {
+    const { backdropCanvas: n2 = null, destTransform: s2 = [1, 0, 0, 1, 0, 0], backdropOffset: r2 = [0, 0], reuseMaskEntry: a2 = null, poolMeta: o2 = null, sourceAlpha: l2 = 1, sourceFilter: h2 = "none", knockoutAlpha: c2 = 1 } = i2, { width: d2, height: u2 } = e2, p2 = __privateMethod(this, _CanvasGraphics_instances, as_fn).call(this, e2, a2, c2), g2 = t2.globalCompositeOperation;
+    t2.save();
+    t2.setTransform(...s2);
+    t2.globalAlpha = 1;
+    FeatureTest.isCanvasFilterSupported && (t2.filter = "none");
+    t2.globalCompositeOperation = "destination-out";
+    t2.drawImage(p2.canvas, 0, 0);
+    if (n2) {
+      const [e3, i3] = r2, s3 = __privateMethod(this, _CanvasGraphics_instances, os_fn).call(this, o2, "knockoutBackdropEntry", d2, u2), a3 = s3.context;
+      a3.drawImage(n2, e3, i3, d2, u2, 0, 0, d2, u2);
+      a3.globalCompositeOperation = "destination-in";
+      a3.drawImage(p2.canvas, 0, 0);
+      a3.globalCompositeOperation = "source-over";
+      t2.globalCompositeOperation = "destination-over";
+      t2.drawImage(s3.canvas, 0, 0);
+      o2 || this.canvasFactory.destroy(s3);
+    }
+    t2.globalCompositeOperation = g2;
+    t2.globalAlpha = l2;
+    FeatureTest.isCanvasFilterSupported && (t2.filter = h2 ?? "none");
+    t2.drawImage(e2, 0, 0);
+    t2.restore();
+    a2 || this.canvasFactory.destroy(p2);
+  };
+  hs_fn = function(t2 = 1) {
+    if (0 === __privateGet(this, _qn) || __privateGet(this, _Kn) > 0 || !this.contentVisible) return false;
+    __privateWrapper(this, _Kn)._++;
+    __privateSet(this, _Zn, t2);
+    const e2 = __privateGet(this, _is).at(-1), { canvas: i2 } = this.ctx, n2 = __privateMethod(this, _CanvasGraphics_instances, os_fn).call(this, e2, "knockoutTempEntry", i2.width, i2.height);
+    __privateSet(this, _Xn, n2);
+    const s2 = n2.context;
+    s2.save();
+    s2.setTransform(this.ctx.getTransform());
+    copyCtxState(this.ctx, s2);
+    __privateSet(this, _Qn, s2.globalCompositeOperation);
+    s2.globalCompositeOperation = "source-over";
+    mirrorContextOperations(s2, this.ctx);
+    __privateSet(this, _es, e2);
+    __privateSet(this, _Yn, this.ctx);
+    __privateSet(this, _Jn, this.suspendedCtx);
+    this.ctx = s2;
+    this.inSMaskMode && (this.suspendedCtx = s2);
+    return true;
+  };
+  cs_fn = function(t2) {
+    if (!t2) return;
+    const e2 = __privateGet(this, _Xn), i2 = __privateGet(this, _Yn), n2 = __privateGet(this, _Jn), s2 = e2.context;
+    __privateSet(this, _Xn, null);
+    __privateSet(this, _Yn, null);
+    __privateSet(this, _Jn, null);
+    this.inSMaskMode && this.suspendedCtx === s2 && this.ctx !== s2 && this.endSMaskMode();
+    this.inSMaskMode && (this.suspendedCtx = n2);
+    this.ctx._removeMirroring();
+    this.ctx.globalCompositeOperation = __privateGet(this, _Qn);
+    __privateSet(this, _Qn, null);
+    copyCtxState(this.ctx, i2);
+    this.ctx = i2;
+    const r2 = __privateGet(this, _es);
+    __privateSet(this, _es, null);
+    const a2 = __privateGet(this, _Zn);
+    __privateSet(this, _Zn, 1);
+    try {
+      __privateMethod(this, _CanvasGraphics_instances, ls_fn).call(this, n2 ?? i2, e2.canvas, { backdropCanvas: r2?.backdropCtx?.canvas ?? null, backdropOffset: r2?.backdropCtx ? [r2.offsetX, r2.offsetY] : [0, 0], reuseMaskEntry: r2?.knockoutMaskEntry ?? null, poolMeta: r2, knockoutAlpha: a2 });
+    } finally {
+      s2.restore();
+      __privateWrapper(this, _Kn)._--;
+      r2 || this.canvasFactory.destroy(e2);
+    }
+  };
+  ds_fn = function(t2, e2, i2) {
+    const n2 = new Path2D();
+    n2.addPath(t2, new DOMMatrix(i2).invertSelf().multiplySelf(e2));
+    return n2;
+  };
+  us_fn = function(t2) {
+    const { canvas: e2 } = t2, { width: i2, height: n2 } = e2;
+    if (FeatureTest.isCanvasFilterSupported) {
+      t2.save();
+      t2.setTransform(1, 0, 0, 1, 0, 0);
+      t2.filter = "grayscale(1)";
+      t2.globalAlpha = 1;
+      t2.globalCompositeOperation = "copy";
+      t2.drawImage(e2, 0, 0);
+      t2.restore();
+      return;
+    }
+    const s2 = t2.getImageData(0, 0, i2, n2), { data: r2 } = s2;
+    for (let t3 = 0, e3 = r2.length; t3 < e3; t3 += 4) {
+      const e4 = 0.2126 * r2[t3] + 0.7152 * r2[t3 + 1] + 0.0722 * r2[t3 + 2] + 0.5 | 0;
+      r2[t3] = r2[t3 + 1] = r2[t3 + 2] = e4;
+    }
+    t2.putImageData(s2, 0, 0);
+  };
+  ss_fn = function(t2) {
+    if (t2) {
+      if (t2.knockoutMaskEntry) {
+        this.canvasFactory.destroy(t2.knockoutMaskEntry);
+        t2.knockoutMaskEntry = null;
+      }
+      if (t2.knockoutTempEntry) {
+        this.canvasFactory.destroy(t2.knockoutTempEntry);
+        t2.knockoutTempEntry = null;
+      }
+      if (t2.knockoutBackdropEntry) {
+        this.canvasFactory.destroy(t2.knockoutBackdropEntry);
+        t2.knockoutBackdropEntry = null;
+      }
+    }
+  };
+  var CanvasGraphics = _CanvasGraphics;
   for (const t2 in B) void 0 !== CanvasGraphics.prototype[t2] && (CanvasGraphics.prototype[B[t2]] = CanvasGraphics.prototype[t2]);
+  var _ps, _gs;
   var BasePDFStream = class {
-    #ps = null;
-    #gs = null;
-    _fullReader = null;
-    _rangeReaders = /* @__PURE__ */ new Set();
-    _source = null;
     constructor(t2, e2, i2) {
+      __privateAdd(this, _ps, null);
+      __privateAdd(this, _gs, null);
+      __publicField(this, "_fullReader", null);
+      __publicField(this, "_rangeReaders", /* @__PURE__ */ new Set());
+      __publicField(this, "_source", null);
       this._source = t2;
-      this.#ps = e2;
-      this.#gs = i2;
+      __privateSet(this, _ps, e2);
+      __privateSet(this, _gs, i2);
     }
     get _progressiveDataLength() {
       return this._fullReader?._loaded ?? 0;
     }
     getFullReader() {
       assert(!this._fullReader, "BasePDFStream.getFullReader can only be called once.");
-      return this._fullReader = new this.#ps(this);
+      return this._fullReader = new (__privateGet(this, _ps))(this);
     }
     getRangeReader(t2, e2) {
       if (e2 <= this._progressiveDataLength) return null;
-      const i2 = new this.#gs(this, t2, e2);
+      const i2 = new (__privateGet(this, _gs))(this, t2, e2);
       this._rangeReaders.add(i2);
       return i2;
     }
@@ -14421,16 +14988,18 @@
       for (const e2 of new Set(this._rangeReaders)) e2.cancel(t2);
     }
   };
+  _ps = new WeakMap();
+  _gs = new WeakMap();
   var BasePDFStreamReader = class {
-    onProgress = null;
-    _contentLength = 0;
-    _filename = null;
-    _headersCapability = Promise.withResolvers();
-    _isRangeSupported = false;
-    _isStreamingSupported = false;
-    _loaded = 0;
-    _stream = null;
     constructor(t2) {
+      __publicField(this, "onProgress", null);
+      __publicField(this, "_contentLength", 0);
+      __publicField(this, "_filename", null);
+      __publicField(this, "_headersCapability", Promise.withResolvers());
+      __publicField(this, "_isRangeSupported", false);
+      __publicField(this, "_isStreamingSupported", false);
+      __publicField(this, "_loaded", 0);
+      __publicField(this, "_stream", null);
       this._stream = t2;
     }
     _callOnProgress() {
@@ -14459,8 +15028,8 @@
     }
   };
   var BasePDFStreamRangeReader = class {
-    _stream = null;
     constructor(t2, e2, i2) {
+      __publicField(this, "_stream", null);
       this._stream = t2;
     }
     async read() {
@@ -14617,19 +15186,19 @@
     throw new Error(`getArrayBuffer - unexpected data: ${t2}`);
   }
   var PDFFetchStream = class extends BasePDFStream {
-    _responseOrigin = null;
     constructor(t2) {
       super(t2, PDFFetchStreamReader, PDFFetchStreamRangeReader);
+      __publicField(this, "_responseOrigin", null);
       const { httpHeaders: e2, url: i2 } = t2;
       assert(/https?:/.test(i2.protocol), "PDFFetchStream only supports http(s):// URLs.");
       this.headers = createHeaders(true, e2);
     }
   };
   var PDFFetchStreamReader = class extends BasePDFStreamReader {
-    _abortController = new AbortController();
-    _reader = null;
     constructor(t2) {
       super(t2);
+      __publicField(this, "_abortController", new AbortController());
+      __publicField(this, "_reader", null);
       const { disableRange: e2, disableStream: i2, rangeChunkSize: n2, url: s2, withCredentials: r2 } = t2._source;
       this._isStreamingSupported = !i2;
       const a2 = new Headers(t2.headers);
@@ -14659,11 +15228,11 @@
     }
   };
   var PDFFetchStreamRangeReader = class extends BasePDFStreamRangeReader {
-    _abortController = new AbortController();
-    _readCapability = Promise.withResolvers();
-    _reader = null;
     constructor(t2, e2, i2) {
       super(t2, e2, i2);
+      __publicField(this, "_abortController", new AbortController());
+      __publicField(this, "_readCapability", Promise.withResolvers());
+      __publicField(this, "_reader", null);
       const { url: n2, withCredentials: s2 } = t2._source, r2 = new Headers(t2.headers);
       r2.append("Range", `bytes=${e2}-${i2 - 1}`);
       fetchUrl(n2, r2, s2, this._abortController).then((e3) => {
@@ -14690,11 +15259,13 @@
     for (const t2 of this._requests) t2.resolve({ value: void 0, done: true });
     this._requests.length = 0;
   }
+  var _PDFDataTransportStream_instances, ms_fn;
   var PDFDataTransportStream = class extends BasePDFStream {
-    _progressiveDone = false;
-    _queuedChunks = [];
     constructor(t2) {
       super(t2, PDFDataTransportStreamReader, PDFDataTransportStreamRangeReader);
+      __privateAdd(this, _PDFDataTransportStream_instances);
+      __publicField(this, "_progressiveDone", false);
+      __publicField(this, "_queuedChunks", []);
       const { pdfDataRangeTransport: e2 } = t2, { initialData: i2, progressiveDone: n2 } = e2;
       if (i2?.length > 0) {
         const t3 = transport_stream_getArrayBuffer(i2);
@@ -14705,22 +15276,13 @@
         switch (t3.type) {
           case "range":
           case "progressiveRead":
-            this.#ms(t3.begin, t3.chunk);
+            __privateMethod(this, _PDFDataTransportStream_instances, ms_fn).call(this, t3.begin, t3.chunk);
             break;
           case "progressiveDone":
             this._fullReader?.progressiveDone();
             this._progressiveDone = true;
         }
       });
-    }
-    #ms(t2, e2) {
-      const i2 = transport_stream_getArrayBuffer(e2);
-      if (void 0 === t2) this._fullReader ? this._fullReader._enqueue(i2) : this._queuedChunks.push(i2);
-      else {
-        const e3 = this._rangeReaders.keys().find((e4) => e4._begin === t2);
-        assert(e3, "#onReceiveData - no `PDFDataTransportStreamRangeReader` instance found.");
-        e3._enqueue(i2);
-      }
     }
     getFullReader() {
       const t2 = super.getFullReader();
@@ -14740,13 +15302,24 @@
       this._source.pdfDataRangeTransport.abort();
     }
   };
+  _PDFDataTransportStream_instances = new WeakSet();
+  ms_fn = function(t2, e2) {
+    const i2 = transport_stream_getArrayBuffer(e2);
+    if (void 0 === t2) this._fullReader ? this._fullReader._enqueue(i2) : this._queuedChunks.push(i2);
+    else {
+      const e3 = this._rangeReaders.keys().find((e4) => e4._begin === t2);
+      assert(e3, "#onReceiveData - no `PDFDataTransportStreamRangeReader` instance found.");
+      e3._enqueue(i2);
+    }
+  };
+  var _fs;
   var PDFDataTransportStreamReader = class extends BasePDFStreamReader {
-    #fs = endRequests.bind(this);
-    _done = false;
-    _queuedChunks = null;
-    _requests = [];
     constructor(t2) {
       super(t2);
+      __privateAdd(this, _fs, endRequests.bind(this));
+      __publicField(this, "_done", false);
+      __publicField(this, "_queuedChunks", null);
+      __publicField(this, "_requests", []);
       const { pdfDataRangeTransport: e2, disableRange: i2, disableStream: n2 } = t2._source, { length: s2, contentDispositionFilename: r2 } = e2;
       this._queuedChunks = t2._queuedChunks || [];
       for (const t3 of this._queuedChunks) this._loaded += t3.byteLength;
@@ -14781,22 +15354,24 @@
     }
     cancel(t2) {
       this._done = true;
-      this.#fs();
+      __privateGet(this, _fs).call(this);
     }
     progressiveDone() {
-      this._done ||= true;
-      0 === this._queuedChunks.length && this.#fs();
+      this._done || (this._done = true);
+      0 === this._queuedChunks.length && __privateGet(this, _fs).call(this);
     }
   };
+  _fs = new WeakMap();
+  var _fs2;
   var PDFDataTransportStreamRangeReader = class extends BasePDFStreamRangeReader {
-    #fs = endRequests.bind(this);
-    onDone = null;
-    _begin = -1;
-    _done = false;
-    _queuedChunk = null;
-    _requests = [];
     constructor(t2, e2, i2) {
       super(t2, e2, i2);
+      __privateAdd(this, _fs2, endRequests.bind(this));
+      __publicField(this, "onDone", null);
+      __publicField(this, "_begin", -1);
+      __publicField(this, "_done", false);
+      __publicField(this, "_queuedChunk", null);
+      __publicField(this, "_requests", []);
       this._begin = e2;
     }
     _enqueue(t2) {
@@ -14804,7 +15379,7 @@
         if (0 === this._requests.length) this._queuedChunk = t2;
         else {
           this._requests.shift().resolve({ value: t2, done: false });
-          this.#fs();
+          __privateGet(this, _fs2).call(this);
         }
         this._done = true;
         this.onDone?.();
@@ -14823,15 +15398,18 @@
     }
     cancel(t2) {
       this._done = true;
-      this.#fs();
+      __privateGet(this, _fs2).call(this);
       this.onDone?.();
     }
   };
+  _fs2 = new WeakMap();
+  var _bs, _PDFNetworkStream_instances, vs_fn, ys_fn;
   var PDFNetworkStream = class extends BasePDFStream {
-    #bs = /* @__PURE__ */ new WeakMap();
-    _responseOrigin = null;
     constructor(t2) {
       super(t2, PDFNetworkStreamReader, PDFNetworkStreamRangeReader);
+      __privateAdd(this, _PDFNetworkStream_instances);
+      __privateAdd(this, _bs, /* @__PURE__ */ new WeakMap());
+      __publicField(this, "_responseOrigin", null);
       const { httpHeaders: e2, url: i2 } = t2;
       this.url = i2;
       this.isHttp = /https?:/.test(i2.protocol);
@@ -14839,7 +15417,7 @@
     }
     _request(t2) {
       const e2 = new XMLHttpRequest(), i2 = { validateStatus: null, onHeadersReceived: t2.onHeadersReceived, onDone: t2.onDone, onError: t2.onError, onProgress: t2.onProgress };
-      this.#bs.set(e2, i2);
+      __privateGet(this, _bs).set(e2, i2);
       e2.open("GET", this.url);
       e2.withCredentials = this._source.withCredentials;
       for (const [t3, i3] of this.headers) e2.setRequestHeader(t3, i3);
@@ -14850,49 +15428,14 @@
       e2.responseType = "arraybuffer";
       assert(t2.onError, "Expected `onError` callback to be provided.");
       e2.onerror = () => t2.onError(e2.status);
-      e2.onreadystatechange = this.#ys.bind(this, e2);
-      e2.onprogress = this.#vs.bind(this, e2);
+      e2.onreadystatechange = __privateMethod(this, _PDFNetworkStream_instances, ys_fn).bind(this, e2);
+      e2.onprogress = __privateMethod(this, _PDFNetworkStream_instances, vs_fn).bind(this, e2);
       e2.send(null);
       return e2;
     }
-    #vs(t2, e2) {
-      const i2 = this.#bs.get(t2);
-      i2?.onProgress?.(e2);
-    }
-    #ys(t2, e2) {
-      const i2 = this.#bs.get(t2);
-      if (!i2) return;
-      if (t2.readyState >= 2 && i2.onHeadersReceived) {
-        i2.onHeadersReceived();
-        delete i2.onHeadersReceived;
-      }
-      if (4 !== t2.readyState) return;
-      if (!this.#bs.has(t2)) return;
-      this.#bs.delete(t2);
-      if (0 === t2.status && this.isHttp) {
-        i2.onError(t2.status);
-        return;
-      }
-      const n2 = t2.status || 200;
-      if (!i2.validateStatus(n2)) {
-        i2.onError(t2.status);
-        return;
-      }
-      const s2 = (function network_getArrayBuffer(t3) {
-        return "string" != typeof t3 ? t3 : stringToBytes(t3).buffer;
-      })(t2.response);
-      if (206 === n2) {
-        const e3 = t2.getResponseHeader("Content-Range");
-        if (/bytes \d+-\d+\/\d+/.test(e3)) i2.onDone(s2);
-        else {
-          warn('Missing or invalid "Content-Range" header.');
-          i2.onError(0);
-        }
-      } else s2 ? i2.onDone(s2) : i2.onError(t2.status);
-    }
     _abortRequest(t2) {
-      if (this.#bs.has(t2)) {
-        this.#bs.delete(t2);
+      if (__privateGet(this, _bs).has(t2)) {
+        __privateGet(this, _bs).delete(t2);
         t2.abort();
       }
     }
@@ -14902,45 +15445,54 @@
       return i2;
     }
   };
+  _bs = new WeakMap();
+  _PDFNetworkStream_instances = new WeakSet();
+  vs_fn = function(t2, e2) {
+    const i2 = __privateGet(this, _bs).get(t2);
+    i2?.onProgress?.(e2);
+  };
+  ys_fn = function(t2, e2) {
+    const i2 = __privateGet(this, _bs).get(t2);
+    if (!i2) return;
+    if (t2.readyState >= 2 && i2.onHeadersReceived) {
+      i2.onHeadersReceived();
+      delete i2.onHeadersReceived;
+    }
+    if (4 !== t2.readyState) return;
+    if (!__privateGet(this, _bs).has(t2)) return;
+    __privateGet(this, _bs).delete(t2);
+    if (0 === t2.status && this.isHttp) {
+      i2.onError(t2.status);
+      return;
+    }
+    const n2 = t2.status || 200;
+    if (!i2.validateStatus(n2)) {
+      i2.onError(t2.status);
+      return;
+    }
+    const s2 = (function network_getArrayBuffer(t3) {
+      return "string" != typeof t3 ? t3 : stringToBytes(t3).buffer;
+    })(t2.response);
+    if (206 === n2) {
+      const e3 = t2.getResponseHeader("Content-Range");
+      if (/bytes \d+-\d+\/\d+/.test(e3)) i2.onDone(s2);
+      else {
+        warn('Missing or invalid "Content-Range" header.');
+        i2.onError(0);
+      }
+    } else s2 ? i2.onDone(s2) : i2.onError(t2.status);
+  };
+  var _fs3, _PDFNetworkStreamReader_instances, ws_fn, xs_fn, As_fn, vs_fn2;
   var PDFNetworkStreamReader = class extends BasePDFStreamReader {
-    #fs = endRequests.bind(this);
-    _cachedChunks = [];
-    _done = false;
-    _requests = [];
-    _storedError = null;
     constructor(t2) {
       super(t2);
-      this._fullRequestXhr = t2._request({ onHeadersReceived: this.#ws.bind(this), onDone: this.#xs.bind(this), onError: this.#As.bind(this), onProgress: this.#vs.bind(this) });
-    }
-    #ws() {
-      const t2 = this._stream, { disableRange: e2, rangeChunkSize: i2 } = t2._source, n2 = this._fullRequestXhr;
-      t2._responseOrigin = getResponseOrigin(n2.responseURL);
-      const s2 = n2.getAllResponseHeaders(), r2 = new Headers(s2 ? s2.trimStart().replace(/[^\S ]+$/, "").split(/[\r\n]+/).map((t3) => {
-        const [e3, ...i3] = t3.split(": ");
-        return [e3, i3.join(": ")];
-      }) : []), { contentLength: a2, isRangeSupported: o2 } = validateRangeRequestCapabilities({ responseHeaders: r2, isHttp: t2.isHttp, rangeChunkSize: i2, disableRange: e2 });
-      this._contentLength = a2;
-      this._isRangeSupported = o2;
-      this._filename = extractFilenameFromHeader(r2);
-      this._isRangeSupported && t2._abortRequest(n2);
-      this._headersCapability.resolve();
-    }
-    #xs(t2) {
-      if (this._requests.length > 0) {
-        this._requests.shift().resolve({ value: t2, done: false });
-      } else this._cachedChunks.push(t2);
-      this._done = true;
-      0 === this._cachedChunks.length && this.#fs();
-    }
-    #As(t2) {
-      this._storedError = createResponseError(t2, this._stream.url);
-      this._headersCapability.reject(this._storedError);
-      for (const t3 of this._requests) t3.reject(this._storedError);
-      this._requests.length = 0;
-      this._cachedChunks.length = 0;
-    }
-    #vs(t2) {
-      this.onProgress?.({ loaded: t2.loaded, total: t2.lengthComputable ? t2.total : this._contentLength });
+      __privateAdd(this, _PDFNetworkStreamReader_instances);
+      __privateAdd(this, _fs3, endRequests.bind(this));
+      __publicField(this, "_cachedChunks", []);
+      __publicField(this, "_done", false);
+      __publicField(this, "_requests", []);
+      __publicField(this, "_storedError", null);
+      this._fullRequestXhr = t2._request({ onHeadersReceived: __privateMethod(this, _PDFNetworkStreamReader_instances, ws_fn).bind(this), onDone: __privateMethod(this, _PDFNetworkStreamReader_instances, xs_fn).bind(this), onError: __privateMethod(this, _PDFNetworkStreamReader_instances, As_fn).bind(this), onProgress: __privateMethod(this, _PDFNetworkStreamReader_instances, vs_fn2).bind(this) });
     }
     async read() {
       await this._headersCapability.promise;
@@ -14956,44 +15508,55 @@
     cancel(t2) {
       this._done = true;
       this._headersCapability.reject(t2);
-      this.#fs();
+      __privateGet(this, _fs3).call(this);
       this._stream._abortRequest(this._fullRequestXhr);
       this._fullRequestXhr = null;
     }
   };
+  _fs3 = new WeakMap();
+  _PDFNetworkStreamReader_instances = new WeakSet();
+  ws_fn = function() {
+    const t2 = this._stream, { disableRange: e2, rangeChunkSize: i2 } = t2._source, n2 = this._fullRequestXhr;
+    t2._responseOrigin = getResponseOrigin(n2.responseURL);
+    const s2 = n2.getAllResponseHeaders(), r2 = new Headers(s2 ? s2.trimStart().replace(/[^\S ]+$/, "").split(/[\r\n]+/).map((t3) => {
+      const [e3, ...i3] = t3.split(": ");
+      return [e3, i3.join(": ")];
+    }) : []), { contentLength: a2, isRangeSupported: o2 } = validateRangeRequestCapabilities({ responseHeaders: r2, isHttp: t2.isHttp, rangeChunkSize: i2, disableRange: e2 });
+    this._contentLength = a2;
+    this._isRangeSupported = o2;
+    this._filename = extractFilenameFromHeader(r2);
+    this._isRangeSupported && t2._abortRequest(n2);
+    this._headersCapability.resolve();
+  };
+  xs_fn = function(t2) {
+    if (this._requests.length > 0) {
+      this._requests.shift().resolve({ value: t2, done: false });
+    } else this._cachedChunks.push(t2);
+    this._done = true;
+    0 === this._cachedChunks.length && __privateGet(this, _fs3).call(this);
+  };
+  As_fn = function(t2) {
+    this._storedError = createResponseError(t2, this._stream.url);
+    this._headersCapability.reject(this._storedError);
+    for (const t3 of this._requests) t3.reject(this._storedError);
+    this._requests.length = 0;
+    this._cachedChunks.length = 0;
+  };
+  vs_fn2 = function(t2) {
+    this.onProgress?.({ loaded: t2.loaded, total: t2.lengthComputable ? t2.total : this._contentLength });
+  };
+  var _fs4, _PDFNetworkStreamRangeReader_instances, ws_fn2, xs_fn2, As_fn2;
   var PDFNetworkStreamRangeReader = class extends BasePDFStreamRangeReader {
-    #fs = endRequests.bind(this);
-    onClosed = null;
-    _done = false;
-    _queuedChunk = null;
-    _requests = [];
-    _storedError = null;
     constructor(t2, e2, i2) {
       super(t2, e2, i2);
-      this._requestXhr = t2._request({ begin: e2, end: i2, onHeadersReceived: this.#ws.bind(this), onDone: this.#xs.bind(this), onError: this.#As.bind(this), onProgress: null });
-    }
-    #ws() {
-      const t2 = getResponseOrigin(this._requestXhr?.responseURL);
-      try {
-        ensureResponseOrigin(t2, this._stream._responseOrigin);
-      } catch (t3) {
-        this._storedError = t3;
-        this.#As(0);
-      }
-    }
-    #xs(t2) {
-      if (this._requests.length > 0) {
-        this._requests.shift().resolve({ value: t2, done: false });
-      } else this._queuedChunk = t2;
-      this._done = true;
-      this.#fs();
-      this.onClosed?.();
-    }
-    #As(t2) {
-      this._storedError ??= createResponseError(t2, this._stream.url);
-      for (const t3 of this._requests) t3.reject(this._storedError);
-      this._requests.length = 0;
-      this._queuedChunk = null;
+      __privateAdd(this, _PDFNetworkStreamRangeReader_instances);
+      __privateAdd(this, _fs4, endRequests.bind(this));
+      __publicField(this, "onClosed", null);
+      __publicField(this, "_done", false);
+      __publicField(this, "_queuedChunk", null);
+      __publicField(this, "_requests", []);
+      __publicField(this, "_storedError", null);
+      this._requestXhr = t2._request({ begin: e2, end: i2, onHeadersReceived: __privateMethod(this, _PDFNetworkStreamRangeReader_instances, ws_fn2).bind(this), onDone: __privateMethod(this, _PDFNetworkStreamRangeReader_instances, xs_fn2).bind(this), onError: __privateMethod(this, _PDFNetworkStreamRangeReader_instances, As_fn2).bind(this), onProgress: null });
     }
     async read() {
       if (this._storedError) throw this._storedError;
@@ -15009,10 +15572,35 @@
     }
     cancel(t2) {
       this._done = true;
-      this.#fs();
+      __privateGet(this, _fs4).call(this);
       this._stream._abortRequest(this._requestXhr);
       this.onClosed?.();
     }
+  };
+  _fs4 = new WeakMap();
+  _PDFNetworkStreamRangeReader_instances = new WeakSet();
+  ws_fn2 = function() {
+    const t2 = getResponseOrigin(this._requestXhr?.responseURL);
+    try {
+      ensureResponseOrigin(t2, this._stream._responseOrigin);
+    } catch (t3) {
+      this._storedError = t3;
+      __privateMethod(this, _PDFNetworkStreamRangeReader_instances, As_fn2).call(this, 0);
+    }
+  };
+  xs_fn2 = function(t2) {
+    if (this._requests.length > 0) {
+      this._requests.shift().resolve({ value: t2, done: false });
+    } else this._queuedChunk = t2;
+    this._done = true;
+    __privateGet(this, _fs4).call(this);
+    this.onClosed?.();
+  };
+  As_fn2 = function(t2) {
+    this._storedError ?? (this._storedError = createResponseError(t2, this._stream.url));
+    for (const t3 of this._requests) t3.reject(this._storedError);
+    this._requests.length = 0;
+    this._queuedChunk = null;
   };
   function getReadableStream(t2, e2 = null) {
     const i2 = process.getBuiltinModule("fs"), { Readable: n2 } = process.getBuiltinModule("stream"), s2 = i2.createReadStream(t2, e2);
@@ -15026,9 +15614,9 @@
     }
   };
   var PDFNodeStreamReader = class extends BasePDFStreamReader {
-    _reader = null;
     constructor(t2) {
       super(t2);
+      __publicField(this, "_reader", null);
       const { disableRange: e2, disableStream: i2, rangeChunkSize: n2, url: s2 } = t2._source;
       this._isStreamingSupported = !i2;
       process.getBuiltinModule("fs/promises").lstat(s2).then((t3) => {
@@ -15057,10 +15645,10 @@
     }
   };
   var PDFNodeStreamRangeReader = class extends BasePDFStreamRangeReader {
-    _readCapability = Promise.withResolvers();
-    _reader = null;
     constructor(t2, e2, i2) {
       super(t2, e2, i2);
+      __publicField(this, "_readCapability", Promise.withResolvers());
+      __publicField(this, "_reader", null);
       const { url: n2 } = t2._source;
       try {
         const t3 = getReadableStream(n2, { start: e2, end: i2 - 1 });
@@ -15079,179 +15667,162 @@
       this._reader?.cancel(t2);
     }
   };
+  var _Es, _Cs;
   var GlobalWorkerOptions = class {
-    static #Es = null;
-    static #Cs = "";
     static get workerPort() {
-      return this.#Es;
+      return __privateGet(this, _Es);
     }
     static set workerPort(t2) {
       if (!("undefined" != typeof Worker && t2 instanceof Worker) && null !== t2) throw new Error("Invalid `workerPort` type.");
-      this.#Es = t2;
+      __privateSet(this, _Es, t2);
     }
     static get workerSrc() {
-      return this.#Cs;
+      return __privateGet(this, _Cs);
     }
     static set workerSrc(t2) {
       if ("string" != typeof t2) throw new Error("Invalid `workerSrc` type.");
-      this.#Cs = t2;
+      __privateSet(this, _Cs, t2);
     }
   };
+  _Es = new WeakMap();
+  _Cs = new WeakMap();
+  __privateAdd(GlobalWorkerOptions, _Es, null);
+  __privateAdd(GlobalWorkerOptions, _Cs, "");
+  var _Ss, _Ts;
   var Metadata = class {
-    #Ss;
-    #Ts;
     constructor({ parsedData: t2, rawData: e2 }) {
-      this.#Ss = t2;
-      this.#Ts = e2;
+      __privateAdd(this, _Ss);
+      __privateAdd(this, _Ts);
+      __privateSet(this, _Ss, t2);
+      __privateSet(this, _Ts, e2);
     }
     getRaw() {
-      return this.#Ts;
+      return __privateGet(this, _Ts);
     }
     get(t2) {
-      return this.#Ss.get(t2) ?? null;
+      return __privateGet(this, _Ss).get(t2) ?? null;
     }
     [Symbol.iterator]() {
-      return this.#Ss.entries();
+      return __privateGet(this, _Ss).entries();
     }
   };
+  _Ss = new WeakMap();
+  _Ts = new WeakMap();
   var Nt = /* @__PURE__ */ Symbol("INTERNAL");
+  var __s, _ks, _Ds, _Ms;
   var OptionalContentGroup = class {
-    #_s = false;
-    #ks = false;
-    #Ds = false;
-    #Ms = true;
     constructor(t2, { name: e2, intent: i2, usage: n2, rbGroups: s2 }) {
-      this.#_s = !!(t2 & l);
-      this.#ks = !!(t2 & h);
+      __privateAdd(this, __s, false);
+      __privateAdd(this, _ks, false);
+      __privateAdd(this, _Ds, false);
+      __privateAdd(this, _Ms, true);
+      __privateSet(this, __s, !!(t2 & l));
+      __privateSet(this, _ks, !!(t2 & h));
       this.name = e2;
       this.intent = i2;
       this.usage = n2;
       this.rbGroups = s2;
     }
     get visible() {
-      if (this.#Ds) return this.#Ms;
-      if (!this.#Ms) return false;
+      if (__privateGet(this, _Ds)) return __privateGet(this, _Ms);
+      if (!__privateGet(this, _Ms)) return false;
       const { print: t2, view: e2 } = this.usage;
-      return this.#_s ? "OFF" !== e2?.viewState : !this.#ks || "OFF" !== t2?.printState;
+      return __privateGet(this, __s) ? "OFF" !== e2?.viewState : !__privateGet(this, _ks) || "OFF" !== t2?.printState;
     }
     _setVisible(t2, e2, i2 = false) {
       t2 !== Nt && unreachable("Internal method `_setVisible` called.");
-      this.#Ds = i2;
-      this.#Ms = e2;
+      __privateSet(this, _Ds, i2);
+      __privateSet(this, _Ms, e2);
     }
     get serializable() {
-      return { userSet: this.#Ds, visible: this.#Ms };
+      return { userSet: __privateGet(this, _Ds), visible: __privateGet(this, _Ms) };
     }
   };
-  var OptionalContentConfig = class _OptionalContentConfig {
-    #Ps = null;
-    #Is = /* @__PURE__ */ new Map();
-    #Fs = null;
-    #Os = null;
-    #Rs;
-    creator = null;
-    name = null;
+  __s = new WeakMap();
+  _ks = new WeakMap();
+  _Ds = new WeakMap();
+  _Ms = new WeakMap();
+  var _Ps, _Is, _Fs, _Os, _Rs, _OptionalContentConfig_instances, Bs_fn;
+  var _OptionalContentConfig = class _OptionalContentConfig {
     constructor(t2, e2 = l, i2 = null) {
-      this.#Rs = t2;
+      __privateAdd(this, _OptionalContentConfig_instances);
+      __privateAdd(this, _Ps, null);
+      __privateAdd(this, _Is, /* @__PURE__ */ new Map());
+      __privateAdd(this, _Fs, null);
+      __privateAdd(this, _Os, null);
+      __privateAdd(this, _Rs);
+      __publicField(this, "creator", null);
+      __publicField(this, "name", null);
+      __privateSet(this, _Rs, t2);
       this.renderingIntent = e2;
       if (null !== t2) {
         this.name = t2.name;
         this.creator = t2.creator;
-        this.#Os = t2.order;
-        for (const i3 of t2.groups) this.#Is.set(i3.id, new OptionalContentGroup(e2, i3));
+        __privateSet(this, _Os, t2.order);
+        for (const i3 of t2.groups) __privateGet(this, _Is).set(i3.id, new OptionalContentGroup(e2, i3));
         if (i2) {
-          i2.size !== this.#Is.size && unreachable("Incorrect serialized groupState.");
-          for (const [t3, e3] of i2) this.#Is.get(t3)._setVisible(Nt, e3.visible, e3.userSet);
+          i2.size !== __privateGet(this, _Is).size && unreachable("Incorrect serialized groupState.");
+          for (const [t3, e3] of i2) __privateGet(this, _Is).get(t3)._setVisible(Nt, e3.visible, e3.userSet);
         } else {
-          if ("OFF" === t2.baseState) for (const t3 of this.#Is.values()) t3._setVisible(Nt, false);
-          for (const e3 of t2.on) this.#Is.get(e3)._setVisible(Nt, true);
-          for (const e3 of t2.off) this.#Is.get(e3)._setVisible(Nt, false);
+          if ("OFF" === t2.baseState) for (const t3 of __privateGet(this, _Is).values()) t3._setVisible(Nt, false);
+          for (const e3 of t2.on) __privateGet(this, _Is).get(e3)._setVisible(Nt, true);
+          for (const e3 of t2.off) __privateGet(this, _Is).get(e3)._setVisible(Nt, false);
         }
-        this.#Fs = this.getHash();
+        __privateSet(this, _Fs, this.getHash());
       }
-    }
-    #Bs(t2) {
-      const e2 = t2.length;
-      if (e2 < 2) return true;
-      const i2 = t2[0];
-      for (let n2 = 1; n2 < e2; n2++) {
-        const e3 = t2[n2];
-        let s2;
-        if (Array.isArray(e3)) s2 = this.#Bs(e3);
-        else {
-          if (!this.#Is.has(e3)) {
-            warn(`Optional content group not found: ${e3}`);
-            return true;
-          }
-          s2 = this.#Is.get(e3).visible;
-        }
-        switch (i2) {
-          case "And":
-            if (!s2) return false;
-            break;
-          case "Or":
-            if (s2) return true;
-            break;
-          case "Not":
-            return !s2;
-          default:
-            return true;
-        }
-      }
-      return "And" === i2;
     }
     isVisible(t2) {
-      if (0 === this.#Is.size) return true;
+      if (0 === __privateGet(this, _Is).size) return true;
       if (!t2) {
         info("Optional content group not defined.");
         return true;
       }
       if ("OCG" === t2.type) {
-        if (!this.#Is.has(t2.id)) {
+        if (!__privateGet(this, _Is).has(t2.id)) {
           warn(`Optional content group not found: ${t2.id}`);
           return true;
         }
-        return this.#Is.get(t2.id).visible;
+        return __privateGet(this, _Is).get(t2.id).visible;
       }
       if ("OCMD" === t2.type) {
-        if (t2.expression) return this.#Bs(t2.expression);
+        if (t2.expression) return __privateMethod(this, _OptionalContentConfig_instances, Bs_fn).call(this, t2.expression);
         if (!t2.policy || "AnyOn" === t2.policy) {
           for (const e2 of t2.ids) {
-            if (!this.#Is.has(e2)) {
+            if (!__privateGet(this, _Is).has(e2)) {
               warn(`Optional content group not found: ${e2}`);
               return true;
             }
-            if (this.#Is.get(e2).visible) return true;
+            if (__privateGet(this, _Is).get(e2).visible) return true;
           }
           return false;
         }
         if ("AllOn" === t2.policy) {
           for (const e2 of t2.ids) {
-            if (!this.#Is.has(e2)) {
+            if (!__privateGet(this, _Is).has(e2)) {
               warn(`Optional content group not found: ${e2}`);
               return true;
             }
-            if (!this.#Is.get(e2).visible) return false;
+            if (!__privateGet(this, _Is).get(e2).visible) return false;
           }
           return true;
         }
         if ("AnyOff" === t2.policy) {
           for (const e2 of t2.ids) {
-            if (!this.#Is.has(e2)) {
+            if (!__privateGet(this, _Is).has(e2)) {
               warn(`Optional content group not found: ${e2}`);
               return true;
             }
-            if (!this.#Is.get(e2).visible) return true;
+            if (!__privateGet(this, _Is).get(e2).visible) return true;
           }
           return false;
         }
         if ("AllOff" === t2.policy) {
           for (const e2 of t2.ids) {
-            if (!this.#Is.has(e2)) {
+            if (!__privateGet(this, _Is).has(e2)) {
               warn(`Optional content group not found: ${e2}`);
               return true;
             }
-            if (this.#Is.get(e2).visible) return false;
+            if (__privateGet(this, _Is).get(e2).visible) return false;
           }
           return true;
         }
@@ -15262,11 +15833,11 @@
       return true;
     }
     setVisibility(t2, e2 = true, i2 = true) {
-      const n2 = this.#Is.get(t2);
+      const n2 = __privateGet(this, _Is).get(t2);
       if (n2) {
-        if (i2 && e2 && n2.rbGroups.length) for (const e3 of n2.rbGroups) for (const i3 of e3) i3 !== t2 && this.#Is.get(i3)?._setVisible(Nt, false, true);
+        if (i2 && e2 && n2.rbGroups.length) for (const e3 of n2.rbGroups) for (const i3 of e3) i3 !== t2 && __privateGet(this, _Is).get(i3)?._setVisible(Nt, false, true);
         n2._setVisible(Nt, !!e2, true);
-        this.#Ps = null;
+        __privateSet(this, _Ps, null);
       } else warn(`Optional content group not found: ${t2}`);
     }
     setOCGState({ state: t2, preserveRB: e2 }) {
@@ -15279,7 +15850,7 @@
             i2 = n2;
             continue;
         }
-        const t3 = this.#Is.get(n2);
+        const t3 = __privateGet(this, _Is).get(n2);
         if (t3) switch (i2) {
           case "ON":
             this.setVisibility(n2, true, e2);
@@ -15291,89 +15862,116 @@
             this.setVisibility(n2, !t3.visible, e2);
         }
       }
-      this.#Ps = null;
+      __privateSet(this, _Ps, null);
     }
     get hasInitialVisibility() {
-      return null === this.#Fs || this.getHash() === this.#Fs;
+      return null === __privateGet(this, _Fs) || this.getHash() === __privateGet(this, _Fs);
     }
     getOrder() {
-      return this.#Is.size ? this.#Os ? this.#Os.slice() : [...this.#Is.keys()] : null;
+      return __privateGet(this, _Is).size ? __privateGet(this, _Os) ? __privateGet(this, _Os).slice() : [...__privateGet(this, _Is).keys()] : null;
     }
     getGroup(t2) {
-      return this.#Is.get(t2) || null;
+      return __privateGet(this, _Is).get(t2) || null;
     }
     getHash() {
-      if (null !== this.#Ps) return this.#Ps;
+      if (null !== __privateGet(this, _Ps)) return __privateGet(this, _Ps);
       const t2 = new MurmurHash3_64();
-      for (const [e2, i2] of this.#Is) t2.update(`${e2}:${i2.visible}`);
-      return this.#Ps = t2.hexdigest();
+      for (const [e2, i2] of __privateGet(this, _Is)) t2.update(`${e2}:${i2.visible}`);
+      return __privateSet(this, _Ps, t2.hexdigest());
     }
     [Symbol.iterator]() {
-      return this.#Is.entries();
+      return __privateGet(this, _Is).entries();
     }
     get serializable() {
       const t2 = /* @__PURE__ */ new Map();
-      for (const [e2, i2] of this.#Is) t2.set(e2, i2.serializable);
-      return { data: this.#Rs, renderingIntent: this.renderingIntent, groupState: t2 };
+      for (const [e2, i2] of __privateGet(this, _Is)) t2.set(e2, i2.serializable);
+      return { data: __privateGet(this, _Rs), renderingIntent: this.renderingIntent, groupState: t2 };
     }
     static fromSerializable({ data: t2, renderingIntent: e2, groupState: i2 }) {
       return new _OptionalContentConfig(t2, e2, i2);
     }
   };
+  _Ps = new WeakMap();
+  _Is = new WeakMap();
+  _Fs = new WeakMap();
+  _Os = new WeakMap();
+  _Rs = new WeakMap();
+  _OptionalContentConfig_instances = new WeakSet();
+  Bs_fn = function(t2) {
+    const e2 = t2.length;
+    if (e2 < 2) return true;
+    const i2 = t2[0];
+    for (let n2 = 1; n2 < e2; n2++) {
+      const e3 = t2[n2];
+      let s2;
+      if (Array.isArray(e3)) s2 = __privateMethod(this, _OptionalContentConfig_instances, Bs_fn).call(this, e3);
+      else {
+        if (!__privateGet(this, _Is).has(e3)) {
+          warn(`Optional content group not found: ${e3}`);
+          return true;
+        }
+        s2 = __privateGet(this, _Is).get(e3).visible;
+      }
+      switch (i2) {
+        case "And":
+          if (!s2) return false;
+          break;
+        case "Or":
+          if (s2) return true;
+          break;
+        case "Not":
+          return !s2;
+        default:
+          return true;
+      }
+    }
+    return "And" === i2;
+  };
+  var OptionalContentConfig = _OptionalContentConfig;
+  var _Ls, _Ns, _Us, _Hs, _zs, _PagesMapper_instances, Gs_fn, js_fn, Ws_fn;
   var PagesMapper = class {
-    #Ls = null;
-    #Ns = null;
-    #Us = 0;
-    #Hs = null;
-    #zs = null;
+    constructor() {
+      __privateAdd(this, _PagesMapper_instances);
+      __privateAdd(this, _Ls, null);
+      __privateAdd(this, _Ns, null);
+      __privateAdd(this, _Us, 0);
+      __privateAdd(this, _Hs, null);
+      __privateAdd(this, _zs, null);
+    }
     get pagesNumber() {
-      return this.#Us;
+      return __privateGet(this, _Us);
     }
     set pagesNumber(t2) {
-      if (this.#Us !== t2) {
-        this.#Us = t2;
-        this.#Ls = null;
-        this.#Ns = null;
+      if (__privateGet(this, _Us) !== t2) {
+        __privateSet(this, _Us, t2);
+        __privateSet(this, _Ls, null);
+        __privateSet(this, _Ns, null);
       }
-    }
-    #Gs() {
-      if (this.#Ls) return;
-      const t2 = this.#Us, e2 = this.#Ls = new Uint32Array(t2);
-      for (let i2 = 0; i2 < t2; i2++) e2[i2] = i2 + 1;
-      this.#Ns = new Int32Array(e2);
-    }
-    #js() {
-      const t2 = /* @__PURE__ */ new Map(), e2 = this.#Ls;
-      for (let i2 = 0, n2 = this.#Us; i2 < n2; i2++) {
-        const n3 = e2[i2], s2 = t2.get(n3);
-        s2 ? s2.push(i2 + 1) : t2.set(n3, [i2 + 1]);
-      }
-      return t2;
     }
     movePages(t2, e2, i2) {
-      this.#Gs();
-      const n2 = this.#Ls, s2 = this.#js(), r2 = e2.length, a2 = new Uint32Array(r2);
+      __privateMethod(this, _PagesMapper_instances, Gs_fn).call(this);
+      const n2 = __privateGet(this, _Ls), s2 = __privateMethod(this, _PagesMapper_instances, js_fn).call(this), r2 = e2.length, a2 = new Uint32Array(r2);
       let o2 = 0;
       for (let t3 = 0; t3 < r2; t3++) {
         const s3 = e2[t3] - 1;
         a2[t3] = n2[s3];
         s3 < i2 && o2++;
       }
-      const l2 = this.#Us, h2 = l2 - r2, c2 = MathClamp(i2 - o2, 0, h2);
+      const l2 = __privateGet(this, _Us), h2 = l2 - r2, c2 = MathClamp(i2 - o2, 0, h2);
       for (let e3 = 0, i3 = 0; e3 < l2; e3++) t2.has(e3 + 1) || (n2[i3++] = n2[e3]);
       n2.copyWithin(c2 + r2, c2, h2);
       n2.set(a2, c2);
-      this.#Ws(s2);
-      n2.every((t3, e3) => t3 === e3 + 1) && (this.#Ls = null);
+      __privateMethod(this, _PagesMapper_instances, Ws_fn).call(this, s2);
+      n2.every((t3, e3) => t3 === e3 + 1) && __privateSet(this, _Ls, null);
     }
     deletePages(t2) {
-      this.#Gs();
-      const e2 = this.#Ls, i2 = this.#js();
-      this.#zs = { pageNumberToId: e2.slice(), pagesNumber: this.#Us, prevPageNumbers: this.#Ns.slice() };
-      const n2 = this.#Us - t2.length;
-      this.#Us = n2;
-      const s2 = this.#Ls = new Uint32Array(n2);
-      this.#Ns = new Int32Array(n2);
+      __privateMethod(this, _PagesMapper_instances, Gs_fn).call(this);
+      const e2 = __privateGet(this, _Ls), i2 = __privateMethod(this, _PagesMapper_instances, js_fn).call(this);
+      __privateSet(this, _zs, { pageNumberToId: e2.slice(), pagesNumber: __privateGet(this, _Us), prevPageNumbers: __privateGet(this, _Ns).slice() });
+      const n2 = __privateGet(this, _Us) - t2.length;
+      __privateSet(this, _Us, n2);
+      const s2 = __privateSet(this, _Ls, new Uint32Array(n2));
+      __privateSet(this, _Ns, new Int32Array(n2));
       let r2 = 0, a2 = 0;
       for (const i3 of t2) {
         const t3 = i3 - 1;
@@ -15384,57 +15982,43 @@
         r2 = t3 + 1;
       }
       r2 < e2.length && s2.set(e2.subarray(r2), a2);
-      this.#Ws(i2, new Set(t2));
+      __privateMethod(this, _PagesMapper_instances, Ws_fn).call(this, i2, new Set(t2));
     }
     cancelDelete() {
-      if (this.#zs) {
-        this.#Ls = this.#zs.pageNumberToId;
-        this.#Us = this.#zs.pagesNumber;
-        this.#Ns = this.#zs.prevPageNumbers;
-        this.#zs = null;
+      if (__privateGet(this, _zs)) {
+        __privateSet(this, _Ls, __privateGet(this, _zs).pageNumberToId);
+        __privateSet(this, _Us, __privateGet(this, _zs).pagesNumber);
+        __privateSet(this, _Ns, __privateGet(this, _zs).prevPageNumbers);
+        __privateSet(this, _zs, null);
       }
     }
     cleanSavedData() {
-      this.#zs = null;
+      __privateSet(this, _zs, null);
     }
     copyPages(t2) {
-      this.#Gs();
-      this.#Hs = { pageNumbers: t2, pageIds: t2.map((t3) => this.#Ls[t3 - 1]) };
+      __privateMethod(this, _PagesMapper_instances, Gs_fn).call(this);
+      __privateSet(this, _Hs, { pageNumbers: t2, pageIds: t2.map((t3) => __privateGet(this, _Ls)[t3 - 1]) });
     }
     cancelCopy() {
-      this.#Hs = null;
+      __privateSet(this, _Hs, null);
     }
     pastePages(t2) {
-      this.#Gs();
-      const e2 = this.#Ls, i2 = this.#js(), { pageNumbers: n2, pageIds: s2 } = this.#Hs, r2 = this.#Us + n2.length;
-      this.#Us = r2;
-      const a2 = this.#Ls = new Uint32Array(r2);
-      this.#Ns = new Int32Array(r2);
+      __privateMethod(this, _PagesMapper_instances, Gs_fn).call(this);
+      const e2 = __privateGet(this, _Ls), i2 = __privateMethod(this, _PagesMapper_instances, js_fn).call(this), { pageNumbers: n2, pageIds: s2 } = __privateGet(this, _Hs), r2 = __privateGet(this, _Us) + n2.length;
+      __privateSet(this, _Us, r2);
+      const a2 = __privateSet(this, _Ls, new Uint32Array(r2));
+      __privateSet(this, _Ns, new Int32Array(r2));
       a2.set(e2.subarray(0, t2), 0);
       a2.set(s2, t2);
       a2.set(e2.subarray(t2), t2 + n2.length);
-      this.#Ws(i2, null, t2, n2);
-      this.#Hs = null;
-    }
-    #Ws(t2, e2 = null, i2 = -1, n2 = null) {
-      const s2 = this.#Ns, r2 = this.#Ls, a2 = i2 + (n2?.length ?? 0), o2 = /* @__PURE__ */ new Map();
-      for (let l2 = 0, h2 = this.#Us; l2 < h2; l2++) {
-        if (l2 >= i2 && l2 < a2) {
-          s2[l2] = -n2[l2 - i2];
-          continue;
-        }
-        const h3 = r2[l2], c2 = t2.get(h3);
-        let d2 = o2.get(h3) || 0;
-        if (e2 && c2) for (; d2 < c2.length && e2.has(c2[d2]); ) d2++;
-        s2[l2] = c2?.[d2];
-        o2.set(h3, d2 + 1);
-      }
+      __privateMethod(this, _PagesMapper_instances, Ws_fn).call(this, i2, null, t2, n2);
+      __privateSet(this, _Hs, null);
     }
     hasBeenAltered() {
-      return null !== this.#Ls;
+      return null !== __privateGet(this, _Ls);
     }
     getPageMappingForSaving(t2 = null) {
-      t2 ??= this.#js();
+      t2 ?? (t2 = __privateMethod(this, _PagesMapper_instances, js_fn).call(this));
       let e2 = 0;
       for (const i3 of t2.values()) e2 = Math.max(e2, i3.length);
       const i2 = new Array(e2);
@@ -15459,109 +16043,145 @@
       return this.getPageMappingForSaving(e2);
     }
     getPrevPageNumber(t2) {
-      return this.#Ns?.[t2 - 1] ?? 0;
+      return __privateGet(this, _Ns)?.[t2 - 1] ?? 0;
     }
     getPageNumber(t2) {
-      if (!this.#Ls) return t2;
-      const e2 = this.#Ls;
-      for (let i2 = 0, n2 = this.#Us; i2 < n2; i2++) if (e2[i2] === t2) return i2 + 1;
+      if (!__privateGet(this, _Ls)) return t2;
+      const e2 = __privateGet(this, _Ls);
+      for (let i2 = 0, n2 = __privateGet(this, _Us); i2 < n2; i2++) if (e2[i2] === t2) return i2 + 1;
       return 0;
     }
     getPageId(t2) {
-      return this.#Ls?.[t2 - 1] ?? t2;
+      return __privateGet(this, _Ls)?.[t2 - 1] ?? t2;
     }
     getMapping() {
-      return this.#Ls?.subarray(0, this.pagesNumber);
+      return __privateGet(this, _Ls)?.subarray(0, this.pagesNumber);
+    }
+  };
+  _Ls = new WeakMap();
+  _Ns = new WeakMap();
+  _Us = new WeakMap();
+  _Hs = new WeakMap();
+  _zs = new WeakMap();
+  _PagesMapper_instances = new WeakSet();
+  Gs_fn = function() {
+    if (__privateGet(this, _Ls)) return;
+    const t2 = __privateGet(this, _Us), e2 = __privateSet(this, _Ls, new Uint32Array(t2));
+    for (let i2 = 0; i2 < t2; i2++) e2[i2] = i2 + 1;
+    __privateSet(this, _Ns, new Int32Array(e2));
+  };
+  js_fn = function() {
+    const t2 = /* @__PURE__ */ new Map(), e2 = __privateGet(this, _Ls);
+    for (let i2 = 0, n2 = __privateGet(this, _Us); i2 < n2; i2++) {
+      const n3 = e2[i2], s2 = t2.get(n3);
+      s2 ? s2.push(i2 + 1) : t2.set(n3, [i2 + 1]);
+    }
+    return t2;
+  };
+  Ws_fn = function(t2, e2 = null, i2 = -1, n2 = null) {
+    const s2 = __privateGet(this, _Ns), r2 = __privateGet(this, _Ls), a2 = i2 + (n2?.length ?? 0), o2 = /* @__PURE__ */ new Map();
+    for (let l2 = 0, h2 = __privateGet(this, _Us); l2 < h2; l2++) {
+      if (l2 >= i2 && l2 < a2) {
+        s2[l2] = -n2[l2 - i2];
+        continue;
+      }
+      const h3 = r2[l2], c2 = t2.get(h3);
+      let d2 = o2.get(h3) || 0;
+      if (e2 && c2) for (; d2 < c2.length && e2.has(c2[d2]); ) d2++;
+      s2[l2] = c2?.[d2];
+      o2.set(h3, d2 + 1);
     }
   };
   var Ut = /* @__PURE__ */ Symbol("INITIAL_DATA");
   var dataObj = () => ({ ...Promise.withResolvers(), data: Ut });
+  var _Vs;
   var PDFObjects = class {
-    #Vs = /* @__PURE__ */ new Map();
+    constructor() {
+      __privateAdd(this, _Vs, /* @__PURE__ */ new Map());
+    }
     get(t2, e2 = null) {
       if (e2) {
-        const i3 = this.#Vs.getOrInsertComputed(t2, dataObj);
+        const i3 = __privateGet(this, _Vs).getOrInsertComputed(t2, dataObj);
         i3.promise.then(() => e2(i3.data));
         return null;
       }
-      const i2 = this.#Vs.get(t2);
+      const i2 = __privateGet(this, _Vs).get(t2);
       if (!i2 || i2.data === Ut) throw new Error(`Requesting object that isn't resolved yet ${t2}.`);
       return i2.data;
     }
     has(t2) {
-      const e2 = this.#Vs.get(t2);
+      const e2 = __privateGet(this, _Vs).get(t2);
       return !!e2 && e2.data !== Ut;
     }
     delete(t2) {
-      const e2 = this.#Vs.get(t2);
+      const e2 = __privateGet(this, _Vs).get(t2);
       if (!e2 || e2.data === Ut) return false;
-      this.#Vs.delete(t2);
+      __privateGet(this, _Vs).delete(t2);
       return true;
     }
     resolve(t2, e2 = null) {
-      const i2 = this.#Vs.getOrInsertComputed(t2, dataObj);
+      const i2 = __privateGet(this, _Vs).getOrInsertComputed(t2, dataObj);
       if (i2.data !== Ut) throw new Error(`Object already resolved ${t2}.`);
       i2.data = e2;
       i2.resolve();
     }
     clear() {
-      for (const { data: t2 } of this.#Vs.values()) t2?.bitmap?.close();
-      this.#Vs.clear();
+      for (const { data: t2 } of __privateGet(this, _Vs).values()) t2?.bitmap?.close();
+      __privateGet(this, _Vs).clear();
     }
     *[Symbol.iterator]() {
-      for (const [t2, { data: e2 }] of this.#Vs) e2 !== Ut && (yield [t2, e2]);
+      for (const [t2, { data: e2 }] of __privateGet(this, _Vs)) e2 !== Ut && (yield [t2, e2]);
     }
   };
-  var TextLayer = class _TextLayer {
-    #$s = Promise.withResolvers();
-    #Dt = null;
-    #qs = false;
-    #Ks = !!globalThis.FontInspector?.enabled;
-    #Xs = null;
-    #Ys = null;
-    #Js = null;
-    #Qs = 0;
-    #Zs = 0;
-    #tr = null;
-    #er = null;
-    #ir = 0;
-    #nr = 0;
-    #sr = /* @__PURE__ */ Object.create(null);
-    #rr = [];
-    #ar = null;
-    #or = [];
-    #lr = /* @__PURE__ */ new WeakMap();
-    #hr = null;
-    static #cr = /* @__PURE__ */ new Map();
-    static #dr = /* @__PURE__ */ new Map();
-    static #ur = /* @__PURE__ */ new WeakMap();
-    static #pr = null;
-    static #gr = /* @__PURE__ */ new Set();
+  _Vs = new WeakMap();
+  var _$s, _Dt3, _qs, _Ks, _Xs, _Ys, _Js, _Qs, _Zs, _tr, _er, _ir, _nr, _sr, _rr, _ar, _or, _lr, _hr, _cr, _dr, _ur, _pr, _gr, _TextLayer_instances, fr_fn, vr_fn, yr_fn, _TextLayer_static, br_fn, xr_fn, mr_fn, wr_fn;
+  var _TextLayer = class _TextLayer {
     constructor({ textContentSource: t2, images: e2, container: i2, viewport: n2 }) {
-      if (t2 instanceof ReadableStream) this.#ar = t2;
+      __privateAdd(this, _TextLayer_instances);
+      __privateAdd(this, _$s, Promise.withResolvers());
+      __privateAdd(this, _Dt3, null);
+      __privateAdd(this, _qs, false);
+      __privateAdd(this, _Ks, !!globalThis.FontInspector?.enabled);
+      __privateAdd(this, _Xs, null);
+      __privateAdd(this, _Ys, null);
+      __privateAdd(this, _Js, null);
+      __privateAdd(this, _Qs, 0);
+      __privateAdd(this, _Zs, 0);
+      __privateAdd(this, _tr, null);
+      __privateAdd(this, _er, null);
+      __privateAdd(this, _ir, 0);
+      __privateAdd(this, _nr, 0);
+      __privateAdd(this, _sr, /* @__PURE__ */ Object.create(null));
+      __privateAdd(this, _rr, []);
+      __privateAdd(this, _ar, null);
+      __privateAdd(this, _or, []);
+      __privateAdd(this, _lr, /* @__PURE__ */ new WeakMap());
+      __privateAdd(this, _hr, null);
+      var _a4;
+      if (t2 instanceof ReadableStream) __privateSet(this, _ar, t2);
       else {
         if ("object" != typeof t2) throw new Error('No "textContentSource" parameter specified.');
-        this.#ar = new ReadableStream({ start(e3) {
+        __privateSet(this, _ar, new ReadableStream({ start(e3) {
           e3.enqueue(t2);
           e3.close();
-        } });
+        } }));
       }
-      this.#Dt = this.#er = i2;
-      this.#Xs = e2;
-      this.#nr = n2.scale * OutputScale.pixelRatio;
-      this.#ir = n2.rotation;
-      this.#Js = { div: null, properties: null, ctx: null };
+      __privateSet(this, _Dt3, __privateSet(this, _er, i2));
+      __privateSet(this, _Xs, e2);
+      __privateSet(this, _nr, n2.scale * OutputScale.pixelRatio);
+      __privateSet(this, _ir, n2.rotation);
+      __privateSet(this, _Js, { div: null, properties: null, ctx: null });
       const { pageWidth: s2, pageHeight: r2, pageX: a2, pageY: o2 } = n2.rawDims;
-      this.#hr = [1, 0, 0, -1, -a2, o2 + r2];
-      this.#Zs = s2;
-      this.#Qs = r2;
-      _TextLayer.#mr();
-      i2.style.setProperty("--min-font-size", _TextLayer.#pr);
+      __privateSet(this, _hr, [1, 0, 0, -1, -a2, o2 + r2]);
+      __privateSet(this, _Zs, s2);
+      __privateSet(this, _Qs, r2);
+      __privateMethod(_a4 = _TextLayer, _TextLayer_static, mr_fn).call(_a4);
+      i2.style.setProperty("--min-font-size", __privateGet(_TextLayer, _pr));
       setLayerDimensions(i2, n2);
-      this.#$s.promise.finally(() => {
-        _TextLayer.#gr.delete(this);
-        this.#Js = null;
-        this.#sr = null;
+      __privateGet(this, _$s).promise.finally(() => {
+        __privateGet(_TextLayer, _gr).delete(this);
+        __privateSet(this, _Js, null);
+        __privateSet(this, _sr, null);
       }).catch(() => {
       });
     }
@@ -15570,192 +16190,229 @@
       return shadow(this, "fontFamilyMap", /* @__PURE__ */ new Map([["sans-serif", (t2 && e2 ? "Calibri, " : "") + "sans-serif"], ["monospace", (t2 && e2 ? "Lucida Console, " : "") + "monospace"]]));
     }
     render() {
-      this.#Xs && this.#Dt.append(this.#Xs.render());
+      __privateGet(this, _Xs) && __privateGet(this, _Dt3).append(__privateGet(this, _Xs).render());
       const pump = () => {
-        this.#tr.read().then(({ value: t2, done: e2 }) => {
-          if (e2) this.#$s.resolve();
+        __privateGet(this, _tr).read().then(({ value: t2, done: e2 }) => {
+          if (e2) __privateGet(this, _$s).resolve();
           else {
-            this.#Ys ??= t2.lang;
-            Object.assign(this.#sr, t2.styles);
-            this.#fr(t2.items);
+            __privateGet(this, _Ys) ?? __privateSet(this, _Ys, t2.lang);
+            Object.assign(__privateGet(this, _sr), t2.styles);
+            __privateMethod(this, _TextLayer_instances, fr_fn).call(this, t2.items);
             pump();
           }
-        }, this.#$s.reject);
+        }, __privateGet(this, _$s).reject);
       };
-      this.#tr = this.#ar.getReader();
-      _TextLayer.#gr.add(this);
+      __privateSet(this, _tr, __privateGet(this, _ar).getReader());
+      __privateGet(_TextLayer, _gr).add(this);
       pump();
-      return this.#$s.promise;
+      return __privateGet(this, _$s).promise;
     }
     update({ viewport: t2, onBefore: e2 = null }) {
+      var _a4;
       const i2 = t2.scale * OutputScale.pixelRatio, n2 = t2.rotation;
-      if (n2 !== this.#ir) {
+      if (n2 !== __privateGet(this, _ir)) {
         e2?.();
-        this.#ir = n2;
-        setLayerDimensions(this.#er, { rotation: n2 });
+        __privateSet(this, _ir, n2);
+        setLayerDimensions(__privateGet(this, _er), { rotation: n2 });
       }
-      if (i2 !== this.#nr) {
+      if (i2 !== __privateGet(this, _nr)) {
         e2?.();
-        this.#nr = i2;
-        const t3 = { div: null, properties: null, ctx: _TextLayer.#br(this.#Ys) };
-        for (const e3 of this.#or) {
-          t3.properties = this.#lr.get(e3);
+        __privateSet(this, _nr, i2);
+        const t3 = { div: null, properties: null, ctx: __privateMethod(_a4 = _TextLayer, _TextLayer_static, br_fn).call(_a4, __privateGet(this, _Ys)) };
+        for (const e3 of __privateGet(this, _or)) {
+          t3.properties = __privateGet(this, _lr).get(e3);
           t3.div = e3;
-          this.#yr(t3);
+          __privateMethod(this, _TextLayer_instances, yr_fn).call(this, t3);
         }
       }
     }
     cancel() {
       const t2 = new AbortException("TextLayer task cancelled.");
-      this.#tr?.cancel(t2).catch(() => {
+      __privateGet(this, _tr)?.cancel(t2).catch(() => {
       });
-      this.#tr = null;
-      this.#$s.reject(t2);
+      __privateSet(this, _tr, null);
+      __privateGet(this, _$s).reject(t2);
     }
     get textDivs() {
-      return this.#or;
+      return __privateGet(this, _or);
     }
     get textContentItemsStr() {
-      return this.#rr;
-    }
-    #fr(t2) {
-      if (this.#qs) return;
-      this.#Js.ctx ??= _TextLayer.#br(this.#Ys);
-      const e2 = this.#or, i2 = this.#rr;
-      for (const n2 of t2) {
-        if (e2.length > 1e5) {
-          warn("Ignoring additional textDivs for performance reasons.");
-          this.#qs = true;
-          return;
-        }
-        if (void 0 !== n2.str) {
-          i2.push(n2.str);
-          this.#vr(n2);
-        } else if ("beginMarkedContentProps" === n2.type || "beginMarkedContent" === n2.type) {
-          const t3 = this.#Dt;
-          this.#Dt = document.createElement("span");
-          this.#Dt.classList.add("markedContent");
-          n2.id && this.#Dt.setAttribute("id", n2.id);
-          "Artifact" === n2.tag && (this.#Dt.ariaHidden = true);
-          t3.append(this.#Dt);
-        } else "endMarkedContent" === n2.type && (this.#Dt = this.#Dt.parentNode);
-      }
-    }
-    #vr(t2) {
-      const e2 = document.createElement("span"), i2 = { angle: 0, canvasWidth: 0, hasText: "" !== t2.str, hasEOL: t2.hasEOL, fontSize: 0 };
-      this.#or.push(e2);
-      const n2 = Util.transform(this.#hr, t2.transform);
-      let s2 = Math.atan2(n2[1], n2[0]);
-      const r2 = this.#sr[t2.fontName];
-      r2.vertical && (s2 += Math.PI / 2);
-      let a2 = this.#Ks && r2.fontSubstitution || r2.fontFamily;
-      a2 = _TextLayer.fontFamilyMap.get(a2) || a2;
-      const o2 = Math.hypot(n2[2], n2[3]), l2 = o2 * _TextLayer.#wr(a2, r2, this.#Ys);
-      let h2, c2;
-      if (0 === s2) {
-        h2 = n2[4];
-        c2 = n2[5] - l2;
-      } else {
-        h2 = n2[4] + l2 * Math.sin(s2);
-        c2 = n2[5] - l2 * Math.cos(s2);
-      }
-      const d2 = e2.style;
-      d2.left = `${(100 * h2 / this.#Zs).toFixed(2)}%`;
-      d2.top = `${(100 * c2 / this.#Qs).toFixed(2)}%`;
-      d2.setProperty("--font-height", `${o2.toFixed(2)}px`);
-      d2.fontFamily = a2;
-      i2.fontSize = o2;
-      e2.setAttribute("role", "presentation");
-      e2.textContent = t2.str;
-      e2.dir = t2.dir;
-      this.#Ks && (e2.dataset.fontName = r2.fontSubstitutionLoadedName || t2.fontName);
-      0 !== s2 && (i2.angle = s2 * (180 / Math.PI));
-      let u2 = false;
-      if (t2.str.length > 1) u2 = true;
-      else if (" " !== t2.str && t2.transform[0] !== t2.transform[3]) {
-        const e3 = Math.abs(t2.transform[0]), i3 = Math.abs(t2.transform[3]);
-        e3 !== i3 && Math.max(e3, i3) / Math.min(e3, i3) > 1.5 && (u2 = true);
-      }
-      u2 && (i2.canvasWidth = r2.vertical ? t2.height : t2.width);
-      this.#lr.set(e2, i2);
-      this.#Js.div = e2;
-      this.#Js.properties = i2;
-      this.#yr(this.#Js);
-      i2.hasText && this.#Dt.append(e2);
-      if (i2.hasEOL) {
-        const t3 = document.createElement("br");
-        t3.setAttribute("role", "presentation");
-        this.#Dt.append(t3);
-      }
-    }
-    #yr(t2) {
-      const { div: e2, properties: i2, ctx: n2 } = t2, { style: s2 } = e2;
-      if (0 !== i2.canvasWidth && i2.hasText) {
-        const { fontFamily: t3 } = s2, { canvasWidth: r2, fontSize: a2 } = i2;
-        _TextLayer.#xr(n2, a2 * this.#nr, t3);
-        const { width: o2 } = n2.measureText(e2.textContent);
-        o2 > 0 && s2.setProperty("--scale-x", r2 * this.#nr / o2);
-      }
-      0 !== i2.angle && s2.setProperty("--rotate", `${i2.angle}deg`);
+      return __privateGet(this, _rr);
     }
     static cleanup() {
-      if (!(this.#gr.size > 0)) {
-        this.#cr.clear();
-        for (const { canvas: t2 } of this.#dr.values()) t2.remove();
-        this.#dr.clear();
+      if (!(__privateGet(this, _gr).size > 0)) {
+        __privateGet(this, _cr).clear();
+        for (const { canvas: t2 } of __privateGet(this, _dr).values()) t2.remove();
+        __privateGet(this, _dr).clear();
       }
-    }
-    static #br(t2 = null) {
-      let e2 = this.#dr.get(t2 ||= "");
-      if (!e2) {
-        const i2 = document.createElement("canvas");
-        i2.style.cssText = "position:absolute;top:0;left:0;width:0;height:0;display:none;letter-spacing:normal;word-spacing:normal";
-        i2.lang = t2;
-        document.body.append(i2);
-        e2 = i2.getContext("2d", { alpha: false, willReadFrequently: true });
-        this.#dr.set(t2, e2);
-        this.#ur.set(e2, { size: 0, family: "" });
-      }
-      return e2;
-    }
-    static #xr(t2, e2, i2) {
-      const n2 = this.#ur.get(t2);
-      if (e2 !== n2.size || i2 !== n2.family) {
-        t2.font = `${e2}px ${i2}`;
-        n2.size = e2;
-        n2.family = i2;
-      }
-    }
-    static #mr() {
-      if (null !== this.#pr) return;
-      const t2 = document.createElement("div");
-      t2.style.opacity = 0;
-      t2.style.lineHeight = 1;
-      t2.style.fontSize = "1px";
-      t2.style.position = "absolute";
-      t2.textContent = "X";
-      document.body.append(t2);
-      this.#pr = t2.getBoundingClientRect().height;
-      t2.remove();
-    }
-    static #wr(t2, e2, i2) {
-      const n2 = this.#cr.get(t2);
-      if (n2) return n2;
-      const s2 = this.#br(i2);
-      s2.canvas.width = s2.canvas.height = 30;
-      this.#xr(s2, 30, t2);
-      const r2 = s2.measureText(""), a2 = r2.fontBoundingBoxAscent, o2 = Math.abs(r2.fontBoundingBoxDescent);
-      s2.canvas.width = s2.canvas.height = 0;
-      let l2 = 0.8;
-      if (a2) l2 = a2 / (a2 + o2);
-      else {
-        FeatureTest.platform.isFirefox && warn("Enable the `dom.textMetrics.fontBoundingBox.enabled` preference in `about:config` to improve TextLayer rendering.");
-        e2.ascent ? l2 = e2.ascent : e2.descent && (l2 = 1 + e2.descent);
-      }
-      this.#cr.set(t2, l2);
-      return l2;
     }
   };
+  _$s = new WeakMap();
+  _Dt3 = new WeakMap();
+  _qs = new WeakMap();
+  _Ks = new WeakMap();
+  _Xs = new WeakMap();
+  _Ys = new WeakMap();
+  _Js = new WeakMap();
+  _Qs = new WeakMap();
+  _Zs = new WeakMap();
+  _tr = new WeakMap();
+  _er = new WeakMap();
+  _ir = new WeakMap();
+  _nr = new WeakMap();
+  _sr = new WeakMap();
+  _rr = new WeakMap();
+  _ar = new WeakMap();
+  _or = new WeakMap();
+  _lr = new WeakMap();
+  _hr = new WeakMap();
+  _cr = new WeakMap();
+  _dr = new WeakMap();
+  _ur = new WeakMap();
+  _pr = new WeakMap();
+  _gr = new WeakMap();
+  _TextLayer_instances = new WeakSet();
+  fr_fn = function(t2) {
+    var _a4, _b;
+    if (__privateGet(this, _qs)) return;
+    (_b = __privateGet(this, _Js)).ctx ?? (_b.ctx = __privateMethod(_a4 = _TextLayer, _TextLayer_static, br_fn).call(_a4, __privateGet(this, _Ys)));
+    const e2 = __privateGet(this, _or), i2 = __privateGet(this, _rr);
+    for (const n2 of t2) {
+      if (e2.length > 1e5) {
+        warn("Ignoring additional textDivs for performance reasons.");
+        __privateSet(this, _qs, true);
+        return;
+      }
+      if (void 0 !== n2.str) {
+        i2.push(n2.str);
+        __privateMethod(this, _TextLayer_instances, vr_fn).call(this, n2);
+      } else if ("beginMarkedContentProps" === n2.type || "beginMarkedContent" === n2.type) {
+        const t3 = __privateGet(this, _Dt3);
+        __privateSet(this, _Dt3, document.createElement("span"));
+        __privateGet(this, _Dt3).classList.add("markedContent");
+        n2.id && __privateGet(this, _Dt3).setAttribute("id", n2.id);
+        "Artifact" === n2.tag && (__privateGet(this, _Dt3).ariaHidden = true);
+        t3.append(__privateGet(this, _Dt3));
+      } else "endMarkedContent" === n2.type && __privateSet(this, _Dt3, __privateGet(this, _Dt3).parentNode);
+    }
+  };
+  vr_fn = function(t2) {
+    var _a4;
+    const e2 = document.createElement("span"), i2 = { angle: 0, canvasWidth: 0, hasText: "" !== t2.str, hasEOL: t2.hasEOL, fontSize: 0 };
+    __privateGet(this, _or).push(e2);
+    const n2 = Util.transform(__privateGet(this, _hr), t2.transform);
+    let s2 = Math.atan2(n2[1], n2[0]);
+    const r2 = __privateGet(this, _sr)[t2.fontName];
+    r2.vertical && (s2 += Math.PI / 2);
+    let a2 = __privateGet(this, _Ks) && r2.fontSubstitution || r2.fontFamily;
+    a2 = _TextLayer.fontFamilyMap.get(a2) || a2;
+    const o2 = Math.hypot(n2[2], n2[3]), l2 = o2 * __privateMethod(_a4 = _TextLayer, _TextLayer_static, wr_fn).call(_a4, a2, r2, __privateGet(this, _Ys));
+    let h2, c2;
+    if (0 === s2) {
+      h2 = n2[4];
+      c2 = n2[5] - l2;
+    } else {
+      h2 = n2[4] + l2 * Math.sin(s2);
+      c2 = n2[5] - l2 * Math.cos(s2);
+    }
+    const d2 = e2.style;
+    d2.left = `${(100 * h2 / __privateGet(this, _Zs)).toFixed(2)}%`;
+    d2.top = `${(100 * c2 / __privateGet(this, _Qs)).toFixed(2)}%`;
+    d2.setProperty("--font-height", `${o2.toFixed(2)}px`);
+    d2.fontFamily = a2;
+    i2.fontSize = o2;
+    e2.setAttribute("role", "presentation");
+    e2.textContent = t2.str;
+    e2.dir = t2.dir;
+    __privateGet(this, _Ks) && (e2.dataset.fontName = r2.fontSubstitutionLoadedName || t2.fontName);
+    0 !== s2 && (i2.angle = s2 * (180 / Math.PI));
+    let u2 = false;
+    if (t2.str.length > 1) u2 = true;
+    else if (" " !== t2.str && t2.transform[0] !== t2.transform[3]) {
+      const e3 = Math.abs(t2.transform[0]), i3 = Math.abs(t2.transform[3]);
+      e3 !== i3 && Math.max(e3, i3) / Math.min(e3, i3) > 1.5 && (u2 = true);
+    }
+    u2 && (i2.canvasWidth = r2.vertical ? t2.height : t2.width);
+    __privateGet(this, _lr).set(e2, i2);
+    __privateGet(this, _Js).div = e2;
+    __privateGet(this, _Js).properties = i2;
+    __privateMethod(this, _TextLayer_instances, yr_fn).call(this, __privateGet(this, _Js));
+    i2.hasText && __privateGet(this, _Dt3).append(e2);
+    if (i2.hasEOL) {
+      const t3 = document.createElement("br");
+      t3.setAttribute("role", "presentation");
+      __privateGet(this, _Dt3).append(t3);
+    }
+  };
+  yr_fn = function(t2) {
+    var _a4;
+    const { div: e2, properties: i2, ctx: n2 } = t2, { style: s2 } = e2;
+    if (0 !== i2.canvasWidth && i2.hasText) {
+      const { fontFamily: t3 } = s2, { canvasWidth: r2, fontSize: a2 } = i2;
+      __privateMethod(_a4 = _TextLayer, _TextLayer_static, xr_fn).call(_a4, n2, a2 * __privateGet(this, _nr), t3);
+      const { width: o2 } = n2.measureText(e2.textContent);
+      o2 > 0 && s2.setProperty("--scale-x", r2 * __privateGet(this, _nr) / o2);
+    }
+    0 !== i2.angle && s2.setProperty("--rotate", `${i2.angle}deg`);
+  };
+  _TextLayer_static = new WeakSet();
+  br_fn = function(t2 = null) {
+    let e2 = __privateGet(this, _dr).get(t2 || (t2 = ""));
+    if (!e2) {
+      const i2 = document.createElement("canvas");
+      i2.style.cssText = "position:absolute;top:0;left:0;width:0;height:0;display:none;letter-spacing:normal;word-spacing:normal";
+      i2.lang = t2;
+      document.body.append(i2);
+      e2 = i2.getContext("2d", { alpha: false, willReadFrequently: true });
+      __privateGet(this, _dr).set(t2, e2);
+      __privateGet(this, _ur).set(e2, { size: 0, family: "" });
+    }
+    return e2;
+  };
+  xr_fn = function(t2, e2, i2) {
+    const n2 = __privateGet(this, _ur).get(t2);
+    if (e2 !== n2.size || i2 !== n2.family) {
+      t2.font = `${e2}px ${i2}`;
+      n2.size = e2;
+      n2.family = i2;
+    }
+  };
+  mr_fn = function() {
+    if (null !== __privateGet(this, _pr)) return;
+    const t2 = document.createElement("div");
+    t2.style.opacity = 0;
+    t2.style.lineHeight = 1;
+    t2.style.fontSize = "1px";
+    t2.style.position = "absolute";
+    t2.textContent = "X";
+    document.body.append(t2);
+    __privateSet(this, _pr, t2.getBoundingClientRect().height);
+    t2.remove();
+  };
+  wr_fn = function(t2, e2, i2) {
+    const n2 = __privateGet(this, _cr).get(t2);
+    if (n2) return n2;
+    const s2 = __privateMethod(this, _TextLayer_static, br_fn).call(this, i2);
+    s2.canvas.width = s2.canvas.height = 30;
+    __privateMethod(this, _TextLayer_static, xr_fn).call(this, s2, 30, t2);
+    const r2 = s2.measureText(""), a2 = r2.fontBoundingBoxAscent, o2 = Math.abs(r2.fontBoundingBoxDescent);
+    s2.canvas.width = s2.canvas.height = 0;
+    let l2 = 0.8;
+    if (a2) l2 = a2 / (a2 + o2);
+    else {
+      FeatureTest.platform.isFirefox && warn("Enable the `dom.textMetrics.fontBoundingBox.enabled` preference in `about:config` to improve TextLayer rendering.");
+      e2.ascent ? l2 = e2.ascent : e2.descent && (l2 = 1 + e2.descent);
+    }
+    __privateGet(this, _cr).set(t2, l2);
+    return l2;
+  };
+  __privateAdd(_TextLayer, _TextLayer_static);
+  __privateAdd(_TextLayer, _cr, /* @__PURE__ */ new Map());
+  __privateAdd(_TextLayer, _dr, /* @__PURE__ */ new Map());
+  __privateAdd(_TextLayer, _ur, /* @__PURE__ */ new WeakMap());
+  __privateAdd(_TextLayer, _pr, null);
+  __privateAdd(_TextLayer, _gr, /* @__PURE__ */ new Set());
+  var TextLayer = _TextLayer;
   function getDocument(t2 = {}) {
     const e2 = new PDFDocumentLoadingTask(), { docId: n2 } = e2, s2 = t2.url ? (function getUrlProp(t3) {
       if (t3 instanceof URL) return t3;
@@ -15813,16 +16470,18 @@
     }).catch(e2._capability.reject).finally(e2._setupCapability.resolve);
     return e2;
   }
-  var PDFDocumentLoadingTask = class _PDFDocumentLoadingTask {
-    static #Sn = 0;
-    _capability = Promise.withResolvers();
-    _setupCapability = Promise.withResolvers();
-    _transport = null;
-    _worker = null;
-    docId = "d" + _PDFDocumentLoadingTask.#Sn++;
-    destroyed = false;
-    onPassword = null;
-    onProgress = null;
+  var _Sn2;
+  var _PDFDocumentLoadingTask = class _PDFDocumentLoadingTask {
+    constructor() {
+      __publicField(this, "_capability", Promise.withResolvers());
+      __publicField(this, "_setupCapability", Promise.withResolvers());
+      __publicField(this, "_transport", null);
+      __publicField(this, "_worker", null);
+      __publicField(this, "docId", "d" + __privateWrapper(_PDFDocumentLoadingTask, _Sn2)._++);
+      __publicField(this, "destroyed", false);
+      __publicField(this, "onPassword", null);
+      __publicField(this, "onProgress", null);
+    }
     get promise() {
       return this._capability.promise;
     }
@@ -15846,31 +16505,35 @@
       return this._transport.getData();
     }
   };
+  _Sn2 = new WeakMap();
+  __privateAdd(_PDFDocumentLoadingTask, _Sn2, 0);
+  var PDFDocumentLoadingTask = _PDFDocumentLoadingTask;
+  var _$s2, _Ar;
   var PDFDataRangeTransport = class {
-    #$s = Promise.withResolvers();
-    #Ar = null;
     constructor(t2, e2, i2 = false, n2 = null) {
+      __privateAdd(this, _$s2, Promise.withResolvers());
+      __privateAdd(this, _Ar, null);
       this.length = t2;
       this.initialData = e2;
       this.progressiveDone = i2;
       this.contentDispositionFilename = n2;
     }
     onDataRange(t2, e2) {
-      this.#Ar({ type: "range", begin: t2, chunk: e2 });
+      __privateGet(this, _Ar).call(this, { type: "range", begin: t2, chunk: e2 });
     }
     onDataProgressiveRead(t2) {
-      this.#$s.promise.then(() => {
-        this.#Ar({ type: "progressiveRead", chunk: t2 });
+      __privateGet(this, _$s2).promise.then(() => {
+        __privateGet(this, _Ar).call(this, { type: "progressiveRead", chunk: t2 });
       });
     }
     onDataProgressiveDone() {
-      this.#$s.promise.then(() => {
-        this.#Ar({ type: "progressiveDone" });
+      __privateGet(this, _$s2).promise.then(() => {
+        __privateGet(this, _Ar).call(this, { type: "progressiveDone" });
       });
     }
     transportReady(t2) {
-      this.#Ar = t2;
-      this.#$s.resolve();
+      __privateSet(this, _Ar, t2);
+      __privateGet(this, _$s2).resolve();
     }
     requestDataRange(t2, e2) {
       unreachable("Abstract method PDFDataRangeTransport.requestDataRange");
@@ -15878,6 +16541,8 @@
     abort() {
     }
   };
+  _$s2 = new WeakMap();
+  _Ar = new WeakMap();
   var PDFDocumentProxy = class {
     constructor(t2, e2) {
       this._pdfInfo = t2;
@@ -16005,10 +16670,12 @@
       return this._transport.getCalculationOrderIds();
     }
   };
-  var PDFPageProxy = class _PDFPageProxy {
-    #Er = false;
-    #Cr = null;
+  var _Er, _Cr, _PDFPageProxy_instances, Sr_fn;
+  var _PDFPageProxy = class _PDFPageProxy {
     constructor(t2, e2, i2, n2, s2 = false) {
+      __privateAdd(this, _PDFPageProxy_instances);
+      __privateAdd(this, _Er, false);
+      __privateAdd(this, _Cr, null);
       this._pageIndex = t2;
       this._pageInfo = e2;
       this._transport = i2;
@@ -16019,11 +16686,11 @@
       this._intentStates = /* @__PURE__ */ new Map();
       this.destroyed = false;
       this.recordedBBoxes = null;
-      this.#Cr = n2;
+      __privateSet(this, _Cr, n2);
       this.imageCoordinates = null;
     }
     clone(t2) {
-      const e2 = new _PDFPageProxy(t2, this._pageInfo, this._transport, this.#Cr, this._pdfBug);
+      const e2 = new _PDFPageProxy(t2, this._pageInfo, this._transport, __privateGet(this, _Cr), this._pdfBug);
       e2.clonedFromIndex = this.clonedFromIndex ?? this._pageIndex;
       this._transport.updatePage(e2);
       return e2;
@@ -16069,8 +16736,8 @@
     render({ canvasContext: t2, canvas: e2 = t2.canvas, viewport: i2, intent: n2 = "display", annotationMode: s2 = m.ENABLE, transform: r2 = null, background: a2 = null, optionalContentConfigPromise: o2 = null, annotationCanvasMap: l2 = null, pageColors: c2 = null, printAnnotationStorage: d2 = null, isEditing: u2 = false, recordImages: p2 = false, recordOperations: g2 = false, operationsFilter: f2 = null }) {
       this._stats?.time("Overall");
       const b2 = this._transport.getRenderingIntent(n2, s2, d2, u2), { renderingIntent: y2, cacheKey: v2 } = b2;
-      this.#Er = false;
-      o2 ||= this._transport.getOptionalContentConfig(y2);
+      __privateSet(this, _Er, false);
+      o2 || (o2 = this._transport.getOptionalContentConfig(y2));
       const w2 = this._intentStates.getOrInsertComputed(v2, makeObj);
       if (w2.streamReaderCancelTimeout) {
         clearTimeout(w2.streamReaderCancelTimeout);
@@ -16093,8 +16760,8 @@
           }
         }
         C2 && !t3 && (this.imageCoordinates = _2.gfx?.imagesTracker.take());
-        x2 && (this.#Er = true);
-        this.#Sr();
+        x2 && __privateSet(this, _Er, true);
+        __privateMethod(this, _PDFPageProxy_instances, Sr_fn).call(this);
         if (t3) {
           _2.capability.reject(t3);
           this._abortOperatorList({ intentState: w2, reason: t3 instanceof Error ? t3 : new Error(t3) });
@@ -16109,7 +16776,7 @@
       (E2 || C2) && (T2 = new CanvasBBoxTracker(e2, w2.operatorList.length));
       E2 && (S2 = new CanvasDependencyTracker(T2, A2));
       const _2 = new InternalRenderTask({ callback: complete, params: { canvas: e2, canvasContext: t2, dependencyTracker: S2 ?? T2, imagesTracker: C2 ? new CanvasImagesTracker(e2) : null, viewport: i2, transform: r2, background: a2 }, objs: this.objs, commonObjs: this.commonObjs, annotationCanvasMap: l2, operatorList: w2.operatorList, pageIndex: this._pageIndex, canvasFactory: this._transport.canvasFactory, filterFactory: this._transport.filterFactory, useRequestAnimationFrame: !x2, pdfBug: this._pdfBug, pageColors: c2, enableHWA: this._transport.enableHWA, operationsFilter: f2 });
-      (w2.renderTasks ||= /* @__PURE__ */ new Set()).add(_2);
+      (w2.renderTasks || (w2.renderTasks = /* @__PURE__ */ new Set())).add(_2);
       const k2 = _2.task;
       Promise.all([w2.displayReadyCapability.promise, o2]).then(([t3, e3]) => {
         if (this.destroyed) complete();
@@ -16134,7 +16801,7 @@
           }
         };
         r2.opListReadCapability = Promise.withResolvers();
-        (r2.renderTasks ||= /* @__PURE__ */ new Set()).add(a2);
+        (r2.renderTasks || (r2.renderTasks = /* @__PURE__ */ new Set())).add(a2);
         r2.operatorList = { fnArray: [], argsArray: [], lastChunk: false, separateAnnots: null };
         this._stats?.time("Page Request");
         this._pumpOperatorList(s2);
@@ -16142,13 +16809,13 @@
       return r2.opListReadCapability.promise;
     }
     streamTextContent({ includeMarkedContent: t2 = false, disableNormalization: e2 = false } = {}) {
-      return this._transport.messageHandler.sendWithStream("GetTextContent", { pageId: this.#Cr.getPageId(this._pageIndex + 1) - 1, pageIndex: this._pageIndex, includeMarkedContent: true === t2, disableNormalization: true === e2 }, { highWaterMark: 100, size: (t3) => t3.items.length });
+      return this._transport.messageHandler.sendWithStream("GetTextContent", { pageId: __privateGet(this, _Cr).getPageId(this._pageIndex + 1) - 1, pageIndex: this._pageIndex, includeMarkedContent: true === t2, disableNormalization: true === e2 }, { highWaterMark: 100, size: (t3) => t3.items.length });
     }
     async getTextContent(t2 = {}) {
       if (this._transport._htmlForXfa) return this.getXfa().then((t3) => XfaText.textContent(t3));
       const e2 = this.streamTextContent(t2), i2 = { items: [], styles: /* @__PURE__ */ Object.create(null), lang: null };
       for await (const t3 of e2) {
-        i2.lang ??= t3.lang;
+        i2.lang ?? (i2.lang = t3.lang);
         Object.assign(i2.styles, t3.styles);
         i2.items.push(...t3.items);
       }
@@ -16168,22 +16835,14 @@
         }
       }
       this.objs.clear();
-      this.#Er = false;
+      __privateSet(this, _Er, false);
       return Promise.all(t2);
     }
     cleanup(t2 = false) {
-      this.#Er = true;
-      const e2 = this.#Sr();
-      t2 && e2 && (this._stats &&= new StatTimer());
+      __privateSet(this, _Er, true);
+      const e2 = __privateMethod(this, _PDFPageProxy_instances, Sr_fn).call(this);
+      t2 && e2 && (this._stats && (this._stats = new StatTimer()));
       return e2;
-    }
-    #Sr() {
-      if (!this.#Er || this.destroyed) return false;
-      for (const { renderTasks: t2, operatorList: e2 } of this._intentStates.values()) if (t2.size > 0 || !e2.lastChunk) return false;
-      this._intentStates.clear();
-      this.objs.clear();
-      this.#Er = false;
-      return true;
     }
     _startRenderPage(t2, e2) {
       const i2 = this._intentStates.get(e2);
@@ -16200,10 +16859,10 @@
       e2.operatorList.lastChunk = t2.lastChunk;
       e2.operatorList.separateAnnots = t2.separateAnnots;
       for (const t3 of e2.renderTasks) t3.operatorListChanged();
-      t2.lastChunk && this.#Sr();
+      t2.lastChunk && __privateMethod(this, _PDFPageProxy_instances, Sr_fn).call(this);
     }
     _pumpOperatorList({ renderingIntent: t2, cacheKey: e2, annotationStorageSerializable: i2, modifiedIds: n2 }) {
-      const { map: s2, transfer: r2 } = i2, a2 = this._transport.messageHandler.sendWithStream("GetOperatorList", { pageId: this.#Cr.getPageId(this._pageIndex + 1) - 1, pageIndex: this._pageIndex, intent: t2, cacheKey: e2, annotationStorage: s2, modifiedIds: n2 }, void 0, r2).getReader(), o2 = this._intentStates.get(e2);
+      const { map: s2, transfer: r2 } = i2, a2 = this._transport.messageHandler.sendWithStream("GetOperatorList", { pageId: __privateGet(this, _Cr).getPageId(this._pageIndex + 1) - 1, pageIndex: this._pageIndex, intent: t2, cacheKey: e2, annotationStorage: s2, modifiedIds: n2 }, void 0, r2).getReader(), o2 = this._intentStates.get(e2);
       o2.streamReader = a2;
       const pump = () => {
         a2.read().then(({ value: t3, done: e3 }) => {
@@ -16218,7 +16877,7 @@
             if (o2.operatorList) {
               o2.operatorList.lastChunk = true;
               for (const t4 of o2.renderTasks) t4.operatorListChanged();
-              this.#Sr();
+              __privateMethod(this, _PDFPageProxy_instances, Sr_fn).call(this);
             }
             if (o2.displayReadyCapability) o2.displayReadyCapability.reject(t3);
             else {
@@ -16264,137 +16923,55 @@
       return this._stats;
     }
   };
-  var PDFWorker = class _PDFWorker {
-    #$s = Promise.withResolvers();
-    #Tr = null;
-    #Es = null;
-    #_r = null;
-    static #kr = 0;
-    static #Dr = false;
-    static #Mr = /* @__PURE__ */ new WeakMap();
-    static {
-      if (i) {
-        this.#Dr = true;
-        GlobalWorkerOptions.workerSrc ||= "./pdf.worker.mjs";
-      }
-      this._isSameOrigin = (t2, e2) => {
-        const i2 = URL.parse(t2);
-        if (!i2?.origin || "null" === i2.origin) return false;
-        const n2 = new URL(e2, i2);
-        return i2.origin === n2.origin;
-      };
-      this._createCDNWrapper = (t2) => {
-        const e2 = `await import("${t2}");`;
-        return URL.createObjectURL(new Blob([e2], { type: "text/javascript" }));
-      };
-    }
+  _Er = new WeakMap();
+  _Cr = new WeakMap();
+  _PDFPageProxy_instances = new WeakSet();
+  Sr_fn = function() {
+    if (!__privateGet(this, _Er) || this.destroyed) return false;
+    for (const { renderTasks: t2, operatorList: e2 } of this._intentStates.values()) if (t2.size > 0 || !e2.lastChunk) return false;
+    this._intentStates.clear();
+    this.objs.clear();
+    __privateSet(this, _Er, false);
+    return true;
+  };
+  var PDFPageProxy = _PDFPageProxy;
+  var _$s3, _Tr, _Es2, __r, _kr, _Dr, _Mr, _PDFWorker_instances, Fr_fn, Pr_fn, Ir_fn, Rr_fn, _PDFWorker_static, Or_get;
+  var _PDFWorker = class _PDFWorker {
     constructor({ name: t2 = null, port: e2 = null, verbosity: i2 = getVerbosityLevel() } = {}) {
+      __privateAdd(this, _PDFWorker_instances);
+      __privateAdd(this, _$s3, Promise.withResolvers());
+      __privateAdd(this, _Tr, null);
+      __privateAdd(this, _Es2, null);
+      __privateAdd(this, __r, null);
       this.name = t2;
       this.destroyed = false;
       this.verbosity = i2;
       if (e2) {
-        if (_PDFWorker.#Mr.has(e2)) throw new Error("Cannot use more than one PDFWorker per port.");
-        _PDFWorker.#Mr.set(e2, this);
-        this.#Pr(e2);
-      } else this.#Ir();
+        if (__privateGet(_PDFWorker, _Mr).has(e2)) throw new Error("Cannot use more than one PDFWorker per port.");
+        __privateGet(_PDFWorker, _Mr).set(e2, this);
+        __privateMethod(this, _PDFWorker_instances, Pr_fn).call(this, e2);
+      } else __privateMethod(this, _PDFWorker_instances, Ir_fn).call(this);
     }
     get promise() {
-      return this.#$s.promise;
-    }
-    #Fr() {
-      this.#$s.resolve();
-      this.#Tr.send("configure", { verbosity: this.verbosity });
+      return __privateGet(this, _$s3).promise;
     }
     get port() {
-      return this.#Es;
+      return __privateGet(this, _Es2);
     }
     get messageHandler() {
-      return this.#Tr;
-    }
-    #Pr(t2) {
-      this.#Es = t2;
-      this.#Tr = new MessageHandler("main", "worker", t2);
-      this.#Tr.on("ready", () => {
-      });
-      this.#Fr();
-    }
-    #Ir() {
-      if (_PDFWorker.#Dr || _PDFWorker.#Or) {
-        this.#Rr();
-        return;
-      }
-      let { workerSrc: t2 } = _PDFWorker;
-      try {
-        _PDFWorker._isSameOrigin(window.location, t2) || (t2 = _PDFWorker._createCDNWrapper(new URL(t2, window.location).href));
-        const e2 = new Worker(t2, { type: "module" }), i2 = new MessageHandler("main", "worker", e2), terminateEarly = () => {
-          n2.abort();
-          i2.destroy();
-          e2.terminate();
-          this.destroyed ? this.#$s.reject(new Error("Worker was destroyed")) : this.#Rr();
-        }, n2 = new AbortController();
-        e2.addEventListener("error", () => {
-          this.#_r || terminateEarly();
-        }, { signal: n2.signal });
-        i2.on("test", (t3) => {
-          n2.abort();
-          if (!this.destroyed && t3) {
-            this.#Tr = i2;
-            this.#Es = e2;
-            this.#_r = e2;
-            this.#Fr();
-          } else terminateEarly();
-        });
-        i2.on("ready", (t3) => {
-          n2.abort();
-          if (this.destroyed) terminateEarly();
-          else try {
-            sendTest();
-          } catch {
-            this.#Rr();
-          }
-        });
-        const sendTest = () => {
-          const t3 = new Uint8Array();
-          i2.send("test", t3, [t3.buffer]);
-        };
-        sendTest();
-        return;
-      } catch {
-        info("The worker has been disabled.");
-      }
-      this.#Rr();
-    }
-    #Rr() {
-      if (!_PDFWorker.#Dr) {
-        warn("Setting up fake worker.");
-        _PDFWorker.#Dr = true;
-      }
-      _PDFWorker._setupFakeWorkerGlobal.then((t2) => {
-        if (this.destroyed) {
-          this.#$s.reject(new Error("Worker was destroyed"));
-          return;
-        }
-        const e2 = new LoopbackPort();
-        this.#Es = e2;
-        const i2 = "fake" + _PDFWorker.#kr++, n2 = new MessageHandler(i2 + "_worker", i2, e2);
-        t2.setup(n2, e2);
-        this.#Tr = new MessageHandler(i2, i2 + "_worker", e2);
-        this.#Fr();
-      }).catch((t2) => {
-        this.#$s.reject(new Error(`Setting up fake worker failed: "${t2.message}".`));
-      });
+      return __privateGet(this, _Tr);
     }
     destroy() {
       this.destroyed = true;
-      this.#_r?.terminate();
-      this.#_r = null;
-      _PDFWorker.#Mr.delete(this.#Es);
-      this.#Es = null;
-      this.#Tr?.destroy();
-      this.#Tr = null;
+      __privateGet(this, __r)?.terminate();
+      __privateSet(this, __r, null);
+      __privateGet(_PDFWorker, _Mr).delete(__privateGet(this, _Es2));
+      __privateSet(this, _Es2, null);
+      __privateGet(this, _Tr)?.destroy();
+      __privateSet(this, _Tr, null);
     }
     static create(t2) {
-      const e2 = this.#Mr.get(t2?.port);
+      const e2 = __privateGet(this, _Mr).get(t2?.port);
       if (e2) {
         if (e2._pendingDestroy) throw new Error("PDFWorker.create - the worker is being destroyed.\nPlease remember to await `PDFDocumentLoadingTask.destroy()`-calls.");
         return e2;
@@ -16405,16 +16982,9 @@
       if (GlobalWorkerOptions.workerSrc) return GlobalWorkerOptions.workerSrc;
       throw new Error('No "GlobalWorkerOptions.workerSrc" specified.');
     }
-    static get #Or() {
-      try {
-        return globalThis.pdfjsWorker?.WorkerMessageHandler || null;
-      } catch {
-        return null;
-      }
-    }
     static get _setupFakeWorkerGlobal() {
       return shadow(this, "_setupFakeWorkerGlobal", (async () => {
-        if (this.#Or) return this.#Or;
+        if (__privateGet(this, _PDFWorker_static, Or_get)) return __privateGet(this, _PDFWorker_static, Or_get);
         return (await import(
           /*webpackIgnore: true*/
           /*@vite-ignore*/
@@ -16423,19 +16993,135 @@
       })());
     }
   };
+  _$s3 = new WeakMap();
+  _Tr = new WeakMap();
+  _Es2 = new WeakMap();
+  __r = new WeakMap();
+  _kr = new WeakMap();
+  _Dr = new WeakMap();
+  _Mr = new WeakMap();
+  _PDFWorker_instances = new WeakSet();
+  Fr_fn = function() {
+    __privateGet(this, _$s3).resolve();
+    __privateGet(this, _Tr).send("configure", { verbosity: this.verbosity });
+  };
+  Pr_fn = function(t2) {
+    __privateSet(this, _Es2, t2);
+    __privateSet(this, _Tr, new MessageHandler("main", "worker", t2));
+    __privateGet(this, _Tr).on("ready", () => {
+    });
+    __privateMethod(this, _PDFWorker_instances, Fr_fn).call(this);
+  };
+  Ir_fn = function() {
+    if (__privateGet(_PDFWorker, _Dr) || __privateGet(_PDFWorker, _PDFWorker_static, Or_get)) {
+      __privateMethod(this, _PDFWorker_instances, Rr_fn).call(this);
+      return;
+    }
+    let { workerSrc: t2 } = _PDFWorker;
+    try {
+      _PDFWorker._isSameOrigin(window.location, t2) || (t2 = _PDFWorker._createCDNWrapper(new URL(t2, window.location).href));
+      const e2 = new Worker(t2, { type: "module" }), i2 = new MessageHandler("main", "worker", e2), terminateEarly = () => {
+        n2.abort();
+        i2.destroy();
+        e2.terminate();
+        this.destroyed ? __privateGet(this, _$s3).reject(new Error("Worker was destroyed")) : __privateMethod(this, _PDFWorker_instances, Rr_fn).call(this);
+      }, n2 = new AbortController();
+      e2.addEventListener("error", () => {
+        __privateGet(this, __r) || terminateEarly();
+      }, { signal: n2.signal });
+      i2.on("test", (t3) => {
+        n2.abort();
+        if (!this.destroyed && t3) {
+          __privateSet(this, _Tr, i2);
+          __privateSet(this, _Es2, e2);
+          __privateSet(this, __r, e2);
+          __privateMethod(this, _PDFWorker_instances, Fr_fn).call(this);
+        } else terminateEarly();
+      });
+      i2.on("ready", (t3) => {
+        n2.abort();
+        if (this.destroyed) terminateEarly();
+        else try {
+          sendTest();
+        } catch {
+          __privateMethod(this, _PDFWorker_instances, Rr_fn).call(this);
+        }
+      });
+      const sendTest = () => {
+        const t3 = new Uint8Array();
+        i2.send("test", t3, [t3.buffer]);
+      };
+      sendTest();
+      return;
+    } catch {
+      info("The worker has been disabled.");
+    }
+    __privateMethod(this, _PDFWorker_instances, Rr_fn).call(this);
+  };
+  Rr_fn = function() {
+    if (!__privateGet(_PDFWorker, _Dr)) {
+      warn("Setting up fake worker.");
+      __privateSet(_PDFWorker, _Dr, true);
+    }
+    _PDFWorker._setupFakeWorkerGlobal.then((t2) => {
+      if (this.destroyed) {
+        __privateGet(this, _$s3).reject(new Error("Worker was destroyed"));
+        return;
+      }
+      const e2 = new LoopbackPort();
+      __privateSet(this, _Es2, e2);
+      const i2 = "fake" + __privateWrapper(_PDFWorker, _kr)._++, n2 = new MessageHandler(i2 + "_worker", i2, e2);
+      t2.setup(n2, e2);
+      __privateSet(this, _Tr, new MessageHandler(i2, i2 + "_worker", e2));
+      __privateMethod(this, _PDFWorker_instances, Fr_fn).call(this);
+    }).catch((t2) => {
+      __privateGet(this, _$s3).reject(new Error(`Setting up fake worker failed: "${t2.message}".`));
+    });
+  };
+  _PDFWorker_static = new WeakSet();
+  Or_get = function() {
+    try {
+      return globalThis.pdfjsWorker?.WorkerMessageHandler || null;
+    } catch {
+      return null;
+    }
+  };
+  __privateAdd(_PDFWorker, _PDFWorker_static);
+  __privateAdd(_PDFWorker, _kr, 0);
+  __privateAdd(_PDFWorker, _Dr, false);
+  __privateAdd(_PDFWorker, _Mr, /* @__PURE__ */ new WeakMap());
+  (() => {
+    if (i) {
+      __privateSet(_PDFWorker, _Dr, true);
+      GlobalWorkerOptions.workerSrc || (GlobalWorkerOptions.workerSrc = "./pdf.worker.mjs");
+    }
+    _PDFWorker._isSameOrigin = (t2, e2) => {
+      const i2 = URL.parse(t2);
+      if (!i2?.origin || "null" === i2.origin) return false;
+      const n2 = new URL(e2, i2);
+      return i2.origin === n2.origin;
+    };
+    _PDFWorker._createCDNWrapper = (t2) => {
+      const e2 = `await import("${t2}");`;
+      return URL.createObjectURL(new Blob([e2], { type: "text/javascript" }));
+    };
+  })();
+  var PDFWorker = _PDFWorker;
+  var _Br, _Lr, _Nr, _Ur, _Hr, _zr, _Gr, _WorkerTransport_instances, jr_fn, vs_fn3;
   var WorkerTransport = class {
-    downloadInfoCapability = Promise.withResolvers();
-    #Br = null;
-    #Lr = /* @__PURE__ */ new Map();
-    #Nr = null;
-    #Ur = /* @__PURE__ */ new Map();
-    #Hr = /* @__PURE__ */ new Map();
-    #zr = /* @__PURE__ */ new Map();
-    #Gr = null;
     constructor(t2, e2, i2, n2, s2, r2) {
+      __privateAdd(this, _WorkerTransport_instances);
+      __publicField(this, "downloadInfoCapability", Promise.withResolvers());
+      __privateAdd(this, _Br, null);
+      __privateAdd(this, _Lr, /* @__PURE__ */ new Map());
+      __privateAdd(this, _Nr, null);
+      __privateAdd(this, _Ur, /* @__PURE__ */ new Map());
+      __privateAdd(this, _Hr, /* @__PURE__ */ new Map());
+      __privateAdd(this, _zr, /* @__PURE__ */ new Map());
+      __privateAdd(this, _Gr, null);
       this.messageHandler = t2;
       this.loadingTask = e2;
-      this.#Nr = i2;
+      __privateSet(this, _Nr, i2);
       this.commonObjs = new PDFObjects();
       this.fontLoader = new FontLoader({ ownerDocument: n2.ownerDocument, styleElement: n2.styleElement });
       this.enableHWA = n2.enableHWA;
@@ -16451,14 +17137,8 @@
     }
     updatePage(t2) {
       const { _pageIndex: e2 } = t2;
-      this.#Ur.set(e2, t2);
-      this.#Hr.set(e2, Promise.resolve(t2));
-    }
-    #jr(t2, e2 = null) {
-      return this.#Lr.getOrInsertComputed(t2, () => this.messageHandler.sendWithPromise(t2, e2));
-    }
-    #vs({ loaded: t2, total: e2 }) {
-      this.loadingTask.onProgress?.({ loaded: t2, total: e2, percent: e2 ? MathClamp(Math.round(t2 / e2 * 100), 0, 100) : NaN });
+      __privateGet(this, _Ur).set(e2, t2);
+      __privateGet(this, _Hr).set(e2, Promise.resolve(t2));
     }
     get annotationStorage() {
       return shadow(this, "annotationStorage", new AnnotationStorage());
@@ -16503,22 +17183,22 @@
       if (this.destroyCapability) return this.destroyCapability.promise;
       this.destroyed = true;
       this.destroyCapability = Promise.withResolvers();
-      this.#Gr?.reject(new Error("Worker was destroyed during onPassword callback"));
+      __privateGet(this, _Gr)?.reject(new Error("Worker was destroyed during onPassword callback"));
       const t2 = [];
-      for (const e3 of this.#Ur.values()) t2.push(e3._destroy());
-      this.#Ur.clear();
-      this.#Hr.clear();
-      this.#zr.clear();
+      for (const e3 of __privateGet(this, _Ur).values()) t2.push(e3._destroy());
+      __privateGet(this, _Ur).clear();
+      __privateGet(this, _Hr).clear();
+      __privateGet(this, _zr).clear();
       Object.hasOwn(this, "annotationStorage") && this.annotationStorage.resetModified();
       const e2 = this.messageHandler.sendWithPromise("Terminate", null);
       t2.push(e2);
       Promise.all(t2).then(() => {
         this.commonObjs.clear();
         this.fontLoader.clear();
-        this.#Lr.clear();
+        __privateGet(this, _Lr).clear();
         this.filterFactory.destroy();
         TextLayer.cleanup();
-        this.#Nr?.cancelAllRequests(new AbortException("Worker was terminated."));
+        __privateGet(this, _Nr)?.cancelAllRequests(new AbortException("Worker was terminated."));
         this.messageHandler?.destroy();
         this.messageHandler = null;
         this.destroyCapability.resolve();
@@ -16528,11 +17208,11 @@
     setupMessageHandler() {
       const { messageHandler: t2, loadingTask: e2 } = this;
       t2.on("GetReader", (t3, e3) => {
-        assert(this.#Nr, "GetReader - no `BasePDFStream` instance available.");
-        this.#Br = this.#Nr.getFullReader();
-        this.#Br.onProgress = (t4) => this.#vs(t4);
+        assert(__privateGet(this, _Nr), "GetReader - no `BasePDFStream` instance available.");
+        __privateSet(this, _Br, __privateGet(this, _Nr).getFullReader());
+        __privateGet(this, _Br).onProgress = (t4) => __privateMethod(this, _WorkerTransport_instances, vs_fn3).call(this, t4);
         e3.onPull = () => {
-          this.#Br.read().then(function({ value: t4, done: i2 }) {
+          __privateGet(this, _Br).read().then(function({ value: t4, done: i2 }) {
             if (i2) e3.close();
             else {
               assert(t4 instanceof ArrayBuffer, "GetReader - expected an ArrayBuffer.");
@@ -16543,21 +17223,21 @@
           });
         };
         e3.onCancel = (t4) => {
-          this.#Br.cancel(t4);
+          __privateGet(this, _Br).cancel(t4);
           e3.ready.catch((t5) => {
             if (!this.destroyed) throw t5;
           });
         };
       });
       t2.on("ReaderHeadersReady", async (t3) => {
-        await this.#Br.headersReady;
-        const { isStreamingSupported: e3, isRangeSupported: i2, contentLength: n2 } = this.#Br;
-        e3 && i2 && (this.#Br.onProgress = null);
+        await __privateGet(this, _Br).headersReady;
+        const { isStreamingSupported: e3, isRangeSupported: i2, contentLength: n2 } = __privateGet(this, _Br);
+        e3 && i2 && (__privateGet(this, _Br).onProgress = null);
         return { isStreamingSupported: e3, isRangeSupported: i2, contentLength: n2 };
       });
       t2.on("GetRangeReader", (t3, e3) => {
-        assert(this.#Nr, "GetRangeReader - no `BasePDFStream` instance available.");
-        const i2 = this.#Nr.getRangeReader(t3.begin, t3.end);
+        assert(__privateGet(this, _Nr), "GetRangeReader - no `BasePDFStream` instance available.");
+        const i2 = __privateGet(this, _Nr).getRangeReader(t3.begin, t3.end);
         if (i2) {
           e3.onPull = () => {
             i2.read().then(function({ value: t4, done: i3 }) {
@@ -16589,25 +17269,25 @@
         e2._capability.reject(wrapReason(t3));
       });
       t2.on("PasswordRequest", (t3) => {
-        this.#Gr = Promise.withResolvers();
+        __privateSet(this, _Gr, Promise.withResolvers());
         try {
           if (!e2.onPassword) throw wrapReason(t3);
           const updatePassword = (t4) => {
-            t4 instanceof Error ? this.#Gr.reject(t4) : this.#Gr.resolve({ password: t4 });
+            t4 instanceof Error ? __privateGet(this, _Gr).reject(t4) : __privateGet(this, _Gr).resolve({ password: t4 });
           };
           e2.onPassword(updatePassword, t3.code);
         } catch (t4) {
-          this.#Gr.reject(t4);
+          __privateGet(this, _Gr).reject(t4);
         }
-        return this.#Gr.promise;
+        return __privateGet(this, _Gr).promise;
       });
       t2.on("DataLoaded", (t3) => {
-        this.#vs({ loaded: t3.length, total: t3.length });
+        __privateMethod(this, _WorkerTransport_instances, vs_fn3).call(this, { loaded: t3.length, total: t3.length });
         this.downloadInfoCapability.resolve(t3);
       });
       t2.on("StartRenderPage", (t3) => {
         if (this.destroyed) return;
-        this.#Ur.get(t3.pageIndex)._startRenderPage(t3.transparency, t3.cacheKey);
+        __privateGet(this, _Ur).get(t3.pageIndex)._startRenderPage(t3.transparency, t3.cacheKey);
       });
       t2.on("commonobj", ([e3, i2, n2]) => {
         if (this.destroyed) return null;
@@ -16629,7 +17309,7 @@
           case "CopyLocalImage":
             const { imageRef: o2 } = n2;
             assert(o2, "The imageRef must be defined.");
-            for (const t3 of this.#Ur.values()) for (const [, i3] of t3.objs) {
+            for (const t3 of __privateGet(this, _Ur).values()) for (const [, i3] of t3.objs) {
               if (i3?.ref !== o2) continue;
               if (!i3.dataLen) return null;
               const t4 = structuredClone(i3);
@@ -16654,7 +17334,7 @@
       });
       t2.on("obj", ([t3, e3, i2, n2]) => {
         if (this.destroyed) return;
-        const s2 = this.#Ur.get(e3);
+        const s2 = __privateGet(this, _Ur).get(e3);
         if (!s2.objs.has(t3)) if (0 !== s2._intentStates.size) switch (i2) {
           case "Image":
           case "Pattern":
@@ -16666,7 +17346,7 @@
         else n2?.bitmap?.close();
       });
       t2.on("DocProgress", (t3) => {
-        this.destroyed || this.#vs(t3);
+        this.destroyed || __privateMethod(this, _WorkerTransport_instances, vs_fn3).call(this, t3);
       });
       t2.on("FetchBinaryData", async (t3) => {
         if (this.destroyed) throw new Error("Worker was destroyed.");
@@ -16680,7 +17360,7 @@
     saveDocument() {
       this.annotationStorage.size <= 0 && warn("saveDocument called while `annotationStorage` is empty, please use the getData-method instead.");
       const { map: t2, transfer: e2 } = this.annotationStorage.serializable;
-      return this.messageHandler.sendWithPromise("SaveDocument", { isPureXfa: !!this._htmlForXfa, numPages: this._numPages, annotationStorage: t2, filename: this.#Br?.filename ?? null }, e2).finally(() => {
+      return this.messageHandler.sendWithPromise("SaveDocument", { isPureXfa: !!this._htmlForXfa, numPages: this._numPages, annotationStorage: t2, filename: __privateGet(this, _Br)?.filename ?? null }, e2).finally(() => {
         this.annotationStorage.resetModified();
       });
     }
@@ -16690,7 +17370,7 @@
       const n2 = globalThis.ImageBitmap;
       if ("function" == typeof n2) {
         const e3 = Array.isArray(t2) ? t2 : [t2];
-        for (const t3 of e3) t3?.image instanceof n2 && (i2 ||= []).push(t3.image);
+        for (const t3 of e3) t3?.image instanceof n2 && (i2 || (i2 = [])).push(t3.image);
       }
       if (this.annotationStorage.size > 0) {
         const t3 = this.annotationStorage.serializable;
@@ -16719,16 +17399,16 @@
     }
     getPage(t2) {
       if (!Number.isInteger(t2) || t2 <= 0 || t2 > this.pagesMapper.pagesNumber) return Promise.reject(new Error("Invalid page request."));
-      const e2 = t2 - 1, i2 = this.pagesMapper.getPageId(t2) - 1, n2 = this.#Hr.get(e2);
+      const e2 = t2 - 1, i2 = this.pagesMapper.getPageId(t2) - 1, n2 = __privateGet(this, _Hr).get(e2);
       if (n2) return n2;
       const s2 = this.messageHandler.sendWithPromise("GetPage", { pageIndex: i2 }).then((t3) => {
         if (this.destroyed) throw new Error("Transport destroyed");
-        t3.refStr && this.#zr.set(t3.refStr, i2);
+        t3.refStr && __privateGet(this, _zr).set(t3.refStr, i2);
         const n3 = new PDFPageProxy(e2, t3, this, this.pagesMapper, this._params.pdfBug);
-        this.#Ur.set(e2, n3);
+        __privateGet(this, _Ur).set(e2, n3);
         return n3;
       });
-      this.#Hr.set(e2, s2);
+      __privateGet(this, _Hr).set(e2, s2);
       return s2;
     }
     async getPageIndex(t2) {
@@ -16741,16 +17421,16 @@
       return this.messageHandler.sendWithPromise("GetAnnotations", { pageIndex: this.pagesMapper.getPageId(t2 + 1) - 1, intent: e2 });
     }
     getFieldObjects() {
-      return this.#jr("GetFieldObjects");
+      return __privateMethod(this, _WorkerTransport_instances, jr_fn).call(this, "GetFieldObjects");
     }
     getSignatures() {
-      return this.#jr("GetSignatures");
+      return __privateMethod(this, _WorkerTransport_instances, jr_fn).call(this, "GetSignatures");
     }
     getSignatureData(t2) {
       return this.messageHandler.sendWithPromise("GetSignatureData", t2);
     }
     hasJSActions() {
-      return this.#jr("HasJSActions");
+      return __privateMethod(this, _WorkerTransport_instances, jr_fn).call(this, "HasJSActions");
     }
     getCalculationOrderIds() {
       return this.messageHandler.sendWithPromise("GetCalculationOrderIds", null);
@@ -16786,7 +17466,7 @@
       return this.messageHandler.sendWithPromise("GetAnnotationsByType", { types: t2, pageIndexesToSkip: e2 });
     }
     getDocJSActions() {
-      return this.#jr("GetDocJSActions");
+      return __privateMethod(this, _WorkerTransport_instances, jr_fn).call(this, "GetDocJSActions");
     }
     getPageJSActions(t2) {
       return this.messageHandler.sendWithPromise("GetPageJSActions", { pageIndex: this.pagesMapper.getPageId(t2 + 1) - 1 });
@@ -16798,14 +17478,14 @@
       return this.messageHandler.sendWithPromise("GetOutline", null);
     }
     getOptionalContentConfig(t2) {
-      return this.#jr("GetOptionalContentConfig").then((e2) => new OptionalContentConfig(e2, t2));
+      return __privateMethod(this, _WorkerTransport_instances, jr_fn).call(this, "GetOptionalContentConfig").then((e2) => new OptionalContentConfig(e2, t2));
     }
     getPermissions() {
       return this.messageHandler.sendWithPromise("GetPermissions", null);
     }
     getMetadata() {
       const t2 = "GetMetadata";
-      return this.#Lr.getOrInsertComputed(t2, () => this.messageHandler.sendWithPromise(t2, null).then((t3) => ({ info: t3[0], metadata: t3[1] ? new Metadata(t3[1]) : null, contentDispositionFilename: this.#Br?.filename ?? null, contentLength: this.#Br?.contentLength ?? null, hasStructTree: t3[2] })));
+      return __privateGet(this, _Lr).getOrInsertComputed(t2, () => this.messageHandler.sendWithPromise(t2, null).then((t3) => ({ info: t3[0], metadata: t3[1] ? new Metadata(t3[1]) : null, contentDispositionFilename: __privateGet(this, _Br)?.filename ?? null, contentLength: __privateGet(this, _Br)?.contentLength ?? null, hasStructTree: t3[2] })));
     }
     getMarkInfo() {
       return this.messageHandler.sendWithPromise("GetMarkInfo", null);
@@ -16816,19 +17496,19 @@
     async startCleanup(t2 = false) {
       if (!this.destroyed) {
         await this.messageHandler.sendWithPromise("Cleanup", null);
-        for (const t3 of this.#Ur.values()) {
+        for (const t3 of __privateGet(this, _Ur).values()) {
           if (!t3.cleanup()) throw new Error(`startCleanup: Page ${t3.pageNumber} is currently rendering.`);
         }
         this.commonObjs.clear();
         t2 || this.fontLoader.clear();
-        this.#Lr.clear();
+        __privateGet(this, _Lr).clear();
         this.filterFactory.destroy(true);
         TextLayer.cleanup();
       }
     }
     cachedPageNumber(t2) {
       if (!isRefProxy(t2)) return null;
-      const e2 = 0 === t2.gen ? `${t2.num}R` : `${t2.num}R${t2.gen}`, i2 = this.#zr.get(e2);
+      const e2 = 0 === t2.gen ? `${t2.num}R` : `${t2.num}R${t2.gen}`, i2 = __privateGet(this, _zr).get(e2);
       if (i2 >= 0) {
         const t3 = this.pagesMapper.getPageNumber(i2 + 1);
         if (0 !== t3) return t3;
@@ -16836,11 +17516,25 @@
       return null;
     }
   };
+  _Br = new WeakMap();
+  _Lr = new WeakMap();
+  _Nr = new WeakMap();
+  _Ur = new WeakMap();
+  _Hr = new WeakMap();
+  _zr = new WeakMap();
+  _Gr = new WeakMap();
+  _WorkerTransport_instances = new WeakSet();
+  jr_fn = function(t2, e2 = null) {
+    return __privateGet(this, _Lr).getOrInsertComputed(t2, () => this.messageHandler.sendWithPromise(t2, e2));
+  };
+  vs_fn3 = function({ loaded: t2, total: e2 }) {
+    this.loadingTask.onProgress?.({ loaded: t2, total: e2, percent: e2 ? MathClamp(Math.round(t2 / e2 * 100), 0, 100) : NaN });
+  };
   var RenderTask = class {
-    _internalRenderTask = null;
-    onContinue = null;
-    onError = null;
     constructor(t2) {
+      __publicField(this, "_internalRenderTask", null);
+      __publicField(this, "onContinue", null);
+      __publicField(this, "onError", null);
       this._internalRenderTask = t2;
     }
     get promise() {
@@ -16859,10 +17553,10 @@
       return this._internalRenderTask.imageCoordinates || null;
     }
   };
-  var InternalRenderTask = class _InternalRenderTask {
-    #Wr = null;
-    static #Vr = /* @__PURE__ */ new WeakSet();
+  var _Wr, _Vr;
+  var _InternalRenderTask = class _InternalRenderTask {
     constructor({ callback: t2, params: e2, objs: i2, commonObjs: n2, annotationCanvasMap: s2, operatorList: r2, pageIndex: a2, canvasFactory: o2, filterFactory: l2, useRequestAnimationFrame: h2 = false, pdfBug: c2 = false, pageColors: d2 = null, enableHWA: u2 = false, operationsFilter: p2 = null }) {
+      __privateAdd(this, _Wr, null);
       this.callback = t2;
       this.params = e2;
       this.objs = i2;
@@ -16900,8 +17594,8 @@
     initializeGraphics({ transparency: t2 = false, optionalContentConfig: e2 }) {
       if (this.cancelled) return;
       if (this._canvas) {
-        if (_InternalRenderTask.#Vr.has(this._canvas)) throw new Error("Cannot use the same canvas during multiple render() operations. Use different canvas or ensure previous operations were cancelled or completed.");
-        _InternalRenderTask.#Vr.add(this._canvas);
+        if (__privateGet(_InternalRenderTask, _Vr).has(this._canvas)) throw new Error("Cannot use the same canvas during multiple render() operations. Use different canvas or ensure previous operations were cancelled or completed.");
+        __privateGet(_InternalRenderTask, _Vr).add(this._canvas);
       }
       if (this._pdfBug && globalThis.StepperManager?.enabled) {
         this.stepper = globalThis.StepperManager.create(this._pageIndex);
@@ -16919,12 +17613,12 @@
       this.running = false;
       this.cancelled = true;
       this.gfx?.endDrawing();
-      if (this.#Wr) {
-        window.cancelAnimationFrame(this.#Wr);
-        this.#Wr = null;
+      if (__privateGet(this, _Wr)) {
+        window.cancelAnimationFrame(__privateGet(this, _Wr));
+        __privateSet(this, _Wr, null);
       }
-      _InternalRenderTask.#Vr.delete(this._canvas);
-      t2 ||= new RenderingCancelledException(`Rendering cancelled, page ${this._pageIndex + 1}`, e2);
+      __privateGet(_InternalRenderTask, _Vr).delete(this._canvas);
+      t2 || (t2 = new RenderingCancelledException(`Rendering cancelled, page ${this._pageIndex + 1}`, e2));
       this.callback(t2);
       this.task.onError?.(t2);
     }
@@ -16933,17 +17627,17 @@
         this.gfx.dependencyTracker?.growOperationsCount(this.operatorList.fnArray.length);
         this.stepper?.updateOperatorList(this.operatorList);
         this.running || this._continue();
-      } else this.graphicsReadyCallback ||= this._continueBound;
+      } else this.graphicsReadyCallback || (this.graphicsReadyCallback = this._continueBound);
     }
     _continue() {
       this.running = true;
       this.cancelled || (this.task.onContinue ? this.task.onContinue(this._scheduleNextBound) : this._scheduleNext());
     }
     _scheduleNext() {
-      this._useRequestAnimationFrame ? this.#Wr = window.requestAnimationFrame(() => {
-        this.#Wr = null;
+      this._useRequestAnimationFrame ? __privateSet(this, _Wr, window.requestAnimationFrame(() => {
+        __privateSet(this, _Wr, null);
         this._nextBound().catch(this._cancelBound);
-      }) : Promise.resolve().then(this._nextBound).catch(this._cancelBound);
+      })) : Promise.resolve().then(this._nextBound).catch(this._cancelBound);
     }
     async _next() {
       if (!this.cancelled) {
@@ -16952,186 +17646,205 @@
           this.running = false;
           if (this.operatorList.lastChunk) {
             this.gfx.endDrawing();
-            _InternalRenderTask.#Vr.delete(this._canvas);
+            __privateGet(_InternalRenderTask, _Vr).delete(this._canvas);
             this.callback();
           }
         }
       }
     }
   };
+  _Wr = new WeakMap();
+  _Vr = new WeakMap();
+  __privateAdd(_InternalRenderTask, _Vr, /* @__PURE__ */ new WeakSet());
+  var InternalRenderTask = _InternalRenderTask;
   var Ht = "6.2.108";
   var zt = "0365cbde0";
   __webpack_require__(3068);
-  var ColorPicker = class _ColorPicker {
-    #$r = null;
-    #qr = null;
-    #Kr;
-    #Xr = null;
-    #Yr = false;
-    #Jr = false;
-    #o = null;
-    #Qr;
-    #Zr = null;
-    #v = null;
-    static #ta = null;
+  var _$r, _qr, _Kr, _Xr, _Yr, _Jr, _o4, _Qr, _Zr, _v2, _ta, _ColorPicker_instances, na_fn, sa_fn, ia_fn, ea_fn, g_fn2, ra_get;
+  var _ColorPicker = class _ColorPicker {
+    constructor({ editor: t2 = null, uiManager: e2 = null }) {
+      __privateAdd(this, _ColorPicker_instances);
+      __privateAdd(this, _$r, null);
+      __privateAdd(this, _qr, null);
+      __privateAdd(this, _Kr);
+      __privateAdd(this, _Xr, null);
+      __privateAdd(this, _Yr, false);
+      __privateAdd(this, _Jr, false);
+      __privateAdd(this, _o4, null);
+      __privateAdd(this, _Qr);
+      __privateAdd(this, _Zr, null);
+      __privateAdd(this, _v2, null);
+      if (t2) {
+        __privateSet(this, _Jr, false);
+        __privateSet(this, _o4, t2);
+      } else __privateSet(this, _Jr, true);
+      __privateSet(this, _v2, t2?._uiManager || e2);
+      __privateSet(this, _Qr, __privateGet(this, _v2)._eventBus);
+      __privateSet(this, _Kr, t2?.color?.toUpperCase() || __privateGet(this, _v2)?.highlightColors.values().next().value || "#FFFF98");
+      __privateGet(_ColorPicker, _ta) || __privateSet(_ColorPicker, _ta, Object.freeze({ blue: "pdfjs-editor-colorpicker-blue", green: "pdfjs-editor-colorpicker-green", pink: "pdfjs-editor-colorpicker-pink", red: "pdfjs-editor-colorpicker-red", yellow: "pdfjs-editor-colorpicker-yellow" }));
+    }
     static get _keyboardManager() {
       return shadow(this, "_keyboardManager", new KeyboardManager([[["Escape"], _ColorPicker.prototype._hideDropdownFromKeyboard], [["Space"], _ColorPicker.prototype._colorSelectFromKeyboard], [["ArrowDown", "ArrowRight"], _ColorPicker.prototype._moveToNext], [["ArrowUp", "ArrowLeft"], _ColorPicker.prototype._moveToPrevious], [["Home"], _ColorPicker.prototype._moveToBeginning], [["End"], _ColorPicker.prototype._moveToEnd]]));
     }
-    constructor({ editor: t2 = null, uiManager: e2 = null }) {
-      if (t2) {
-        this.#Jr = false;
-        this.#o = t2;
-      } else this.#Jr = true;
-      this.#v = t2?._uiManager || e2;
-      this.#Qr = this.#v._eventBus;
-      this.#Kr = t2?.color?.toUpperCase() || this.#v?.highlightColors.values().next().value || "#FFFF98";
-      _ColorPicker.#ta ||= Object.freeze({ blue: "pdfjs-editor-colorpicker-blue", green: "pdfjs-editor-colorpicker-green", pink: "pdfjs-editor-colorpicker-pink", red: "pdfjs-editor-colorpicker-red", yellow: "pdfjs-editor-colorpicker-yellow" });
-    }
     renderButton() {
-      const t2 = this.#$r = document.createElement("button");
+      const t2 = __privateSet(this, _$r, document.createElement("button"));
       t2.className = "colorPicker";
       t2.tabIndex = "0";
       t2.setAttribute("data-l10n-id", "pdfjs-editor-colorpicker-button");
       t2.ariaHasPopup = "true";
-      this.#o && (t2.ariaControls = `${this.#o.id}_colorpicker_dropdown`);
-      const e2 = this.#v._signal;
-      t2.addEventListener("click", this.#ea.bind(this), { signal: e2 });
-      t2.addEventListener("keydown", this.#ia.bind(this), { signal: e2 });
-      const i2 = this.#qr = document.createElement("span");
+      __privateGet(this, _o4) && (t2.ariaControls = `${__privateGet(this, _o4).id}_colorpicker_dropdown`);
+      const e2 = __privateGet(this, _v2)._signal;
+      t2.addEventListener("click", __privateMethod(this, _ColorPicker_instances, ea_fn).bind(this), { signal: e2 });
+      t2.addEventListener("keydown", __privateMethod(this, _ColorPicker_instances, ia_fn).bind(this), { signal: e2 });
+      const i2 = __privateSet(this, _qr, document.createElement("span"));
       i2.className = "swatch";
       i2.ariaHidden = "true";
-      i2.style.backgroundColor = this.#Kr;
+      i2.style.backgroundColor = __privateGet(this, _Kr);
       t2.append(i2);
       return t2;
     }
     renderMainDropdown() {
-      const t2 = this.#Xr = this.#na();
+      const t2 = __privateSet(this, _Xr, __privateMethod(this, _ColorPicker_instances, na_fn).call(this));
       t2.ariaOrientation = "horizontal";
       t2.ariaLabelledBy = "highlightColorPickerLabel";
       return t2;
     }
-    #na() {
-      const t2 = document.createElement("div"), e2 = this.#v._signal;
-      t2.addEventListener("contextmenu", noContextMenu, { signal: e2 });
-      t2.className = "dropdown";
-      t2.role = "listbox";
-      t2.ariaMultiSelectable = "false";
-      t2.ariaOrientation = "vertical";
-      t2.setAttribute("data-l10n-id", "pdfjs-editor-colorpicker-dropdown");
-      this.#o && (t2.id = `${this.#o.id}_colorpicker_dropdown`);
-      for (const [i2, n2] of this.#v.highlightColors) {
-        const s2 = document.createElement("button");
-        s2.tabIndex = "0";
-        s2.role = "option";
-        s2.setAttribute("data-color", n2);
-        s2.title = i2;
-        s2.setAttribute("data-l10n-id", _ColorPicker.#ta[i2]);
-        const r2 = document.createElement("span");
-        s2.append(r2);
-        r2.className = "swatch";
-        r2.style.backgroundColor = n2;
-        s2.ariaSelected = n2 === this.#Kr;
-        s2.addEventListener("click", this.#sa.bind(this, n2), { signal: e2 });
-        t2.append(s2);
-      }
-      t2.addEventListener("keydown", this.#ia.bind(this), { signal: e2 });
-      return t2;
-    }
-    #sa(t2, e2) {
-      e2.stopPropagation();
-      this.#Qr.dispatch("switchannotationeditorparams", { source: this, type: v.HIGHLIGHT_COLOR, value: t2 });
-      this.updateColor(t2);
-    }
     _colorSelectFromKeyboard(t2) {
-      if (t2.target === this.#$r) {
-        this.#ea(t2);
+      if (t2.target === __privateGet(this, _$r)) {
+        __privateMethod(this, _ColorPicker_instances, ea_fn).call(this, t2);
         return;
       }
       const e2 = t2.target.getAttribute("data-color");
-      e2 && this.#sa(e2, t2);
+      e2 && __privateMethod(this, _ColorPicker_instances, sa_fn).call(this, e2, t2);
     }
     _moveToNext(t2) {
-      this.#ra ? t2.target !== this.#$r ? t2.target.nextSibling?.focus() : this.#Xr.firstElementChild?.focus() : this.#ea(t2);
+      __privateGet(this, _ColorPicker_instances, ra_get) ? t2.target !== __privateGet(this, _$r) ? t2.target.nextSibling?.focus() : __privateGet(this, _Xr).firstElementChild?.focus() : __privateMethod(this, _ColorPicker_instances, ea_fn).call(this, t2);
     }
     _moveToPrevious(t2) {
-      if (t2.target !== this.#Xr?.firstElementChild && t2.target !== this.#$r) {
-        this.#ra || this.#ea(t2);
+      if (t2.target !== __privateGet(this, _Xr)?.firstElementChild && t2.target !== __privateGet(this, _$r)) {
+        __privateGet(this, _ColorPicker_instances, ra_get) || __privateMethod(this, _ColorPicker_instances, ea_fn).call(this, t2);
         t2.target.previousSibling?.focus();
-      } else this.#ra && this._hideDropdownFromKeyboard();
+      } else __privateGet(this, _ColorPicker_instances, ra_get) && this._hideDropdownFromKeyboard();
     }
     _moveToBeginning(t2) {
-      this.#ra ? this.#Xr.firstElementChild?.focus() : this.#ea(t2);
+      __privateGet(this, _ColorPicker_instances, ra_get) ? __privateGet(this, _Xr).firstElementChild?.focus() : __privateMethod(this, _ColorPicker_instances, ea_fn).call(this, t2);
     }
     _moveToEnd(t2) {
-      this.#ra ? this.#Xr.lastElementChild?.focus() : this.#ea(t2);
-    }
-    #ia(t2) {
-      _ColorPicker._keyboardManager.exec(this, t2);
-    }
-    #ea(t2) {
-      if (this.#ra) {
-        this.hideDropdown();
-        return;
-      }
-      this.#Yr = 0 === t2.detail;
-      if (!this.#Zr) {
-        this.#Zr = new AbortController();
-        window.addEventListener("pointerdown", this.#g.bind(this), { signal: this.#v.combinedSignal(this.#Zr) });
-      }
-      this.#$r.ariaExpanded = "true";
-      if (this.#Xr) {
-        this.#Xr.classList.remove("hidden");
-        return;
-      }
-      const e2 = this.#Xr = this.#na();
-      this.#$r.append(e2);
-    }
-    #g(t2) {
-      this.#Xr?.contains(t2.target) || this.hideDropdown();
+      __privateGet(this, _ColorPicker_instances, ra_get) ? __privateGet(this, _Xr).lastElementChild?.focus() : __privateMethod(this, _ColorPicker_instances, ea_fn).call(this, t2);
     }
     hideDropdown() {
-      this.#Xr?.classList.add("hidden");
-      this.#$r.ariaExpanded = "false";
-      this.#Zr?.abort();
-      this.#Zr = null;
-    }
-    get #ra() {
-      return this.#Xr && !this.#Xr.classList.contains("hidden");
+      __privateGet(this, _Xr)?.classList.add("hidden");
+      __privateGet(this, _$r).ariaExpanded = "false";
+      __privateGet(this, _Zr)?.abort();
+      __privateSet(this, _Zr, null);
     }
     _hideDropdownFromKeyboard() {
-      if (!this.#Jr) if (this.#ra) {
+      if (!__privateGet(this, _Jr)) if (__privateGet(this, _ColorPicker_instances, ra_get)) {
         this.hideDropdown();
-        this.#$r.focus({ preventScroll: true, focusVisible: this.#Yr });
-      } else this.#o?.unselect();
+        __privateGet(this, _$r).focus({ preventScroll: true, focusVisible: __privateGet(this, _Yr) });
+      } else __privateGet(this, _o4)?.unselect();
     }
     updateColor(t2) {
-      this.#qr && (this.#qr.style.backgroundColor = t2);
-      if (!this.#Xr) return;
-      const e2 = this.#v.highlightColors.values();
-      for (const i2 of this.#Xr.children) i2.ariaSelected = e2.next().value === t2.toUpperCase();
+      __privateGet(this, _qr) && (__privateGet(this, _qr).style.backgroundColor = t2);
+      if (!__privateGet(this, _Xr)) return;
+      const e2 = __privateGet(this, _v2).highlightColors.values();
+      for (const i2 of __privateGet(this, _Xr).children) i2.ariaSelected = e2.next().value === t2.toUpperCase();
     }
     destroy() {
-      this.#$r?.remove();
-      this.#$r = null;
-      this.#qr = null;
-      this.#Xr?.remove();
-      this.#Xr = null;
+      __privateGet(this, _$r)?.remove();
+      __privateSet(this, _$r, null);
+      __privateSet(this, _qr, null);
+      __privateGet(this, _Xr)?.remove();
+      __privateSet(this, _Xr, null);
     }
   };
-  var BasicColorPicker = class _BasicColorPicker {
-    #aa = null;
-    #oa = false;
-    #o = null;
-    #v = null;
-    static #ta = null;
+  _$r = new WeakMap();
+  _qr = new WeakMap();
+  _Kr = new WeakMap();
+  _Xr = new WeakMap();
+  _Yr = new WeakMap();
+  _Jr = new WeakMap();
+  _o4 = new WeakMap();
+  _Qr = new WeakMap();
+  _Zr = new WeakMap();
+  _v2 = new WeakMap();
+  _ta = new WeakMap();
+  _ColorPicker_instances = new WeakSet();
+  na_fn = function() {
+    const t2 = document.createElement("div"), e2 = __privateGet(this, _v2)._signal;
+    t2.addEventListener("contextmenu", noContextMenu, { signal: e2 });
+    t2.className = "dropdown";
+    t2.role = "listbox";
+    t2.ariaMultiSelectable = "false";
+    t2.ariaOrientation = "vertical";
+    t2.setAttribute("data-l10n-id", "pdfjs-editor-colorpicker-dropdown");
+    __privateGet(this, _o4) && (t2.id = `${__privateGet(this, _o4).id}_colorpicker_dropdown`);
+    for (const [i2, n2] of __privateGet(this, _v2).highlightColors) {
+      const s2 = document.createElement("button");
+      s2.tabIndex = "0";
+      s2.role = "option";
+      s2.setAttribute("data-color", n2);
+      s2.title = i2;
+      s2.setAttribute("data-l10n-id", __privateGet(_ColorPicker, _ta)[i2]);
+      const r2 = document.createElement("span");
+      s2.append(r2);
+      r2.className = "swatch";
+      r2.style.backgroundColor = n2;
+      s2.ariaSelected = n2 === __privateGet(this, _Kr);
+      s2.addEventListener("click", __privateMethod(this, _ColorPicker_instances, sa_fn).bind(this, n2), { signal: e2 });
+      t2.append(s2);
+    }
+    t2.addEventListener("keydown", __privateMethod(this, _ColorPicker_instances, ia_fn).bind(this), { signal: e2 });
+    return t2;
+  };
+  sa_fn = function(t2, e2) {
+    e2.stopPropagation();
+    __privateGet(this, _Qr).dispatch("switchannotationeditorparams", { source: this, type: v.HIGHLIGHT_COLOR, value: t2 });
+    this.updateColor(t2);
+  };
+  ia_fn = function(t2) {
+    _ColorPicker._keyboardManager.exec(this, t2);
+  };
+  ea_fn = function(t2) {
+    if (__privateGet(this, _ColorPicker_instances, ra_get)) {
+      this.hideDropdown();
+      return;
+    }
+    __privateSet(this, _Yr, 0 === t2.detail);
+    if (!__privateGet(this, _Zr)) {
+      __privateSet(this, _Zr, new AbortController());
+      window.addEventListener("pointerdown", __privateMethod(this, _ColorPicker_instances, g_fn2).bind(this), { signal: __privateGet(this, _v2).combinedSignal(__privateGet(this, _Zr)) });
+    }
+    __privateGet(this, _$r).ariaExpanded = "true";
+    if (__privateGet(this, _Xr)) {
+      __privateGet(this, _Xr).classList.remove("hidden");
+      return;
+    }
+    const e2 = __privateSet(this, _Xr, __privateMethod(this, _ColorPicker_instances, na_fn).call(this));
+    __privateGet(this, _$r).append(e2);
+  };
+  g_fn2 = function(t2) {
+    __privateGet(this, _Xr)?.contains(t2.target) || this.hideDropdown();
+  };
+  ra_get = function() {
+    return __privateGet(this, _Xr) && !__privateGet(this, _Xr).classList.contains("hidden");
+  };
+  __privateAdd(_ColorPicker, _ta, null);
+  var ColorPicker = _ColorPicker;
+  var _aa, _oa, _o5, _v3, _ta2;
+  var _BasicColorPicker = class _BasicColorPicker {
     constructor(t2) {
-      this.#o = t2;
-      this.#v = t2._uiManager;
-      _BasicColorPicker.#ta ||= Object.freeze({ freetext: "pdfjs-editor-color-picker-free-text-input", ink: "pdfjs-editor-color-picker-ink-input" });
+      __privateAdd(this, _aa, null);
+      __privateAdd(this, _oa, false);
+      __privateAdd(this, _o5, null);
+      __privateAdd(this, _v3, null);
+      __privateSet(this, _o5, t2);
+      __privateSet(this, _v3, t2._uiManager);
+      __privateGet(_BasicColorPicker, _ta2) || __privateSet(_BasicColorPicker, _ta2, Object.freeze({ freetext: "pdfjs-editor-color-picker-free-text-input", ink: "pdfjs-editor-color-picker-ink-input" }));
     }
     renderButton() {
-      if (this.#aa) return this.#aa;
-      const { editorType: t2, colorType: e2, colorAndOpacityType: i2, opacityType: n2, color: s2, opacity: r2 } = this.#o, a2 = this.#oa = FeatureTest.isAlphaColorInputSupported && void 0 !== n2, o2 = this.#aa = document.createElement("input");
+      if (__privateGet(this, _aa)) return __privateGet(this, _aa);
+      const { editorType: t2, colorType: e2, colorAndOpacityType: i2, opacityType: n2, color: s2, opacity: r2 } = __privateGet(this, _o5), a2 = __privateSet(this, _oa, FeatureTest.isAlphaColorInputSupported && void 0 !== n2), o2 = __privateSet(this, _aa, document.createElement("input"));
       o2.type = "color";
       if (a2) {
         o2.setAttribute("alpha", "");
@@ -17140,39 +17853,46 @@
       } else o2.value = s2 || "#000000";
       o2.className = "basicColorPicker";
       o2.tabIndex = 0;
-      o2.setAttribute("data-l10n-id", _BasicColorPicker.#ta[t2]);
+      o2.setAttribute("data-l10n-id", __privateGet(_BasicColorPicker, _ta2)[t2]);
       o2.addEventListener("input", () => {
         if (a2) {
           const t3 = getRGBA(o2.value);
           if (!t3) return;
           const [s3, r3, a3, l2] = t3, h2 = Util.makeHexColor(s3, r3, a3);
-          if (void 0 !== i2) this.#v.updateParams(i2, { color: h2, opacity: l2 });
+          if (void 0 !== i2) __privateGet(this, _v3).updateParams(i2, { color: h2, opacity: l2 });
           else {
-            this.#v.updateParams(e2, h2);
-            this.#v.updateParams(n2, l2);
+            __privateGet(this, _v3).updateParams(e2, h2);
+            __privateGet(this, _v3).updateParams(n2, l2);
           }
-        } else this.#v.updateParams(e2, o2.value);
-      }, { signal: this.#v._signal });
+        } else __privateGet(this, _v3).updateParams(e2, o2.value);
+      }, { signal: __privateGet(this, _v3)._signal });
       return o2;
     }
     update(t2) {
-      if (this.#aa) if (this.#oa) {
-        const e2 = Util.hexNums[Math.round(255 * this.#o.opacity)];
-        this.#aa.value = t2 + e2;
-      } else this.#aa.value = t2;
+      if (__privateGet(this, _aa)) if (__privateGet(this, _oa)) {
+        const e2 = Util.hexNums[Math.round(255 * __privateGet(this, _o5).opacity)];
+        __privateGet(this, _aa).value = t2 + e2;
+      } else __privateGet(this, _aa).value = t2;
     }
     updateOpacity(t2) {
-      if (!this.#aa || !this.#oa) return;
+      if (!__privateGet(this, _aa) || !__privateGet(this, _oa)) return;
       const e2 = Util.hexNums[Math.round(255 * t2)];
-      this.#aa.value = this.#o.color + e2;
+      __privateGet(this, _aa).value = __privateGet(this, _o5).color + e2;
     }
     destroy() {
-      this.#aa?.remove();
-      this.#aa = null;
+      __privateGet(this, _aa)?.remove();
+      __privateSet(this, _aa, null);
     }
     hideDropdown() {
     }
   };
+  _aa = new WeakMap();
+  _oa = new WeakMap();
+  _o5 = new WeakMap();
+  _v3 = new WeakMap();
+  _ta2 = new WeakMap();
+  __privateAdd(_BasicColorPicker, _ta2, null);
+  var BasicColorPicker = _BasicColorPicker;
   __webpack_require__(531);
   function makeColorComp(t2) {
     return Math.floor(255 * MathClamp(t2, 0, 1)).toString(16).padStart(2, "0");
@@ -17313,11 +18033,13 @@
       }
     }
   };
-  var AnnotationElement = class _AnnotationElement {
-    #la = null;
-    #ha = false;
-    #ca = null;
+  var _la, _ha, _ca, _AnnotationElement_instances, da_fn;
+  var _AnnotationElement = class _AnnotationElement {
     constructor(t2, { isRenderable: e2 = false, ignoreBorder: i2 = false, createQuadrilaterals: n2 = false } = {}) {
+      __privateAdd(this, _AnnotationElement_instances);
+      __privateAdd(this, _la, null);
+      __privateAdd(this, _ha, false);
+      __privateAdd(this, _ca, null);
       this.isRenderable = e2;
       this.data = t2.data;
       this.layer = t2.layer;
@@ -17390,44 +18112,34 @@
       t2 || this.removePopup();
     }
     removePopup() {
-      (this.#ca?.popup || this.popup)?.remove();
-      this.#ca = this.popup = null;
+      (__privateGet(this, _ca)?.popup || this.popup)?.remove();
+      __privateSet(this, _ca, this.popup = null);
     }
     updateEdited(t2) {
       if (!this.container) return;
-      t2.rect && (this.#la ||= { rect: this.data.rect.slice(0) });
+      t2.rect && (__privateGet(this, _la) || __privateSet(this, _la, { rect: this.data.rect.slice(0) }));
       const { rect: e2, popup: i2 } = t2;
-      e2 && this.#da(e2);
-      let n2 = this.#ca?.popup || this.popup;
+      e2 && __privateMethod(this, _AnnotationElement_instances, da_fn).call(this, e2);
+      let n2 = __privateGet(this, _ca)?.popup || this.popup;
       if (!n2 && i2?.text) {
         this._createPopup(i2);
-        n2 = this.#ca.popup;
+        n2 = __privateGet(this, _ca).popup;
       }
       if (n2) {
         n2.updateEdited(t2);
         if (i2?.deleted) {
           n2.remove();
-          this.#ca = null;
+          __privateSet(this, _ca, null);
           this.popup = null;
         }
       }
     }
     resetEdited() {
-      if (this.#la) {
-        this.#da(this.#la.rect);
-        this.#ca?.popup.resetEdited();
-        this.#la = null;
+      if (__privateGet(this, _la)) {
+        __privateMethod(this, _AnnotationElement_instances, da_fn).call(this, __privateGet(this, _la).rect);
+        __privateGet(this, _ca)?.popup.resetEdited();
+        __privateSet(this, _la, null);
       }
-    }
-    #da(t2) {
-      const { container: { style: e2 }, data: { rect: i2, rotation: n2 }, parent: { viewport: { rawDims: { pageWidth: s2, pageHeight: r2, pageX: a2, pageY: o2 } } } } = this;
-      i2?.splice(0, 4, ...t2);
-      e2.left = 100 * (t2[0] - a2) / s2 + "%";
-      e2.top = 100 * (r2 - t2[3] + o2) / r2 + "%";
-      if (0 === n2) {
-        e2.width = 100 * (t2[2] - t2[0]) / s2 + "%";
-        e2.height = 100 * (t2[3] - t2[1]) / r2 + "%";
-      } else this.setRotation(n2);
     }
     _createContainer(t2) {
       const { data: e2, parent: { page: i2, viewport: n2 } } = this, s2 = document.createElement("section");
@@ -17469,7 +18181,7 @@
         }
         const n3 = e2.borderColor || null;
         if (n3) {
-          this.#ha = true;
+          __privateSet(this, _ha, true);
           r2.borderColor = Util.makeHexColor(...n3);
         } else r2.borderWidth = 0;
       }
@@ -17565,7 +18277,7 @@
       }
       const { style: r2 } = this.container;
       let o2;
-      if (this.#ha) {
+      if (__privateGet(this, _ha)) {
         const { borderColor: t3, borderWidth: e3 } = r2;
         r2.borderWidth = 0;
         o2 = ["url('data:image/svg+xml;utf8,", `<svg xmlns="${a}" preserveAspectRatio="none" viewBox="0 0 1 1">`, `<g fill="transparent" stroke="${t3}" stroke-width="${e3}">`];
@@ -17591,7 +18303,7 @@
         p2.append(u3);
         o2?.push(`<rect vector-effect="non-scaling-stroke" x="${g3}" y="${m2}" width="${f2}" height="${b2}"/>`);
       }
-      if (this.#ha) {
+      if (__privateGet(this, _ha)) {
         o2.push("</g></svg>')");
         r2.backgroundImage = o2.join("");
       }
@@ -17608,13 +18320,13 @@
         i2 = e2.contentsObj;
         n2 = e2.modificationDate;
       }
-      this.#ca = new PopupAnnotationElement({ data: { color: e2.color, titleObj: e2.titleObj, modificationDate: n2, contentsObj: i2, richText: e2.richText, parentRect: e2.rect, borderStyle: 0, id: `popup_${e2.id}`, rotation: e2.rotation, noRotate: true }, linkService: this.linkService, parent: this.parent, elements: [this] });
+      __privateSet(this, _ca, new PopupAnnotationElement({ data: { color: e2.color, titleObj: e2.titleObj, modificationDate: n2, contentsObj: i2, richText: e2.richText, parentRect: e2.rect, borderStyle: 0, id: `popup_${e2.id}`, rotation: e2.rotation, noRotate: true }, linkService: this.linkService, parent: this.parent, elements: [this] }));
     }
     get hasPopupElement() {
-      return !!(this.#ca || this.popup || this.data.popupRef);
+      return !!(__privateGet(this, _ca) || this.popup || this.data.popupRef);
     }
     get extraPopupElement() {
-      return this.#ca;
+      return __privateGet(this, _ca);
     }
     render() {
       unreachable("Abstract method `AnnotationElement.render` called");
@@ -17675,6 +18387,21 @@
       t2.style.backgroundColor = null === e2 ? "transparent" : Util.makeHexColor(...e2);
     }
   };
+  _la = new WeakMap();
+  _ha = new WeakMap();
+  _ca = new WeakMap();
+  _AnnotationElement_instances = new WeakSet();
+  da_fn = function(t2) {
+    const { container: { style: e2 }, data: { rect: i2, rotation: n2 }, parent: { viewport: { rawDims: { pageWidth: s2, pageHeight: r2, pageX: a2, pageY: o2 } } } } = this;
+    i2?.splice(0, 4, ...t2);
+    e2.left = 100 * (t2[0] - a2) / s2 + "%";
+    e2.top = 100 * (r2 - t2[3] + o2) / r2 + "%";
+    if (0 === n2) {
+      e2.width = 100 * (t2[2] - t2[0]) / s2 + "%";
+      e2.height = 100 * (t2[3] - t2[1]) / r2 + "%";
+    } else this.setRotation(n2);
+  };
+  var AnnotationElement = _AnnotationElement;
   var EditorAnnotationElement = class extends AnnotationElement {
     constructor(t2) {
       super(t2, { isRenderable: true, ignoreBorder: true });
@@ -17711,9 +18438,11 @@
       this.removePopup();
     }
   };
+  var _LinkAnnotationElement_instances, ga_fn, ua_fn, pa_fn;
   var LinkAnnotationElement = class extends AnnotationElement {
     constructor(t2, e2 = null) {
       super(t2, { isRenderable: true, ignoreBorder: !!e2?.ignoreBorder, createQuadrilaterals: true });
+      __privateAdd(this, _LinkAnnotationElement_instances);
       this.isTooltipOnly = t2.data.isTooltipOnly;
     }
     render() {
@@ -17727,10 +18456,10 @@
         this._bindNamedAction(i2, t2.action, t2.overlaidText);
         n2 = true;
       } else if (t2.attachment) {
-        this.#ua(i2, t2.attachmentId, t2.attachment, t2.overlaidText, t2.attachmentDest);
+        __privateMethod(this, _LinkAnnotationElement_instances, ua_fn).call(this, i2, t2.attachmentId, t2.attachment, t2.overlaidText, t2.attachmentDest);
         n2 = true;
       } else if (t2.setOCGState) {
-        this.#pa(i2, t2.setOCGState, t2.overlaidText);
+        __privateMethod(this, _LinkAnnotationElement_instances, pa_fn).call(this, i2, t2.setOCGState, t2.overlaidText);
         n2 = true;
       } else if (t2.dest) {
         this._bindLink(i2, t2.dest, t2.overlaidText);
@@ -17755,16 +18484,13 @@
       }
       return this.container;
     }
-    #ga() {
-      this.container.setAttribute("data-internal-link", "");
-    }
     _bindLink(t2, e2, i2 = "") {
       t2.href = this.linkService.getDestinationHash(e2);
       t2.onclick = () => {
         e2 && this.linkService.goToDestination(e2);
         return false;
       };
-      (e2 || "" === e2) && this.#ga();
+      (e2 || "" === e2) && __privateMethod(this, _LinkAnnotationElement_instances, ga_fn).call(this);
       i2 && (t2.title = i2);
     }
     _bindNamedAction(t2, e2, i2 = "") {
@@ -17774,29 +18500,7 @@
         return false;
       };
       i2 && (t2.title = i2);
-      this.#ga();
-    }
-    #ua(t2, e2, i2, n2 = "", s2 = null) {
-      t2.href = this.linkService.getAnchorUrl("");
-      i2.description ? t2.title = i2.description : n2 && (t2.title = n2);
-      const openAttachment = async () => {
-        const t3 = await this.linkService.getAttachmentContent(e2);
-        t3 && this.downloadManager?.openOrDownloadData(t3, i2.filename, s2);
-      };
-      t2.onclick = () => {
-        openAttachment();
-        return false;
-      };
-      this.#ga();
-    }
-    #pa(t2, e2, i2 = "") {
-      t2.href = this.linkService.getAnchorUrl("");
-      t2.onclick = () => {
-        this.linkService.executeSetOCGState(e2);
-        return false;
-      };
-      i2 && (t2.title = i2);
-      this.#ga();
+      __privateMethod(this, _LinkAnnotationElement_instances, ga_fn).call(this);
     }
     _bindJSAction(t2, e2) {
       t2.href = this.linkService.getAnchorUrl("");
@@ -17809,13 +18513,13 @@
         });
       }
       e2.overlaidText && (t2.title = e2.overlaidText);
-      t2.onclick ||= () => false;
-      this.#ga();
+      t2.onclick || (t2.onclick = () => false);
+      __privateMethod(this, _LinkAnnotationElement_instances, ga_fn).call(this);
     }
     _bindResetFormAction(t2, e2) {
       const i2 = t2.onclick;
       i2 || (t2.href = this.linkService.getAnchorUrl(""));
-      this.#ga();
+      __privateMethod(this, _LinkAnnotationElement_instances, ga_fn).call(this);
       if (this._fieldObjects) t2.onclick = () => {
         i2?.();
         const { fields: t3, refs: n2, include: s2 } = e2, r2 = [];
@@ -17864,6 +18568,32 @@
       }
     }
   };
+  _LinkAnnotationElement_instances = new WeakSet();
+  ga_fn = function() {
+    this.container.setAttribute("data-internal-link", "");
+  };
+  ua_fn = function(t2, e2, i2, n2 = "", s2 = null) {
+    t2.href = this.linkService.getAnchorUrl("");
+    i2.description ? t2.title = i2.description : n2 && (t2.title = n2);
+    const openAttachment = async () => {
+      const t3 = await this.linkService.getAttachmentContent(e2);
+      t3 && this.downloadManager?.openOrDownloadData(t3, i2.filename, s2);
+    };
+    t2.onclick = () => {
+      openAttachment();
+      return false;
+    };
+    __privateMethod(this, _LinkAnnotationElement_instances, ga_fn).call(this);
+  };
+  pa_fn = function(t2, e2, i2 = "") {
+    t2.href = this.linkService.getAnchorUrl("");
+    t2.onclick = () => {
+      this.linkService.executeSetOCGState(e2);
+      return false;
+    };
+    i2 && (t2.title = i2);
+    __privateMethod(this, _LinkAnnotationElement_instances, ga_fn).call(this);
+  };
   var TextAnnotationElement = class extends AnnotationElement {
     constructor(t2) {
       super(t2, { isRenderable: true });
@@ -17905,7 +18635,7 @@
     }
     _setEventListeners(t2, e2, i2, n2) {
       for (const [s2, r2] of i2) if ("Action" === r2 || this.data.actions?.[r2]) {
-        "Focus" !== r2 && "Blur" !== r2 || (e2 ||= { focused: false });
+        "Focus" !== r2 && "Blur" !== r2 || (e2 || (e2 = { focused: false }));
         this._setEventListener(t2, e2, s2, r2, n2);
         "Focus" !== r2 || this.data.actions?.Blur ? "Blur" !== r2 || this.data.actions?.Focus || this._setEventListener(t2, e2, "focus", "Focus", null) : this._setEventListener(t2, e2, "blur", "Blur", null);
       }
@@ -18385,24 +19115,23 @@
       return this.container;
     }
   };
+  var _PopupAnnotationElement_instances, ma_fn;
   var PopupAnnotationElement = class extends AnnotationElement {
     constructor(t2) {
       const { data: e2, elements: i2, parent: n2 } = t2, s2 = !!n2._commentManager;
       super(t2, { isRenderable: !s2 && AnnotationElement._hasPopupData(e2) });
+      __privateAdd(this, _PopupAnnotationElement_instances);
       this.elements = i2;
       if (s2 && AnnotationElement._hasPopupData(e2)) {
-        const t3 = this.popup = this.#ma();
+        const t3 = this.popup = __privateMethod(this, _PopupAnnotationElement_instances, ma_fn).call(this);
         for (const e3 of i2) e3.popup = t3;
       } else this.popup = null;
-    }
-    #ma() {
-      return new PopupElement({ container: this.container, color: this.data.color, titleObj: this.data.titleObj, modificationDate: this.data.modificationDate || this.data.creationDate, contentsObj: this.data.contentsObj, richText: this.data.richText, rect: this.data.rect, parentRect: this.data.parentRect || null, parent: this.parent, elements: this.elements, open: this.data.open, commentManager: this.parent._commentManager });
     }
     render() {
       const { container: t2 } = this;
       t2.classList.add("popupAnnotation");
       t2.role = "comment";
-      const e2 = this.popup = this.#ma(), i2 = [];
+      const e2 = this.popup = __privateMethod(this, _PopupAnnotationElement_instances, ma_fn).call(this), i2 = [];
       for (const t3 of this.elements) {
         t3.popup = e2;
         t3.container.ariaHasPopup = "dialog";
@@ -18413,341 +19142,374 @@
       return this.container;
     }
   };
+  _PopupAnnotationElement_instances = new WeakSet();
+  ma_fn = function() {
+    return new PopupElement({ container: this.container, color: this.data.color, titleObj: this.data.titleObj, modificationDate: this.data.modificationDate || this.data.creationDate, contentsObj: this.data.contentsObj, richText: this.data.richText, rect: this.data.rect, parentRect: this.data.parentRect || null, parent: this.parent, elements: this.elements, open: this.data.open, commentManager: this.parent._commentManager });
+  };
+  var _q2, _fa, _ba, _va, _xa, _Ea, _Dt4, _Ca, _Sa, _Ta, __a, _ka, _Da, _Ma, _Pa, _O2, _Ia, _Fa, _xe2, _Oa, _be2, _Ra, _la2, _Ba, _La, _Na, _PopupElement_instances, Ua_fn, Ha_fn, Ga_fn, za_fn, ja_get, Wa_get, Va_get, $a_fn, ia_fn2, qa_fn, Aa_fn, wa_fn, ya_fn;
   var PopupElement = class {
-    #q = null;
-    #fa = this.#ia.bind(this);
-    #ba = this.#ya.bind(this);
-    #va = this.#wa.bind(this);
-    #xa = this.#Aa.bind(this);
-    #Ea = null;
-    #Dt = null;
-    #Ca = null;
-    #Sa = null;
-    #Ta = null;
-    #_a = null;
-    #ka = null;
-    #Da = false;
-    #Ma = null;
-    #Pa = null;
-    #O = null;
-    #Ia = null;
-    #Fa = null;
-    #xe = null;
-    #Oa = null;
-    #be = null;
-    #Ra = null;
-    #la = null;
-    #Ba = false;
-    #La = null;
-    #Na = null;
     constructor({ container: t2, color: e2, elements: i2, titleObj: n2, modificationDate: s2, contentsObj: r2, richText: a2, parent: o2, rect: l2, parentRect: h2, open: c2, commentManager: d2 = null }) {
-      this.#Dt = t2;
-      this.#Ra = n2;
-      this.#Ca = r2;
-      this.#be = a2;
-      this.#_a = o2;
-      this.#Ea = e2;
-      this.#Oa = l2;
-      this.#ka = h2;
-      this.#Ta = i2;
-      this.#q = d2;
-      this.#La = i2[0];
-      this.#Sa = PDFDateString.toDateObject(s2);
+      __privateAdd(this, _PopupElement_instances);
+      __privateAdd(this, _q2, null);
+      __privateAdd(this, _fa, __privateMethod(this, _PopupElement_instances, ia_fn2).bind(this));
+      __privateAdd(this, _ba, __privateMethod(this, _PopupElement_instances, ya_fn).bind(this));
+      __privateAdd(this, _va, __privateMethod(this, _PopupElement_instances, wa_fn).bind(this));
+      __privateAdd(this, _xa, __privateMethod(this, _PopupElement_instances, Aa_fn).bind(this));
+      __privateAdd(this, _Ea, null);
+      __privateAdd(this, _Dt4, null);
+      __privateAdd(this, _Ca, null);
+      __privateAdd(this, _Sa, null);
+      __privateAdd(this, _Ta, null);
+      __privateAdd(this, __a, null);
+      __privateAdd(this, _ka, null);
+      __privateAdd(this, _Da, false);
+      __privateAdd(this, _Ma, null);
+      __privateAdd(this, _Pa, null);
+      __privateAdd(this, _O2, null);
+      __privateAdd(this, _Ia, null);
+      __privateAdd(this, _Fa, null);
+      __privateAdd(this, _xe2, null);
+      __privateAdd(this, _Oa, null);
+      __privateAdd(this, _be2, null);
+      __privateAdd(this, _Ra, null);
+      __privateAdd(this, _la2, null);
+      __privateAdd(this, _Ba, false);
+      __privateAdd(this, _La, null);
+      __privateAdd(this, _Na, null);
+      __privateSet(this, _Dt4, t2);
+      __privateSet(this, _Ra, n2);
+      __privateSet(this, _Ca, r2);
+      __privateSet(this, _be2, a2);
+      __privateSet(this, __a, o2);
+      __privateSet(this, _Ea, e2);
+      __privateSet(this, _Oa, l2);
+      __privateSet(this, _ka, h2);
+      __privateSet(this, _Ta, i2);
+      __privateSet(this, _q2, d2);
+      __privateSet(this, _La, i2[0]);
+      __privateSet(this, _Sa, PDFDateString.toDateObject(s2));
       this.trigger = i2.flatMap((t3) => t3.getElementsToTriggerPopup());
       if (!d2) {
-        this.#Ua();
-        this.#Dt.hidden = true;
-        c2 && this.#Aa();
+        __privateMethod(this, _PopupElement_instances, Ua_fn).call(this);
+        __privateGet(this, _Dt4).hidden = true;
+        c2 && __privateMethod(this, _PopupElement_instances, Aa_fn).call(this);
       }
-    }
-    #Ua() {
-      if (this.#Pa) return;
-      this.#Pa = new AbortController();
-      const { signal: t2 } = this.#Pa;
-      for (const e2 of this.trigger) {
-        e2.addEventListener("click", this.#xa, { signal: t2 });
-        e2.addEventListener("pointerenter", this.#va, { signal: t2 });
-        e2.addEventListener("pointerleave", this.#ba, { signal: t2 });
-        e2.classList.add("popupTriggerArea");
-      }
-      for (const e2 of this.#Ta) e2.container?.addEventListener("keydown", this.#fa, { signal: t2 });
-    }
-    #Ha() {
-      const t2 = this.#Ta.find((t3) => t3.hasCommentButton);
-      t2 && (this.#Fa = t2._normalizePoint(t2.commentButtonPosition));
     }
     renderCommentButton() {
-      if (this.#Ia) {
-        this.#Ia.parentNode || this.#La.container.after(this.#Ia);
+      if (__privateGet(this, _Ia)) {
+        __privateGet(this, _Ia).parentNode || __privateGet(this, _La).container.after(__privateGet(this, _Ia));
         return;
       }
-      this.#Fa || this.#Ha();
-      if (!this.#Fa) return;
-      const { signal: t2 } = this.#Pa = new AbortController(), e2 = this.#La.hasOwnCommentButton, togglePopup = () => {
-        this.#q.toggleCommentPopup(this, true, void 0, !e2);
+      __privateGet(this, _Fa) || __privateMethod(this, _PopupElement_instances, Ha_fn).call(this);
+      if (!__privateGet(this, _Fa)) return;
+      const { signal: t2 } = __privateSet(this, _Pa, new AbortController()), e2 = __privateGet(this, _La).hasOwnCommentButton, togglePopup = () => {
+        __privateGet(this, _q2).toggleCommentPopup(this, true, void 0, !e2);
       }, showPopup = () => {
-        this.#q.toggleCommentPopup(this, false, true, !e2);
+        __privateGet(this, _q2).toggleCommentPopup(this, false, true, !e2);
       }, hidePopup = () => {
-        this.#q.toggleCommentPopup(this, false, false);
+        __privateGet(this, _q2).toggleCommentPopup(this, false, false);
       };
       if (e2) {
-        this.#Ia = this.#La.container;
+        __privateSet(this, _Ia, __privateGet(this, _La).container);
         for (const e3 of this.trigger) {
           e3.ariaHasPopup = "dialog";
           e3.ariaControls = "commentPopup";
-          e3.addEventListener("keydown", this.#fa, { signal: t2 });
+          e3.addEventListener("keydown", __privateGet(this, _fa), { signal: t2 });
           e3.addEventListener("click", togglePopup, { signal: t2 });
           e3.addEventListener("pointerenter", showPopup, { signal: t2 });
           e3.addEventListener("pointerleave", hidePopup, { signal: t2 });
           e3.classList.add("popupTriggerArea");
         }
       } else {
-        const e3 = this.#Ia = document.createElement("button");
+        const e3 = __privateSet(this, _Ia, document.createElement("button"));
         e3.className = "annotationCommentButton";
-        const i2 = this.#La.container;
+        const i2 = __privateGet(this, _La).container;
         e3.style.zIndex = parseInt(i2.style.zIndex, 10) + 1;
         e3.tabIndex = 0;
         e3.ariaHasPopup = "dialog";
         e3.ariaControls = "commentPopup";
         e3.setAttribute("data-l10n-id", "pdfjs-show-comment-button");
-        this.#za();
-        this.#Ga();
-        e3.addEventListener("keydown", this.#fa, { signal: t2 });
+        __privateMethod(this, _PopupElement_instances, za_fn).call(this);
+        __privateMethod(this, _PopupElement_instances, Ga_fn).call(this);
+        e3.addEventListener("keydown", __privateGet(this, _fa), { signal: t2 });
         e3.addEventListener("click", togglePopup, { signal: t2 });
         e3.addEventListener("pointerenter", showPopup, { signal: t2 });
         e3.addEventListener("pointerleave", hidePopup, { signal: t2 });
         i2.after(e3);
       }
     }
-    #Ga() {
-      if (this.#La.extraPopupElement && !this.#La.editor) return;
-      this.#Ia || this.renderCommentButton();
-      const [t2, e2] = this.#Fa, { style: i2 } = this.#Ia;
-      i2.left = `calc(${t2}%)`;
-      i2.top = `calc(${e2}% - var(--comment-button-dim))`;
-    }
-    #za() {
-      if (!this.#La.extraPopupElement) {
-        this.#Ia || this.renderCommentButton();
-        this.#Ia.style.backgroundColor = this.commentButtonColor || "";
-      }
-    }
     get commentButtonColor() {
-      const { color: t2, opacity: e2 } = this.#La.commentData;
-      return t2 ? this.#_a._commentManager.makeCommentColor(t2, e2) : null;
+      const { color: t2, opacity: e2 } = __privateGet(this, _La).commentData;
+      return t2 ? __privateGet(this, __a)._commentManager.makeCommentColor(t2, e2) : null;
     }
     focusCommentButton() {
       setTimeout(() => {
-        this.#Ia?.focus();
+        __privateGet(this, _Ia)?.focus();
       }, 0);
     }
     getData() {
-      const { richText: t2, color: e2, opacity: i2, creationDate: n2, modificationDate: s2 } = this.#La.commentData;
+      const { richText: t2, color: e2, opacity: i2, creationDate: n2, modificationDate: s2 } = __privateGet(this, _La).commentData;
       return { contentsObj: { str: this.comment }, richText: t2, color: e2, opacity: i2, creationDate: n2, modificationDate: s2 };
     }
     get elementBeforePopup() {
-      return this.#Ia;
+      return __privateGet(this, _Ia);
     }
     get comment() {
-      this.#Na ||= this.#La.commentText;
-      return this.#Na;
+      __privateGet(this, _Na) || __privateSet(this, _Na, __privateGet(this, _La).commentText);
+      return __privateGet(this, _Na);
     }
     set comment(t2) {
-      t2 !== this.comment && (this.#La.commentText = this.#Na = t2);
+      t2 !== this.comment && (__privateGet(this, _La).commentText = __privateSet(this, _Na, t2));
     }
     focus() {
-      this.#La.container?.focus();
+      __privateGet(this, _La).container?.focus();
     }
     get parentBoundingClientRect() {
-      return this.#La.layer.getBoundingClientRect();
+      return __privateGet(this, _La).layer.getBoundingClientRect();
     }
     setCommentButtonStates({ selected: t2, hasPopup: e2 }) {
-      if (this.#Ia) {
-        this.#Ia.classList.toggle("selected", t2);
-        this.#Ia.ariaExpanded = e2;
+      if (__privateGet(this, _Ia)) {
+        __privateGet(this, _Ia).classList.toggle("selected", t2);
+        __privateGet(this, _Ia).ariaExpanded = e2;
       }
     }
     setSelectedCommentButton(t2) {
-      this.#Ia.classList.toggle("selected", t2);
+      __privateGet(this, _Ia).classList.toggle("selected", t2);
     }
     get commentPopupPosition() {
-      if (this.#xe) return this.#xe;
-      const { x: t2, y: e2, height: i2 } = this.#Ia.getBoundingClientRect(), { x: n2, y: s2, width: r2, height: a2 } = this.#La.layer.getBoundingClientRect();
+      if (__privateGet(this, _xe2)) return __privateGet(this, _xe2);
+      const { x: t2, y: e2, height: i2 } = __privateGet(this, _Ia).getBoundingClientRect(), { x: n2, y: s2, width: r2, height: a2 } = __privateGet(this, _La).layer.getBoundingClientRect();
       return [(t2 - n2) / r2, (e2 + i2 - s2) / a2];
     }
     set commentPopupPosition(t2) {
-      this.#xe = t2;
+      __privateSet(this, _xe2, t2);
     }
     hasDefaultPopupPosition() {
-      return null === this.#xe;
+      return null === __privateGet(this, _xe2);
     }
     get commentButtonPosition() {
-      return this.#Fa;
+      return __privateGet(this, _Fa);
     }
     get commentButtonWidth() {
-      return this.#Ia.getBoundingClientRect().width / this.parentBoundingClientRect.width;
+      return __privateGet(this, _Ia).getBoundingClientRect().width / this.parentBoundingClientRect.width;
     }
     editComment(t2) {
-      const [e2, i2] = this.#xe || this.commentButtonPosition.map((t3) => t3 / 100), n2 = this.parentBoundingClientRect, { x: s2, y: r2, width: a2, height: o2 } = n2;
-      this.#q.showDialog(null, this, s2 + e2 * a2, r2 + i2 * o2, { ...t2, parentDimensions: n2 });
+      const [e2, i2] = __privateGet(this, _xe2) || this.commentButtonPosition.map((t3) => t3 / 100), n2 = this.parentBoundingClientRect, { x: s2, y: r2, width: a2, height: o2 } = n2;
+      __privateGet(this, _q2).showDialog(null, this, s2 + e2 * a2, r2 + i2 * o2, { ...t2, parentDimensions: n2 });
     }
     render() {
-      if (this.#Ma) return;
-      const t2 = this.#Ma = document.createElement("div");
+      if (__privateGet(this, _Ma)) return;
+      const t2 = __privateSet(this, _Ma, document.createElement("div"));
       t2.className = "popup";
-      if (this.#Ea) {
-        const e3 = t2.style.outlineColor = Util.makeHexColor(...this.#Ea);
+      if (__privateGet(this, _Ea)) {
+        const e3 = t2.style.outlineColor = Util.makeHexColor(...__privateGet(this, _Ea));
         t2.style.backgroundColor = `color-mix(in srgb, ${e3} 30%, white)`;
       }
       const e2 = document.createElement("span");
       e2.className = "header";
-      if (this.#Ra?.str) {
+      if (__privateGet(this, _Ra)?.str) {
         const t3 = document.createElement("span");
         t3.className = "title";
         e2.append(t3);
-        ({ dir: t3.dir, str: t3.textContent } = this.#Ra);
+        ({ dir: t3.dir, str: t3.textContent } = __privateGet(this, _Ra));
       }
       t2.append(e2);
-      if (this.#Sa) {
+      if (__privateGet(this, _Sa)) {
         const t3 = document.createElement("time");
         t3.className = "popupDate";
         t3.setAttribute("data-l10n-id", "pdfjs-annotation-date-time-string");
-        t3.setAttribute("data-l10n-args", JSON.stringify({ dateObj: this.#Sa.valueOf() }));
-        t3.dateTime = this.#Sa.toISOString();
+        t3.setAttribute("data-l10n-args", JSON.stringify({ dateObj: __privateGet(this, _Sa).valueOf() }));
+        t3.dateTime = __privateGet(this, _Sa).toISOString();
         e2.append(t3);
       }
-      renderRichText({ html: this.#ja || this.#Ca.str, dir: this.#Ca?.dir, className: "popupContent" }, t2);
-      this.#Dt.append(t2);
-    }
-    get #ja() {
-      const t2 = this.#be, e2 = this.#Ca;
-      return !t2?.str || e2?.str && e2.str !== t2.str ? null : this.#be.html || null;
-    }
-    get #Wa() {
-      return this.#ja?.attributes?.style?.fontSize || 0;
-    }
-    get #Va() {
-      return this.#ja?.attributes?.style?.color || null;
-    }
-    #$a(t2) {
-      const e2 = [], i2 = { str: t2, html: { name: "div", attributes: { dir: "auto" }, children: [{ name: "p", children: e2 }] } }, n2 = { style: { color: this.#Va, fontSize: this.#Wa ? `calc(${this.#Wa}px * var(--total-scale-factor))` : "" } };
-      for (const i3 of t2.split("\n")) e2.push({ name: "span", value: i3, attributes: n2 });
-      return i2;
-    }
-    #ia(t2) {
-      t2.altKey || t2.shiftKey || t2.ctrlKey || t2.metaKey || ("Enter" === t2.key || "Escape" === t2.key && this.#Da) && this.#Aa();
+      renderRichText({ html: __privateGet(this, _PopupElement_instances, ja_get) || __privateGet(this, _Ca).str, dir: __privateGet(this, _Ca)?.dir, className: "popupContent" }, t2);
+      __privateGet(this, _Dt4).append(t2);
     }
     updateEdited({ rect: t2, popup: e2, deleted: i2 }) {
-      if (this.#q) {
+      if (__privateGet(this, _q2)) {
         if (i2) {
           this.remove();
-          this.#Na = null;
+          __privateSet(this, _Na, null);
         } else if (e2) if (e2.deleted) this.remove();
         else {
-          this.#za();
-          this.#Na = e2.text;
+          __privateMethod(this, _PopupElement_instances, za_fn).call(this);
+          __privateSet(this, _Na, e2.text);
         }
         if (t2) {
-          this.#Fa = null;
-          this.#Ha();
-          this.#Ga();
+          __privateSet(this, _Fa, null);
+          __privateMethod(this, _PopupElement_instances, Ha_fn).call(this);
+          __privateMethod(this, _PopupElement_instances, Ga_fn).call(this);
         }
       } else if (i2 || e2?.deleted) this.remove();
       else {
-        this.#Ua();
-        this.#la ||= { contentsObj: this.#Ca, richText: this.#be };
-        t2 && (this.#O = null);
+        __privateMethod(this, _PopupElement_instances, Ua_fn).call(this);
+        __privateGet(this, _la2) || __privateSet(this, _la2, { contentsObj: __privateGet(this, _Ca), richText: __privateGet(this, _be2) });
+        t2 && __privateSet(this, _O2, null);
         if (e2 && e2.text) {
-          this.#be = this.#$a(e2.text);
-          this.#Sa = PDFDateString.toDateObject(e2.date);
-          this.#Ca = null;
+          __privateSet(this, _be2, __privateMethod(this, _PopupElement_instances, $a_fn).call(this, e2.text));
+          __privateSet(this, _Sa, PDFDateString.toDateObject(e2.date));
+          __privateSet(this, _Ca, null);
         }
-        this.#Ma?.remove();
-        this.#Ma = null;
+        __privateGet(this, _Ma)?.remove();
+        __privateSet(this, _Ma, null);
       }
     }
     resetEdited() {
-      if (this.#la) {
-        ({ contentsObj: this.#Ca, richText: this.#be } = this.#la);
-        this.#la = null;
-        this.#Ma?.remove();
-        this.#Ma = null;
-        this.#O = null;
+      if (__privateGet(this, _la2)) {
+        ({ contentsObj: __privateWrapper(this, _Ca)._, richText: __privateWrapper(this, _be2)._ } = __privateGet(this, _la2));
+        __privateSet(this, _la2, null);
+        __privateGet(this, _Ma)?.remove();
+        __privateSet(this, _Ma, null);
+        __privateSet(this, _O2, null);
       }
     }
     remove() {
-      this.#Pa?.abort();
-      this.#Pa = null;
-      this.#Ma?.remove();
-      this.#Ma = null;
-      this.#Ba = false;
-      this.#Da = false;
-      this.#Ia?.remove();
-      this.#Ia = null;
+      __privateGet(this, _Pa)?.abort();
+      __privateSet(this, _Pa, null);
+      __privateGet(this, _Ma)?.remove();
+      __privateSet(this, _Ma, null);
+      __privateSet(this, _Ba, false);
+      __privateSet(this, _Da, false);
+      __privateGet(this, _Ia)?.remove();
+      __privateSet(this, _Ia, null);
       if (this.trigger) for (const t2 of this.trigger) t2.classList.remove("popupTriggerArea");
     }
-    #qa() {
-      if (null !== this.#O) return;
-      const { page: { view: t2 }, viewport: { rawDims: { pageWidth: e2, pageHeight: i2, pageX: n2, pageY: s2 } } } = this.#_a;
-      let r2 = !!this.#ka, a2 = r2 ? this.#ka : this.#Oa;
-      for (const t3 of this.#Ta) if (!a2 || null !== Util.intersect(t3.data.rect, a2)) {
-        a2 = t3.data.rect;
-        r2 = true;
-        break;
-      }
-      const o2 = Util.normalizeRect([a2[0], t2[3] - a2[1] + t2[1], a2[2], t2[3] - a2[3] + t2[1]]), l2 = r2 ? a2[2] - a2[0] + 5 : 0, h2 = o2[0] + l2, c2 = o2[1];
-      this.#O = [100 * (h2 - n2) / e2, 100 * (c2 - s2) / i2];
-      const { style: d2 } = this.#Dt;
-      d2.left = `${this.#O[0]}%`;
-      d2.top = `${this.#O[1]}%`;
-    }
-    #Aa() {
-      if (this.#q) this.#q.toggleCommentPopup(this, false);
-      else {
-        this.#Da = !this.#Da;
-        if (this.#Da) {
-          this.#wa();
-          this.#Dt.addEventListener("click", this.#xa);
-          this.#Dt.addEventListener("keydown", this.#fa);
-        } else {
-          this.#ya();
-          this.#Dt.removeEventListener("click", this.#xa);
-          this.#Dt.removeEventListener("keydown", this.#fa);
-        }
-      }
-    }
-    #wa() {
-      this.#Ma || this.render();
-      if (this.isVisible) this.#Da && this.#Dt.classList.add("focused");
-      else {
-        this.#qa();
-        this.#Dt.hidden = false;
-        this.#Dt.style.zIndex = parseInt(this.#Dt.style.zIndex, 10) + 1e3;
-      }
-    }
-    #ya() {
-      this.#Dt.classList.remove("focused");
-      if (!this.#Da && this.isVisible) {
-        this.#Dt.hidden = true;
-        this.#Dt.style.zIndex = parseInt(this.#Dt.style.zIndex, 10) - 1e3;
-      }
-    }
     forceHide() {
-      this.#Ba = this.isVisible;
-      this.#Ba && (this.#Dt.hidden = true);
+      __privateSet(this, _Ba, this.isVisible);
+      __privateGet(this, _Ba) && (__privateGet(this, _Dt4).hidden = true);
     }
     maybeShow() {
-      if (!this.#q) {
-        this.#Ua();
-        if (this.#Ba) {
-          this.#Ma || this.#wa();
-          this.#Ba = false;
-          this.#Dt.hidden = false;
+      if (!__privateGet(this, _q2)) {
+        __privateMethod(this, _PopupElement_instances, Ua_fn).call(this);
+        if (__privateGet(this, _Ba)) {
+          __privateGet(this, _Ma) || __privateMethod(this, _PopupElement_instances, wa_fn).call(this);
+          __privateSet(this, _Ba, false);
+          __privateGet(this, _Dt4).hidden = false;
         }
       }
     }
     get isVisible() {
-      return !this.#q && false === this.#Dt.hidden;
+      return !__privateGet(this, _q2) && false === __privateGet(this, _Dt4).hidden;
+    }
+  };
+  _q2 = new WeakMap();
+  _fa = new WeakMap();
+  _ba = new WeakMap();
+  _va = new WeakMap();
+  _xa = new WeakMap();
+  _Ea = new WeakMap();
+  _Dt4 = new WeakMap();
+  _Ca = new WeakMap();
+  _Sa = new WeakMap();
+  _Ta = new WeakMap();
+  __a = new WeakMap();
+  _ka = new WeakMap();
+  _Da = new WeakMap();
+  _Ma = new WeakMap();
+  _Pa = new WeakMap();
+  _O2 = new WeakMap();
+  _Ia = new WeakMap();
+  _Fa = new WeakMap();
+  _xe2 = new WeakMap();
+  _Oa = new WeakMap();
+  _be2 = new WeakMap();
+  _Ra = new WeakMap();
+  _la2 = new WeakMap();
+  _Ba = new WeakMap();
+  _La = new WeakMap();
+  _Na = new WeakMap();
+  _PopupElement_instances = new WeakSet();
+  Ua_fn = function() {
+    if (__privateGet(this, _Pa)) return;
+    __privateSet(this, _Pa, new AbortController());
+    const { signal: t2 } = __privateGet(this, _Pa);
+    for (const e2 of this.trigger) {
+      e2.addEventListener("click", __privateGet(this, _xa), { signal: t2 });
+      e2.addEventListener("pointerenter", __privateGet(this, _va), { signal: t2 });
+      e2.addEventListener("pointerleave", __privateGet(this, _ba), { signal: t2 });
+      e2.classList.add("popupTriggerArea");
+    }
+    for (const e2 of __privateGet(this, _Ta)) e2.container?.addEventListener("keydown", __privateGet(this, _fa), { signal: t2 });
+  };
+  Ha_fn = function() {
+    const t2 = __privateGet(this, _Ta).find((t3) => t3.hasCommentButton);
+    t2 && __privateSet(this, _Fa, t2._normalizePoint(t2.commentButtonPosition));
+  };
+  Ga_fn = function() {
+    if (__privateGet(this, _La).extraPopupElement && !__privateGet(this, _La).editor) return;
+    __privateGet(this, _Ia) || this.renderCommentButton();
+    const [t2, e2] = __privateGet(this, _Fa), { style: i2 } = __privateGet(this, _Ia);
+    i2.left = `calc(${t2}%)`;
+    i2.top = `calc(${e2}% - var(--comment-button-dim))`;
+  };
+  za_fn = function() {
+    if (!__privateGet(this, _La).extraPopupElement) {
+      __privateGet(this, _Ia) || this.renderCommentButton();
+      __privateGet(this, _Ia).style.backgroundColor = this.commentButtonColor || "";
+    }
+  };
+  ja_get = function() {
+    const t2 = __privateGet(this, _be2), e2 = __privateGet(this, _Ca);
+    return !t2?.str || e2?.str && e2.str !== t2.str ? null : __privateGet(this, _be2).html || null;
+  };
+  Wa_get = function() {
+    return __privateGet(this, _PopupElement_instances, ja_get)?.attributes?.style?.fontSize || 0;
+  };
+  Va_get = function() {
+    return __privateGet(this, _PopupElement_instances, ja_get)?.attributes?.style?.color || null;
+  };
+  $a_fn = function(t2) {
+    const e2 = [], i2 = { str: t2, html: { name: "div", attributes: { dir: "auto" }, children: [{ name: "p", children: e2 }] } }, n2 = { style: { color: __privateGet(this, _PopupElement_instances, Va_get), fontSize: __privateGet(this, _PopupElement_instances, Wa_get) ? `calc(${__privateGet(this, _PopupElement_instances, Wa_get)}px * var(--total-scale-factor))` : "" } };
+    for (const i3 of t2.split("\n")) e2.push({ name: "span", value: i3, attributes: n2 });
+    return i2;
+  };
+  ia_fn2 = function(t2) {
+    t2.altKey || t2.shiftKey || t2.ctrlKey || t2.metaKey || ("Enter" === t2.key || "Escape" === t2.key && __privateGet(this, _Da)) && __privateMethod(this, _PopupElement_instances, Aa_fn).call(this);
+  };
+  qa_fn = function() {
+    if (null !== __privateGet(this, _O2)) return;
+    const { page: { view: t2 }, viewport: { rawDims: { pageWidth: e2, pageHeight: i2, pageX: n2, pageY: s2 } } } = __privateGet(this, __a);
+    let r2 = !!__privateGet(this, _ka), a2 = r2 ? __privateGet(this, _ka) : __privateGet(this, _Oa);
+    for (const t3 of __privateGet(this, _Ta)) if (!a2 || null !== Util.intersect(t3.data.rect, a2)) {
+      a2 = t3.data.rect;
+      r2 = true;
+      break;
+    }
+    const o2 = Util.normalizeRect([a2[0], t2[3] - a2[1] + t2[1], a2[2], t2[3] - a2[3] + t2[1]]), l2 = r2 ? a2[2] - a2[0] + 5 : 0, h2 = o2[0] + l2, c2 = o2[1];
+    __privateSet(this, _O2, [100 * (h2 - n2) / e2, 100 * (c2 - s2) / i2]);
+    const { style: d2 } = __privateGet(this, _Dt4);
+    d2.left = `${__privateGet(this, _O2)[0]}%`;
+    d2.top = `${__privateGet(this, _O2)[1]}%`;
+  };
+  Aa_fn = function() {
+    if (__privateGet(this, _q2)) __privateGet(this, _q2).toggleCommentPopup(this, false);
+    else {
+      __privateSet(this, _Da, !__privateGet(this, _Da));
+      if (__privateGet(this, _Da)) {
+        __privateMethod(this, _PopupElement_instances, wa_fn).call(this);
+        __privateGet(this, _Dt4).addEventListener("click", __privateGet(this, _xa));
+        __privateGet(this, _Dt4).addEventListener("keydown", __privateGet(this, _fa));
+      } else {
+        __privateMethod(this, _PopupElement_instances, ya_fn).call(this);
+        __privateGet(this, _Dt4).removeEventListener("click", __privateGet(this, _xa));
+        __privateGet(this, _Dt4).removeEventListener("keydown", __privateGet(this, _fa));
+      }
+    }
+  };
+  wa_fn = function() {
+    __privateGet(this, _Ma) || this.render();
+    if (this.isVisible) __privateGet(this, _Da) && __privateGet(this, _Dt4).classList.add("focused");
+    else {
+      __privateMethod(this, _PopupElement_instances, qa_fn).call(this);
+      __privateGet(this, _Dt4).hidden = false;
+      __privateGet(this, _Dt4).style.zIndex = parseInt(__privateGet(this, _Dt4).style.zIndex, 10) + 1e3;
+    }
+  };
+  ya_fn = function() {
+    __privateGet(this, _Dt4).classList.remove("focused");
+    if (!__privateGet(this, _Da) && this.isVisible) {
+      __privateGet(this, _Dt4).hidden = true;
+      __privateGet(this, _Dt4).style.zIndex = parseInt(__privateGet(this, _Dt4).style.zIndex, 10) - 1e3;
     }
   };
   var FreeTextAnnotationElement = class extends AnnotationElement {
@@ -18778,14 +19540,15 @@
       return this.container;
     }
   };
+  var _Ka;
   var LineAnnotationElement = class extends AnnotationElement {
-    #Ka = null;
     constructor(t2) {
       super(t2, { isRenderable: true, ignoreBorder: true });
+      __privateAdd(this, _Ka, null);
     }
     render() {
       this.container.classList.add("lineAnnotation");
-      const { data: t2, width: e2, height: i2 } = this, n2 = this.svgFactory.create(e2, i2, true), s2 = this.#Ka = this.svgFactory.createElement("svg:line");
+      const { data: t2, width: e2, height: i2 } = this, n2 = this.svgFactory.create(e2, i2, true), s2 = __privateSet(this, _Ka, this.svgFactory.createElement("svg:line"));
       s2.setAttribute("x1", t2.rect[2] - t2.lineCoordinates[0]);
       s2.setAttribute("y1", t2.rect[3] - t2.lineCoordinates[1]);
       s2.setAttribute("x2", t2.rect[2] - t2.lineCoordinates[2]);
@@ -18802,20 +19565,22 @@
       return this.container;
     }
     getElementsToTriggerPopup() {
-      return this.#Ka;
+      return __privateGet(this, _Ka);
     }
     addHighlightArea() {
       this.container.classList.add("highlightArea");
     }
   };
+  _Ka = new WeakMap();
+  var _Xa;
   var SquareAnnotationElement = class extends AnnotationElement {
-    #Xa = null;
     constructor(t2) {
       super(t2, { isRenderable: true, ignoreBorder: true });
+      __privateAdd(this, _Xa, null);
     }
     render() {
       this.container.classList.add("squareAnnotation");
-      const { data: t2, width: e2, height: i2 } = this, n2 = this.svgFactory.create(e2, i2, true), s2 = t2.borderStyle.width, r2 = this.#Xa = this.svgFactory.createElement("svg:rect");
+      const { data: t2, width: e2, height: i2 } = this, n2 = this.svgFactory.create(e2, i2, true), s2 = t2.borderStyle.width, r2 = __privateSet(this, _Xa, this.svgFactory.createElement("svg:rect"));
       r2.setAttribute("x", s2 / 2);
       r2.setAttribute("y", s2 / 2);
       r2.setAttribute("width", e2 - s2);
@@ -18832,20 +19597,22 @@
       return this.container;
     }
     getElementsToTriggerPopup() {
-      return this.#Xa;
+      return __privateGet(this, _Xa);
     }
     addHighlightArea() {
       this.container.classList.add("highlightArea");
     }
   };
+  _Xa = new WeakMap();
+  var _Ya;
   var CircleAnnotationElement = class extends AnnotationElement {
-    #Ya = null;
     constructor(t2) {
       super(t2, { isRenderable: true, ignoreBorder: true });
+      __privateAdd(this, _Ya, null);
     }
     render() {
       this.container.classList.add("circleAnnotation");
-      const { data: t2, width: e2, height: i2 } = this, n2 = this.svgFactory.create(e2, i2, true), s2 = t2.borderStyle.width, r2 = this.#Ya = this.svgFactory.createElement("svg:ellipse");
+      const { data: t2, width: e2, height: i2 } = this, n2 = this.svgFactory.create(e2, i2, true), s2 = t2.borderStyle.width, r2 = __privateSet(this, _Ya, this.svgFactory.createElement("svg:ellipse"));
       r2.setAttribute("cx", e2 / 2);
       r2.setAttribute("cy", i2 / 2);
       r2.setAttribute("rx", e2 / 2 - s2 / 2);
@@ -18862,16 +19629,18 @@
       return this.container;
     }
     getElementsToTriggerPopup() {
-      return this.#Ya;
+      return __privateGet(this, _Ya);
     }
     addHighlightArea() {
       this.container.classList.add("highlightArea");
     }
   };
+  _Ya = new WeakMap();
+  var _Ja;
   var PolylineAnnotationElement = class extends AnnotationElement {
-    #Ja = null;
     constructor(t2) {
       super(t2, { isRenderable: true, ignoreBorder: true });
+      __privateAdd(this, _Ja, null);
       this.containerClassName = "polylineAnnotation";
       this.svgElementName = "svg:polyline";
     }
@@ -18886,7 +19655,7 @@
         o2.push(`${n4},${s3}`);
       }
       o2 = o2.join(" ");
-      const l2 = this.#Ja = this.svgFactory.createElement(this.svgElementName);
+      const l2 = __privateSet(this, _Ja, this.svgFactory.createElement(this.svgElementName));
       l2.setAttribute("points", o2);
       l2.setAttribute("stroke-width", i2.width || 1);
       l2.setAttribute("stroke", "transparent");
@@ -18900,12 +19669,13 @@
       return this.container;
     }
     getElementsToTriggerPopup() {
-      return this.#Ja;
+      return __privateGet(this, _Ja);
     }
     addHighlightArea() {
       this.container.classList.add("highlightArea");
     }
   };
+  _Ja = new WeakMap();
   var PolygonAnnotationElement = class extends PolylineAnnotationElement {
     constructor(t2) {
       super(t2);
@@ -18926,30 +19696,20 @@
       return this.container;
     }
   };
+  var _Qa, _Za, _InkAnnotationElement_instances, to_fn;
   var InkAnnotationElement = class extends AnnotationElement {
-    #Qa = null;
-    #Za = [];
     constructor(t2) {
       super(t2, { isRenderable: true, ignoreBorder: true });
+      __privateAdd(this, _InkAnnotationElement_instances);
+      __privateAdd(this, _Qa, null);
+      __privateAdd(this, _Za, []);
       this.containerClassName = "inkAnnotation";
       this.svgElementName = "svg:polyline";
       this.annotationEditorType = "InkHighlight" === this.data.it ? y.HIGHLIGHT : y.INK;
     }
-    #to(t2, e2) {
-      switch (t2) {
-        case 90:
-          return { transform: `rotate(90) translate(${-e2[0]},${e2[1]}) scale(1,-1)`, width: e2[3] - e2[1], height: e2[2] - e2[0] };
-        case 180:
-          return { transform: `rotate(180) translate(${-e2[2]},${e2[1]}) scale(1,-1)`, width: e2[2] - e2[0], height: e2[3] - e2[1] };
-        case 270:
-          return { transform: `rotate(270) translate(${-e2[2]},${e2[3]}) scale(1,-1)`, width: e2[3] - e2[1], height: e2[2] - e2[0] };
-        default:
-          return { transform: `translate(${-e2[0]},${e2[3]}) scale(1,-1)`, width: e2[2] - e2[0], height: e2[3] - e2[1] };
-      }
-    }
     render() {
       this.container.classList.add(this.containerClassName);
-      const { data: { rect: t2, rotation: e2, inkLists: i2, borderStyle: n2, popupRef: s2 } } = this, { transform: r2, width: a2, height: o2 } = this.#to(e2, t2), l2 = this.svgFactory.create(a2, o2, true), h2 = this.#Qa = this.svgFactory.createElement("svg:g");
+      const { data: { rect: t2, rotation: e2, inkLists: i2, borderStyle: n2, popupRef: s2 } } = this, { transform: r2, width: a2, height: o2 } = __privateMethod(this, _InkAnnotationElement_instances, to_fn).call(this, e2, t2), l2 = this.svgFactory.create(a2, o2, true), h2 = __privateSet(this, _Qa, this.svgFactory.createElement("svg:g"));
       l2.append(h2);
       h2.setAttribute("stroke-width", n2.width || 1);
       h2.setAttribute("stroke-linecap", "round");
@@ -18960,7 +19720,7 @@
       h2.setAttribute("transform", r2);
       for (const t3 of i2) {
         const e3 = this.svgFactory.createElement(this.svgElementName);
-        this.#Za.push(e3);
+        __privateGet(this, _Za).push(e3);
         e3.setAttribute("points", t3.join(","));
         h2.append(e3);
       }
@@ -18974,20 +19734,35 @@
     }
     updateEdited(t2) {
       super.updateEdited(t2);
-      const { thickness: e2, points: i2, rect: n2 } = t2, s2 = this.#Qa;
+      const { thickness: e2, points: i2, rect: n2 } = t2, s2 = __privateGet(this, _Qa);
       e2 >= 0 && s2.setAttribute("stroke-width", e2 || 1);
-      if (i2) for (let t3 = 0, e3 = this.#Za.length; t3 < e3; t3++) this.#Za[t3].setAttribute("points", i2[t3].join(","));
+      if (i2) for (let t3 = 0, e3 = __privateGet(this, _Za).length; t3 < e3; t3++) __privateGet(this, _Za)[t3].setAttribute("points", i2[t3].join(","));
       if (n2) {
-        const { transform: t3, width: e3, height: i3 } = this.#to(this.data.rotation, n2);
+        const { transform: t3, width: e3, height: i3 } = __privateMethod(this, _InkAnnotationElement_instances, to_fn).call(this, this.data.rotation, n2);
         s2.parentElement.setAttribute("viewBox", `0 0 ${e3} ${i3}`);
         s2.setAttribute("transform", t3);
       }
     }
     getElementsToTriggerPopup() {
-      return this.#Za;
+      return __privateGet(this, _Za);
     }
     addHighlightArea() {
       this.container.classList.add("highlightArea");
+    }
+  };
+  _Qa = new WeakMap();
+  _Za = new WeakMap();
+  _InkAnnotationElement_instances = new WeakSet();
+  to_fn = function(t2, e2) {
+    switch (t2) {
+      case 90:
+        return { transform: `rotate(90) translate(${-e2[0]},${e2[1]}) scale(1,-1)`, width: e2[3] - e2[1], height: e2[2] - e2[0] };
+      case 180:
+        return { transform: `rotate(180) translate(${-e2[2]},${e2[1]}) scale(1,-1)`, width: e2[2] - e2[0], height: e2[3] - e2[1] };
+      case 270:
+        return { transform: `rotate(270) translate(${-e2[2]},${e2[3]}) scale(1,-1)`, width: e2[3] - e2[1], height: e2[2] - e2[0] };
+      default:
+        return { transform: `translate(${-e2[0]},${e2[3]}) scale(1,-1)`, width: e2[2] - e2[0], height: e2[3] - e2[1] };
     }
   };
   var HighlightAnnotationElement = class extends AnnotationElement {
@@ -19088,10 +19863,12 @@
       return this.container;
     }
   };
+  var _eo, _FileAttachmentAnnotationElement_instances, io_fn;
   var FileAttachmentAnnotationElement = class extends AnnotationElement {
-    #eo = null;
     constructor(t2) {
       super(t2, { isRenderable: true });
+      __privateAdd(this, _FileAttachmentAnnotationElement_instances);
+      __privateAdd(this, _eo, null);
       const { fileId: e2, file: i2 } = this.data;
       this.filename = i2.filename;
       this.content = i2.content;
@@ -19108,11 +19885,11 @@
         i2.src = `${this.imageResourcesPath}annotation-${/paperclip/i.test(e2.name) ? "paperclip" : "pushpin"}.svg`;
         e2.fillAlpha && e2.fillAlpha < 1 && (i2.style = `filter: opacity(${Math.round(100 * e2.fillAlpha)}%);`);
       }
-      i2.addEventListener("dblclick", this.#io.bind(this));
-      this.#eo = i2;
+      i2.addEventListener("dblclick", __privateMethod(this, _FileAttachmentAnnotationElement_instances, io_fn).bind(this));
+      __privateSet(this, _eo, i2);
       const { isMac: n2 } = FeatureTest.platform;
       t2.addEventListener("keydown", (t3) => {
-        "Enter" === t3.key && (n2 ? t3.metaKey : t3.ctrlKey) && this.#io();
+        "Enter" === t3.key && (n2 ? t3.metaKey : t3.ctrlKey) && __privateMethod(this, _FileAttachmentAnnotationElement_instances, io_fn).call(this);
       });
       if (!e2.popupRef && this.hasPopupData) {
         this.hasOwnCommentButton = true;
@@ -19122,22 +19899,26 @@
       return t2;
     }
     getElementsToTriggerPopup() {
-      return this.#eo;
+      return __privateGet(this, _eo);
     }
     addHighlightArea() {
       this.container.classList.add("highlightArea");
     }
-    async #io() {
-      const { fileId: t2, filename: e2, content: i2 } = this, n2 = await this.linkService.getAttachmentContent(t2) || i2;
-      n2 && this.downloadManager?.openOrDownloadData(n2, e2);
-    }
   };
+  _eo = new WeakMap();
+  _FileAttachmentAnnotationElement_instances = new WeakSet();
+  io_fn = async function() {
+    const { fileId: t2, filename: e2, content: i2 } = this, n2 = await this.linkService.getAttachmentContent(t2) || i2;
+    n2 && this.downloadManager?.openOrDownloadData(n2, e2);
+  };
+  var _L2, _no, _so, _MediaAnnotationElement_instances, ro_fn, ao_fn;
   var MediaAnnotationElement = class extends AnnotationElement {
-    #L = new AbortController();
-    #no = null;
-    #so = null;
     constructor(t2) {
       super(t2, { isRenderable: !!t2.data.richMedia });
+      __privateAdd(this, _MediaAnnotationElement_instances);
+      __privateAdd(this, _L2, new AbortController());
+      __privateAdd(this, _no, null);
+      __privateAdd(this, _so, null);
     }
     render() {
       this.container.classList.add("mediaAnnotation");
@@ -19145,106 +19926,112 @@
       e2.className = "mediaPlayButton";
       e2.type = "button";
       e2.title = e2.ariaLabel = t2;
-      e2.addEventListener("click", () => this.#ro(e2), { signal: this.#L.signal });
+      e2.addEventListener("click", () => __privateMethod(this, _MediaAnnotationElement_instances, ro_fn).call(this, e2), { signal: __privateGet(this, _L2).signal });
       this.container.append(e2);
       return this.container;
     }
-    async #ro(t2) {
-      const { fileId: e2, filename: i2, contentType: n2 } = this.data.richMedia;
-      t2.disabled = true;
-      let s2;
-      try {
-        s2 = await this.linkService.getAttachmentContent(e2);
-      } catch {
-        return;
-      } finally {
-        t2.disabled = false;
-      }
-      if (!s2 || !t2.isConnected) return;
-      const { signal: r2 } = this.#L, a2 = URL.createObjectURL(new Blob([s2], { type: n2 }));
-      this.#no = a2;
-      const o2 = n2.startsWith("audio/"), l2 = document.createElement(o2 ? "audio" : "video");
-      this.#so = l2;
-      l2.className = "mediaContent";
-      this._setBackgroundColor(l2);
-      l2.src = a2;
-      l2.title = i2;
-      l2.controls = true;
-      l2.autoplay = true;
-      l2.tabIndex = 0;
-      if (o2) {
-        let t3 = false, e3 = false;
-        const updateControls = () => {
-          l2.controls = t3 || e3;
-        };
-        this.container.addEventListener("pointerenter", () => {
-          t3 = true;
-          updateControls();
-        }, { signal: r2 });
-        this.container.addEventListener("pointerleave", () => {
-          t3 = false;
-          updateControls();
-        }, { signal: r2 });
-        this.container.addEventListener("focusin", () => {
-          e3 = true;
-          updateControls();
-        }, { signal: r2 });
-        this.container.addEventListener("focusout", () => {
-          e3 = false;
-          updateControls();
-        }, { signal: r2 });
-      }
-      l2.addEventListener("emptied", () => this.#ao(a2), { once: true, signal: r2 });
-      t2.replaceWith(l2);
-      l2.play().catch(() => {
-      });
-    }
-    #ao(t2 = this.#no) {
-      if (t2 && t2 === this.#no) {
-        URL.revokeObjectURL(t2);
-        this.#no = null;
-      }
-    }
     destroy() {
-      this.#L.abort();
-      if (this.#so) {
-        this.#so.pause();
-        this.#so.removeAttribute("src");
-        this.#so.load();
-        this.#so = null;
+      __privateGet(this, _L2).abort();
+      if (__privateGet(this, _so)) {
+        __privateGet(this, _so).pause();
+        __privateGet(this, _so).removeAttribute("src");
+        __privateGet(this, _so).load();
+        __privateSet(this, _so, null);
       }
-      this.#ao();
+      __privateMethod(this, _MediaAnnotationElement_instances, ao_fn).call(this);
     }
   };
-  var AnnotationLayer = class _AnnotationLayer {
-    #oo = null;
-    #lo = null;
-    #W = null;
-    #ho = /* @__PURE__ */ new Map();
-    #co = null;
-    #do = null;
-    #Ta = [];
-    #uo = false;
-    zIndex = 0;
+  _L2 = new WeakMap();
+  _no = new WeakMap();
+  _so = new WeakMap();
+  _MediaAnnotationElement_instances = new WeakSet();
+  ro_fn = async function(t2) {
+    const { fileId: e2, filename: i2, contentType: n2 } = this.data.richMedia;
+    t2.disabled = true;
+    let s2;
+    try {
+      s2 = await this.linkService.getAttachmentContent(e2);
+    } catch {
+      return;
+    } finally {
+      t2.disabled = false;
+    }
+    if (!s2 || !t2.isConnected) return;
+    const { signal: r2 } = __privateGet(this, _L2), a2 = URL.createObjectURL(new Blob([s2], { type: n2 }));
+    __privateSet(this, _no, a2);
+    const o2 = n2.startsWith("audio/"), l2 = document.createElement(o2 ? "audio" : "video");
+    __privateSet(this, _so, l2);
+    l2.className = "mediaContent";
+    this._setBackgroundColor(l2);
+    l2.src = a2;
+    l2.title = i2;
+    l2.controls = true;
+    l2.autoplay = true;
+    l2.tabIndex = 0;
+    if (o2) {
+      let t3 = false, e3 = false;
+      const updateControls = () => {
+        l2.controls = t3 || e3;
+      };
+      this.container.addEventListener("pointerenter", () => {
+        t3 = true;
+        updateControls();
+      }, { signal: r2 });
+      this.container.addEventListener("pointerleave", () => {
+        t3 = false;
+        updateControls();
+      }, { signal: r2 });
+      this.container.addEventListener("focusin", () => {
+        e3 = true;
+        updateControls();
+      }, { signal: r2 });
+      this.container.addEventListener("focusout", () => {
+        e3 = false;
+        updateControls();
+      }, { signal: r2 });
+    }
+    l2.addEventListener("emptied", () => __privateMethod(this, _MediaAnnotationElement_instances, ao_fn).call(this, a2), { once: true, signal: r2 });
+    t2.replaceWith(l2);
+    l2.play().catch(() => {
+    });
+  };
+  ao_fn = function(t2 = __privateGet(this, _no)) {
+    if (t2 && t2 === __privateGet(this, _no)) {
+      URL.revokeObjectURL(t2);
+      __privateSet(this, _no, null);
+    }
+  };
+  var _oo, _lo, _W2, _ho, _co, _do, _Ta2, _uo, _AnnotationLayer_instances, po_fn, go_fn;
+  var _AnnotationLayer = class _AnnotationLayer {
     constructor({ div: t2, accessibilityManager: e2, annotationCanvasMap: i2, annotationEditorUIManager: n2, page: s2, viewport: r2, structTreeLayer: a2, commentManager: o2, linkService: l2, annotationStorage: h2 }) {
+      __privateAdd(this, _AnnotationLayer_instances);
+      __privateAdd(this, _oo, null);
+      __privateAdd(this, _lo, null);
+      __privateAdd(this, _W2, null);
+      __privateAdd(this, _ho, /* @__PURE__ */ new Map());
+      __privateAdd(this, _co, null);
+      __privateAdd(this, _do, null);
+      __privateAdd(this, _Ta2, []);
+      __privateAdd(this, _uo, false);
+      __publicField(this, "zIndex", 0);
       this.div = t2;
-      this.#oo = e2;
-      this.#lo = i2;
-      this.#co = a2 || null;
-      this.#do = l2 || null;
-      this.#W = h2 || new AnnotationStorage();
+      __privateSet(this, _oo, e2);
+      __privateSet(this, _lo, i2);
+      __privateSet(this, _co, a2 || null);
+      __privateSet(this, _do, l2 || null);
+      __privateSet(this, _W2, h2 || new AnnotationStorage());
       this.page = s2;
       this.viewport = r2;
       this._annotationEditorUIManager = n2;
       this._commentManager = o2 || null;
     }
     hasEditableAnnotations() {
-      return this.#ho.size > 0;
+      return __privateGet(this, _ho).size > 0;
     }
     async render(t2) {
       const { annotations: e2, optionalContentConfig: i2 } = t2, n2 = this.div;
       setLayerDimensions(n2, this.viewport);
-      const s2 = /* @__PURE__ */ new Map(), r2 = [], a2 = { data: null, layer: n2, linkService: this.#do, downloadManager: t2.downloadManager, imageResourcesPath: t2.imageResourcesPath || "", renderForms: false !== t2.renderForms, svgFactory: new DOMSVGFactory(), annotationStorage: this.#W, enableComment: true === t2.enableComment, enableScripting: true === t2.enableScripting, hasJSActions: t2.hasJSActions, fieldObjects: t2.fieldObjects, parent: this, elements: null };
+      const s2 = /* @__PURE__ */ new Map(), r2 = [], a2 = { data: null, layer: n2, linkService: __privateGet(this, _do), downloadManager: t2.downloadManager, imageResourcesPath: t2.imageResourcesPath || "", renderForms: false !== t2.renderForms, svgFactory: new DOMSVGFactory(), annotationStorage: __privateGet(this, _W2), enableComment: true === t2.enableComment, enableScripting: true === t2.enableScripting, hasJSActions: t2.hasJSActions, fieldObjects: t2.fieldObjects, parent: this, elements: null };
       for (const t3 of e2) {
         if (t3.noHTML) continue;
         const e3 = t3.annotationType === k.POPUP;
@@ -19261,18 +20048,18 @@
         const n3 = AnnotationElementFactory.create(a2);
         if (!n3.isRenderable) continue;
         if (!e3) {
-          this.#Ta.push(n3);
+          __privateGet(this, _Ta2).push(n3);
           t3.popupRef && s2.getOrInsertComputed(t3.popupRef, makeArr).push(n3);
         }
         const o2 = n3.render();
         t3.hidden && (o2.style.visibility = "hidden");
         n3.updateOC(i2);
         if (n3._isEditable) {
-          this.#ho.set(n3.data.id, n3);
+          __privateGet(this, _ho).set(n3.data.id, n3);
           this._annotationEditorUIManager?.renderAnnotationElement(n3);
         }
       }
-      await this.#po();
+      await __privateMethod(this, _AnnotationLayer_instances, po_fn).call(this);
       for (const t3 of r2) {
         const e3 = a2.elements = s2.get(t3.id);
         a2.data = t3;
@@ -19283,130 +20070,66 @@
         t3.hidden && (n3.style.visibility = "hidden");
         e3.at(-1).container.after(n3);
       }
-      this.#go();
-    }
-    async #po() {
-      if (0 === this.#Ta.length) return;
-      this.div.replaceChildren();
-      const t2 = [];
-      if (!this.#uo) {
-        this.#uo = true;
-        for (const { contentElement: e3, data: { id: i2 } } of this.#Ta) {
-          const n2 = e3.id = `${f}${i2}`;
-          t2.push(this.#co?.getAriaAttributes(n2).then((t3) => {
-            if (t3) for (const [i3, n3] of t3) e3.setAttribute(i3, n3);
-          }));
-        }
-      }
-      this.#Ta.sort(({ data: { rect: [t3, e3, i2, n2] } }, { data: { rect: [s2, r2, a2, o2] } }) => {
-        if (t3 === i2 && e3 === n2) return 1;
-        if (s2 === a2 && r2 === o2) return -1;
-        const l2 = (e3 + n2) / 2, h2 = (r2 + o2) / 2;
-        if (l2 >= o2 && h2 <= e3) return -1;
-        if (h2 >= n2 && l2 <= r2) return 1;
-        return (t3 + i2) / 2 - (s2 + a2) / 2;
-      });
-      const e2 = document.createDocumentFragment();
-      for (const t3 of this.#Ta) {
-        e2.append(t3.container);
-        this._commentManager ? (t3.extraPopupElement?.popup || t3.popup)?.renderCommentButton() : t3.extraPopupElement && e2.append(t3.extraPopupElement.render());
-      }
-      this.div.append(e2);
-      await Promise.all(t2);
-      if (this.#oo) for (const t3 of this.#Ta) this.#oo.addPointerInTextLayer(t3.contentElement, false);
+      __privateMethod(this, _AnnotationLayer_instances, go_fn).call(this);
     }
     async addLinkAnnotations(t2) {
-      const e2 = { data: null, layer: this.div, linkService: this.#do, svgFactory: new DOMSVGFactory(), parent: this };
+      const e2 = { data: null, layer: this.div, linkService: __privateGet(this, _do), svgFactory: new DOMSVGFactory(), parent: this };
       for (const i2 of t2) {
-        i2.borderStyle ||= _AnnotationLayer._defaultBorderStyle;
+        i2.borderStyle || (i2.borderStyle = _AnnotationLayer._defaultBorderStyle);
         e2.data = i2;
         const t3 = AnnotationElementFactory.create(e2);
         if (t3.isRenderable) {
           t3.render();
           t3.contentElement.id = `${f}${i2.id}`;
-          this.#Ta.push(t3);
+          __privateGet(this, _Ta2).push(t3);
         }
       }
-      await this.#po();
+      await __privateMethod(this, _AnnotationLayer_instances, po_fn).call(this);
     }
     update({ viewport: t2, optionalContentConfig: e2 }) {
       const i2 = this.div;
       this.viewport = t2;
       setLayerDimensions(i2, { rotation: t2.rotation });
-      for (const t3 of this.#Ta) t3.updateOC(e2);
-      this.#go();
+      for (const t3 of __privateGet(this, _Ta2)) t3.updateOC(e2);
+      __privateMethod(this, _AnnotationLayer_instances, go_fn).call(this);
       i2.hidden = false;
     }
     destroy() {
-      for (const t2 of this.#Ta) {
+      for (const t2 of __privateGet(this, _Ta2)) {
         t2.destroy?.();
-        this.#oo?.removePointerInTextLayer(t2.contentElement);
+        __privateGet(this, _oo)?.removePointerInTextLayer(t2.contentElement);
       }
-      this.#Ta.length = 0;
-      this.#ho.clear();
+      __privateGet(this, _Ta2).length = 0;
+      __privateGet(this, _ho).clear();
       this.div.replaceChildren();
     }
-    #go() {
-      if (!this.#lo) return;
-      const t2 = this.div;
-      for (const [e2, i2] of this.#lo) {
-        const n2 = t2.querySelector(`[data-annotation-id="${e2}"]`);
-        if (!n2) continue;
-        if (Array.isArray(i2)) for (const t3 of i2) {
-          t3.className = "annotationContent";
-          t3.ariaHidden = true;
-        }
-        else {
-          i2.className = "annotationContent";
-          i2.ariaHidden = true;
-        }
-        const s2 = [];
-        for (const t3 of n2.children) "CANVAS" === t3.nodeName && s2.push(t3);
-        for (const t3 of s2) t3.remove();
-        const r2 = Array.isArray(i2) ? i2[0] : i2, { firstChild: a2 } = n2;
-        a2 ? a2.classList.contains("annotationContent") ? a2.after(r2) : a2.before(r2) : n2.append(r2);
-        if (Array.isArray(i2)) {
-          let t3 = r2;
-          for (let e3 = 1, n3 = i2.length; e3 < n3; e3++) {
-            t3.after(i2[e3]);
-            t3 = i2[e3];
-          }
-        }
-        this.#lo.delete(e2);
-        const o2 = this.#ho.get(e2);
-        if (o2) if (o2._hasNoCanvas) {
-          this._annotationEditorUIManager?.setMissingCanvas(e2, n2.id, i2);
-          o2._hasNoCanvas = false;
-        } else o2.canvas = i2;
-      }
-    }
     refreshCanvases() {
-      this.#go();
+      __privateMethod(this, _AnnotationLayer_instances, go_fn).call(this);
     }
     getEditableAnnotations() {
-      return this.#ho.values();
+      return __privateGet(this, _ho).values();
     }
     getEditableAnnotation(t2) {
-      return this.#ho.get(t2);
+      return __privateGet(this, _ho).get(t2);
     }
     addFakeAnnotation(t2) {
-      const { div: e2 } = this, { id: i2, rotation: n2 } = t2, s2 = new EditorAnnotationElement({ data: { id: i2, rect: t2.getPDFRect(), rotation: n2 }, editor: t2, layer: e2, parent: this, enableComment: !!this._commentManager, linkService: this.#do, annotationStorage: this.#W });
+      const { div: e2 } = this, { id: i2, rotation: n2 } = t2, s2 = new EditorAnnotationElement({ data: { id: i2, rect: t2.getPDFRect(), rotation: n2 }, editor: t2, layer: e2, parent: this, enableComment: !!this._commentManager, linkService: __privateGet(this, _do), annotationStorage: __privateGet(this, _W2) });
       s2.render();
       s2.contentElement.id = `${f}${i2}`;
       s2.createOrUpdatePopup();
-      this.#Ta.push(s2);
+      __privateGet(this, _Ta2).push(s2);
       return s2;
     }
     removeAnnotation(t2) {
-      const e2 = this.#Ta.findIndex((e3) => e3.data.id === t2);
+      const e2 = __privateGet(this, _Ta2).findIndex((e3) => e3.data.id === t2);
       if (e2 < 0) return;
-      const [i2] = this.#Ta.splice(e2, 1);
-      this.#oo?.removePointerInTextLayer(i2.contentElement);
+      const [i2] = __privateGet(this, _Ta2).splice(e2, 1);
+      __privateGet(this, _oo)?.removePointerInTextLayer(i2.contentElement);
     }
     updateFakeAnnotations(t2) {
       if (0 !== t2.length) {
         for (const e2 of t2) e2.updateFakeAnnotationElement(this);
-        this.#po();
+        __privateMethod(this, _AnnotationLayer_instances, po_fn).call(this);
       }
     }
     togglePointerEvents(t2 = false) {
@@ -19416,29 +20139,99 @@
       return shadow(this, "_defaultBorderStyle", Object.freeze({ width: 1, rawWidth: 1, style: D, dashArray: [3], horizontalCornerRadius: 0, verticalCornerRadius: 0 }));
     }
   };
+  _oo = new WeakMap();
+  _lo = new WeakMap();
+  _W2 = new WeakMap();
+  _ho = new WeakMap();
+  _co = new WeakMap();
+  _do = new WeakMap();
+  _Ta2 = new WeakMap();
+  _uo = new WeakMap();
+  _AnnotationLayer_instances = new WeakSet();
+  po_fn = async function() {
+    if (0 === __privateGet(this, _Ta2).length) return;
+    this.div.replaceChildren();
+    const t2 = [];
+    if (!__privateGet(this, _uo)) {
+      __privateSet(this, _uo, true);
+      for (const { contentElement: e3, data: { id: i2 } } of __privateGet(this, _Ta2)) {
+        const n2 = e3.id = `${f}${i2}`;
+        t2.push(__privateGet(this, _co)?.getAriaAttributes(n2).then((t3) => {
+          if (t3) for (const [i3, n3] of t3) e3.setAttribute(i3, n3);
+        }));
+      }
+    }
+    __privateGet(this, _Ta2).sort(({ data: { rect: [t3, e3, i2, n2] } }, { data: { rect: [s2, r2, a2, o2] } }) => {
+      if (t3 === i2 && e3 === n2) return 1;
+      if (s2 === a2 && r2 === o2) return -1;
+      const l2 = (e3 + n2) / 2, h2 = (r2 + o2) / 2;
+      if (l2 >= o2 && h2 <= e3) return -1;
+      if (h2 >= n2 && l2 <= r2) return 1;
+      return (t3 + i2) / 2 - (s2 + a2) / 2;
+    });
+    const e2 = document.createDocumentFragment();
+    for (const t3 of __privateGet(this, _Ta2)) {
+      e2.append(t3.container);
+      this._commentManager ? (t3.extraPopupElement?.popup || t3.popup)?.renderCommentButton() : t3.extraPopupElement && e2.append(t3.extraPopupElement.render());
+    }
+    this.div.append(e2);
+    await Promise.all(t2);
+    if (__privateGet(this, _oo)) for (const t3 of __privateGet(this, _Ta2)) __privateGet(this, _oo).addPointerInTextLayer(t3.contentElement, false);
+  };
+  go_fn = function() {
+    if (!__privateGet(this, _lo)) return;
+    const t2 = this.div;
+    for (const [e2, i2] of __privateGet(this, _lo)) {
+      const n2 = t2.querySelector(`[data-annotation-id="${e2}"]`);
+      if (!n2) continue;
+      if (Array.isArray(i2)) for (const t3 of i2) {
+        t3.className = "annotationContent";
+        t3.ariaHidden = true;
+      }
+      else {
+        i2.className = "annotationContent";
+        i2.ariaHidden = true;
+      }
+      const s2 = [];
+      for (const t3 of n2.children) "CANVAS" === t3.nodeName && s2.push(t3);
+      for (const t3 of s2) t3.remove();
+      const r2 = Array.isArray(i2) ? i2[0] : i2, { firstChild: a2 } = n2;
+      a2 ? a2.classList.contains("annotationContent") ? a2.after(r2) : a2.before(r2) : n2.append(r2);
+      if (Array.isArray(i2)) {
+        let t3 = r2;
+        for (let e3 = 1, n3 = i2.length; e3 < n3; e3++) {
+          t3.after(i2[e3]);
+          t3 = i2[e3];
+        }
+      }
+      __privateGet(this, _lo).delete(e2);
+      const o2 = __privateGet(this, _ho).get(e2);
+      if (o2) if (o2._hasNoCanvas) {
+        this._annotationEditorUIManager?.setMissingCanvas(e2, n2.id, i2);
+        o2._hasNoCanvas = false;
+      } else o2.canvas = i2;
+    }
+  };
+  var AnnotationLayer = _AnnotationLayer;
   var Wt = /\r\n?|\n/g;
-  var FreeTextEditor = class _FreeTextEditor extends AnnotationEditor {
-    #mo = "";
-    #fo = `${this.id}-editor`;
-    #bo = null;
-    #Wa;
-    _colorPicker = null;
-    static _freeTextDefaultContent = "";
-    static _internalPadding = 0;
-    static _defaultColor = null;
-    static _defaultFontSize = 10;
+  var _mo, _fo, _bo, _Wa, _FreeTextEditor_instances, yo_fn, za_fn2, wo_fn, vo_fn, _FreeTextEditor_static, xo_fn, Ao_fn, Co_fn, Eo_fn, So_fn;
+  var _FreeTextEditor = class _FreeTextEditor extends AnnotationEditor {
+    constructor(t2) {
+      super({ ...t2, name: "freeTextEditor" });
+      __privateAdd(this, _FreeTextEditor_instances);
+      __privateAdd(this, _mo, "");
+      __privateAdd(this, _fo, `${this.id}-editor`);
+      __privateAdd(this, _bo, null);
+      __privateAdd(this, _Wa);
+      __publicField(this, "_colorPicker", null);
+      this.color = t2.color || _FreeTextEditor._defaultColor || AnnotationEditor._defaultLineColor;
+      __privateSet(this, _Wa, t2.fontSize || _FreeTextEditor._defaultFontSize);
+      this.annotationElementId || this._uiManager.a11yAlert(AnnotationEditor._l10nAlert.freetext);
+      this.canAddComment = false;
+    }
     static get _keyboardManager() {
       const t2 = _FreeTextEditor.prototype, arrowChecker = (t3) => t3.isEmpty(), e2 = AnnotationEditorUIManager.TRANSLATE_SMALL, i2 = AnnotationEditorUIManager.TRANSLATE_BIG;
       return shadow(this, "_keyboardManager", new KeyboardManager([[["ctrl+s", "mac+meta+s", "ctrl+p", "mac+meta+p"], t2.commitOrRemove, { bubbles: true }], [["ctrl+Enter", "mac+meta+Enter"], t2.commitOrRemove], [["Escape"], t2.commitOrRemove], [["ArrowLeft"], t2._translateEmpty, { args: [-e2, 0], checker: arrowChecker }], [["ctrl+ArrowLeft", "mac+shift+ArrowLeft"], t2._translateEmpty, { args: [-i2, 0], checker: arrowChecker }], [["ArrowRight"], t2._translateEmpty, { args: [e2, 0], checker: arrowChecker }], [["ctrl+ArrowRight", "mac+shift+ArrowRight"], t2._translateEmpty, { args: [i2, 0], checker: arrowChecker }], [["ArrowUp"], t2._translateEmpty, { args: [0, -e2], checker: arrowChecker }], [["ctrl+ArrowUp", "mac+shift+ArrowUp"], t2._translateEmpty, { args: [0, -i2], checker: arrowChecker }], [["ArrowDown"], t2._translateEmpty, { args: [0, e2], checker: arrowChecker }], [["ctrl+ArrowDown", "mac+shift+ArrowDown"], t2._translateEmpty, { args: [0, i2], checker: arrowChecker }]]));
-    }
-    static _type = "freetext";
-    static _editorType = y.FREETEXT;
-    constructor(t2) {
-      super({ ...t2, name: "freeTextEditor" });
-      this.color = t2.color || _FreeTextEditor._defaultColor || AnnotationEditor._defaultLineColor;
-      this.#Wa = t2.fontSize || _FreeTextEditor._defaultFontSize;
-      this.annotationElementId || this._uiManager.a11yAlert(AnnotationEditor._l10nAlert.freetext);
-      this.canAddComment = false;
     }
     static initialize(t2, e2) {
       AnnotationEditor.initialize(t2, e2);
@@ -19457,52 +20250,36 @@
     updateParams(t2, e2) {
       switch (t2) {
         case v.FREETEXT_SIZE:
-          this.#yo(e2);
+          __privateMethod(this, _FreeTextEditor_instances, yo_fn).call(this, e2);
           break;
         case v.FREETEXT_COLOR:
-          this.#za(e2);
+          __privateMethod(this, _FreeTextEditor_instances, za_fn2).call(this, e2);
       }
     }
     static get defaultPropertiesToUpdate() {
       return [[v.FREETEXT_SIZE, _FreeTextEditor._defaultFontSize], [v.FREETEXT_COLOR, _FreeTextEditor._defaultColor || AnnotationEditor._defaultLineColor]];
     }
     get propertiesToUpdate() {
-      return [[v.FREETEXT_SIZE, this.#Wa], [v.FREETEXT_COLOR, this.color]];
+      return [[v.FREETEXT_SIZE, __privateGet(this, _Wa)], [v.FREETEXT_COLOR, this.color]];
     }
     get toolbarButtons() {
-      this._colorPicker ||= new BasicColorPicker(this);
+      this._colorPicker || (this._colorPicker = new BasicColorPicker(this));
       return [["colorPicker", this._colorPicker]];
     }
     get colorType() {
       return v.FREETEXT_COLOR;
-    }
-    #yo(t2) {
-      const setFontsize = (t3) => {
-        this.editorDiv.style.fontSize = `calc(${t3}px * var(--total-scale-factor))`;
-        this.translate(0, -(t3 - this.#Wa) * this.parentScale);
-        this.#Wa = t3;
-        this.#vo();
-      }, e2 = this.#Wa;
-      this.addCommands({ cmd: setFontsize.bind(this, t2), undo: setFontsize.bind(this, e2), post: this._uiManager.updateUI.bind(this._uiManager, this), mustExec: true, type: v.FREETEXT_SIZE, overwriteIfSameType: true, keepUndo: true });
     }
     onUpdatedColor() {
       this.editorDiv.style.color = this.color;
       this._colorPicker?.update(this.color);
       super.onUpdatedColor();
     }
-    #za(t2) {
-      const setColor = (t3) => {
-        this.color = t3;
-        this.onUpdatedColor();
-      }, e2 = this.color;
-      this.addCommands({ cmd: setColor.bind(this, t2), undo: setColor.bind(this, e2), post: this._uiManager.updateUI.bind(this._uiManager, this), mustExec: true, type: v.FREETEXT_COLOR, overwriteIfSameType: true, keepUndo: true });
-    }
     _translateEmpty(t2, e2) {
       this._uiManager.translateSelectedEditors(t2, e2, true);
     }
     getInitialTranslation() {
       const t2 = this.parentScale;
-      return [-_FreeTextEditor._internalPadding * t2, -(_FreeTextEditor._internalPadding + this.#Wa) * t2];
+      return [-_FreeTextEditor._internalPadding * t2, -(_FreeTextEditor._internalPadding + __privateGet(this, _Wa)) * t2];
     }
     rebuild() {
       if (this.parent) {
@@ -19516,8 +20293,8 @@
       this.editorDiv.contentEditable = true;
       this._isDraggable = false;
       this.div.removeAttribute("aria-activedescendant");
-      this.#bo = new AbortController();
-      const t2 = this._uiManager.combinedSignal(this.#bo);
+      __privateSet(this, _bo, new AbortController());
+      const t2 = this._uiManager.combinedSignal(__privateGet(this, _bo));
       this.editorDiv.addEventListener("keydown", this.editorDivKeydown.bind(this), { signal: t2 });
       this.editorDiv.addEventListener("focus", this.editorDivFocus.bind(this), { signal: t2 });
       this.editorDiv.addEventListener("blur", this.editorDivBlur.bind(this), { signal: t2 });
@@ -19529,10 +20306,10 @@
       if (!super.disableEditMode()) return false;
       this.overlayDiv.classList.add("enabled");
       this.editorDiv.contentEditable = false;
-      this.div.setAttribute("aria-activedescendant", this.#fo);
+      this.div.setAttribute("aria-activedescendant", __privateGet(this, _fo));
       this._isDraggable = true;
-      this.#bo?.abort();
-      this.#bo = null;
+      __privateGet(this, _bo)?.abort();
+      __privateSet(this, _bo, null);
       this.div.focus({ preventScroll: true });
       this.isEditing = false;
       this.parent.div.classList.add("freetextEditing");
@@ -19563,51 +20340,18 @@
       }
       super.remove();
     }
-    #wo() {
-      const t2 = [];
-      this.editorDiv.normalize();
-      let e2 = null;
-      for (const i2 of this.editorDiv.childNodes) if (e2?.nodeType !== Node.TEXT_NODE || "BR" !== i2.nodeName) {
-        t2.push(_FreeTextEditor.#xo(i2));
-        e2 = i2;
-      }
-      return t2.join("\n");
-    }
-    #vo() {
-      const [t2, e2] = this.parentDimensions;
-      let i2;
-      if (this.isAttachedToDOM) i2 = this.div.getBoundingClientRect();
-      else {
-        const { currentLayer: t3, div: e3 } = this, n2 = e3.style.display, s2 = e3.classList.contains("hidden");
-        e3.classList.remove("hidden");
-        e3.style.display = "hidden";
-        t3.div.append(this.div);
-        i2 = e3.getBoundingClientRect();
-        e3.remove();
-        e3.style.display = n2;
-        e3.classList.toggle("hidden", s2);
-      }
-      if (this.rotation % 180 == this.parentRotation % 180) {
-        this.width = i2.width / t2;
-        this.height = i2.height / e2;
-      } else {
-        this.width = i2.height / t2;
-        this.height = i2.width / e2;
-      }
-      this.fixAndSetPosition();
-    }
     commit() {
       if (!this.isInEditMode()) return;
       super.commit();
       this.disableEditMode();
-      const t2 = this.#mo, e2 = this.#mo = this.#wo().trimEnd();
+      const t2 = __privateGet(this, _mo), e2 = __privateSet(this, _mo, __privateMethod(this, _FreeTextEditor_instances, wo_fn).call(this).trimEnd());
       if (t2 === e2) return;
       const setText = (t3) => {
-        this.#mo = t3;
+        __privateSet(this, _mo, t3);
         if (t3) {
-          this.#Ao();
+          __privateMethod(this, _FreeTextEditor_instances, Ao_fn).call(this);
           this._uiManager.rebuild(this);
-          this.#vo();
+          __privateMethod(this, _FreeTextEditor_instances, vo_fn).call(this);
         } else this.remove();
       };
       this.addCommands({ cmd: () => {
@@ -19615,7 +20359,7 @@
       }, undo: () => {
         setText(t2);
       }, mustExec: false });
-      this.#vo();
+      __privateMethod(this, _FreeTextEditor_instances, vo_fn).call(this);
     }
     shouldGetKeyboardEvents() {
       return this.isInEditMode();
@@ -19663,13 +20407,13 @@
       super.render();
       this.editorDiv = document.createElement("div");
       this.editorDiv.className = "internal";
-      this.editorDiv.setAttribute("id", this.#fo);
+      this.editorDiv.setAttribute("id", __privateGet(this, _fo));
       this.editorDiv.setAttribute("data-l10n-id", "pdfjs-free-text2");
       this.editorDiv.setAttribute("data-l10n-attrs", "default-content");
       this.enableEditing();
       this.editorDiv.contentEditable = true;
       const { style: i2 } = this.editorDiv;
-      i2.fontSize = `calc(${this.#Wa}px * var(--total-scale-factor))`;
+      i2.fontSize = `calc(${__privateGet(this, _Wa)}px * var(--total-scale-factor))`;
       i2.color = this.color;
       this.div.append(this.editorDiv);
       this.overlayDiv = document.createElement("div");
@@ -19705,7 +20449,7 @@
           }
           this.setAt(d2 * i3, u2 * n2, r2, a2);
         } else this._moveAfterPaste(t2, e2);
-        this.#Ao();
+        __privateMethod(this, _FreeTextEditor_instances, Ao_fn).call(this);
         this._isDraggable = true;
         this.editorDiv.contentEditable = false;
       } else {
@@ -19714,14 +20458,12 @@
       }
       return this.div;
     }
-    static #xo(t2) {
-      return (t2.nodeType === Node.TEXT_NODE ? t2.nodeValue : t2.innerText).replaceAll(Wt, "");
-    }
     editorDivPaste(t2) {
+      var _a4, _b, _c3;
       const e2 = t2.clipboardData || window.clipboardData, { types: i2 } = e2;
       if (1 === i2.length && "text/plain" === i2[0]) return;
       t2.preventDefault();
-      const n2 = _FreeTextEditor.#Eo(e2.getData("text") || "").replaceAll(Wt, "\n");
+      const n2 = __privateMethod(_a4 = _FreeTextEditor, _FreeTextEditor_static, Eo_fn).call(_a4, e2.getData("text") || "").replaceAll(Wt, "\n");
       if (!n2) return;
       const s2 = window.getSelection();
       if (!s2.rangeCount) return;
@@ -19740,18 +20482,18 @@
         h2.push(a2.nodeValue.slice(o2).replaceAll(Wt, ""));
         if (t3 !== this.editorDiv) {
           let e3 = l2;
-          for (const i3 of this.editorDiv.childNodes) i3 !== t3 ? e3.push(_FreeTextEditor.#xo(i3)) : e3 = h2;
+          for (const i3 of this.editorDiv.childNodes) i3 !== t3 ? e3.push(__privateMethod(_b = _FreeTextEditor, _FreeTextEditor_static, xo_fn).call(_b, i3)) : e3 = h2;
         }
         l2.push(a2.nodeValue.slice(0, o2).replaceAll(Wt, ""));
       } else if (a2 === this.editorDiv) {
         let t3 = l2, e3 = 0;
         for (const i3 of this.editorDiv.childNodes) {
           e3++ === o2 && (t3 = h2);
-          t3.push(_FreeTextEditor.#xo(i3));
+          t3.push(__privateMethod(_c3 = _FreeTextEditor, _FreeTextEditor_static, xo_fn).call(_c3, i3));
         }
       }
-      this.#mo = `${l2.join("\n")}${n2}${h2.join("\n")}`;
-      this.#Ao();
+      __privateSet(this, _mo, `${l2.join("\n")}${n2}${h2.join("\n")}`);
+      __privateMethod(this, _FreeTextEditor_instances, Ao_fn).call(this);
       const c2 = new Range();
       let d2 = Math.sumPrecise(l2.map((t3) => t3.length));
       for (const { firstChild: t3 } of this.editorDiv.childNodes) if (t3.nodeType === Node.TEXT_NODE) {
@@ -19766,20 +20508,6 @@
       s2.removeAllRanges();
       s2.addRange(c2);
     }
-    #Ao() {
-      this.editorDiv.replaceChildren();
-      if (this.#mo) for (const t2 of this.#mo.split("\n")) {
-        const e2 = document.createElement("div");
-        e2.append(t2 ? document.createTextNode(t2) : document.createElement("br"));
-        this.editorDiv.append(e2);
-      }
-    }
-    #Co() {
-      return this.#mo.replaceAll("\xA0", " ");
-    }
-    static #Eo(t2) {
-      return t2.replaceAll(" ", "\xA0");
-    }
     get contentDiv() {
       return this.editorDiv;
     }
@@ -19788,6 +20516,7 @@
       return this.getRect(t2, t2);
     }
     static async deserialize(t2, e2, i2) {
+      var _a4;
       let n2 = null;
       if (t2 instanceof FreeTextAnnotationElement) {
         const { data: { defaultAppearanceData: { fontSize: e3, fontColor: i3 }, rect: s3, rotation: r2, id: a2, popupRef: o2, richText: l2, contentsObj: h2, creationDate: c2, modificationDate: d2 }, textContent: u2, textPosition: p2, parent: { page: { pageNumber: g2 } } } = t2;
@@ -19795,9 +20524,9 @@
         n2 = t2 = { annotationType: y.FREETEXT, color: Array.from(i3), fontSize: e3, value: u2.join("\n"), position: p2, pageIndex: g2 - 1, rect: s3.slice(0), rotation: r2, annotationElementId: a2, id: a2, deleted: false, popupRef: o2, comment: h2?.str || null, richText: l2, creationDate: c2, modificationDate: d2 };
       }
       const s2 = await super.deserialize(t2, e2, i2);
-      s2.#Wa = t2.fontSize;
+      __privateSet(s2, _Wa, t2.fontSize);
       s2.color = Util.makeHexColor(...t2.color);
-      s2.#mo = _FreeTextEditor.#Eo(t2.value);
+      __privateSet(s2, _mo, __privateMethod(_a4 = _FreeTextEditor, _FreeTextEditor_static, Eo_fn).call(_a4, t2.value));
       s2._initialData = n2;
       t2.comment && s2.setCommentData(t2);
       return s2;
@@ -19805,33 +20534,29 @@
     serialize(t2 = false) {
       if (this.isEmpty()) return null;
       if (this.deleted) return this.serializeDeleted();
-      const e2 = AnnotationEditor._colorManager.convert(this.isAttachedToDOM ? getComputedStyle(this.editorDiv).color : this.color), i2 = Object.assign(super.serialize(t2), { color: e2, fontSize: this.#Wa, value: this.#Co() });
+      const e2 = AnnotationEditor._colorManager.convert(this.isAttachedToDOM ? getComputedStyle(this.editorDiv).color : this.color), i2 = Object.assign(super.serialize(t2), { color: e2, fontSize: __privateGet(this, _Wa), value: __privateMethod(this, _FreeTextEditor_instances, Co_fn).call(this) });
       this.addComment(i2);
       if (t2) {
         i2.isCopy = true;
         return i2;
       }
-      if (this.annotationElementId && !this.#So(i2)) return null;
+      if (this.annotationElementId && !__privateMethod(this, _FreeTextEditor_instances, So_fn).call(this, i2)) return null;
       i2.id = this.annotationElementId;
       return i2;
-    }
-    #So(t2) {
-      const { value: e2, fontSize: i2, color: n2, pageIndex: s2 } = this._initialData;
-      return this.hasEditedComment || this._hasBeenMoved || t2.value !== e2 || t2.fontSize !== i2 || t2.color.some((t3, e3) => t3 !== n2[e3]) || t2.pageIndex !== s2;
     }
     renderAnnotationElement(t2) {
       const e2 = super.renderAnnotationElement(t2);
       if (!e2) return null;
       const { style: i2 } = e2;
-      i2.fontSize = `calc(${this.#Wa}px * var(--total-scale-factor))`;
+      i2.fontSize = `calc(${__privateGet(this, _Wa)}px * var(--total-scale-factor))`;
       i2.color = this.color;
       e2.replaceChildren();
-      for (const t3 of this.#mo.split("\n")) {
+      for (const t3 of __privateGet(this, _mo).split("\n")) {
         const i3 = document.createElement("div");
         i3.append(t3 ? document.createTextNode(t3) : document.createElement("br"));
         e2.append(i3);
       }
-      t2.updateEdited({ rect: this.getPDFRect(), popup: this._uiManager.hasCommentManager() || this.hasEditedComment ? this.comment : { text: this.#mo } });
+      t2.updateEdited({ rect: this.getPDFRect(), popup: this._uiManager.hasCommentManager() || this.hasEditedComment ? this.comment : { text: __privateGet(this, _mo) } });
       return e2;
     }
     resetAnnotationElement(t2) {
@@ -19839,8 +20564,92 @@
       t2.resetEdited();
     }
   };
+  _mo = new WeakMap();
+  _fo = new WeakMap();
+  _bo = new WeakMap();
+  _Wa = new WeakMap();
+  _FreeTextEditor_instances = new WeakSet();
+  yo_fn = function(t2) {
+    const setFontsize = (t3) => {
+      this.editorDiv.style.fontSize = `calc(${t3}px * var(--total-scale-factor))`;
+      this.translate(0, -(t3 - __privateGet(this, _Wa)) * this.parentScale);
+      __privateSet(this, _Wa, t3);
+      __privateMethod(this, _FreeTextEditor_instances, vo_fn).call(this);
+    }, e2 = __privateGet(this, _Wa);
+    this.addCommands({ cmd: setFontsize.bind(this, t2), undo: setFontsize.bind(this, e2), post: this._uiManager.updateUI.bind(this._uiManager, this), mustExec: true, type: v.FREETEXT_SIZE, overwriteIfSameType: true, keepUndo: true });
+  };
+  za_fn2 = function(t2) {
+    const setColor = (t3) => {
+      this.color = t3;
+      this.onUpdatedColor();
+    }, e2 = this.color;
+    this.addCommands({ cmd: setColor.bind(this, t2), undo: setColor.bind(this, e2), post: this._uiManager.updateUI.bind(this._uiManager, this), mustExec: true, type: v.FREETEXT_COLOR, overwriteIfSameType: true, keepUndo: true });
+  };
+  wo_fn = function() {
+    var _a4;
+    const t2 = [];
+    this.editorDiv.normalize();
+    let e2 = null;
+    for (const i2 of this.editorDiv.childNodes) if (e2?.nodeType !== Node.TEXT_NODE || "BR" !== i2.nodeName) {
+      t2.push(__privateMethod(_a4 = _FreeTextEditor, _FreeTextEditor_static, xo_fn).call(_a4, i2));
+      e2 = i2;
+    }
+    return t2.join("\n");
+  };
+  vo_fn = function() {
+    const [t2, e2] = this.parentDimensions;
+    let i2;
+    if (this.isAttachedToDOM) i2 = this.div.getBoundingClientRect();
+    else {
+      const { currentLayer: t3, div: e3 } = this, n2 = e3.style.display, s2 = e3.classList.contains("hidden");
+      e3.classList.remove("hidden");
+      e3.style.display = "hidden";
+      t3.div.append(this.div);
+      i2 = e3.getBoundingClientRect();
+      e3.remove();
+      e3.style.display = n2;
+      e3.classList.toggle("hidden", s2);
+    }
+    if (this.rotation % 180 == this.parentRotation % 180) {
+      this.width = i2.width / t2;
+      this.height = i2.height / e2;
+    } else {
+      this.width = i2.height / t2;
+      this.height = i2.width / e2;
+    }
+    this.fixAndSetPosition();
+  };
+  _FreeTextEditor_static = new WeakSet();
+  xo_fn = function(t2) {
+    return (t2.nodeType === Node.TEXT_NODE ? t2.nodeValue : t2.innerText).replaceAll(Wt, "");
+  };
+  Ao_fn = function() {
+    this.editorDiv.replaceChildren();
+    if (__privateGet(this, _mo)) for (const t2 of __privateGet(this, _mo).split("\n")) {
+      const e2 = document.createElement("div");
+      e2.append(t2 ? document.createTextNode(t2) : document.createElement("br"));
+      this.editorDiv.append(e2);
+    }
+  };
+  Co_fn = function() {
+    return __privateGet(this, _mo).replaceAll("\xA0", " ");
+  };
+  Eo_fn = function(t2) {
+    return t2.replaceAll(" ", "\xA0");
+  };
+  So_fn = function(t2) {
+    const { value: e2, fontSize: i2, color: n2, pageIndex: s2 } = this._initialData;
+    return this.hasEditedComment || this._hasBeenMoved || t2.value !== e2 || t2.fontSize !== i2 || t2.color.some((t3, e3) => t3 !== n2[e3]) || t2.pageIndex !== s2;
+  };
+  __privateAdd(_FreeTextEditor, _FreeTextEditor_static);
+  __publicField(_FreeTextEditor, "_freeTextDefaultContent", "");
+  __publicField(_FreeTextEditor, "_internalPadding", 0);
+  __publicField(_FreeTextEditor, "_defaultColor", null);
+  __publicField(_FreeTextEditor, "_defaultFontSize", 10);
+  __publicField(_FreeTextEditor, "_type", "freetext");
+  __publicField(_FreeTextEditor, "_editorType", y.FREETEXT);
+  var FreeTextEditor = _FreeTextEditor;
   var Outline = class {
-    static PRECISION = 1e-4;
     toSVGPath() {
       unreachable("Abstract method `toSVGPath` must be implemented.");
     }
@@ -19851,7 +20660,7 @@
       unreachable("Abstract method `serialize` must be implemented.");
     }
     static _rescale(t2, e2, i2, n2, s2, r2) {
-      r2 ||= new Float32Array(t2.length);
+      r2 || (r2 = new Float32Array(t2.length));
       for (let a2 = 0, o2 = t2.length; a2 < o2; a2 += 2) {
         r2[a2] = e2 + t2[a2] * n2;
         r2[a2 + 1] = i2 + t2[a2 + 1] * s2;
@@ -19859,7 +20668,7 @@
       return r2;
     }
     static _rescaleAndSwap(t2, e2, i2, n2, s2, r2) {
-      r2 ||= new Float32Array(t2.length);
+      r2 || (r2 = new Float32Array(t2.length));
       for (let a2 = 0, o2 = t2.length; a2 < o2; a2 += 2) {
         r2[a2] = e2 + t2[a2 + 1] * n2;
         r2[a2 + 1] = i2 + t2[a2] * s2;
@@ -19867,7 +20676,7 @@
       return r2;
     }
     static _translate(t2, e2, i2, n2) {
-      n2 ||= new Float32Array(t2.length);
+      n2 || (n2 = new Float32Array(t2.length));
       for (let s2 = 0, r2 = t2.length; s2 < r2; s2 += 2) {
         n2[s2] = e2 + t2[s2];
         n2[s2 + 1] = i2 + t2[s2 + 1];
@@ -19893,128 +20702,112 @@
       return [(t2 + 5 * i2) / 6, (e2 + 5 * n2) / 6, (5 * i2 + s2) / 6, (5 * n2 + r2) / 6, (i2 + s2) / 2, (n2 + r2) / 2];
     }
   };
-  var FreeDrawOutliner = class _FreeDrawOutliner {
-    #To;
-    #_o = [];
-    #ko;
-    #Do;
-    #Mo = [];
-    #Po = new Float32Array(18);
-    #Io;
-    #Fo;
-    #Oo;
-    #Ro;
-    #Bo;
-    #Lo;
-    #No = [];
-    static #Uo = 8;
-    static #Ho = 2;
-    static #zo = _FreeDrawOutliner.#Uo + _FreeDrawOutliner.#Ho;
+  __publicField(Outline, "PRECISION", 1e-4);
+  var _To, __o, _ko, _Do, _Mo, _Po, _Io, _Fo, _Oo, _Ro, _Bo, _Lo, _No, _Uo, _Ho, _zo, _FreeDrawOutliner_instances, Go_fn, jo_fn, Vo_fn, Wo_fn, $o_fn, Ko_fn, qo_fn;
+  var _FreeDrawOutliner = class _FreeDrawOutliner {
     constructor({ x: t2, y: e2 }, i2, n2, s2, r2, a2 = 0) {
-      this.#To = i2;
-      this.#Lo = s2 * n2;
-      this.#Do = r2;
-      this.#Po.set([NaN, NaN, NaN, NaN, t2, e2], 6);
-      this.#ko = a2;
-      this.#Ro = _FreeDrawOutliner.#Uo * n2;
-      this.#Oo = _FreeDrawOutliner.#zo * n2;
-      this.#Bo = n2;
-      this.#No.push(t2, e2);
+      __privateAdd(this, _FreeDrawOutliner_instances);
+      __privateAdd(this, _To);
+      __privateAdd(this, __o, []);
+      __privateAdd(this, _ko);
+      __privateAdd(this, _Do);
+      __privateAdd(this, _Mo, []);
+      __privateAdd(this, _Po, new Float32Array(18));
+      __privateAdd(this, _Io);
+      __privateAdd(this, _Fo);
+      __privateAdd(this, _Oo);
+      __privateAdd(this, _Ro);
+      __privateAdd(this, _Bo);
+      __privateAdd(this, _Lo);
+      __privateAdd(this, _No, []);
+      __privateSet(this, _To, i2);
+      __privateSet(this, _Lo, s2 * n2);
+      __privateSet(this, _Do, r2);
+      __privateGet(this, _Po).set([NaN, NaN, NaN, NaN, t2, e2], 6);
+      __privateSet(this, _ko, a2);
+      __privateSet(this, _Ro, __privateGet(_FreeDrawOutliner, _Uo) * n2);
+      __privateSet(this, _Oo, __privateGet(_FreeDrawOutliner, _zo) * n2);
+      __privateSet(this, _Bo, n2);
+      __privateGet(this, _No).push(t2, e2);
     }
     isEmpty() {
-      return isNaN(this.#Po[8]);
-    }
-    #Go() {
-      const t2 = this.#Po.subarray(4, 6), e2 = this.#Po.subarray(16, 18), [i2, n2, s2, r2] = this.#To;
-      return [(this.#Io + (t2[0] - e2[0]) / 2 - i2) / s2, (this.#Fo + (t2[1] - e2[1]) / 2 - n2) / r2, (this.#Io + (e2[0] - t2[0]) / 2 - i2) / s2, (this.#Fo + (e2[1] - t2[1]) / 2 - n2) / r2];
+      return isNaN(__privateGet(this, _Po)[8]);
     }
     add({ x: t2, y: e2 }) {
-      this.#Io = t2;
-      this.#Fo = e2;
-      const [i2, n2, s2, r2] = this.#To;
-      let [a2, o2, l2, h2] = this.#Po.subarray(8, 12);
+      __privateSet(this, _Io, t2);
+      __privateSet(this, _Fo, e2);
+      const [i2, n2, s2, r2] = __privateGet(this, _To);
+      let [a2, o2, l2, h2] = __privateGet(this, _Po).subarray(8, 12);
       const c2 = t2 - l2, d2 = e2 - h2, u2 = Math.hypot(c2, d2);
-      if (u2 < this.#Oo) return false;
-      const p2 = u2 - this.#Ro, g2 = p2 / u2, m2 = g2 * c2, f2 = g2 * d2;
+      if (u2 < __privateGet(this, _Oo)) return false;
+      const p2 = u2 - __privateGet(this, _Ro), g2 = p2 / u2, m2 = g2 * c2, f2 = g2 * d2;
       let b2 = a2, y2 = o2;
       a2 = l2;
       o2 = h2;
       l2 += m2;
       h2 += f2;
-      this.#No?.push(t2, e2);
-      const v2 = m2 / p2, w2 = -f2 / p2 * this.#Lo, x2 = v2 * this.#Lo;
-      this.#Po.set(this.#Po.subarray(2, 8), 0);
-      this.#Po.set([l2 + w2, h2 + x2], 4);
-      this.#Po.set(this.#Po.subarray(14, 18), 12);
-      this.#Po.set([l2 - w2, h2 - x2], 16);
-      if (isNaN(this.#Po[6])) {
-        if (0 === this.#Mo.length) {
-          this.#Po.set([a2 + w2, o2 + x2], 2);
-          this.#Mo.push(NaN, NaN, NaN, NaN, (a2 + w2 - i2) / s2, (o2 + x2 - n2) / r2);
-          this.#Po.set([a2 - w2, o2 - x2], 14);
-          this.#_o.push(NaN, NaN, NaN, NaN, (a2 - w2 - i2) / s2, (o2 - x2 - n2) / r2);
+      __privateGet(this, _No)?.push(t2, e2);
+      const v2 = m2 / p2, w2 = -f2 / p2 * __privateGet(this, _Lo), x2 = v2 * __privateGet(this, _Lo);
+      __privateGet(this, _Po).set(__privateGet(this, _Po).subarray(2, 8), 0);
+      __privateGet(this, _Po).set([l2 + w2, h2 + x2], 4);
+      __privateGet(this, _Po).set(__privateGet(this, _Po).subarray(14, 18), 12);
+      __privateGet(this, _Po).set([l2 - w2, h2 - x2], 16);
+      if (isNaN(__privateGet(this, _Po)[6])) {
+        if (0 === __privateGet(this, _Mo).length) {
+          __privateGet(this, _Po).set([a2 + w2, o2 + x2], 2);
+          __privateGet(this, _Mo).push(NaN, NaN, NaN, NaN, (a2 + w2 - i2) / s2, (o2 + x2 - n2) / r2);
+          __privateGet(this, _Po).set([a2 - w2, o2 - x2], 14);
+          __privateGet(this, __o).push(NaN, NaN, NaN, NaN, (a2 - w2 - i2) / s2, (o2 - x2 - n2) / r2);
         }
-        this.#Po.set([b2, y2, a2, o2, l2, h2], 6);
+        __privateGet(this, _Po).set([b2, y2, a2, o2, l2, h2], 6);
         return !this.isEmpty();
       }
-      this.#Po.set([b2, y2, a2, o2, l2, h2], 6);
+      __privateGet(this, _Po).set([b2, y2, a2, o2, l2, h2], 6);
       if (Math.abs(Math.atan2(y2 - o2, b2 - a2) - Math.atan2(f2, m2)) < Math.PI / 2) {
-        [a2, o2, l2, h2] = this.#Po.subarray(2, 6);
-        this.#Mo.push(NaN, NaN, NaN, NaN, ((a2 + l2) / 2 - i2) / s2, ((o2 + h2) / 2 - n2) / r2);
-        [a2, o2, b2, y2] = this.#Po.subarray(14, 18);
-        this.#_o.push(NaN, NaN, NaN, NaN, ((b2 + a2) / 2 - i2) / s2, ((y2 + o2) / 2 - n2) / r2);
+        [a2, o2, l2, h2] = __privateGet(this, _Po).subarray(2, 6);
+        __privateGet(this, _Mo).push(NaN, NaN, NaN, NaN, ((a2 + l2) / 2 - i2) / s2, ((o2 + h2) / 2 - n2) / r2);
+        [a2, o2, b2, y2] = __privateGet(this, _Po).subarray(14, 18);
+        __privateGet(this, __o).push(NaN, NaN, NaN, NaN, ((b2 + a2) / 2 - i2) / s2, ((y2 + o2) / 2 - n2) / r2);
         return true;
       }
-      [b2, y2, a2, o2, l2, h2] = this.#Po.subarray(0, 6);
-      this.#Mo.push(((b2 + 5 * a2) / 6 - i2) / s2, ((y2 + 5 * o2) / 6 - n2) / r2, ((5 * a2 + l2) / 6 - i2) / s2, ((5 * o2 + h2) / 6 - n2) / r2, ((a2 + l2) / 2 - i2) / s2, ((o2 + h2) / 2 - n2) / r2);
-      [l2, h2, a2, o2, b2, y2] = this.#Po.subarray(12, 18);
-      this.#_o.push(((b2 + 5 * a2) / 6 - i2) / s2, ((y2 + 5 * o2) / 6 - n2) / r2, ((5 * a2 + l2) / 6 - i2) / s2, ((5 * o2 + h2) / 6 - n2) / r2, ((a2 + l2) / 2 - i2) / s2, ((o2 + h2) / 2 - n2) / r2);
+      [b2, y2, a2, o2, l2, h2] = __privateGet(this, _Po).subarray(0, 6);
+      __privateGet(this, _Mo).push(((b2 + 5 * a2) / 6 - i2) / s2, ((y2 + 5 * o2) / 6 - n2) / r2, ((5 * a2 + l2) / 6 - i2) / s2, ((5 * o2 + h2) / 6 - n2) / r2, ((a2 + l2) / 2 - i2) / s2, ((o2 + h2) / 2 - n2) / r2);
+      [l2, h2, a2, o2, b2, y2] = __privateGet(this, _Po).subarray(12, 18);
+      __privateGet(this, __o).push(((b2 + 5 * a2) / 6 - i2) / s2, ((y2 + 5 * o2) / 6 - n2) / r2, ((5 * a2 + l2) / 6 - i2) / s2, ((5 * o2 + h2) / 6 - n2) / r2, ((a2 + l2) / 2 - i2) / s2, ((o2 + h2) / 2 - n2) / r2);
       return true;
     }
     toSVGPath() {
       if (this.isEmpty()) return "";
-      const t2 = this.#Mo, e2 = this.#_o;
-      if (isNaN(this.#Po[6]) && !this.isEmpty()) return this.#jo();
+      const t2 = __privateGet(this, _Mo), e2 = __privateGet(this, __o);
+      if (isNaN(__privateGet(this, _Po)[6]) && !this.isEmpty()) return __privateMethod(this, _FreeDrawOutliner_instances, jo_fn).call(this);
       const i2 = [];
       i2.push(`M${t2[4]} ${t2[5]}`);
       for (let e3 = 6; e3 < t2.length; e3 += 6) isNaN(t2[e3]) ? i2.push(`L${t2[e3 + 4]} ${t2[e3 + 5]}`) : i2.push(`C${t2[e3]} ${t2[e3 + 1]} ${t2[e3 + 2]} ${t2[e3 + 3]} ${t2[e3 + 4]} ${t2[e3 + 5]}`);
-      this.#Wo(i2);
+      __privateMethod(this, _FreeDrawOutliner_instances, Wo_fn).call(this, i2);
       for (let t3 = e2.length - 6; t3 >= 6; t3 -= 6) isNaN(e2[t3]) ? i2.push(`L${e2[t3 + 4]} ${e2[t3 + 5]}`) : i2.push(`C${e2[t3]} ${e2[t3 + 1]} ${e2[t3 + 2]} ${e2[t3 + 3]} ${e2[t3 + 4]} ${e2[t3 + 5]}`);
-      this.#Vo(i2);
+      __privateMethod(this, _FreeDrawOutliner_instances, Vo_fn).call(this, i2);
       return i2.join(" ");
-    }
-    #jo() {
-      const [t2, e2, i2, n2] = this.#To, [s2, r2, a2, o2] = this.#Go();
-      return `M${(this.#Po[2] - t2) / i2} ${(this.#Po[3] - e2) / n2} L${(this.#Po[4] - t2) / i2} ${(this.#Po[5] - e2) / n2} L${s2} ${r2} L${a2} ${o2} L${(this.#Po[16] - t2) / i2} ${(this.#Po[17] - e2) / n2} L${(this.#Po[14] - t2) / i2} ${(this.#Po[15] - e2) / n2} Z`;
-    }
-    #Vo(t2) {
-      const e2 = this.#_o;
-      t2.push(`L${e2[4]} ${e2[5]} Z`);
-    }
-    #Wo(t2) {
-      const [e2, i2, n2, s2] = this.#To, r2 = this.#Po.subarray(4, 6), a2 = this.#Po.subarray(16, 18), [o2, l2, h2, c2] = this.#Go();
-      t2.push(`L${(r2[0] - e2) / n2} ${(r2[1] - i2) / s2} L${o2} ${l2} L${h2} ${c2} L${(a2[0] - e2) / n2} ${(a2[1] - i2) / s2}`);
     }
     newFreeDrawOutline(t2, e2, i2, n2, s2, r2) {
       return new FreeDrawOutline(t2, e2, i2, n2, s2, r2);
     }
     getOutlines() {
-      const t2 = this.#Mo, e2 = this.#_o, i2 = this.#Po, [n2, s2, r2, a2] = this.#To, o2 = new Float32Array((this.#No?.length ?? 0) + 2);
+      const t2 = __privateGet(this, _Mo), e2 = __privateGet(this, __o), i2 = __privateGet(this, _Po), [n2, s2, r2, a2] = __privateGet(this, _To), o2 = new Float32Array((__privateGet(this, _No)?.length ?? 0) + 2);
       for (let t3 = 0, e3 = o2.length - 2; t3 < e3; t3 += 2) {
-        o2[t3] = (this.#No[t3] - n2) / r2;
-        o2[t3 + 1] = (this.#No[t3 + 1] - s2) / a2;
+        o2[t3] = (__privateGet(this, _No)[t3] - n2) / r2;
+        o2[t3 + 1] = (__privateGet(this, _No)[t3 + 1] - s2) / a2;
       }
-      o2[o2.length - 2] = (this.#Io - n2) / r2;
-      o2[o2.length - 1] = (this.#Fo - s2) / a2;
-      if (isNaN(i2[6]) && !this.isEmpty()) return this.#$o(o2);
-      const l2 = new Float32Array(this.#Mo.length + 24 + this.#_o.length);
+      o2[o2.length - 2] = (__privateGet(this, _Io) - n2) / r2;
+      o2[o2.length - 1] = (__privateGet(this, _Fo) - s2) / a2;
+      if (isNaN(i2[6]) && !this.isEmpty()) return __privateMethod(this, _FreeDrawOutliner_instances, $o_fn).call(this, o2);
+      const l2 = new Float32Array(__privateGet(this, _Mo).length + 24 + __privateGet(this, __o).length);
       let h2 = t2.length;
       for (let e3 = 0; e3 < h2; e3 += 2) if (isNaN(t2[e3])) l2[e3] = l2[e3 + 1] = NaN;
       else {
         l2[e3] = t2[e3];
         l2[e3 + 1] = t2[e3 + 1];
       }
-      h2 = this.#qo(l2, h2);
+      h2 = __privateMethod(this, _FreeDrawOutliner_instances, qo_fn).call(this, l2, h2);
       for (let t3 = e2.length - 6; t3 >= 6; t3 -= 6) for (let i3 = 0; i3 < 6; i3 += 2) if (isNaN(e2[t3 + i3])) {
         l2[h2] = l2[h2 + 1] = NaN;
         h2 += 2;
@@ -20023,45 +20816,84 @@
         l2[h2 + 1] = e2[t3 + i3 + 1];
         h2 += 2;
       }
-      this.#Ko(l2, h2);
-      return this.newFreeDrawOutline(l2, o2, this.#To, this.#Bo, this.#ko, this.#Do);
-    }
-    #$o(t2) {
-      const e2 = this.#Po, [i2, n2, s2, r2] = this.#To, [a2, o2, l2, h2] = this.#Go(), c2 = new Float32Array(36);
-      c2.set([NaN, NaN, NaN, NaN, (e2[2] - i2) / s2, (e2[3] - n2) / r2, NaN, NaN, NaN, NaN, (e2[4] - i2) / s2, (e2[5] - n2) / r2, NaN, NaN, NaN, NaN, a2, o2, NaN, NaN, NaN, NaN, l2, h2, NaN, NaN, NaN, NaN, (e2[16] - i2) / s2, (e2[17] - n2) / r2, NaN, NaN, NaN, NaN, (e2[14] - i2) / s2, (e2[15] - n2) / r2], 0);
-      return this.newFreeDrawOutline(c2, t2, this.#To, this.#Bo, this.#ko, this.#Do);
-    }
-    #Ko(t2, e2) {
-      const i2 = this.#_o;
-      t2.set([NaN, NaN, NaN, NaN, i2[4], i2[5]], e2);
-      return e2 + 6;
-    }
-    #qo(t2, e2) {
-      const i2 = this.#Po.subarray(4, 6), n2 = this.#Po.subarray(16, 18), [s2, r2, a2, o2] = this.#To, [l2, h2, c2, d2] = this.#Go();
-      t2.set([NaN, NaN, NaN, NaN, (i2[0] - s2) / a2, (i2[1] - r2) / o2, NaN, NaN, NaN, NaN, l2, h2, NaN, NaN, NaN, NaN, c2, d2, NaN, NaN, NaN, NaN, (n2[0] - s2) / a2, (n2[1] - r2) / o2], e2);
-      return e2 + 24;
+      __privateMethod(this, _FreeDrawOutliner_instances, Ko_fn).call(this, l2, h2);
+      return this.newFreeDrawOutline(l2, o2, __privateGet(this, _To), __privateGet(this, _Bo), __privateGet(this, _ko), __privateGet(this, _Do));
     }
   };
+  _To = new WeakMap();
+  __o = new WeakMap();
+  _ko = new WeakMap();
+  _Do = new WeakMap();
+  _Mo = new WeakMap();
+  _Po = new WeakMap();
+  _Io = new WeakMap();
+  _Fo = new WeakMap();
+  _Oo = new WeakMap();
+  _Ro = new WeakMap();
+  _Bo = new WeakMap();
+  _Lo = new WeakMap();
+  _No = new WeakMap();
+  _Uo = new WeakMap();
+  _Ho = new WeakMap();
+  _zo = new WeakMap();
+  _FreeDrawOutliner_instances = new WeakSet();
+  Go_fn = function() {
+    const t2 = __privateGet(this, _Po).subarray(4, 6), e2 = __privateGet(this, _Po).subarray(16, 18), [i2, n2, s2, r2] = __privateGet(this, _To);
+    return [(__privateGet(this, _Io) + (t2[0] - e2[0]) / 2 - i2) / s2, (__privateGet(this, _Fo) + (t2[1] - e2[1]) / 2 - n2) / r2, (__privateGet(this, _Io) + (e2[0] - t2[0]) / 2 - i2) / s2, (__privateGet(this, _Fo) + (e2[1] - t2[1]) / 2 - n2) / r2];
+  };
+  jo_fn = function() {
+    const [t2, e2, i2, n2] = __privateGet(this, _To), [s2, r2, a2, o2] = __privateMethod(this, _FreeDrawOutliner_instances, Go_fn).call(this);
+    return `M${(__privateGet(this, _Po)[2] - t2) / i2} ${(__privateGet(this, _Po)[3] - e2) / n2} L${(__privateGet(this, _Po)[4] - t2) / i2} ${(__privateGet(this, _Po)[5] - e2) / n2} L${s2} ${r2} L${a2} ${o2} L${(__privateGet(this, _Po)[16] - t2) / i2} ${(__privateGet(this, _Po)[17] - e2) / n2} L${(__privateGet(this, _Po)[14] - t2) / i2} ${(__privateGet(this, _Po)[15] - e2) / n2} Z`;
+  };
+  Vo_fn = function(t2) {
+    const e2 = __privateGet(this, __o);
+    t2.push(`L${e2[4]} ${e2[5]} Z`);
+  };
+  Wo_fn = function(t2) {
+    const [e2, i2, n2, s2] = __privateGet(this, _To), r2 = __privateGet(this, _Po).subarray(4, 6), a2 = __privateGet(this, _Po).subarray(16, 18), [o2, l2, h2, c2] = __privateMethod(this, _FreeDrawOutliner_instances, Go_fn).call(this);
+    t2.push(`L${(r2[0] - e2) / n2} ${(r2[1] - i2) / s2} L${o2} ${l2} L${h2} ${c2} L${(a2[0] - e2) / n2} ${(a2[1] - i2) / s2}`);
+  };
+  $o_fn = function(t2) {
+    const e2 = __privateGet(this, _Po), [i2, n2, s2, r2] = __privateGet(this, _To), [a2, o2, l2, h2] = __privateMethod(this, _FreeDrawOutliner_instances, Go_fn).call(this), c2 = new Float32Array(36);
+    c2.set([NaN, NaN, NaN, NaN, (e2[2] - i2) / s2, (e2[3] - n2) / r2, NaN, NaN, NaN, NaN, (e2[4] - i2) / s2, (e2[5] - n2) / r2, NaN, NaN, NaN, NaN, a2, o2, NaN, NaN, NaN, NaN, l2, h2, NaN, NaN, NaN, NaN, (e2[16] - i2) / s2, (e2[17] - n2) / r2, NaN, NaN, NaN, NaN, (e2[14] - i2) / s2, (e2[15] - n2) / r2], 0);
+    return this.newFreeDrawOutline(c2, t2, __privateGet(this, _To), __privateGet(this, _Bo), __privateGet(this, _ko), __privateGet(this, _Do));
+  };
+  Ko_fn = function(t2, e2) {
+    const i2 = __privateGet(this, __o);
+    t2.set([NaN, NaN, NaN, NaN, i2[4], i2[5]], e2);
+    return e2 + 6;
+  };
+  qo_fn = function(t2, e2) {
+    const i2 = __privateGet(this, _Po).subarray(4, 6), n2 = __privateGet(this, _Po).subarray(16, 18), [s2, r2, a2, o2] = __privateGet(this, _To), [l2, h2, c2, d2] = __privateMethod(this, _FreeDrawOutliner_instances, Go_fn).call(this);
+    t2.set([NaN, NaN, NaN, NaN, (i2[0] - s2) / a2, (i2[1] - r2) / o2, NaN, NaN, NaN, NaN, l2, h2, NaN, NaN, NaN, NaN, c2, d2, NaN, NaN, NaN, NaN, (n2[0] - s2) / a2, (n2[1] - r2) / o2], e2);
+    return e2 + 24;
+  };
+  __privateAdd(_FreeDrawOutliner, _Uo, 8);
+  __privateAdd(_FreeDrawOutliner, _Ho, 2);
+  __privateAdd(_FreeDrawOutliner, _zo, __privateGet(_FreeDrawOutliner, _Uo) + __privateGet(_FreeDrawOutliner, _Ho));
+  var FreeDrawOutliner = _FreeDrawOutliner;
+  var _To2, _Xo, _ko2, _Do2, _No2, _Bo2, _Yo, _FreeDrawOutline_instances, Jo_fn;
   var FreeDrawOutline = class extends Outline {
-    #To;
-    #Xo = new Float32Array(4);
-    #ko;
-    #Do;
-    #No;
-    #Bo;
-    #Yo;
     constructor(t2, e2, i2, n2, s2, r2) {
       super();
-      this.#Yo = t2;
-      this.#No = e2;
-      this.#To = i2;
-      this.#Bo = n2;
-      this.#ko = s2;
-      this.#Do = r2;
+      __privateAdd(this, _FreeDrawOutline_instances);
+      __privateAdd(this, _To2);
+      __privateAdd(this, _Xo, new Float32Array(4));
+      __privateAdd(this, _ko2);
+      __privateAdd(this, _Do2);
+      __privateAdd(this, _No2);
+      __privateAdd(this, _Bo2);
+      __privateAdd(this, _Yo);
+      __privateSet(this, _Yo, t2);
+      __privateSet(this, _No2, e2);
+      __privateSet(this, _To2, i2);
+      __privateSet(this, _Bo2, n2);
+      __privateSet(this, _ko2, s2);
+      __privateSet(this, _Do2, r2);
       this.firstPoint = [NaN, NaN];
       this.lastPoint = [NaN, NaN];
-      this.#Jo(r2);
-      const [a2, o2, l2, h2] = this.#Xo;
+      __privateMethod(this, _FreeDrawOutline_instances, Jo_fn).call(this, r2);
+      const [a2, o2, l2, h2] = __privateGet(this, _Xo);
       for (let e3 = 0, i3 = t2.length; e3 < i3; e3 += 2) {
         t2[e3] = (t2[e3] - a2) / l2;
         t2[e3 + 1] = (t2[e3 + 1] - o2) / h2;
@@ -20072,8 +20904,8 @@
       }
     }
     toSVGPath() {
-      const t2 = [`M${this.#Yo[4]} ${this.#Yo[5]}`];
-      for (let e2 = 6, i2 = this.#Yo.length; e2 < i2; e2 += 6) isNaN(this.#Yo[e2]) ? t2.push(`L${this.#Yo[e2 + 4]} ${this.#Yo[e2 + 5]}`) : t2.push(`C${this.#Yo[e2]} ${this.#Yo[e2 + 1]} ${this.#Yo[e2 + 2]} ${this.#Yo[e2 + 3]} ${this.#Yo[e2 + 4]} ${this.#Yo[e2 + 5]}`);
+      const t2 = [`M${__privateGet(this, _Yo)[4]} ${__privateGet(this, _Yo)[5]}`];
+      for (let e2 = 6, i2 = __privateGet(this, _Yo).length; e2 < i2; e2 += 6) isNaN(__privateGet(this, _Yo)[e2]) ? t2.push(`L${__privateGet(this, _Yo)[e2 + 4]} ${__privateGet(this, _Yo)[e2 + 5]}`) : t2.push(`C${__privateGet(this, _Yo)[e2]} ${__privateGet(this, _Yo)[e2 + 1]} ${__privateGet(this, _Yo)[e2 + 2]} ${__privateGet(this, _Yo)[e2 + 3]} ${__privateGet(this, _Yo)[e2 + 4]} ${__privateGet(this, _Yo)[e2 + 5]}`);
       t2.push("Z");
       return t2.join(" ");
     }
@@ -20082,94 +20914,104 @@
       let o2, l2;
       switch (s2) {
         case 0:
-          o2 = Outline._rescale(this.#Yo, t2, n2, r2, -a2);
-          l2 = Outline._rescale(this.#No, t2, n2, r2, -a2);
+          o2 = Outline._rescale(__privateGet(this, _Yo), t2, n2, r2, -a2);
+          l2 = Outline._rescale(__privateGet(this, _No2), t2, n2, r2, -a2);
           break;
         case 90:
-          o2 = Outline._rescaleAndSwap(this.#Yo, t2, e2, r2, a2);
-          l2 = Outline._rescaleAndSwap(this.#No, t2, e2, r2, a2);
+          o2 = Outline._rescaleAndSwap(__privateGet(this, _Yo), t2, e2, r2, a2);
+          l2 = Outline._rescaleAndSwap(__privateGet(this, _No2), t2, e2, r2, a2);
           break;
         case 180:
-          o2 = Outline._rescale(this.#Yo, i2, e2, -r2, a2);
-          l2 = Outline._rescale(this.#No, i2, e2, -r2, a2);
+          o2 = Outline._rescale(__privateGet(this, _Yo), i2, e2, -r2, a2);
+          l2 = Outline._rescale(__privateGet(this, _No2), i2, e2, -r2, a2);
           break;
         case 270:
-          o2 = Outline._rescaleAndSwap(this.#Yo, i2, n2, -r2, -a2);
-          l2 = Outline._rescaleAndSwap(this.#No, i2, n2, -r2, -a2);
+          o2 = Outline._rescaleAndSwap(__privateGet(this, _Yo), i2, n2, -r2, -a2);
+          l2 = Outline._rescaleAndSwap(__privateGet(this, _No2), i2, n2, -r2, -a2);
       }
       return { outline: Array.from(o2), points: [Array.from(l2)] };
     }
-    #Jo(t2) {
-      const e2 = this.#Yo;
-      let i2 = e2[4], s2 = e2[5];
-      const r2 = [i2, s2, i2, s2];
-      let a2 = i2, o2 = s2, l2 = i2, h2 = s2;
-      const c2 = t2 ? Math.max : Math.min, d2 = new Float32Array(4);
-      for (let t3 = 6, u3 = e2.length; t3 < u3; t3 += 6) {
-        const u4 = e2[t3 + 4], p2 = e2[t3 + 5];
-        if (isNaN(e2[t3])) {
-          Util.pointBoundingBox(u4, p2, r2);
-          if (o2 > p2) {
-            a2 = u4;
-            o2 = p2;
-          } else o2 === p2 && (a2 = c2(a2, u4));
-          if (h2 < p2) {
-            l2 = u4;
-            h2 = p2;
-          } else h2 === p2 && (l2 = c2(l2, u4));
-        } else {
-          d2.set(n, 0);
-          Util.bezierBoundingBox(i2, s2, ...e2.slice(t3, t3 + 6), d2);
-          Util.rectBoundingBox(...d2, r2);
-          if (o2 > d2[1]) {
-            a2 = d2[0];
-            o2 = d2[1];
-          } else o2 === d2[1] && (a2 = c2(a2, d2[0]));
-          if (h2 < d2[3]) {
-            l2 = d2[2];
-            h2 = d2[3];
-          } else h2 === d2[3] && (l2 = c2(l2, d2[2]));
-        }
-        i2 = u4;
-        s2 = p2;
-      }
-      const u2 = this.#Xo;
-      u2[0] = r2[0] - this.#ko;
-      u2[1] = r2[1] - this.#ko;
-      u2[2] = r2[2] - r2[0] + 2 * this.#ko;
-      u2[3] = r2[3] - r2[1] + 2 * this.#ko;
-      this.firstPoint = [a2, o2];
-      this.lastPoint = [l2, h2];
-    }
     get box() {
-      return this.#Xo;
+      return __privateGet(this, _Xo);
     }
     newOutliner(t2, e2, i2, n2, s2, r2 = 0) {
       return new FreeDrawOutliner(t2, e2, i2, n2, s2, r2);
     }
     getNewOutline(t2, e2) {
-      const [i2, n2, s2, r2] = this.#Xo, [a2, o2, l2, h2] = this.#To, c2 = s2 * l2, d2 = r2 * h2, u2 = i2 * l2 + a2, p2 = n2 * h2 + o2, g2 = this.newOutliner({ x: this.#No[0] * c2 + u2, y: this.#No[1] * d2 + p2 }, this.#To, this.#Bo, t2, this.#Do, e2 ?? this.#ko);
-      for (let t3 = 2; t3 < this.#No.length; t3 += 2) g2.add({ x: this.#No[t3] * c2 + u2, y: this.#No[t3 + 1] * d2 + p2 });
+      const [i2, n2, s2, r2] = __privateGet(this, _Xo), [a2, o2, l2, h2] = __privateGet(this, _To2), c2 = s2 * l2, d2 = r2 * h2, u2 = i2 * l2 + a2, p2 = n2 * h2 + o2, g2 = this.newOutliner({ x: __privateGet(this, _No2)[0] * c2 + u2, y: __privateGet(this, _No2)[1] * d2 + p2 }, __privateGet(this, _To2), __privateGet(this, _Bo2), t2, __privateGet(this, _Do2), e2 ?? __privateGet(this, _ko2));
+      for (let t3 = 2; t3 < __privateGet(this, _No2).length; t3 += 2) g2.add({ x: __privateGet(this, _No2)[t3] * c2 + u2, y: __privateGet(this, _No2)[t3 + 1] * d2 + p2 });
       return g2.getOutlines();
     }
   };
+  _To2 = new WeakMap();
+  _Xo = new WeakMap();
+  _ko2 = new WeakMap();
+  _Do2 = new WeakMap();
+  _No2 = new WeakMap();
+  _Bo2 = new WeakMap();
+  _Yo = new WeakMap();
+  _FreeDrawOutline_instances = new WeakSet();
+  Jo_fn = function(t2) {
+    const e2 = __privateGet(this, _Yo);
+    let i2 = e2[4], s2 = e2[5];
+    const r2 = [i2, s2, i2, s2];
+    let a2 = i2, o2 = s2, l2 = i2, h2 = s2;
+    const c2 = t2 ? Math.max : Math.min, d2 = new Float32Array(4);
+    for (let t3 = 6, u3 = e2.length; t3 < u3; t3 += 6) {
+      const u4 = e2[t3 + 4], p2 = e2[t3 + 5];
+      if (isNaN(e2[t3])) {
+        Util.pointBoundingBox(u4, p2, r2);
+        if (o2 > p2) {
+          a2 = u4;
+          o2 = p2;
+        } else o2 === p2 && (a2 = c2(a2, u4));
+        if (h2 < p2) {
+          l2 = u4;
+          h2 = p2;
+        } else h2 === p2 && (l2 = c2(l2, u4));
+      } else {
+        d2.set(n, 0);
+        Util.bezierBoundingBox(i2, s2, ...e2.slice(t3, t3 + 6), d2);
+        Util.rectBoundingBox(...d2, r2);
+        if (o2 > d2[1]) {
+          a2 = d2[0];
+          o2 = d2[1];
+        } else o2 === d2[1] && (a2 = c2(a2, d2[0]));
+        if (h2 < d2[3]) {
+          l2 = d2[2];
+          h2 = d2[3];
+        } else h2 === d2[3] && (l2 = c2(l2, d2[2]));
+      }
+      i2 = u4;
+      s2 = p2;
+    }
+    const u2 = __privateGet(this, _Xo);
+    u2[0] = r2[0] - __privateGet(this, _ko2);
+    u2[1] = r2[1] - __privateGet(this, _ko2);
+    u2[2] = r2[2] - r2[0] + 2 * __privateGet(this, _ko2);
+    u2[3] = r2[3] - r2[1] + 2 * __privateGet(this, _ko2);
+    this.firstPoint = [a2, o2];
+    this.lastPoint = [l2, h2];
+  };
+  var _To3, _Qo, _Zo, _tl, _el, _HighlightOutliner_instances, rl_fn, al_fn, nl_fn, sl_fn, il_fn;
   var HighlightOutliner = class {
-    #To;
-    #Qo;
-    #Zo;
-    #tl = [];
-    #el = [];
     constructor(t2, e2 = 0, i2 = 0, s2 = true) {
+      __privateAdd(this, _HighlightOutliner_instances);
+      __privateAdd(this, _To3);
+      __privateAdd(this, _Qo);
+      __privateAdd(this, _Zo);
+      __privateAdd(this, _tl, []);
+      __privateAdd(this, _el, []);
       const r2 = n.slice(), a2 = 1e-4;
       for (const { x: i3, y: n2, width: s3, height: o3 } of t2) {
         const t3 = Math.floor((i3 - e2) / a2) * a2, l3 = Math.ceil((i3 + s3 + e2) / a2) * a2, h3 = Math.floor((n2 - e2) / a2) * a2, c3 = Math.ceil((n2 + o3 + e2) / a2) * a2, d3 = [t3, h3, c3, true], u3 = [l3, h3, c3, false];
-        this.#tl.push(d3, u3);
+        __privateGet(this, _tl).push(d3, u3);
         Util.rectBoundingBox(t3, h3, l3, c3, r2);
       }
       const o2 = r2[2] - r2[0] + 2 * i2, l2 = r2[3] - r2[1] + 2 * i2, h2 = r2[0] - i2, c2 = r2[1] - i2;
       let d2 = s2 ? -1 / 0 : 1 / 0, u2 = 1 / 0;
-      const p2 = this.#tl.at(s2 ? -1 : -2), g2 = [p2[0], p2[2]];
-      for (const t3 of this.#tl) {
+      const p2 = __privateGet(this, _tl).at(s2 ? -1 : -2), g2 = [p2[0], p2[2]];
+      for (const t3 of __privateGet(this, _tl)) {
         const [e3, i3, n2, r3] = t3;
         if (!r3 && s2) if (i3 < u2) {
           u2 = i3;
@@ -20183,132 +21025,139 @@
         t3[1] = (i3 - c2) / l2;
         t3[2] = (n2 - c2) / l2;
       }
-      this.#To = new Float32Array([h2, c2, o2, l2]);
-      this.#Qo = [d2, u2];
-      this.#Zo = g2;
+      __privateSet(this, _To3, new Float32Array([h2, c2, o2, l2]));
+      __privateSet(this, _Qo, [d2, u2]);
+      __privateSet(this, _Zo, g2);
     }
     getOutlines() {
-      this.#tl.sort((t3, e2) => t3[0] - e2[0] || t3[1] - e2[1] || t3[2] - e2[2]);
+      __privateGet(this, _tl).sort((t3, e2) => t3[0] - e2[0] || t3[1] - e2[1] || t3[2] - e2[2]);
       const t2 = [];
-      for (const e2 of this.#tl) if (e2[3]) {
-        t2.push(...this.#il(e2));
-        this.#nl(e2);
+      for (const e2 of __privateGet(this, _tl)) if (e2[3]) {
+        t2.push(...__privateMethod(this, _HighlightOutliner_instances, il_fn).call(this, e2));
+        __privateMethod(this, _HighlightOutliner_instances, nl_fn).call(this, e2);
       } else {
-        this.#sl(e2);
-        t2.push(...this.#il(e2));
+        __privateMethod(this, _HighlightOutliner_instances, sl_fn).call(this, e2);
+        t2.push(...__privateMethod(this, _HighlightOutliner_instances, il_fn).call(this, e2));
       }
-      return this.#rl(t2);
-    }
-    #rl(t2) {
-      const e2 = [], i2 = /* @__PURE__ */ new Set();
-      for (const i3 of t2) {
-        const [t3, n3, s3] = i3;
-        e2.push([t3, n3, i3], [t3, s3, i3]);
-      }
-      e2.sort((t3, e3) => t3[1] - e3[1] || t3[0] - e3[0]);
-      for (let t3 = 0, n3 = e2.length; t3 < n3; t3 += 2) {
-        const n4 = e2[t3][2], s3 = e2[t3 + 1][2];
-        n4.push(s3);
-        s3.push(n4);
-        i2.add(n4);
-        i2.add(s3);
-      }
-      const n2 = [];
-      let s2;
-      for (; i2.size > 0; ) {
-        const t3 = i2.values().next().value;
-        let [e3, r2, a2, o2, l2] = t3;
-        i2.delete(t3);
-        let h2 = e3, c2 = r2;
-        s2 = [e3, a2];
-        n2.push(s2);
-        for (; ; ) {
-          let t4;
-          if (i2.has(o2)) t4 = o2;
-          else {
-            if (!i2.has(l2)) break;
-            t4 = l2;
-          }
-          i2.delete(t4);
-          [e3, r2, a2, o2, l2] = t4;
-          if (h2 !== e3) {
-            s2.push(h2, c2, e3, c2 === r2 ? r2 : a2);
-            h2 = e3;
-          }
-          c2 = c2 === r2 ? a2 : r2;
-        }
-        s2.push(h2, c2);
-      }
-      return new HighlightOutline(n2, this.#To, this.#Qo, this.#Zo);
-    }
-    #al(t2) {
-      const e2 = this.#el;
-      let i2 = 0, n2 = e2.length - 1;
-      for (; i2 <= n2; ) {
-        const s2 = i2 + n2 >> 1, r2 = e2[s2][0];
-        if (r2 === t2) return s2;
-        r2 < t2 ? i2 = s2 + 1 : n2 = s2 - 1;
-      }
-      return n2 + 1;
-    }
-    #nl([, t2, e2]) {
-      const i2 = this.#al(t2);
-      this.#el.splice(i2, 0, [t2, e2]);
-    }
-    #sl([, t2, e2]) {
-      const i2 = this.#al(t2);
-      for (let n2 = i2; n2 < this.#el.length; n2++) {
-        const [i3, s2] = this.#el[n2];
-        if (i3 !== t2) break;
-        if (i3 === t2 && s2 === e2) {
-          this.#el.splice(n2, 1);
-          return;
-        }
-      }
-      for (let n2 = i2 - 1; n2 >= 0; n2--) {
-        const [i3, s2] = this.#el[n2];
-        if (i3 !== t2) break;
-        if (i3 === t2 && s2 === e2) {
-          this.#el.splice(n2, 1);
-          return;
-        }
-      }
-    }
-    #il(t2) {
-      const [e2, i2, n2] = t2, s2 = [[e2, i2, n2]], r2 = this.#al(n2);
-      for (let t3 = 0; t3 < r2; t3++) {
-        const [i3, n3] = this.#el[t3];
-        for (let t4 = 0, r3 = s2.length; t4 < r3; t4++) {
-          const [, a2, o2] = s2[t4];
-          if (!(n3 <= a2 || o2 <= i3)) if (a2 >= i3) if (o2 > n3) s2[t4][1] = n3;
-          else {
-            if (1 === r3) return [];
-            s2.splice(t4, 1);
-            t4--;
-            r3--;
-          }
-          else {
-            s2[t4][2] = i3;
-            o2 > n3 && s2.push([e2, n3, o2]);
-          }
-        }
-      }
-      return s2;
+      return __privateMethod(this, _HighlightOutliner_instances, rl_fn).call(this, t2);
     }
   };
+  _To3 = new WeakMap();
+  _Qo = new WeakMap();
+  _Zo = new WeakMap();
+  _tl = new WeakMap();
+  _el = new WeakMap();
+  _HighlightOutliner_instances = new WeakSet();
+  rl_fn = function(t2) {
+    const e2 = [], i2 = /* @__PURE__ */ new Set();
+    for (const i3 of t2) {
+      const [t3, n3, s3] = i3;
+      e2.push([t3, n3, i3], [t3, s3, i3]);
+    }
+    e2.sort((t3, e3) => t3[1] - e3[1] || t3[0] - e3[0]);
+    for (let t3 = 0, n3 = e2.length; t3 < n3; t3 += 2) {
+      const n4 = e2[t3][2], s3 = e2[t3 + 1][2];
+      n4.push(s3);
+      s3.push(n4);
+      i2.add(n4);
+      i2.add(s3);
+    }
+    const n2 = [];
+    let s2;
+    for (; i2.size > 0; ) {
+      const t3 = i2.values().next().value;
+      let [e3, r2, a2, o2, l2] = t3;
+      i2.delete(t3);
+      let h2 = e3, c2 = r2;
+      s2 = [e3, a2];
+      n2.push(s2);
+      for (; ; ) {
+        let t4;
+        if (i2.has(o2)) t4 = o2;
+        else {
+          if (!i2.has(l2)) break;
+          t4 = l2;
+        }
+        i2.delete(t4);
+        [e3, r2, a2, o2, l2] = t4;
+        if (h2 !== e3) {
+          s2.push(h2, c2, e3, c2 === r2 ? r2 : a2);
+          h2 = e3;
+        }
+        c2 = c2 === r2 ? a2 : r2;
+      }
+      s2.push(h2, c2);
+    }
+    return new HighlightOutline(n2, __privateGet(this, _To3), __privateGet(this, _Qo), __privateGet(this, _Zo));
+  };
+  al_fn = function(t2) {
+    const e2 = __privateGet(this, _el);
+    let i2 = 0, n2 = e2.length - 1;
+    for (; i2 <= n2; ) {
+      const s2 = i2 + n2 >> 1, r2 = e2[s2][0];
+      if (r2 === t2) return s2;
+      r2 < t2 ? i2 = s2 + 1 : n2 = s2 - 1;
+    }
+    return n2 + 1;
+  };
+  nl_fn = function([, t2, e2]) {
+    const i2 = __privateMethod(this, _HighlightOutliner_instances, al_fn).call(this, t2);
+    __privateGet(this, _el).splice(i2, 0, [t2, e2]);
+  };
+  sl_fn = function([, t2, e2]) {
+    const i2 = __privateMethod(this, _HighlightOutliner_instances, al_fn).call(this, t2);
+    for (let n2 = i2; n2 < __privateGet(this, _el).length; n2++) {
+      const [i3, s2] = __privateGet(this, _el)[n2];
+      if (i3 !== t2) break;
+      if (i3 === t2 && s2 === e2) {
+        __privateGet(this, _el).splice(n2, 1);
+        return;
+      }
+    }
+    for (let n2 = i2 - 1; n2 >= 0; n2--) {
+      const [i3, s2] = __privateGet(this, _el)[n2];
+      if (i3 !== t2) break;
+      if (i3 === t2 && s2 === e2) {
+        __privateGet(this, _el).splice(n2, 1);
+        return;
+      }
+    }
+  };
+  il_fn = function(t2) {
+    const [e2, i2, n2] = t2, s2 = [[e2, i2, n2]], r2 = __privateMethod(this, _HighlightOutliner_instances, al_fn).call(this, n2);
+    for (let t3 = 0; t3 < r2; t3++) {
+      const [i3, n3] = __privateGet(this, _el)[t3];
+      for (let t4 = 0, r3 = s2.length; t4 < r3; t4++) {
+        const [, a2, o2] = s2[t4];
+        if (!(n3 <= a2 || o2 <= i3)) if (a2 >= i3) if (o2 > n3) s2[t4][1] = n3;
+        else {
+          if (1 === r3) return [];
+          s2.splice(t4, 1);
+          t4--;
+          r3--;
+        }
+        else {
+          s2[t4][2] = i3;
+          o2 > n3 && s2.push([e2, n3, o2]);
+        }
+      }
+    }
+    return s2;
+  };
+  var _To4, _ol;
   var HighlightOutline = class extends Outline {
-    #To;
-    #ol;
     constructor(t2, e2, i2, n2) {
       super();
-      this.#ol = t2;
-      this.#To = e2;
+      __privateAdd(this, _To4);
+      __privateAdd(this, _ol);
+      __privateSet(this, _ol, t2);
+      __privateSet(this, _To4, e2);
       this.firstPoint = i2;
       this.lastPoint = n2;
     }
     toSVGPath() {
       const t2 = [];
-      for (const e2 of this.#ol) {
+      for (const e2 of __privateGet(this, _ol)) {
         let [i2, n2] = e2;
         t2.push(`M${i2} ${n2}`);
         for (let s2 = 2; s2 < e2.length; s2 += 2) {
@@ -20327,7 +21176,7 @@
     }
     serialize([t2, e2, i2, n2], s2) {
       const r2 = [], a2 = i2 - t2, o2 = n2 - e2;
-      for (const e3 of this.#ol) {
+      for (const e3 of __privateGet(this, _ol)) {
         const i3 = new Array(e3.length);
         for (let s3 = 0; s3 < e3.length; s3 += 2) {
           i3[s3] = t2 + e3[s3] * a2;
@@ -20338,9 +21187,11 @@
       return r2;
     }
     get box() {
-      return this.#To;
+      return __privateGet(this, _To4);
     }
   };
+  _To4 = new WeakMap();
+  _ol = new WeakMap();
   var FreeHighlightOutliner = class extends FreeDrawOutliner {
     newFreeDrawOutline(t2, e2, i2, n2, s2, r2) {
       return new FreeHighlightOutline(t2, e2, i2, n2, s2, r2);
@@ -20351,64 +21202,58 @@
       return new FreeHighlightOutliner(t2, e2, i2, n2, s2, r2);
     }
   };
-  var HighlightEditor = class _HighlightEditor extends AnnotationEditor {
-    #ll = null;
-    #hl = 0;
-    #cl;
-    #dl = null;
-    #a = null;
-    #ul = null;
-    #pl = null;
-    #gl = 0;
-    #ml = null;
-    #fl = null;
-    #_ = null;
-    #bl = false;
-    #Qo = null;
-    #Zo = null;
-    #yl = null;
-    #ye = "";
-    #Lo;
-    #vl = "";
-    static _defaultColor = null;
-    static _defaultOpacity = 1;
-    static _defaultThickness = 12;
-    static _type = "highlight";
-    static _editorType = y.HIGHLIGHT;
-    static _freeHighlightId = -1;
-    static _freeHighlight = null;
-    static _freeHighlightClipId = "";
-    static get _keyboardManager() {
-      const t2 = _HighlightEditor.prototype;
-      return shadow(this, "_keyboardManager", new KeyboardManager([[["ArrowLeft"], t2._moveCaret, { args: [0] }], [["ArrowRight"], t2._moveCaret, { args: [1] }], [["ArrowUp"], t2._moveCaret, { args: [2] }], [["ArrowDown"], t2._moveCaret, { args: [3] }]]));
-    }
+  var _ll, _hl, _cl, _dl, _a3, _ul, _pl, _gl, _ml, _fl, __4, _bl, _Qo2, _Zo2, _yl, _ye2, _Lo2, _vl, _HighlightEditor_instances, Al_fn, wl_fn, za_fn3, Cl_fn, Sl_fn, _l_fn, xl_fn, _HighlightEditor_static, El_fn, kl_fn, Dl_fn, Tl_fn, Ml_fn, Pl_fn, Fl_fn, Il_fn, So_fn2;
+  var _HighlightEditor = class _HighlightEditor extends AnnotationEditor {
     constructor(t2) {
       super({ ...t2, name: "highlightEditor" });
+      __privateAdd(this, _HighlightEditor_instances);
+      __privateAdd(this, _ll, null);
+      __privateAdd(this, _hl, 0);
+      __privateAdd(this, _cl);
+      __privateAdd(this, _dl, null);
+      __privateAdd(this, _a3, null);
+      __privateAdd(this, _ul, null);
+      __privateAdd(this, _pl, null);
+      __privateAdd(this, _gl, 0);
+      __privateAdd(this, _ml, null);
+      __privateAdd(this, _fl, null);
+      __privateAdd(this, __4, null);
+      __privateAdd(this, _bl, false);
+      __privateAdd(this, _Qo2, null);
+      __privateAdd(this, _Zo2, null);
+      __privateAdd(this, _yl, null);
+      __privateAdd(this, _ye2, "");
+      __privateAdd(this, _Lo2);
+      __privateAdd(this, _vl, "");
       this.color = t2.color || _HighlightEditor._defaultColor;
-      this.#Lo = t2.thickness || _HighlightEditor._defaultThickness;
+      __privateSet(this, _Lo2, t2.thickness || _HighlightEditor._defaultThickness);
       this.opacity = t2.opacity || _HighlightEditor._defaultOpacity;
-      this.#cl = t2.boxes || null;
-      this.#vl = t2.methodOfCreation || "";
-      this.#ye = t2.text || "";
+      __privateSet(this, _cl, t2.boxes || null);
+      __privateSet(this, _vl, t2.methodOfCreation || "");
+      __privateSet(this, _ye2, t2.text || "");
       this._isDraggable = false;
       this.defaultL10nId = "pdfjs-editor-highlight-editor";
       if (t2.highlightId > -1) {
-        this.#bl = true;
-        this.#wl(t2);
-        this.#xl();
-      } else if (this.#cl) {
-        this.#ll = t2.anchorNode;
-        this.#hl = t2.anchorOffset;
-        this.#pl = t2.focusNode;
-        this.#gl = t2.focusOffset;
-        this.#Al();
-        this.#xl();
+        __privateSet(this, _bl, true);
+        __privateMethod(this, _HighlightEditor_instances, wl_fn).call(this, t2);
+        __privateMethod(this, _HighlightEditor_instances, xl_fn).call(this);
+      } else if (__privateGet(this, _cl)) {
+        __privateSet(this, _ll, t2.anchorNode);
+        __privateSet(this, _hl, t2.anchorOffset);
+        __privateSet(this, _pl, t2.focusNode);
+        __privateSet(this, _gl, t2.focusOffset);
+        __privateMethod(this, _HighlightEditor_instances, Al_fn).call(this);
+        __privateMethod(this, _HighlightEditor_instances, xl_fn).call(this);
         this.rotate(this.rotation);
       }
       this.annotationElementId || this._uiManager.a11yAlert(AnnotationEditor._l10nAlert.highlight);
     }
+    static get _keyboardManager() {
+      const t2 = _HighlightEditor.prototype;
+      return shadow(this, "_keyboardManager", new KeyboardManager([[["ArrowLeft"], t2._moveCaret, { args: [0] }], [["ArrowRight"], t2._moveCaret, { args: [1] }], [["ArrowUp"], t2._moveCaret, { args: [2] }], [["ArrowDown"], t2._moveCaret, { args: [3] }]]));
+    }
     get telemetryInitialData() {
-      return { action: "added", type: this.#bl ? "free_highlight" : "highlight", color: this._uiManager.getNonHCMColorName(this.color), thickness: this.#Lo, methodOfCreation: this.#vl };
+      return { action: "added", type: __privateGet(this, _bl) ? "free_highlight" : "highlight", color: this._uiManager.getNonHCMColorName(this.color), thickness: __privateGet(this, _Lo2), methodOfCreation: __privateGet(this, _vl) };
     }
     get telemetryFinalData() {
       return { type: "highlight", color: this._uiManager.getNonHCMColorName(this.color) };
@@ -20416,69 +21261,9 @@
     static computeTelemetryFinalData(t2) {
       return { numberOfColors: t2.get("color").size };
     }
-    #Al() {
-      const t2 = new HighlightOutliner(this.#cl, 1e-3);
-      this.#fl = t2.getOutlines();
-      [this.x, this.y, this.width, this.height] = this.#fl.box;
-      const e2 = new HighlightOutliner(this.#cl, 25e-4, 1e-3, "ltr" === this._uiManager.direction);
-      this.#ul = e2.getOutlines();
-      const { firstPoint: i2 } = this.#fl;
-      this.#Qo = [(i2[0] - this.x) / this.width, (i2[1] - this.y) / this.height];
-      const { lastPoint: n2 } = this.#ul;
-      this.#Zo = [(n2[0] - this.x) / this.width, (n2[1] - this.y) / this.height];
-    }
-    #wl({ highlightOutlines: t2, highlightId: e2, clipPathId: i2 }) {
-      this.#fl = t2;
-      this.#ul = t2.getNewOutline(this.#Lo / 2 + 1.5, 25e-4);
-      if (e2 >= 0) {
-        this.#_ = e2;
-        this.#dl = i2;
-        this.parent.drawLayer.finalizeDraw(e2, { bbox: t2.box, path: { d: t2.toSVGPath() } });
-        this.#yl = this.parent.drawLayer.drawOutline({ rootClass: { highlightOutline: true, free: true }, bbox: this.#ul.box, path: { d: this.#ul.toSVGPath() } }, true);
-      } else if (this.parent) {
-        const e3 = this.parent.viewport.rotation;
-        this.parent.drawLayer.updateProperties(this.#_, { bbox: _HighlightEditor.#El(this.#fl.box, (e3 - this.rotation + 360) % 360), path: { d: t2.toSVGPath() } });
-        this.parent.drawLayer.updateProperties(this.#yl, { bbox: _HighlightEditor.#El(this.#ul.box, e3), path: { d: this.#ul.toSVGPath() } });
-      }
-      const [n2, s2, r2, a2] = t2.box;
-      switch (this.rotation) {
-        case 0:
-          this.x = n2;
-          this.y = s2;
-          this.width = r2;
-          this.height = a2;
-          break;
-        case 90: {
-          const [t3, e3] = this.parentDimensions;
-          this.x = s2;
-          this.y = 1 - n2;
-          this.width = r2 * e3 / t3;
-          this.height = a2 * t3 / e3;
-          break;
-        }
-        case 180:
-          this.x = 1 - n2;
-          this.y = 1 - s2;
-          this.width = r2;
-          this.height = a2;
-          break;
-        case 270: {
-          const [t3, e3] = this.parentDimensions;
-          this.x = 1 - s2;
-          this.y = n2;
-          this.width = r2 * e3 / t3;
-          this.height = a2 * t3 / e3;
-          break;
-        }
-      }
-      const { firstPoint: o2 } = t2;
-      this.#Qo = [(o2[0] - n2) / r2, (o2[1] - s2) / a2];
-      const { lastPoint: l2 } = this.#ul;
-      this.#Zo = [(l2[0] - n2) / r2, (l2[1] - s2) / a2];
-    }
     static initialize(t2, e2) {
       AnnotationEditor.initialize(t2, e2);
-      _HighlightEditor._defaultColor ||= e2.highlightColors?.values().next().value || "#fff066";
+      _HighlightEditor._defaultColor || (_HighlightEditor._defaultColor = e2.highlightColors?.values().next().value || "#fff066");
     }
     static updateDefaultParams(t2, e2) {
       switch (t2) {
@@ -20492,51 +21277,34 @@
     translateInPage(t2, e2) {
     }
     get toolbarPosition() {
-      return this.#Zo;
+      return __privateGet(this, _Zo2);
     }
     get commentButtonPosition() {
-      return this.#Qo;
+      return __privateGet(this, _Qo2);
     }
     updateParams(t2, e2) {
       switch (t2) {
         case v.HIGHLIGHT_COLOR:
-          this.#za(e2);
+          __privateMethod(this, _HighlightEditor_instances, za_fn3).call(this, e2);
           break;
         case v.HIGHLIGHT_THICKNESS:
-          this.#Cl(e2);
+          __privateMethod(this, _HighlightEditor_instances, Cl_fn).call(this, e2);
       }
     }
     static get defaultPropertiesToUpdate() {
       return [[v.HIGHLIGHT_COLOR, _HighlightEditor._defaultColor], [v.HIGHLIGHT_THICKNESS, _HighlightEditor._defaultThickness]];
     }
     get propertiesToUpdate() {
-      return [[v.HIGHLIGHT_COLOR, this.color || _HighlightEditor._defaultColor], [v.HIGHLIGHT_THICKNESS, this.#Lo || _HighlightEditor._defaultThickness], [v.HIGHLIGHT_FREE, this.#bl]];
+      return [[v.HIGHLIGHT_COLOR, this.color || _HighlightEditor._defaultColor], [v.HIGHLIGHT_THICKNESS, __privateGet(this, _Lo2) || _HighlightEditor._defaultThickness], [v.HIGHLIGHT_FREE, __privateGet(this, _bl)]];
     }
     onUpdatedColor() {
-      this.parent?.drawLayer.updateProperties(this.#_, { root: { fill: this.color, "fill-opacity": this.opacity } });
-      this.#a?.updateColor(this.color);
+      this.parent?.drawLayer.updateProperties(__privateGet(this, __4), { root: { fill: this.color, "fill-opacity": this.opacity } });
+      __privateGet(this, _a3)?.updateColor(this.color);
       super.onUpdatedColor();
-    }
-    #za(t2) {
-      const setColorAndOpacity = (t3, e3) => {
-        this.color = t3;
-        this.opacity = e3;
-        this.onUpdatedColor();
-      }, e2 = this.color, i2 = this.opacity;
-      this.addCommands({ cmd: setColorAndOpacity.bind(this, t2, _HighlightEditor._defaultOpacity), undo: setColorAndOpacity.bind(this, e2, i2), post: this._uiManager.updateUI.bind(this._uiManager, this), mustExec: true, type: v.HIGHLIGHT_COLOR, overwriteIfSameType: true, keepUndo: true });
-      this._reportTelemetry({ action: "color_changed", color: this._uiManager.getNonHCMColorName(t2) }, true);
-    }
-    #Cl(t2) {
-      const e2 = this.#Lo, setThickness = (t3) => {
-        this.#Lo = t3;
-        this.#Sl(t3);
-      };
-      this.addCommands({ cmd: setThickness.bind(this, t2), undo: setThickness.bind(this, e2), post: this._uiManager.updateUI.bind(this._uiManager, this), mustExec: true, type: v.INK_THICKNESS, overwriteIfSameType: true, keepUndo: true });
-      this._reportTelemetry({ action: "thickness_changed", thickness: t2 }, true);
     }
     get toolbarButtons() {
       if (this._uiManager.highlightColors) {
-        return [["colorPicker", this.#a = new ColorPicker({ editor: this })]];
+        return [["colorPicker", __privateSet(this, _a3, new ColorPicker({ editor: this }))]];
       }
       return super.toolbarButtons;
     }
@@ -20549,20 +21317,20 @@
       this.div.classList.toggle("disabled", false);
     }
     fixAndSetPosition() {
-      return super.fixAndSetPosition(this.#Tl());
+      return super.fixAndSetPosition(__privateMethod(this, _HighlightEditor_instances, Tl_fn).call(this));
     }
     getBaseTranslation() {
       return [0, 0];
     }
     getRect(t2, e2) {
-      return super.getRect(t2, e2, this.#Tl());
+      return super.getRect(t2, e2, __privateMethod(this, _HighlightEditor_instances, Tl_fn).call(this));
     }
     onceAdded(t2) {
       this.annotationElementId || this.parent.addUndoableEditor(this);
       t2 && this.div.focus();
     }
     remove() {
-      this.#_l();
+      __privateMethod(this, _HighlightEditor_instances, _l_fn).call(this);
       this._reportTelemetry({ action: "deleted" });
       super.remove();
     }
@@ -20570,173 +21338,105 @@
       if (this.parent) {
         super.rebuild();
         if (null !== this.div) {
-          this.#xl();
+          __privateMethod(this, _HighlightEditor_instances, xl_fn).call(this);
           this.isAttachedToDOM || this.parent.add(this);
         }
       }
     }
     setParent(t2) {
       let e2 = false;
-      if (this.parent && !t2) this.#_l();
+      if (this.parent && !t2) __privateMethod(this, _HighlightEditor_instances, _l_fn).call(this);
       else if (t2) {
-        this.#xl(t2);
+        __privateMethod(this, _HighlightEditor_instances, xl_fn).call(this, t2);
         e2 = !this.parent && this.div?.classList.contains("selectedEditor");
       }
       super.setParent(t2);
       this.show(this._isVisible);
       e2 && this.select();
     }
-    #Sl(t2) {
-      if (this.#bl) {
-        this.#wl({ highlightOutlines: this.#fl.getNewOutline(t2 / 2) });
-        this.fixAndSetPosition();
-        this.setDims();
-      }
-    }
-    #_l() {
-      if (null !== this.#_ && this.parent) {
-        this.parent.drawLayer.remove(this.#_);
-        this.#_ = null;
-        this.parent.drawLayer.remove(this.#yl);
-        this.#yl = null;
-      }
-    }
-    #xl(t2 = this.parent) {
-      if (null === this.#_) {
-        ({ id: this.#_, clipPathId: this.#dl } = t2.drawLayer.draw({ bbox: this.#fl.box, root: { viewBox: "0 0 1 1", fill: this.color, "fill-opacity": this.opacity }, rootClass: { highlight: true, free: this.#bl }, path: { d: this.#fl.toSVGPath() } }, false, true));
-        this.#yl = t2.drawLayer.drawOutline({ rootClass: { highlightOutline: true, free: this.#bl }, bbox: this.#ul.box, path: { d: this.#ul.toSVGPath() } }, this.#bl);
-        this.#ml && (this.#ml.style.clipPath = this.#dl);
-      }
-    }
-    static #El([t2, e2, i2, n2], s2) {
-      switch (s2) {
-        case 90:
-          return [1 - e2 - n2, t2, n2, i2];
-        case 180:
-          return [1 - t2 - i2, 1 - e2 - n2, i2, n2];
-        case 270:
-          return [e2, 1 - t2 - i2, n2, i2];
-      }
-      return [t2, e2, i2, n2];
-    }
     rotate(t2) {
+      var _a4, _b, _c3;
       const { drawLayer: e2 } = this.parent;
       let i2;
-      if (this.#bl) {
+      if (__privateGet(this, _bl)) {
         t2 = (t2 - this.rotation + 360) % 360;
-        i2 = _HighlightEditor.#El(this.#fl.box, t2);
-      } else i2 = _HighlightEditor.#El([this.x, this.y, this.width, this.height], t2);
-      e2.updateProperties(this.#_, { bbox: i2, root: { "data-main-rotation": t2 } });
-      e2.updateProperties(this.#yl, { bbox: _HighlightEditor.#El(this.#ul.box, t2), root: { "data-main-rotation": t2 } });
+        i2 = __privateMethod(_a4 = _HighlightEditor, _HighlightEditor_static, El_fn).call(_a4, __privateGet(this, _fl).box, t2);
+      } else i2 = __privateMethod(_b = _HighlightEditor, _HighlightEditor_static, El_fn).call(_b, [this.x, this.y, this.width, this.height], t2);
+      e2.updateProperties(__privateGet(this, __4), { bbox: i2, root: { "data-main-rotation": t2 } });
+      e2.updateProperties(__privateGet(this, _yl), { bbox: __privateMethod(_c3 = _HighlightEditor, _HighlightEditor_static, El_fn).call(_c3, __privateGet(this, _ul).box, t2), root: { "data-main-rotation": t2 } });
     }
     render() {
       if (this.div) return this.div;
       const t2 = super.render();
-      if (this.#ye) {
-        t2.setAttribute("aria-label", this.#ye);
+      if (__privateGet(this, _ye2)) {
+        t2.setAttribute("aria-label", __privateGet(this, _ye2));
         t2.setAttribute("role", "mark");
       }
-      this.#bl ? t2.classList.add("free") : this.div.addEventListener("keydown", this.#kl.bind(this), { signal: this._uiManager._signal });
-      const e2 = this.#ml = document.createElement("div");
+      __privateGet(this, _bl) ? t2.classList.add("free") : this.div.addEventListener("keydown", __privateMethod(this, _HighlightEditor_instances, kl_fn).bind(this), { signal: this._uiManager._signal });
+      const e2 = __privateSet(this, _ml, document.createElement("div"));
       t2.append(e2);
       e2.setAttribute("aria-hidden", "true");
       e2.className = "internal";
-      e2.style.clipPath = this.#dl;
+      e2.style.clipPath = __privateGet(this, _dl);
       this.setDims();
-      bindEvents(this, this.#ml, ["pointerover", "pointerleave"]);
+      bindEvents(this, __privateGet(this, _ml), ["pointerover", "pointerleave"]);
       this.enableEditing();
       return t2;
     }
     pointerover() {
-      this.isSelected || this.parent?.drawLayer.updateProperties(this.#yl, { rootClass: { hovered: true } });
+      this.isSelected || this.parent?.drawLayer.updateProperties(__privateGet(this, _yl), { rootClass: { hovered: true } });
     }
     pointerleave() {
-      this.isSelected || this.parent?.drawLayer.updateProperties(this.#yl, { rootClass: { hovered: false } });
-    }
-    #kl(t2) {
-      _HighlightEditor._keyboardManager.exec(this, t2);
+      this.isSelected || this.parent?.drawLayer.updateProperties(__privateGet(this, _yl), { rootClass: { hovered: false } });
     }
     _moveCaret(t2) {
       this.parent.unselect(this);
       switch (t2) {
         case 0:
         case 2:
-          this.#Dl(true);
+          __privateMethod(this, _HighlightEditor_instances, Dl_fn).call(this, true);
           break;
         case 1:
         case 3:
-          this.#Dl(false);
+          __privateMethod(this, _HighlightEditor_instances, Dl_fn).call(this, false);
       }
-    }
-    #Dl(t2) {
-      if (!this.#ll) return;
-      const e2 = window.getSelection();
-      t2 ? e2.setPosition(this.#ll, this.#hl) : e2.setPosition(this.#pl, this.#gl);
     }
     select() {
       super.select();
-      this.#yl && this.parent?.drawLayer.updateProperties(this.#yl, { rootClass: { hovered: false, selected: true } });
+      __privateGet(this, _yl) && this.parent?.drawLayer.updateProperties(__privateGet(this, _yl), { rootClass: { hovered: false, selected: true } });
     }
     unselect() {
       super.unselect();
-      if (this.#yl) {
-        this.parent?.drawLayer.updateProperties(this.#yl, { rootClass: { selected: false } });
-        this.#bl || this.#Dl(false);
+      if (__privateGet(this, _yl)) {
+        this.parent?.drawLayer.updateProperties(__privateGet(this, _yl), { rootClass: { selected: false } });
+        __privateGet(this, _bl) || __privateMethod(this, _HighlightEditor_instances, Dl_fn).call(this, false);
       }
     }
     get _mustFixPosition() {
-      return !this.#bl;
+      return !__privateGet(this, _bl);
     }
     show(t2 = this._isVisible) {
       super.show(t2);
       if (this.parent) {
-        this.parent.drawLayer.updateProperties(this.#_, { rootClass: { hidden: !t2 } });
-        this.parent.drawLayer.updateProperties(this.#yl, { rootClass: { hidden: !t2 } });
+        this.parent.drawLayer.updateProperties(__privateGet(this, __4), { rootClass: { hidden: !t2 } });
+        this.parent.drawLayer.updateProperties(__privateGet(this, _yl), { rootClass: { hidden: !t2 } });
       }
-    }
-    #Tl() {
-      return this.#bl ? this.rotation : 0;
-    }
-    #Ml() {
-      if (this.#bl) return null;
-      const [t2, e2] = this.pageDimensions, [i2, n2] = this.pageTranslation, s2 = this.#cl, r2 = new Float32Array(8 * s2.length);
-      let a2 = 0;
-      for (const { x: o2, y: l2, width: h2, height: c2 } of s2) {
-        const s3 = o2 * t2 + i2, d2 = (1 - l2) * e2 + n2;
-        r2[a2] = r2[a2 + 4] = s3;
-        r2[a2 + 1] = r2[a2 + 3] = d2;
-        r2[a2 + 2] = r2[a2 + 6] = s3 + h2 * t2;
-        r2[a2 + 5] = r2[a2 + 7] = d2 - c2 * e2;
-        a2 += 8;
-      }
-      return r2;
-    }
-    #Pl(t2) {
-      return this.#fl.serialize(t2, this.#Tl());
     }
     static startHighlighting(t2, e2, { target: i2, x: n2, y: s2 }) {
       const { x: r2, y: a2, width: o2, height: l2 } = i2.getBoundingClientRect(), h2 = new AbortController(), c2 = t2.combinedSignal(h2), pointerUpCallback = (e3) => {
         h2.abort();
-        this.#Il(t2, e3);
+        __privateMethod(this, _HighlightEditor_static, Il_fn).call(this, t2, e3);
       };
       window.addEventListener("blur", pointerUpCallback, { signal: c2 });
       window.addEventListener("pointerup", pointerUpCallback, { signal: c2 });
       window.addEventListener("pointerdown", stopEvent, { capture: true, passive: false, signal: c2 });
       window.addEventListener("contextmenu", noContextMenu, { signal: c2 });
-      i2.addEventListener("pointermove", this.#Fl.bind(this, t2), { signal: c2 });
+      i2.addEventListener("pointermove", __privateMethod(this, _HighlightEditor_static, Fl_fn).bind(this, t2), { signal: c2 });
       this._freeHighlight = new FreeHighlightOutliner({ x: n2, y: s2 }, [r2, a2, o2, l2], t2.scale, this._defaultThickness / 2, e2, 1e-3);
       ({ id: this._freeHighlightId, clipPathId: this._freeHighlightClipId } = t2.drawLayer.draw({ bbox: [0, 0, 1, 1], root: { viewBox: "0 0 1 1", fill: this._defaultColor, "fill-opacity": this._defaultOpacity }, rootClass: { highlight: true, free: true }, path: { d: this._freeHighlight.toSVGPath() } }, true, true));
     }
-    static #Fl(t2, e2) {
-      this._freeHighlight.add(e2) && t2.drawLayer.updateProperties(this._freeHighlightId, { path: { d: this._freeHighlight.toSVGPath() } });
-    }
-    static #Il(t2, e2) {
-      this._freeHighlight.isEmpty() ? t2.drawLayer.remove(this._freeHighlightId) : t2.createAndAddNewEditor(e2, false, { highlightId: this._freeHighlightId, highlightOutlines: this._freeHighlight.getOutlines(), clipPathId: this._freeHighlightClipId, methodOfCreation: "main_toolbar" });
-      this._freeHighlightId = -1;
-      this._freeHighlight = null;
-      this._freeHighlightClipId = "";
-    }
     static async deserialize(t2, e2, i2) {
+      var _a4, _b, _c3, _d2;
       let n2 = null;
       if (t2 instanceof HighlightAnnotationElement) {
         const { data: { quadPoints: e3, rect: i3, rotation: s3, id: r3, color: a3, opacity: o3, popupRef: l3, richText: h3, contentsObj: c3, creationDate: d3, modificationDate: u3 }, parent: { page: { pageNumber: p3 } } } = t2;
@@ -20748,27 +21448,27 @@
       const { color: s2, quadPoints: r2, inkLists: a2, outlines: o2, opacity: l2 } = t2, h2 = await super.deserialize(t2, e2, i2);
       h2.color = Util.makeHexColor(...s2);
       h2.opacity = l2 || 1;
-      a2 && (h2.#Lo = t2.thickness);
+      a2 && __privateSet(h2, _Lo2, t2.thickness);
       h2._initialData = n2;
       t2.comment && h2.setCommentData(t2);
       const [c2, d2] = h2.pageDimensions, [u2, p2] = h2.pageTranslation;
       if (r2) {
-        const t3 = h2.#cl = [];
+        const t3 = __privateSet(h2, _cl, []);
         for (let e3 = 0; e3 < r2.length; e3 += 8) t3.push({ x: (r2[e3] - u2) / c2, y: 1 - (r2[e3 + 1] - p2) / d2, width: (r2[e3 + 2] - r2[e3]) / c2, height: (r2[e3 + 1] - r2[e3 + 5]) / d2 });
-        h2.#Al();
-        h2.#xl();
+        __privateMethod(_a4 = h2, _HighlightEditor_instances, Al_fn).call(_a4);
+        __privateMethod(_b = h2, _HighlightEditor_instances, xl_fn).call(_b);
         h2.rotate(h2.rotation);
       } else if (a2 || o2) {
-        h2.#bl = true;
-        const t3 = (a2 || o2.points)[0], i3 = { x: t3[0] - u2, y: d2 - (t3[1] - p2) }, n3 = new FreeHighlightOutliner(i3, [0, 0, c2, d2], 1, h2.#Lo / 2, true, 1e-3);
+        __privateSet(h2, _bl, true);
+        const t3 = (a2 || o2.points)[0], i3 = { x: t3[0] - u2, y: d2 - (t3[1] - p2) }, n3 = new FreeHighlightOutliner(i3, [0, 0, c2, d2], 1, __privateGet(h2, _Lo2) / 2, true, 1e-3);
         for (let e3 = 0, s4 = t3.length; e3 < s4; e3 += 2) {
           i3.x = t3[e3] - u2;
           i3.y = d2 - (t3[e3 + 1] - p2);
           n3.add(i3);
         }
         const { id: s3, clipPathId: r3 } = e2.drawLayer.draw({ bbox: [0, 0, 1, 1], root: { viewBox: "0 0 1 1", fill: h2.color, "fill-opacity": h2._defaultOpacity }, rootClass: { highlight: true, free: true }, path: { d: n3.toSVGPath() } }, true, true);
-        h2.#wl({ highlightOutlines: n3.getOutlines(), highlightId: s3, clipPathId: r3 });
-        h2.#xl();
+        __privateMethod(_c3 = h2, _HighlightEditor_instances, wl_fn).call(_c3, { highlightOutlines: n3.getOutlines(), highlightId: s3, clipPathId: r3 });
+        __privateMethod(_d2 = h2, _HighlightEditor_instances, xl_fn).call(_d2);
         h2.rotate(h2.parentRotation);
       }
       return h2;
@@ -20777,15 +21477,11 @@
       if (this.isEmpty() || t2) return null;
       if (this.deleted) return this.serializeDeleted();
       const e2 = AnnotationEditor._colorManager.convert(this._uiManager.getNonHCMColor(this.color)), i2 = super.serialize(t2);
-      Object.assign(i2, { color: e2, opacity: this.opacity, thickness: this.#Lo, quadPoints: this.#Ml(), outlines: this.#Pl(i2.rect) });
+      Object.assign(i2, { color: e2, opacity: this.opacity, thickness: __privateGet(this, _Lo2), quadPoints: __privateMethod(this, _HighlightEditor_instances, Ml_fn).call(this), outlines: __privateMethod(this, _HighlightEditor_instances, Pl_fn).call(this, i2.rect) });
       this.addComment(i2);
-      if (this.annotationElementId && !this.#So(i2)) return null;
+      if (this.annotationElementId && !__privateMethod(this, _HighlightEditor_instances, So_fn2).call(this, i2)) return null;
       i2.id = this.annotationElementId;
       return i2;
-    }
-    #So(t2) {
-      const { color: e2 } = this._initialData;
-      return this.hasEditedComment || t2.color.some((t3, i2) => t3 !== e2[i2]);
     }
     renderAnnotationElement(t2) {
       if (this.deleted) {
@@ -20799,8 +21495,193 @@
       return false;
     }
   };
+  _ll = new WeakMap();
+  _hl = new WeakMap();
+  _cl = new WeakMap();
+  _dl = new WeakMap();
+  _a3 = new WeakMap();
+  _ul = new WeakMap();
+  _pl = new WeakMap();
+  _gl = new WeakMap();
+  _ml = new WeakMap();
+  _fl = new WeakMap();
+  __4 = new WeakMap();
+  _bl = new WeakMap();
+  _Qo2 = new WeakMap();
+  _Zo2 = new WeakMap();
+  _yl = new WeakMap();
+  _ye2 = new WeakMap();
+  _Lo2 = new WeakMap();
+  _vl = new WeakMap();
+  _HighlightEditor_instances = new WeakSet();
+  Al_fn = function() {
+    const t2 = new HighlightOutliner(__privateGet(this, _cl), 1e-3);
+    __privateSet(this, _fl, t2.getOutlines());
+    [this.x, this.y, this.width, this.height] = __privateGet(this, _fl).box;
+    const e2 = new HighlightOutliner(__privateGet(this, _cl), 25e-4, 1e-3, "ltr" === this._uiManager.direction);
+    __privateSet(this, _ul, e2.getOutlines());
+    const { firstPoint: i2 } = __privateGet(this, _fl);
+    __privateSet(this, _Qo2, [(i2[0] - this.x) / this.width, (i2[1] - this.y) / this.height]);
+    const { lastPoint: n2 } = __privateGet(this, _ul);
+    __privateSet(this, _Zo2, [(n2[0] - this.x) / this.width, (n2[1] - this.y) / this.height]);
+  };
+  wl_fn = function({ highlightOutlines: t2, highlightId: e2, clipPathId: i2 }) {
+    var _a4, _b;
+    __privateSet(this, _fl, t2);
+    __privateSet(this, _ul, t2.getNewOutline(__privateGet(this, _Lo2) / 2 + 1.5, 25e-4));
+    if (e2 >= 0) {
+      __privateSet(this, __4, e2);
+      __privateSet(this, _dl, i2);
+      this.parent.drawLayer.finalizeDraw(e2, { bbox: t2.box, path: { d: t2.toSVGPath() } });
+      __privateSet(this, _yl, this.parent.drawLayer.drawOutline({ rootClass: { highlightOutline: true, free: true }, bbox: __privateGet(this, _ul).box, path: { d: __privateGet(this, _ul).toSVGPath() } }, true));
+    } else if (this.parent) {
+      const e3 = this.parent.viewport.rotation;
+      this.parent.drawLayer.updateProperties(__privateGet(this, __4), { bbox: __privateMethod(_a4 = _HighlightEditor, _HighlightEditor_static, El_fn).call(_a4, __privateGet(this, _fl).box, (e3 - this.rotation + 360) % 360), path: { d: t2.toSVGPath() } });
+      this.parent.drawLayer.updateProperties(__privateGet(this, _yl), { bbox: __privateMethod(_b = _HighlightEditor, _HighlightEditor_static, El_fn).call(_b, __privateGet(this, _ul).box, e3), path: { d: __privateGet(this, _ul).toSVGPath() } });
+    }
+    const [n2, s2, r2, a2] = t2.box;
+    switch (this.rotation) {
+      case 0:
+        this.x = n2;
+        this.y = s2;
+        this.width = r2;
+        this.height = a2;
+        break;
+      case 90: {
+        const [t3, e3] = this.parentDimensions;
+        this.x = s2;
+        this.y = 1 - n2;
+        this.width = r2 * e3 / t3;
+        this.height = a2 * t3 / e3;
+        break;
+      }
+      case 180:
+        this.x = 1 - n2;
+        this.y = 1 - s2;
+        this.width = r2;
+        this.height = a2;
+        break;
+      case 270: {
+        const [t3, e3] = this.parentDimensions;
+        this.x = 1 - s2;
+        this.y = n2;
+        this.width = r2 * e3 / t3;
+        this.height = a2 * t3 / e3;
+        break;
+      }
+    }
+    const { firstPoint: o2 } = t2;
+    __privateSet(this, _Qo2, [(o2[0] - n2) / r2, (o2[1] - s2) / a2]);
+    const { lastPoint: l2 } = __privateGet(this, _ul);
+    __privateSet(this, _Zo2, [(l2[0] - n2) / r2, (l2[1] - s2) / a2]);
+  };
+  za_fn3 = function(t2) {
+    const setColorAndOpacity = (t3, e3) => {
+      this.color = t3;
+      this.opacity = e3;
+      this.onUpdatedColor();
+    }, e2 = this.color, i2 = this.opacity;
+    this.addCommands({ cmd: setColorAndOpacity.bind(this, t2, _HighlightEditor._defaultOpacity), undo: setColorAndOpacity.bind(this, e2, i2), post: this._uiManager.updateUI.bind(this._uiManager, this), mustExec: true, type: v.HIGHLIGHT_COLOR, overwriteIfSameType: true, keepUndo: true });
+    this._reportTelemetry({ action: "color_changed", color: this._uiManager.getNonHCMColorName(t2) }, true);
+  };
+  Cl_fn = function(t2) {
+    const e2 = __privateGet(this, _Lo2), setThickness = (t3) => {
+      __privateSet(this, _Lo2, t3);
+      __privateMethod(this, _HighlightEditor_instances, Sl_fn).call(this, t3);
+    };
+    this.addCommands({ cmd: setThickness.bind(this, t2), undo: setThickness.bind(this, e2), post: this._uiManager.updateUI.bind(this._uiManager, this), mustExec: true, type: v.INK_THICKNESS, overwriteIfSameType: true, keepUndo: true });
+    this._reportTelemetry({ action: "thickness_changed", thickness: t2 }, true);
+  };
+  Sl_fn = function(t2) {
+    if (__privateGet(this, _bl)) {
+      __privateMethod(this, _HighlightEditor_instances, wl_fn).call(this, { highlightOutlines: __privateGet(this, _fl).getNewOutline(t2 / 2) });
+      this.fixAndSetPosition();
+      this.setDims();
+    }
+  };
+  _l_fn = function() {
+    if (null !== __privateGet(this, __4) && this.parent) {
+      this.parent.drawLayer.remove(__privateGet(this, __4));
+      __privateSet(this, __4, null);
+      this.parent.drawLayer.remove(__privateGet(this, _yl));
+      __privateSet(this, _yl, null);
+    }
+  };
+  xl_fn = function(t2 = this.parent) {
+    if (null === __privateGet(this, __4)) {
+      ({ id: __privateWrapper(this, __4)._, clipPathId: __privateWrapper(this, _dl)._ } = t2.drawLayer.draw({ bbox: __privateGet(this, _fl).box, root: { viewBox: "0 0 1 1", fill: this.color, "fill-opacity": this.opacity }, rootClass: { highlight: true, free: __privateGet(this, _bl) }, path: { d: __privateGet(this, _fl).toSVGPath() } }, false, true));
+      __privateSet(this, _yl, t2.drawLayer.drawOutline({ rootClass: { highlightOutline: true, free: __privateGet(this, _bl) }, bbox: __privateGet(this, _ul).box, path: { d: __privateGet(this, _ul).toSVGPath() } }, __privateGet(this, _bl)));
+      __privateGet(this, _ml) && (__privateGet(this, _ml).style.clipPath = __privateGet(this, _dl));
+    }
+  };
+  _HighlightEditor_static = new WeakSet();
+  El_fn = function([t2, e2, i2, n2], s2) {
+    switch (s2) {
+      case 90:
+        return [1 - e2 - n2, t2, n2, i2];
+      case 180:
+        return [1 - t2 - i2, 1 - e2 - n2, i2, n2];
+      case 270:
+        return [e2, 1 - t2 - i2, n2, i2];
+    }
+    return [t2, e2, i2, n2];
+  };
+  kl_fn = function(t2) {
+    _HighlightEditor._keyboardManager.exec(this, t2);
+  };
+  Dl_fn = function(t2) {
+    if (!__privateGet(this, _ll)) return;
+    const e2 = window.getSelection();
+    t2 ? e2.setPosition(__privateGet(this, _ll), __privateGet(this, _hl)) : e2.setPosition(__privateGet(this, _pl), __privateGet(this, _gl));
+  };
+  Tl_fn = function() {
+    return __privateGet(this, _bl) ? this.rotation : 0;
+  };
+  Ml_fn = function() {
+    if (__privateGet(this, _bl)) return null;
+    const [t2, e2] = this.pageDimensions, [i2, n2] = this.pageTranslation, s2 = __privateGet(this, _cl), r2 = new Float32Array(8 * s2.length);
+    let a2 = 0;
+    for (const { x: o2, y: l2, width: h2, height: c2 } of s2) {
+      const s3 = o2 * t2 + i2, d2 = (1 - l2) * e2 + n2;
+      r2[a2] = r2[a2 + 4] = s3;
+      r2[a2 + 1] = r2[a2 + 3] = d2;
+      r2[a2 + 2] = r2[a2 + 6] = s3 + h2 * t2;
+      r2[a2 + 5] = r2[a2 + 7] = d2 - c2 * e2;
+      a2 += 8;
+    }
+    return r2;
+  };
+  Pl_fn = function(t2) {
+    return __privateGet(this, _fl).serialize(t2, __privateMethod(this, _HighlightEditor_instances, Tl_fn).call(this));
+  };
+  Fl_fn = function(t2, e2) {
+    this._freeHighlight.add(e2) && t2.drawLayer.updateProperties(this._freeHighlightId, { path: { d: this._freeHighlight.toSVGPath() } });
+  };
+  Il_fn = function(t2, e2) {
+    this._freeHighlight.isEmpty() ? t2.drawLayer.remove(this._freeHighlightId) : t2.createAndAddNewEditor(e2, false, { highlightId: this._freeHighlightId, highlightOutlines: this._freeHighlight.getOutlines(), clipPathId: this._freeHighlightClipId, methodOfCreation: "main_toolbar" });
+    this._freeHighlightId = -1;
+    this._freeHighlight = null;
+    this._freeHighlightClipId = "";
+  };
+  So_fn2 = function(t2) {
+    const { color: e2 } = this._initialData;
+    return this.hasEditedComment || t2.color.some((t3, i2) => t3 !== e2[i2]);
+  };
+  __privateAdd(_HighlightEditor, _HighlightEditor_static);
+  __publicField(_HighlightEditor, "_defaultColor", null);
+  __publicField(_HighlightEditor, "_defaultOpacity", 1);
+  __publicField(_HighlightEditor, "_defaultThickness", 12);
+  __publicField(_HighlightEditor, "_type", "highlight");
+  __publicField(_HighlightEditor, "_editorType", y.HIGHLIGHT);
+  __publicField(_HighlightEditor, "_freeHighlightId", -1);
+  __publicField(_HighlightEditor, "_freeHighlight", null);
+  __publicField(_HighlightEditor, "_freeHighlightClipId", "");
+  var HighlightEditor = _HighlightEditor;
+  var _Ol;
   var DrawingOptions = class {
-    #Ol = /* @__PURE__ */ Object.create(null);
+    constructor() {
+      __privateAdd(this, _Ol, /* @__PURE__ */ Object.create(null));
+    }
     updateProperty(t2, e2) {
       this[t2] = e2;
       this.updateSVGProperty(t2, e2);
@@ -20809,15 +21690,15 @@
       if (t2) for (const [e2, i2] of Object.entries(t2)) e2.startsWith("_") || this.updateProperty(e2, i2);
     }
     updateSVGProperty(t2, e2) {
-      this.#Ol[t2] = e2;
+      __privateGet(this, _Ol)[t2] = e2;
     }
     toSVGProperties() {
-      const t2 = this.#Ol;
-      this.#Ol = /* @__PURE__ */ Object.create(null);
+      const t2 = __privateGet(this, _Ol);
+      __privateSet(this, _Ol, /* @__PURE__ */ Object.create(null));
       return { root: t2 };
     }
     reset() {
-      this.#Ol = /* @__PURE__ */ Object.create(null);
+      __privateSet(this, _Ol, /* @__PURE__ */ Object.create(null));
     }
     updateAll(t2 = this) {
       this.updateProperties(t2);
@@ -20826,20 +21707,17 @@
       unreachable("Not implemented");
     }
   };
-  var DrawingEditor = class _DrawingEditor extends AnnotationEditor {
-    #Rl = null;
-    #Bl;
-    _colorPicker = null;
-    _drawId = null;
-    static _currentDrawId = -1;
-    static _currentParent = null;
-    static #Ll = null;
-    static #Nl = null;
-    static #Ul = null;
-    static _INNER_MARGIN = 3;
+  _Ol = new WeakMap();
+  var _Rl, _Bl, _Ll, _Nl, _Ul, _DrawingEditor_instances, Hl_fn, zl_fn, _l_fn2, xl_fn2, Vl_fn, jl_fn, Gl_fn, Wl_fn;
+  var _DrawingEditor = class _DrawingEditor extends AnnotationEditor {
     constructor(t2) {
       super(t2);
-      this.#Bl = t2.mustBeCommitted || false;
+      __privateAdd(this, _DrawingEditor_instances);
+      __privateAdd(this, _Rl, null);
+      __privateAdd(this, _Bl);
+      __publicField(this, "_colorPicker", null);
+      __publicField(this, "_drawId", null);
+      __privateSet(this, _Bl, t2.mustBeCommitted || false);
       this._addOutlines(t2);
     }
     onUpdatedColor() {
@@ -20851,23 +21729,9 @@
     }
     _addOutlines(t2) {
       if (t2.drawOutlines) {
-        this.#Hl(t2);
-        this.#xl();
+        __privateMethod(this, _DrawingEditor_instances, Hl_fn).call(this, t2);
+        __privateMethod(this, _DrawingEditor_instances, xl_fn2).call(this);
       }
-    }
-    #Hl({ drawOutlines: t2, drawId: e2, drawingOptions: i2 }) {
-      this.#Rl = t2;
-      this._drawingOptions ||= i2;
-      this.annotationElementId || this._uiManager.a11yAlert(AnnotationEditor._l10nAlert[this.editorType]);
-      if (e2 >= 0) {
-        this._drawId = e2;
-        this.parent.drawLayer.finalizeDraw(e2, t2.defaultProperties);
-      } else this._drawId = this.#zl(t2, this.parent);
-      this.#Gl(t2.box);
-    }
-    #zl(t2, e2) {
-      const { id: i2 } = e2.drawLayer.draw(_DrawingEditor._mergeSVGProperties(this._drawingOptions.toSVGProperties(), t2.defaultSVGProperties), false, false);
-      return i2;
     }
     static _mergeSVGProperties(t2, e2) {
       const i2 = new Set(Object.keys(t2));
@@ -20890,7 +21754,7 @@
       const i2 = this.typesMap.get(t2);
       i2 && this._defaultDrawingOptions.updateProperty(i2, e2);
       if (this._currentParent) {
-        _DrawingEditor.#Ll.updateProperty(i2, e2);
+        __privateGet(_DrawingEditor, _Ll).updateProperty(i2, e2);
         this._currentParent.drawLayer.updateProperties(this._currentDrawId, this._defaultDrawingOptions.toSVGProperties());
       }
     }
@@ -20911,8 +21775,8 @@
     _updateProperty(t2, e2, i2) {
       const n2 = this._drawingOptions, s2 = n2[e2], setter = (i3) => {
         n2.updateProperty(e2, i3);
-        const s3 = this.#Rl.updateProperty(e2, i3);
-        s3 && this.#Gl(s3);
+        const s3 = __privateGet(this, _Rl).updateProperty(e2, i3);
+        s3 && __privateMethod(this, _DrawingEditor_instances, Gl_fn).call(this, s3);
         this.parent?.drawLayer.updateProperties(this._drawId, n2.toSVGProperties());
         t2 === this.colorType ? this.onUpdatedColor() : t2 === this.opacityType && this.onUpdatedOpacity();
       };
@@ -20922,8 +21786,8 @@
       const i2 = this.constructor.typesMap.get(this.colorType), n2 = this.constructor.typesMap.get(this.opacityType), s2 = this._drawingOptions, r2 = s2[i2], a2 = s2[n2], setter = (t3, e3) => {
         s2.updateProperty(i2, t3);
         s2.updateProperty(n2, e3);
-        this.#Rl.updateProperty(i2, t3);
-        this.#Rl.updateProperty(n2, e3);
+        __privateGet(this, _Rl).updateProperty(i2, t3);
+        __privateGet(this, _Rl).updateProperty(n2, e3);
         this.parent?.drawLayer.updateProperties(this._drawId, s2.toSVGProperties());
         this.onUpdatedColor();
         this.onUpdatedOpacity();
@@ -20931,16 +21795,16 @@
       this.addCommands({ cmd: setter.bind(this, t2, e2), undo: setter.bind(this, r2, a2), post: this._uiManager.updateUI.bind(this._uiManager, this), mustExec: true, type: v.INK_COLOR_AND_OPACITY, overwriteIfSameType: true, keepUndo: true });
     }
     _onResizing() {
-      this.parent?.drawLayer.updateProperties(this._drawId, _DrawingEditor._mergeSVGProperties(this.#Rl.getPathResizingSVGProperties(this.#jl()), { bbox: this.#Wl() }));
+      this.parent?.drawLayer.updateProperties(this._drawId, _DrawingEditor._mergeSVGProperties(__privateGet(this, _Rl).getPathResizingSVGProperties(__privateMethod(this, _DrawingEditor_instances, jl_fn).call(this)), { bbox: __privateMethod(this, _DrawingEditor_instances, Wl_fn).call(this) }));
     }
     _onResized() {
-      this.parent?.drawLayer.updateProperties(this._drawId, _DrawingEditor._mergeSVGProperties(this.#Rl.getPathResizedSVGProperties(this.#jl()), { bbox: this.#Wl() }));
+      this.parent?.drawLayer.updateProperties(this._drawId, _DrawingEditor._mergeSVGProperties(__privateGet(this, _Rl).getPathResizedSVGProperties(__privateMethod(this, _DrawingEditor_instances, jl_fn).call(this)), { bbox: __privateMethod(this, _DrawingEditor_instances, Wl_fn).call(this) }));
     }
     _onTranslating(t2, e2) {
-      this.parent?.drawLayer.updateProperties(this._drawId, { bbox: this.#Wl() });
+      this.parent?.drawLayer.updateProperties(this._drawId, { bbox: __privateMethod(this, _DrawingEditor_instances, Wl_fn).call(this) });
     }
     _onTranslated() {
-      this.parent?.drawLayer.updateProperties(this._drawId, _DrawingEditor._mergeSVGProperties(this.#Rl.getPathTranslatedSVGProperties(this.#jl(), this.parentDimensions), { bbox: this.#Wl() }));
+      this.parent?.drawLayer.updateProperties(this._drawId, _DrawingEditor._mergeSVGProperties(__privateGet(this, _Rl).getPathTranslatedSVGProperties(__privateMethod(this, _DrawingEditor_instances, jl_fn).call(this), this.parentDimensions), { bbox: __privateMethod(this, _DrawingEditor_instances, Wl_fn).call(this) }));
     }
     _onStartDragging() {
       this.parent?.drawLayer.updateProperties(this._drawId, { rootClass: { moving: true } });
@@ -20970,23 +21834,23 @@
     onceAdded(t2) {
       this.annotationElementId || this.parent.addUndoableEditor(this);
       this._isDraggable = true;
-      if (this.#Bl) {
-        this.#Bl = false;
+      if (__privateGet(this, _Bl)) {
+        __privateSet(this, _Bl, false);
         this.commit();
         this.parent.setSelected(this);
         t2 && this.isOnScreen && this.div.focus();
       }
     }
     remove() {
-      this.#_l();
+      __privateMethod(this, _DrawingEditor_instances, _l_fn2).call(this);
       super.remove();
     }
     rebuild() {
       if (this.parent) {
         super.rebuild();
         if (null !== this.div) {
-          this.#xl();
-          this.#Gl(this.#Rl.box);
+          __privateMethod(this, _DrawingEditor_instances, xl_fn2).call(this);
+          __privateMethod(this, _DrawingEditor_instances, Gl_fn).call(this, __privateGet(this, _Rl).box);
           this.isAttachedToDOM || this.parent.add(this);
         }
       }
@@ -20995,104 +21859,20 @@
       let e2 = false;
       if (this.parent && !t2) {
         this._uiManager.removeShouldRescale(this);
-        this.#_l();
+        __privateMethod(this, _DrawingEditor_instances, _l_fn2).call(this);
       } else if (t2) {
         this._uiManager.addShouldRescale(this);
-        this.#xl(t2);
+        __privateMethod(this, _DrawingEditor_instances, xl_fn2).call(this, t2);
         e2 = !this.parent && this.div?.classList.contains("selectedEditor");
       }
       super.setParent(t2);
       e2 && this.select();
     }
-    #_l() {
-      if (null !== this._drawId && this.parent) {
-        this.parent.drawLayer.remove(this._drawId);
-        this._drawId = null;
-        this._drawingOptions.reset();
-      }
-    }
-    #xl(t2 = this.parent) {
-      if (null === this._drawId || this.parent !== t2) if (null === this._drawId) {
-        this._drawingOptions.updateAll();
-        this._drawId = this.#zl(this.#Rl, t2);
-      } else this.parent.drawLayer.updateParent(this._drawId, t2.drawLayer);
-    }
-    #Vl([t2, e2, i2, n2]) {
-      const { parentDimensions: [s2, r2], rotation: a2 } = this;
-      switch (a2) {
-        case 90:
-          return [e2, 1 - t2, i2 * (r2 / s2), n2 * (s2 / r2)];
-        case 180:
-          return [1 - t2, 1 - e2, i2, n2];
-        case 270:
-          return [1 - e2, t2, i2 * (r2 / s2), n2 * (s2 / r2)];
-        default:
-          return [t2, e2, i2, n2];
-      }
-    }
-    #jl() {
-      const { x: t2, y: e2, width: i2, height: n2, parentDimensions: [s2, r2], rotation: a2 } = this;
-      switch (a2) {
-        case 90:
-          return [1 - e2, t2, i2 * (s2 / r2), n2 * (r2 / s2)];
-        case 180:
-          return [1 - t2, 1 - e2, i2, n2];
-        case 270:
-          return [e2, 1 - t2, i2 * (s2 / r2), n2 * (r2 / s2)];
-        default:
-          return [t2, e2, i2, n2];
-      }
-    }
-    #Gl(t2) {
-      [this.x, this.y, this.width, this.height] = this.#Vl(t2);
-      if (this.div) {
-        this.fixAndSetPosition();
-        this.setDims();
-      }
-      this._onResized();
-    }
-    #Wl() {
-      const { x: t2, y: e2, width: i2, height: n2, rotation: s2, parentRotation: r2, parentDimensions: [a2, o2] } = this;
-      switch ((4 * s2 + r2) / 90) {
-        case 1:
-          return [1 - e2 - n2, t2, n2, i2];
-        case 2:
-          return [1 - t2 - i2, 1 - e2 - n2, i2, n2];
-        case 3:
-          return [e2, 1 - t2 - i2, n2, i2];
-        case 4:
-          return [t2, e2 - i2 * (a2 / o2), n2 * (o2 / a2), i2 * (a2 / o2)];
-        case 5:
-          return [1 - e2, t2, i2 * (a2 / o2), n2 * (o2 / a2)];
-        case 6:
-          return [1 - t2 - n2 * (o2 / a2), 1 - e2, n2 * (o2 / a2), i2 * (a2 / o2)];
-        case 7:
-          return [e2 - i2 * (a2 / o2), 1 - t2 - n2 * (o2 / a2), i2 * (a2 / o2), n2 * (o2 / a2)];
-        case 8:
-          return [t2 - i2, e2 - n2, i2, n2];
-        case 9:
-          return [1 - e2, t2 - i2, n2, i2];
-        case 10:
-          return [1 - t2, 1 - e2, i2, n2];
-        case 11:
-          return [e2 - n2, 1 - t2, n2, i2];
-        case 12:
-          return [t2 - n2 * (o2 / a2), e2, n2 * (o2 / a2), i2 * (a2 / o2)];
-        case 13:
-          return [1 - e2 - i2 * (a2 / o2), t2 - n2 * (o2 / a2), i2 * (a2 / o2), n2 * (o2 / a2)];
-        case 14:
-          return [1 - t2, 1 - e2 - i2 * (a2 / o2), n2 * (o2 / a2), i2 * (a2 / o2)];
-        case 15:
-          return [e2, 1 - t2, i2 * (a2 / o2), n2 * (o2 / a2)];
-        default:
-          return [t2, e2, i2, n2];
-      }
-    }
     rotate() {
-      this.parent && this.parent.drawLayer.updateProperties(this._drawId, _DrawingEditor._mergeSVGProperties({ bbox: this.#Wl() }, this.#Rl.updateRotation((this.parentRotation - this.rotation + 360) % 360)));
+      this.parent && this.parent.drawLayer.updateProperties(this._drawId, _DrawingEditor._mergeSVGProperties({ bbox: __privateMethod(this, _DrawingEditor_instances, Wl_fn).call(this) }, __privateGet(this, _Rl).updateRotation((this.parentRotation - this.rotation + 360) % 360)));
     }
     onScaleChanging() {
-      this.parent && this.#Gl(this.#Rl.updateParentDimensions(this.parentDimensions, this.parent.scale));
+      this.parent && __privateMethod(this, _DrawingEditor_instances, Gl_fn).call(this, __privateGet(this, _Rl).updateParentDimensions(this.parentDimensions, this.parent.scale));
     }
     static onScaleChangingWhenDrawing() {
     }
@@ -21121,7 +21901,7 @@
     static startDrawing(t2, e2, i2, n2) {
       const { target: s2, offsetX: r2, offsetY: a2, pointerId: o2, pointerType: l2 } = n2;
       if (CurrentPointers.isInitializedAndDifferentPointerType(l2)) return;
-      const { viewport: { rotation: h2 } } = t2, { width: c2, height: d2 } = s2.getBoundingClientRect(), u2 = _DrawingEditor.#Nl = new AbortController(), p2 = t2.combinedSignal(u2);
+      const { viewport: { rotation: h2 } } = t2, { width: c2, height: d2 } = s2.getBoundingClientRect(), u2 = __privateSet(_DrawingEditor, _Nl, new AbortController()), p2 = t2.combinedSignal(u2);
       CurrentPointers.setPointer(l2, o2);
       window.addEventListener("pointerup", (t3) => {
         CurrentPointers.isSamePointerIdOrRemove(t3.pointerId) && this._endDraw(t3);
@@ -21132,9 +21912,9 @@
       window.addEventListener("pointerdown", (t3) => {
         if (CurrentPointers.isSamePointerType(t3.pointerType)) {
           CurrentPointers.initializeAndAddPointerId(t3.pointerId);
-          if (_DrawingEditor.#Ll.isCancellable()) {
-            _DrawingEditor.#Ll.removeLastElement();
-            _DrawingEditor.#Ll.isEmpty() ? this._currentParent.endDrawingSession(true) : this._endDraw(null);
+          if (__privateGet(_DrawingEditor, _Ll).isCancellable()) {
+            __privateGet(_DrawingEditor, _Ll).removeLastElement();
+            __privateGet(_DrawingEditor, _Ll).isEmpty() ? this._currentParent.endDrawingSession(true) : this._endDraw(null);
           }
         }
       }, { capture: true, passive: false, signal: p2 });
@@ -21145,22 +21925,22 @@
       }, { signal: p2 });
       t2.toggleDrawing();
       e2._editorUndoBar?.hide();
-      if (_DrawingEditor.#Ll) t2.drawLayer.updateProperties(this._currentDrawId, _DrawingEditor.#Ll.startNew(r2, a2, c2, d2, h2));
+      if (__privateGet(_DrawingEditor, _Ll)) t2.drawLayer.updateProperties(this._currentDrawId, __privateGet(_DrawingEditor, _Ll).startNew(r2, a2, c2, d2, h2));
       else {
         e2.updateUIForDefaultProperties(this);
-        _DrawingEditor.#Ll = this.createDrawerInstance(r2, a2, c2, d2, h2);
-        _DrawingEditor.#Ul = this.getDefaultDrawingOptions();
+        __privateSet(_DrawingEditor, _Ll, this.createDrawerInstance(r2, a2, c2, d2, h2));
+        __privateSet(_DrawingEditor, _Ul, this.getDefaultDrawingOptions());
         this._currentParent = t2;
-        ({ id: this._currentDrawId } = t2.drawLayer.draw(this._mergeSVGProperties(_DrawingEditor.#Ul.toSVGProperties(), _DrawingEditor.#Ll.defaultSVGProperties), true, false));
+        ({ id: this._currentDrawId } = t2.drawLayer.draw(this._mergeSVGProperties(__privateGet(_DrawingEditor, _Ul).toSVGProperties(), __privateGet(_DrawingEditor, _Ll).defaultSVGProperties), true, false));
       }
     }
     static _drawMove(t2) {
       CurrentPointers.isSameTimeStamp(t2.timeStamp);
-      if (!_DrawingEditor.#Ll) return;
+      if (!__privateGet(_DrawingEditor, _Ll)) return;
       const { offsetX: e2, offsetY: i2, pointerId: n2 } = t2;
       if (CurrentPointers.isSamePointerId(n2)) if (CurrentPointers.isUsingMultiplePointers()) this._endDraw(t2);
       else {
-        this._currentParent.drawLayer.updateProperties(this._currentDrawId, _DrawingEditor.#Ll.add(e2, i2));
+        this._currentParent.drawLayer.updateProperties(this._currentDrawId, __privateGet(_DrawingEditor, _Ll).add(e2, i2));
         CurrentPointers.setTimeStamp(t2.timeStamp);
         stopEvent(t2);
       }
@@ -21169,13 +21949,13 @@
       if (t2) {
         this._currentDrawId = -1;
         this._currentParent = null;
-        _DrawingEditor.#Ll = null;
-        _DrawingEditor.#Ul = null;
+        __privateSet(_DrawingEditor, _Ll, null);
+        __privateSet(_DrawingEditor, _Ul, null);
         CurrentPointers.clearTimeStamp();
       }
-      if (_DrawingEditor.#Nl) {
-        _DrawingEditor.#Nl.abort();
-        _DrawingEditor.#Nl = null;
+      if (__privateGet(_DrawingEditor, _Nl)) {
+        __privateGet(_DrawingEditor, _Nl).abort();
+        __privateSet(_DrawingEditor, _Nl, null);
         CurrentPointers.clearPointerIds();
       }
     }
@@ -21184,9 +21964,9 @@
       if (e2) {
         e2.toggleDrawing(true);
         this._cleanup(false);
-        t2?.target === e2.div && e2.drawLayer.updateProperties(this._currentDrawId, _DrawingEditor.#Ll.end(t2.offsetX, t2.offsetY));
+        t2?.target === e2.div && e2.drawLayer.updateProperties(this._currentDrawId, __privateGet(_DrawingEditor, _Ll).end(t2.offsetX, t2.offsetY));
         if (this.supportMultipleDrawings) {
-          const t3 = _DrawingEditor.#Ll, i2 = this._currentDrawId, n2 = t3.getLastElement();
+          const t3 = __privateGet(_DrawingEditor, _Ll), i2 = this._currentDrawId, n2 = t3.getLastElement();
           e2.addCommands({ cmd: () => {
             e2.drawLayer.updateProperties(i2, t3.setLastElement(n2));
           }, undo: () => {
@@ -21202,8 +21982,8 @@
       if (!e2) return null;
       e2.toggleDrawing(true);
       e2.cleanUndoStack(v.DRAW_STEP);
-      if (!_DrawingEditor.#Ll.isEmpty()) {
-        const { pageDimensions: [i2, n2], scale: s2 } = e2, r2 = e2.createAndAddNewEditor({ offsetX: 0, offsetY: 0 }, false, { drawId: this._currentDrawId, drawOutlines: _DrawingEditor.#Ll.getOutlines(i2 * s2, n2 * s2, s2, this._INNER_MARGIN), drawingOptions: _DrawingEditor.#Ul, mustBeCommitted: !t2 });
+      if (!__privateGet(_DrawingEditor, _Ll).isEmpty()) {
+        const { pageDimensions: [i2, n2], scale: s2 } = e2, r2 = e2.createAndAddNewEditor({ offsetX: 0, offsetY: 0 }, false, { drawId: this._currentDrawId, drawOutlines: __privateGet(_DrawingEditor, _Ll).getOutlines(i2 * s2, n2 * s2, s2, this._INNER_MARGIN), drawingOptions: __privateGet(_DrawingEditor, _Ul), mustBeCommitted: !t2 });
         this._cleanup(true);
         return r2;
       }
@@ -21217,17 +21997,18 @@
       unreachable("Not implemented");
     }
     static async deserialize(t2, e2, i2) {
+      var _a4, _b;
       const { rawDims: { pageWidth: n2, pageHeight: s2, pageX: r2, pageY: a2 } } = e2.viewport, o2 = this.deserializeDraw(r2, a2, n2, s2, this._INNER_MARGIN, t2), l2 = await super.deserialize(t2, e2, i2);
       l2.createDrawingOptions(t2);
-      l2.#Hl({ drawOutlines: o2 });
-      l2.#xl();
+      __privateMethod(_a4 = l2, _DrawingEditor_instances, Hl_fn).call(_a4, { drawOutlines: o2 });
+      __privateMethod(_b = l2, _DrawingEditor_instances, xl_fn2).call(_b);
       l2.onScaleChanging();
       l2.rotate();
       return l2;
     }
     serializeDraw(t2) {
       const [e2, i2] = this.pageTranslation, [n2, s2] = this.pageDimensions;
-      return this.#Rl.serialize([e2, i2, n2, s2], t2);
+      return __privateGet(this, _Rl).serialize([e2, i2, n2, s2], t2);
     }
     renderAnnotationElement(t2) {
       t2.updateEdited({ rect: this.getPDFRect() });
@@ -21237,181 +22018,311 @@
       return false;
     }
   };
+  _Rl = new WeakMap();
+  _Bl = new WeakMap();
+  _Ll = new WeakMap();
+  _Nl = new WeakMap();
+  _Ul = new WeakMap();
+  _DrawingEditor_instances = new WeakSet();
+  Hl_fn = function({ drawOutlines: t2, drawId: e2, drawingOptions: i2 }) {
+    __privateSet(this, _Rl, t2);
+    this._drawingOptions || (this._drawingOptions = i2);
+    this.annotationElementId || this._uiManager.a11yAlert(AnnotationEditor._l10nAlert[this.editorType]);
+    if (e2 >= 0) {
+      this._drawId = e2;
+      this.parent.drawLayer.finalizeDraw(e2, t2.defaultProperties);
+    } else this._drawId = __privateMethod(this, _DrawingEditor_instances, zl_fn).call(this, t2, this.parent);
+    __privateMethod(this, _DrawingEditor_instances, Gl_fn).call(this, t2.box);
+  };
+  zl_fn = function(t2, e2) {
+    const { id: i2 } = e2.drawLayer.draw(_DrawingEditor._mergeSVGProperties(this._drawingOptions.toSVGProperties(), t2.defaultSVGProperties), false, false);
+    return i2;
+  };
+  _l_fn2 = function() {
+    if (null !== this._drawId && this.parent) {
+      this.parent.drawLayer.remove(this._drawId);
+      this._drawId = null;
+      this._drawingOptions.reset();
+    }
+  };
+  xl_fn2 = function(t2 = this.parent) {
+    if (null === this._drawId || this.parent !== t2) if (null === this._drawId) {
+      this._drawingOptions.updateAll();
+      this._drawId = __privateMethod(this, _DrawingEditor_instances, zl_fn).call(this, __privateGet(this, _Rl), t2);
+    } else this.parent.drawLayer.updateParent(this._drawId, t2.drawLayer);
+  };
+  Vl_fn = function([t2, e2, i2, n2]) {
+    const { parentDimensions: [s2, r2], rotation: a2 } = this;
+    switch (a2) {
+      case 90:
+        return [e2, 1 - t2, i2 * (r2 / s2), n2 * (s2 / r2)];
+      case 180:
+        return [1 - t2, 1 - e2, i2, n2];
+      case 270:
+        return [1 - e2, t2, i2 * (r2 / s2), n2 * (s2 / r2)];
+      default:
+        return [t2, e2, i2, n2];
+    }
+  };
+  jl_fn = function() {
+    const { x: t2, y: e2, width: i2, height: n2, parentDimensions: [s2, r2], rotation: a2 } = this;
+    switch (a2) {
+      case 90:
+        return [1 - e2, t2, i2 * (s2 / r2), n2 * (r2 / s2)];
+      case 180:
+        return [1 - t2, 1 - e2, i2, n2];
+      case 270:
+        return [e2, 1 - t2, i2 * (s2 / r2), n2 * (r2 / s2)];
+      default:
+        return [t2, e2, i2, n2];
+    }
+  };
+  Gl_fn = function(t2) {
+    [this.x, this.y, this.width, this.height] = __privateMethod(this, _DrawingEditor_instances, Vl_fn).call(this, t2);
+    if (this.div) {
+      this.fixAndSetPosition();
+      this.setDims();
+    }
+    this._onResized();
+  };
+  Wl_fn = function() {
+    const { x: t2, y: e2, width: i2, height: n2, rotation: s2, parentRotation: r2, parentDimensions: [a2, o2] } = this;
+    switch ((4 * s2 + r2) / 90) {
+      case 1:
+        return [1 - e2 - n2, t2, n2, i2];
+      case 2:
+        return [1 - t2 - i2, 1 - e2 - n2, i2, n2];
+      case 3:
+        return [e2, 1 - t2 - i2, n2, i2];
+      case 4:
+        return [t2, e2 - i2 * (a2 / o2), n2 * (o2 / a2), i2 * (a2 / o2)];
+      case 5:
+        return [1 - e2, t2, i2 * (a2 / o2), n2 * (o2 / a2)];
+      case 6:
+        return [1 - t2 - n2 * (o2 / a2), 1 - e2, n2 * (o2 / a2), i2 * (a2 / o2)];
+      case 7:
+        return [e2 - i2 * (a2 / o2), 1 - t2 - n2 * (o2 / a2), i2 * (a2 / o2), n2 * (o2 / a2)];
+      case 8:
+        return [t2 - i2, e2 - n2, i2, n2];
+      case 9:
+        return [1 - e2, t2 - i2, n2, i2];
+      case 10:
+        return [1 - t2, 1 - e2, i2, n2];
+      case 11:
+        return [e2 - n2, 1 - t2, n2, i2];
+      case 12:
+        return [t2 - n2 * (o2 / a2), e2, n2 * (o2 / a2), i2 * (a2 / o2)];
+      case 13:
+        return [1 - e2 - i2 * (a2 / o2), t2 - n2 * (o2 / a2), i2 * (a2 / o2), n2 * (o2 / a2)];
+      case 14:
+        return [1 - t2, 1 - e2 - i2 * (a2 / o2), n2 * (o2 / a2), i2 * (a2 / o2)];
+      case 15:
+        return [e2, 1 - t2, i2 * (a2 / o2), n2 * (o2 / a2)];
+      default:
+        return [t2, e2, i2, n2];
+    }
+  };
+  __publicField(_DrawingEditor, "_currentDrawId", -1);
+  __publicField(_DrawingEditor, "_currentParent", null);
+  __privateAdd(_DrawingEditor, _Ll, null);
+  __privateAdd(_DrawingEditor, _Nl, null);
+  __privateAdd(_DrawingEditor, _Ul, null);
+  __publicField(_DrawingEditor, "_INNER_MARGIN", 3);
+  var DrawingEditor = _DrawingEditor;
+  var _Po2, _Ka2, _$l, _ir2, _Lo3, _No3, _ql, _Kl, _ol2, _Xl, _Yl, _InkDrawOutliner_instances, Jl_fn;
   var InkDrawOutliner = class {
-    #Po = new Float64Array(6);
-    #Ka;
-    #$l;
-    #ir;
-    #Lo;
-    #No;
-    #ql = "";
-    #Kl = 0;
-    #ol = new InkDrawOutline();
-    #Xl;
-    #Yl;
     constructor(t2, e2, i2, n2, s2, r2) {
-      this.#Xl = i2;
-      this.#Yl = n2;
-      this.#ir = s2;
-      this.#Lo = r2;
-      [t2, e2] = this.#Jl(t2, e2);
-      const a2 = this.#Ka = [NaN, NaN, NaN, NaN, t2, e2];
-      this.#No = [t2, e2];
-      this.#$l = [{ line: a2, points: this.#No }];
-      this.#Po.set(a2, 0);
+      __privateAdd(this, _InkDrawOutliner_instances);
+      __privateAdd(this, _Po2, new Float64Array(6));
+      __privateAdd(this, _Ka2);
+      __privateAdd(this, _$l);
+      __privateAdd(this, _ir2);
+      __privateAdd(this, _Lo3);
+      __privateAdd(this, _No3);
+      __privateAdd(this, _ql, "");
+      __privateAdd(this, _Kl, 0);
+      __privateAdd(this, _ol2, new InkDrawOutline());
+      __privateAdd(this, _Xl);
+      __privateAdd(this, _Yl);
+      __privateSet(this, _Xl, i2);
+      __privateSet(this, _Yl, n2);
+      __privateSet(this, _ir2, s2);
+      __privateSet(this, _Lo3, r2);
+      [t2, e2] = __privateMethod(this, _InkDrawOutliner_instances, Jl_fn).call(this, t2, e2);
+      const a2 = __privateSet(this, _Ka2, [NaN, NaN, NaN, NaN, t2, e2]);
+      __privateSet(this, _No3, [t2, e2]);
+      __privateSet(this, _$l, [{ line: a2, points: __privateGet(this, _No3) }]);
+      __privateGet(this, _Po2).set(a2, 0);
     }
     updateProperty(t2, e2) {
-      "stroke-width" === t2 && (this.#Lo = e2);
-    }
-    #Jl(t2, e2) {
-      return Outline._normalizePoint(t2, e2, this.#Xl, this.#Yl, this.#ir);
+      "stroke-width" === t2 && __privateSet(this, _Lo3, e2);
     }
     isEmpty() {
-      return !this.#$l?.length;
+      return !__privateGet(this, _$l)?.length;
     }
     isCancellable() {
-      return this.#No.length <= 10;
+      return __privateGet(this, _No3).length <= 10;
     }
     add(t2, e2) {
-      [t2, e2] = this.#Jl(t2, e2);
-      const [i2, n2, s2, r2] = this.#Po.subarray(2, 6), a2 = t2 - s2, o2 = e2 - r2;
-      if (Math.hypot(this.#Xl * a2, this.#Yl * o2) <= 2) return null;
-      this.#No.push(t2, e2);
+      [t2, e2] = __privateMethod(this, _InkDrawOutliner_instances, Jl_fn).call(this, t2, e2);
+      const [i2, n2, s2, r2] = __privateGet(this, _Po2).subarray(2, 6), a2 = t2 - s2, o2 = e2 - r2;
+      if (Math.hypot(__privateGet(this, _Xl) * a2, __privateGet(this, _Yl) * o2) <= 2) return null;
+      __privateGet(this, _No3).push(t2, e2);
       if (isNaN(i2)) {
-        this.#Po.set([s2, r2, t2, e2], 2);
-        this.#Ka.push(NaN, NaN, NaN, NaN, t2, e2);
+        __privateGet(this, _Po2).set([s2, r2, t2, e2], 2);
+        __privateGet(this, _Ka2).push(NaN, NaN, NaN, NaN, t2, e2);
         return { path: { d: this.toSVGPath() } };
       }
-      isNaN(this.#Po[0]) && this.#Ka.splice(6, 6);
-      this.#Po.set([i2, n2, s2, r2, t2, e2], 0);
-      this.#Ka.push(...Outline.createBezierPoints(i2, n2, s2, r2, t2, e2));
+      isNaN(__privateGet(this, _Po2)[0]) && __privateGet(this, _Ka2).splice(6, 6);
+      __privateGet(this, _Po2).set([i2, n2, s2, r2, t2, e2], 0);
+      __privateGet(this, _Ka2).push(...Outline.createBezierPoints(i2, n2, s2, r2, t2, e2));
       return { path: { d: this.toSVGPath() } };
     }
     end(t2, e2) {
       const i2 = this.add(t2, e2);
-      return i2 || (2 === this.#No.length ? { path: { d: this.toSVGPath() } } : null);
+      return i2 || (2 === __privateGet(this, _No3).length ? { path: { d: this.toSVGPath() } } : null);
     }
     startNew(t2, e2, i2, n2, s2) {
-      this.#Xl = i2;
-      this.#Yl = n2;
-      this.#ir = s2;
-      [t2, e2] = this.#Jl(t2, e2);
-      const r2 = this.#Ka = [NaN, NaN, NaN, NaN, t2, e2];
-      this.#No = [t2, e2];
-      const a2 = this.#$l.at(-1);
+      __privateSet(this, _Xl, i2);
+      __privateSet(this, _Yl, n2);
+      __privateSet(this, _ir2, s2);
+      [t2, e2] = __privateMethod(this, _InkDrawOutliner_instances, Jl_fn).call(this, t2, e2);
+      const r2 = __privateSet(this, _Ka2, [NaN, NaN, NaN, NaN, t2, e2]);
+      __privateSet(this, _No3, [t2, e2]);
+      const a2 = __privateGet(this, _$l).at(-1);
       if (a2) {
         a2.line = new Float32Array(a2.line);
         a2.points = new Float32Array(a2.points);
       }
-      this.#$l.push({ line: r2, points: this.#No });
-      this.#Po.set(r2, 0);
-      this.#Kl = 0;
+      __privateGet(this, _$l).push({ line: r2, points: __privateGet(this, _No3) });
+      __privateGet(this, _Po2).set(r2, 0);
+      __privateSet(this, _Kl, 0);
       this.toSVGPath();
       return null;
     }
     getLastElement() {
-      return this.#$l.at(-1);
+      return __privateGet(this, _$l).at(-1);
     }
     setLastElement(t2) {
-      if (!this.#$l) return this.#ol.setLastElement(t2);
-      this.#$l.push(t2);
-      this.#Ka = t2.line;
-      this.#No = t2.points;
-      this.#Kl = 0;
+      if (!__privateGet(this, _$l)) return __privateGet(this, _ol2).setLastElement(t2);
+      __privateGet(this, _$l).push(t2);
+      __privateSet(this, _Ka2, t2.line);
+      __privateSet(this, _No3, t2.points);
+      __privateSet(this, _Kl, 0);
       return { path: { d: this.toSVGPath() } };
     }
     removeLastElement() {
-      if (!this.#$l) return this.#ol.removeLastElement();
-      this.#$l.pop();
-      this.#ql = "";
-      for (let t2 = 0, e2 = this.#$l.length; t2 < e2; t2++) {
-        const { line: e3, points: i2 } = this.#$l[t2];
-        this.#Ka = e3;
-        this.#No = i2;
-        this.#Kl = 0;
+      if (!__privateGet(this, _$l)) return __privateGet(this, _ol2).removeLastElement();
+      __privateGet(this, _$l).pop();
+      __privateSet(this, _ql, "");
+      for (let t2 = 0, e2 = __privateGet(this, _$l).length; t2 < e2; t2++) {
+        const { line: e3, points: i2 } = __privateGet(this, _$l)[t2];
+        __privateSet(this, _Ka2, e3);
+        __privateSet(this, _No3, i2);
+        __privateSet(this, _Kl, 0);
         this.toSVGPath();
       }
-      return { path: { d: this.#ql } };
+      return { path: { d: __privateGet(this, _ql) } };
     }
     toSVGPath() {
-      const t2 = Outline.svgRound(this.#Ka[4]), e2 = Outline.svgRound(this.#Ka[5]);
-      if (2 === this.#No.length) {
-        this.#ql = `${this.#ql} M ${t2} ${e2} Z`;
-        return this.#ql;
+      const t2 = Outline.svgRound(__privateGet(this, _Ka2)[4]), e2 = Outline.svgRound(__privateGet(this, _Ka2)[5]);
+      if (2 === __privateGet(this, _No3).length) {
+        __privateSet(this, _ql, `${__privateGet(this, _ql)} M ${t2} ${e2} Z`);
+        return __privateGet(this, _ql);
       }
-      if (this.#No.length <= 6) {
-        const i3 = this.#ql.lastIndexOf("M");
-        this.#ql = `${this.#ql.slice(0, i3)} M ${t2} ${e2}`;
-        this.#Kl = 6;
+      if (__privateGet(this, _No3).length <= 6) {
+        const i3 = __privateGet(this, _ql).lastIndexOf("M");
+        __privateSet(this, _ql, `${__privateGet(this, _ql).slice(0, i3)} M ${t2} ${e2}`);
+        __privateSet(this, _Kl, 6);
       }
-      if (4 === this.#No.length) {
-        const t3 = Outline.svgRound(this.#Ka[10]), e3 = Outline.svgRound(this.#Ka[11]);
-        this.#ql = `${this.#ql} L ${t3} ${e3}`;
-        this.#Kl = 12;
-        return this.#ql;
+      if (4 === __privateGet(this, _No3).length) {
+        const t3 = Outline.svgRound(__privateGet(this, _Ka2)[10]), e3 = Outline.svgRound(__privateGet(this, _Ka2)[11]);
+        __privateSet(this, _ql, `${__privateGet(this, _ql)} L ${t3} ${e3}`);
+        __privateSet(this, _Kl, 12);
+        return __privateGet(this, _ql);
       }
       const i2 = [];
-      if (0 === this.#Kl) {
+      if (0 === __privateGet(this, _Kl)) {
         i2.push(`M ${t2} ${e2}`);
-        this.#Kl = 6;
+        __privateSet(this, _Kl, 6);
       }
-      for (let t3 = this.#Kl, e3 = this.#Ka.length; t3 < e3; t3 += 6) {
-        const [e4, n2, s2, r2, a2, o2] = this.#Ka.slice(t3, t3 + 6).map(Outline.svgRound);
+      for (let t3 = __privateGet(this, _Kl), e3 = __privateGet(this, _Ka2).length; t3 < e3; t3 += 6) {
+        const [e4, n2, s2, r2, a2, o2] = __privateGet(this, _Ka2).slice(t3, t3 + 6).map(Outline.svgRound);
         i2.push(`C${e4} ${n2} ${s2} ${r2} ${a2} ${o2}`);
       }
-      this.#ql += i2.join(" ");
-      this.#Kl = this.#Ka.length;
-      return this.#ql;
+      __privateSet(this, _ql, __privateGet(this, _ql) + i2.join(" "));
+      __privateSet(this, _Kl, __privateGet(this, _Ka2).length);
+      return __privateGet(this, _ql);
     }
     getOutlines(t2, e2, i2, n2) {
-      const s2 = this.#$l.at(-1);
+      const s2 = __privateGet(this, _$l).at(-1);
       s2.line = new Float32Array(s2.line);
       s2.points = new Float32Array(s2.points);
-      this.#ol.build(this.#$l, t2, e2, i2, this.#ir, this.#Lo, n2);
-      this.#Po = null;
-      this.#Ka = null;
-      this.#$l = null;
-      this.#ql = null;
-      return this.#ol;
+      __privateGet(this, _ol2).build(__privateGet(this, _$l), t2, e2, i2, __privateGet(this, _ir2), __privateGet(this, _Lo3), n2);
+      __privateSet(this, _Po2, null);
+      __privateSet(this, _Ka2, null);
+      __privateSet(this, _$l, null);
+      __privateSet(this, _ql, null);
+      return __privateGet(this, _ol2);
     }
     get defaultSVGProperties() {
       return { root: { viewBox: "0 0 10000 10000" }, rootClass: { draw: true }, bbox: [0, 0, 1, 1] };
     }
   };
+  _Po2 = new WeakMap();
+  _Ka2 = new WeakMap();
+  _$l = new WeakMap();
+  _ir2 = new WeakMap();
+  _Lo3 = new WeakMap();
+  _No3 = new WeakMap();
+  _ql = new WeakMap();
+  _Kl = new WeakMap();
+  _ol2 = new WeakMap();
+  _Xl = new WeakMap();
+  _Yl = new WeakMap();
+  _InkDrawOutliner_instances = new WeakSet();
+  Jl_fn = function(t2, e2) {
+    return Outline._normalizePoint(t2, e2, __privateGet(this, _Xl), __privateGet(this, _Yl), __privateGet(this, _ir2));
+  };
+  var _Xo2, _Ql, _ko3, _$l2, _Xl2, _Yl2, _Zl, _ir3, _Lo4, _InkDrawOutline_instances, ih_fn, eh_fn, th_fn, Cl_fn2;
   var InkDrawOutline = class extends Outline {
-    #Xo;
-    #Ql = 0;
-    #ko;
-    #$l;
-    #Xl;
-    #Yl;
-    #Zl;
-    #ir;
-    #Lo;
+    constructor() {
+      super(...arguments);
+      __privateAdd(this, _InkDrawOutline_instances);
+      __privateAdd(this, _Xo2);
+      __privateAdd(this, _Ql, 0);
+      __privateAdd(this, _ko3);
+      __privateAdd(this, _$l2);
+      __privateAdd(this, _Xl2);
+      __privateAdd(this, _Yl2);
+      __privateAdd(this, _Zl);
+      __privateAdd(this, _ir3);
+      __privateAdd(this, _Lo4);
+    }
     build(t2, e2, i2, n2, s2, r2, a2) {
-      this.#Xl = e2;
-      this.#Yl = i2;
-      this.#Zl = n2;
-      this.#ir = s2;
-      this.#Lo = r2;
-      this.#ko = a2 ?? 0;
-      this.#$l = t2;
-      this.#th();
+      __privateSet(this, _Xl2, e2);
+      __privateSet(this, _Yl2, i2);
+      __privateSet(this, _Zl, n2);
+      __privateSet(this, _ir3, s2);
+      __privateSet(this, _Lo4, r2);
+      __privateSet(this, _ko3, a2 ?? 0);
+      __privateSet(this, _$l2, t2);
+      __privateMethod(this, _InkDrawOutline_instances, th_fn).call(this);
     }
     get thickness() {
-      return this.#Lo;
+      return __privateGet(this, _Lo4);
     }
     setLastElement(t2) {
-      this.#$l.push(t2);
+      __privateGet(this, _$l2).push(t2);
       return { path: { d: this.toSVGPath() } };
     }
     removeLastElement() {
-      this.#$l.pop();
+      __privateGet(this, _$l2).pop();
       return { path: { d: this.toSVGPath() } };
     }
     toSVGPath() {
       const t2 = [];
-      for (const { line: e2 } of this.#$l) {
+      for (const { line: e2 } of __privateGet(this, _$l2)) {
         t2.push(`M${Outline.svgRound(e2[4])} ${Outline.svgRound(e2[5])}`);
         if (6 !== e2.length) if (12 === e2.length && isNaN(e2[6])) t2.push(`L${Outline.svgRound(e2[10])} ${Outline.svgRound(e2[11])}`);
         else for (let i2 = 6, n2 = e2.length; i2 < n2; i2 += 6) {
@@ -21423,9 +22334,9 @@
       return t2.join("");
     }
     serialize([t2, e2, i2, n2], s2) {
-      const r2 = [], a2 = [], [o2, l2, h2, c2] = this.#eh();
+      const r2 = [], a2 = [], [o2, l2, h2, c2] = __privateMethod(this, _InkDrawOutline_instances, eh_fn).call(this);
       let d2, u2, p2, g2, m2, f2, b2, y2, v2;
-      switch (this.#ir) {
+      switch (__privateGet(this, _ir3)) {
         case 0:
           v2 = Outline._rescale;
           d2 = t2;
@@ -21470,7 +22381,7 @@
           b2 = t2 + (1 - l2) * i2;
           y2 = e2 + (1 - o2) * n2;
       }
-      for (const { line: t3, points: e3 } of this.#$l) {
+      for (const { line: t3, points: e3 } of __privateGet(this, _$l2)) {
         r2.push(v2(t3, d2, u2, p2, g2, s2 ? new Array(t3.length) : null));
         a2.push(v2(e3, d2, u2, p2, g2, s2 ? new Array(e3.length) : null));
       }
@@ -21536,59 +22447,18 @@
       m2.build(h2, i2, n2, 1, o2, l2, s2);
       return m2;
     }
-    #ih(t2 = this.#Lo) {
-      const e2 = this.#ko + t2 / 2 * this.#Zl;
-      return this.#ir % 180 == 0 ? [e2 / this.#Xl, e2 / this.#Yl] : [e2 / this.#Yl, e2 / this.#Xl];
-    }
-    #eh() {
-      const [t2, e2, i2, n2] = this.#Xo, [s2, r2] = this.#ih(0);
-      return [t2 + s2, e2 + r2, i2 - 2 * s2, n2 - 2 * r2];
-    }
-    #th() {
-      const t2 = this.#Xo = s.slice();
-      for (const { line: e3 } of this.#$l) {
-        if (e3.length <= 12) {
-          for (let i4 = 4, n3 = e3.length; i4 < n3; i4 += 6) Util.pointBoundingBox(e3[i4], e3[i4 + 1], t2);
-          continue;
-        }
-        let i3 = e3[4], n2 = e3[5];
-        for (let s2 = 6, r2 = e3.length; s2 < r2; s2 += 6) {
-          const [r3, a2, o2, l2, h2, c2] = e3.subarray(s2, s2 + 6);
-          Util.bezierBoundingBox(i3, n2, r3, a2, o2, l2, h2, c2, t2);
-          i3 = h2;
-          n2 = c2;
-        }
-      }
-      const [e2, i2] = this.#ih();
-      t2[0] = MathClamp(t2[0] - e2, 0, 1);
-      t2[1] = MathClamp(t2[1] - i2, 0, 1);
-      t2[2] = MathClamp(t2[2] + e2, 0, 1);
-      t2[3] = MathClamp(t2[3] + i2, 0, 1);
-      t2[2] -= t2[0];
-      t2[3] -= t2[1];
-    }
     get box() {
-      return this.#Xo;
+      return __privateGet(this, _Xo2);
     }
     updateProperty(t2, e2) {
-      return "stroke-width" === t2 ? this.#Cl(e2) : null;
-    }
-    #Cl(t2) {
-      const [e2, i2] = this.#ih();
-      this.#Lo = t2;
-      const [n2, s2] = this.#ih(), [r2, a2] = [n2 - e2, s2 - i2], o2 = this.#Xo;
-      o2[0] -= r2;
-      o2[1] -= a2;
-      o2[2] += 2 * r2;
-      o2[3] += 2 * a2;
-      return o2;
+      return "stroke-width" === t2 ? __privateMethod(this, _InkDrawOutline_instances, Cl_fn2).call(this, e2) : null;
     }
     updateParentDimensions([t2, e2], i2) {
-      const [n2, s2] = this.#ih();
-      this.#Xl = t2;
-      this.#Yl = e2;
-      this.#Zl = i2;
-      const [r2, a2] = this.#ih(), o2 = r2 - n2, l2 = a2 - s2, h2 = this.#Xo;
+      const [n2, s2] = __privateMethod(this, _InkDrawOutline_instances, ih_fn).call(this);
+      __privateSet(this, _Xl2, t2);
+      __privateSet(this, _Yl2, e2);
+      __privateSet(this, _Zl, i2);
+      const [r2, a2] = __privateMethod(this, _InkDrawOutline_instances, ih_fn).call(this), o2 = r2 - n2, l2 = a2 - s2, h2 = __privateGet(this, _Xo2);
       h2[0] -= o2;
       h2[1] -= l2;
       h2[2] += 2 * o2;
@@ -21596,20 +22466,20 @@
       return h2;
     }
     updateRotation(t2) {
-      this.#Ql = t2;
+      __privateSet(this, _Ql, t2);
       return { path: { transform: this.rotationTransform } };
     }
     get viewBox() {
-      return this.#Xo.map(Outline.svgRound).join(" ");
+      return __privateGet(this, _Xo2).map(Outline.svgRound).join(" ");
     }
     get defaultProperties() {
-      const [t2, e2] = this.#Xo;
+      const [t2, e2] = __privateGet(this, _Xo2);
       return { root: { viewBox: this.viewBox }, path: { "transform-origin": `${Outline.svgRound(t2)} ${Outline.svgRound(e2)}` } };
     }
     get rotationTransform() {
-      const [, , t2, e2] = this.#Xo;
+      const [, , t2, e2] = __privateGet(this, _Xo2);
       let i2 = 0, n2 = 0, s2 = 0, r2 = 0, a2 = 0, o2 = 0;
-      switch (this.#Ql) {
+      switch (__privateGet(this, _Ql)) {
         case 90:
           n2 = e2 / t2;
           s2 = -t2 / e2;
@@ -21632,7 +22502,7 @@
       return `matrix(${i2} ${n2} ${s2} ${r2} ${Outline.svgRound(a2)} ${Outline.svgRound(o2)})`;
     }
     getPathResizingSVGProperties([t2, e2, i2, n2]) {
-      const [s2, r2] = this.#ih(), [a2, o2, l2, h2] = this.#Xo;
+      const [s2, r2] = __privateMethod(this, _InkDrawOutline_instances, ih_fn).call(this), [a2, o2, l2, h2] = __privateGet(this, _Xo2);
       if (Math.abs(l2 - s2) <= Outline.PRECISION || Math.abs(h2 - r2) <= Outline.PRECISION) {
         const s3 = t2 + i2 / 2 - (a2 + l2 / 2), r3 = e2 + n2 / 2 - (o2 + h2 / 2);
         return { path: { "transform-origin": `${Outline.svgRound(t2)} ${Outline.svgRound(e2)}`, transform: `${this.rotationTransform} translate(${s3} ${r3})` } };
@@ -21641,37 +22511,37 @@
       return { path: { "transform-origin": `${Outline.svgRound(a2)} ${Outline.svgRound(o2)}`, transform: `${this.rotationTransform} scale(${u2} ${p2}) translate(${Outline.svgRound(s2)} ${Outline.svgRound(r2)}) scale(${c2} ${d2}) translate(${Outline.svgRound(-s2)} ${Outline.svgRound(-r2)})` } };
     }
     getPathResizedSVGProperties([t2, e2, i2, n2]) {
-      const [s2, r2] = this.#ih(), a2 = this.#Xo, [o2, l2, h2, c2] = a2;
+      const [s2, r2] = __privateMethod(this, _InkDrawOutline_instances, ih_fn).call(this), a2 = __privateGet(this, _Xo2), [o2, l2, h2, c2] = a2;
       a2[0] = t2;
       a2[1] = e2;
       a2[2] = i2;
       a2[3] = n2;
       if (Math.abs(h2 - s2) <= Outline.PRECISION || Math.abs(c2 - r2) <= Outline.PRECISION) {
         const s3 = t2 + i2 / 2 - (o2 + h2 / 2), r3 = e2 + n2 / 2 - (l2 + c2 / 2);
-        for (const { line: t3, points: e3 } of this.#$l) {
+        for (const { line: t3, points: e3 } of __privateGet(this, _$l2)) {
           Outline._translate(t3, s3, r3, t3);
           Outline._translate(e3, s3, r3, e3);
         }
         return { root: { viewBox: this.viewBox }, path: { "transform-origin": `${Outline.svgRound(t2)} ${Outline.svgRound(e2)}`, transform: this.rotationTransform || null, d: this.toSVGPath() } };
       }
       const d2 = (i2 - 2 * s2) / (h2 - 2 * s2), u2 = (n2 - 2 * r2) / (c2 - 2 * r2), p2 = -d2 * (o2 + s2) + t2 + s2, g2 = -u2 * (l2 + r2) + e2 + r2;
-      if (1 !== d2 || 1 !== u2 || 0 !== p2 || 0 !== g2) for (const { line: t3, points: e3 } of this.#$l) {
+      if (1 !== d2 || 1 !== u2 || 0 !== p2 || 0 !== g2) for (const { line: t3, points: e3 } of __privateGet(this, _$l2)) {
         Outline._rescale(t3, p2, g2, d2, u2, t3);
         Outline._rescale(e3, p2, g2, d2, u2, e3);
       }
       return { root: { viewBox: this.viewBox }, path: { "transform-origin": `${Outline.svgRound(t2)} ${Outline.svgRound(e2)}`, transform: this.rotationTransform || null, d: this.toSVGPath() } };
     }
     getPathTranslatedSVGProperties([t2, e2], i2) {
-      const [n2, s2] = i2, r2 = this.#Xo, a2 = t2 - r2[0], o2 = e2 - r2[1];
-      if (this.#Xl === n2 && this.#Yl === s2) for (const { line: t3, points: e3 } of this.#$l) {
+      const [n2, s2] = i2, r2 = __privateGet(this, _Xo2), a2 = t2 - r2[0], o2 = e2 - r2[1];
+      if (__privateGet(this, _Xl2) === n2 && __privateGet(this, _Yl2) === s2) for (const { line: t3, points: e3 } of __privateGet(this, _$l2)) {
         Outline._translate(t3, a2, o2, t3);
         Outline._translate(e3, a2, o2, e3);
       }
       else {
-        const t3 = this.#Xl / n2, e3 = this.#Yl / s2;
-        this.#Xl = n2;
-        this.#Yl = s2;
-        for (const { line: i3, points: n3 } of this.#$l) {
+        const t3 = __privateGet(this, _Xl2) / n2, e3 = __privateGet(this, _Yl2) / s2;
+        __privateSet(this, _Xl2, n2);
+        __privateSet(this, _Yl2, s2);
+        for (const { line: i3, points: n3 } of __privateGet(this, _$l2)) {
           Outline._rescale(i3, a2, o2, t3, e3, i3);
           Outline._rescale(n3, a2, o2, t3, e3, n3);
         }
@@ -21683,9 +22553,60 @@
       return { root: { viewBox: this.viewBox }, path: { d: this.toSVGPath(), "transform-origin": `${Outline.svgRound(t2)} ${Outline.svgRound(e2)}` } };
     }
     get defaultSVGProperties() {
-      const t2 = this.#Xo;
+      const t2 = __privateGet(this, _Xo2);
       return { root: { viewBox: this.viewBox }, rootClass: { draw: true }, path: { d: this.toSVGPath(), "transform-origin": `${Outline.svgRound(t2[0])} ${Outline.svgRound(t2[1])}`, transform: this.rotationTransform || null }, bbox: t2 };
     }
+  };
+  _Xo2 = new WeakMap();
+  _Ql = new WeakMap();
+  _ko3 = new WeakMap();
+  _$l2 = new WeakMap();
+  _Xl2 = new WeakMap();
+  _Yl2 = new WeakMap();
+  _Zl = new WeakMap();
+  _ir3 = new WeakMap();
+  _Lo4 = new WeakMap();
+  _InkDrawOutline_instances = new WeakSet();
+  ih_fn = function(t2 = __privateGet(this, _Lo4)) {
+    const e2 = __privateGet(this, _ko3) + t2 / 2 * __privateGet(this, _Zl);
+    return __privateGet(this, _ir3) % 180 == 0 ? [e2 / __privateGet(this, _Xl2), e2 / __privateGet(this, _Yl2)] : [e2 / __privateGet(this, _Yl2), e2 / __privateGet(this, _Xl2)];
+  };
+  eh_fn = function() {
+    const [t2, e2, i2, n2] = __privateGet(this, _Xo2), [s2, r2] = __privateMethod(this, _InkDrawOutline_instances, ih_fn).call(this, 0);
+    return [t2 + s2, e2 + r2, i2 - 2 * s2, n2 - 2 * r2];
+  };
+  th_fn = function() {
+    const t2 = __privateSet(this, _Xo2, s.slice());
+    for (const { line: e3 } of __privateGet(this, _$l2)) {
+      if (e3.length <= 12) {
+        for (let i4 = 4, n3 = e3.length; i4 < n3; i4 += 6) Util.pointBoundingBox(e3[i4], e3[i4 + 1], t2);
+        continue;
+      }
+      let i3 = e3[4], n2 = e3[5];
+      for (let s2 = 6, r2 = e3.length; s2 < r2; s2 += 6) {
+        const [r3, a2, o2, l2, h2, c2] = e3.subarray(s2, s2 + 6);
+        Util.bezierBoundingBox(i3, n2, r3, a2, o2, l2, h2, c2, t2);
+        i3 = h2;
+        n2 = c2;
+      }
+    }
+    const [e2, i2] = __privateMethod(this, _InkDrawOutline_instances, ih_fn).call(this);
+    t2[0] = MathClamp(t2[0] - e2, 0, 1);
+    t2[1] = MathClamp(t2[1] - i2, 0, 1);
+    t2[2] = MathClamp(t2[2] + e2, 0, 1);
+    t2[3] = MathClamp(t2[3] + i2, 0, 1);
+    t2[2] -= t2[0];
+    t2[3] -= t2[1];
+  };
+  Cl_fn2 = function(t2) {
+    const [e2, i2] = __privateMethod(this, _InkDrawOutline_instances, ih_fn).call(this);
+    __privateSet(this, _Lo4, t2);
+    const [n2, s2] = __privateMethod(this, _InkDrawOutline_instances, ih_fn).call(this), [r2, a2] = [n2 - e2, s2 - i2], o2 = __privateGet(this, _Xo2);
+    o2[0] -= r2;
+    o2[1] -= a2;
+    o2[2] += 2 * r2;
+    o2[3] += 2 * a2;
+    return o2;
   };
   var InkDrawingOptions = class _InkDrawingOptions extends DrawingOptions {
     constructor(t2) {
@@ -21695,7 +22616,7 @@
     }
     updateSVGProperty(t2, e2) {
       if ("stroke-width" === t2) {
-        e2 ??= this["stroke-width"];
+        e2 ?? (e2 = this["stroke-width"]);
         e2 *= this._viewParameters.realScale;
       }
       super.updateSVGProperty(t2, e2);
@@ -21706,12 +22627,11 @@
       return t2;
     }
   };
-  var InkEditor = class _InkEditor extends DrawingEditor {
-    static _type = "ink";
-    static _editorType = y.INK;
-    static _defaultDrawingOptions = null;
+  var _InkEditor_instances, So_fn3;
+  var _InkEditor = class _InkEditor extends DrawingEditor {
     constructor(t2) {
       super({ ...t2, name: "inkEditor" });
+      __privateAdd(this, _InkEditor_instances);
       this._willKeepAspectRatio = true;
       this.defaultL10nId = "pdfjs-editor-ink-editor";
     }
@@ -21748,7 +22668,7 @@
       return s2;
     }
     get toolbarButtons() {
-      this._colorPicker ||= new BasicColorPicker(this);
+      this._colorPicker || (this._colorPicker = new BasicColorPicker(this));
       return [["colorPicker", this._colorPicker]];
     }
     get colorType() {
@@ -21803,13 +22723,9 @@
         a2.isCopy = true;
         return a2;
       }
-      if (this.annotationElementId && !this.#So(a2)) return null;
+      if (this.annotationElementId && !__privateMethod(this, _InkEditor_instances, So_fn3).call(this, a2)) return null;
       a2.id = this.annotationElementId;
       return a2;
-    }
-    #So(t2) {
-      const { color: e2, thickness: i2, opacity: n2, pageIndex: s2 } = this._initialData;
-      return this.hasEditedComment || this._hasBeenMoved || this._hasBeenResized || t2.color.some((t3, i3) => t3 !== e2[i3]) || t2.thickness !== i2 || t2.opacity !== n2 || t2.pageIndex !== s2;
     }
     renderAnnotationElement(t2) {
       if (this.deleted) {
@@ -21821,6 +22737,15 @@
       return null;
     }
   };
+  _InkEditor_instances = new WeakSet();
+  So_fn3 = function(t2) {
+    const { color: e2, thickness: i2, opacity: n2, pageIndex: s2 } = this._initialData;
+    return this.hasEditedComment || this._hasBeenMoved || this._hasBeenResized || t2.color.some((t3, i3) => t3 !== e2[i3]) || t2.thickness !== i2 || t2.opacity !== n2 || t2.pageIndex !== s2;
+  };
+  __publicField(_InkEditor, "_type", "ink");
+  __publicField(_InkEditor, "_editorType", y.INK);
+  __publicField(_InkEditor, "_defaultDrawingOptions", null);
+  var InkEditor = _InkEditor;
   var ContourDrawOutline = class extends InkDrawOutline {
     toSVGPath() {
       let t2 = super.toSVGPath();
@@ -21829,209 +22754,8 @@
     }
   };
   __webpack_require__(5213);
+  var _nh, _SignatureExtractor_static, sh_fn, _rh, ah_fn, oh_fn, lh_fn, hh_fn, ch_fn, dh_fn, uh_fn, ph_fn, gh_fn, mh_fn;
   var SignatureExtractor = class {
-    static #nh = { maxDim: 512, sigmaSFactor: 0.02, sigmaR: 25, kernelSize: 16 };
-    static #sh(t2, e2, i2, n2) {
-      n2 -= e2;
-      return 0 === (i2 -= t2) ? n2 > 0 ? 0 : 4 : 1 === i2 ? n2 + 6 : 2 - n2;
-    }
-    static #rh = new Int32Array([0, 1, -1, 1, -1, 0, -1, -1, 0, -1, 1, -1, 1, 0, 1, 1]);
-    static #ah(t2, e2, i2, n2, s2, r2, a2) {
-      const o2 = this.#sh(i2, n2, s2, r2);
-      for (let s3 = 0; s3 < 8; s3++) {
-        const r3 = (-s3 + o2 - a2 + 16) % 8;
-        if (0 !== t2[(i2 + this.#rh[2 * r3]) * e2 + (n2 + this.#rh[2 * r3 + 1])]) return r3;
-      }
-      return -1;
-    }
-    static #oh(t2, e2, i2, n2, s2, r2, a2) {
-      const o2 = this.#sh(i2, n2, s2, r2);
-      for (let s3 = 0; s3 < 8; s3++) {
-        const r3 = (s3 + o2 + a2 + 16) % 8;
-        if (0 !== t2[(i2 + this.#rh[2 * r3]) * e2 + (n2 + this.#rh[2 * r3 + 1])]) return r3;
-      }
-      return -1;
-    }
-    static #lh(t2, e2, i2, n2) {
-      const s2 = t2.length, r2 = new Int32Array(s2);
-      for (let e3 = 0; e3 < s2; e3++) r2[e3] = t2[e3] <= n2 ? 1 : 0;
-      for (let t3 = 1; t3 < i2 - 1; t3++) r2[t3 * e2] = r2[t3 * e2 + e2 - 1] = 0;
-      for (let t3 = 0; t3 < e2; t3++) r2[t3] = r2[e2 * i2 - 1 - t3] = 0;
-      let a2, o2 = 1;
-      const l2 = [];
-      for (let t3 = 1; t3 < i2 - 1; t3++) {
-        a2 = 1;
-        for (let i3 = 1; i3 < e2 - 1; i3++) {
-          const n3 = t3 * e2 + i3, s3 = r2[n3];
-          if (0 === s3) continue;
-          let h2 = t3, c2 = i3;
-          if (1 === s3 && 0 === r2[n3 - 1]) {
-            o2 += 1;
-            c2 -= 1;
-          } else {
-            if (!(s3 >= 1 && 0 === r2[n3 + 1])) {
-              1 !== s3 && (a2 = Math.abs(s3));
-              continue;
-            }
-            o2 += 1;
-            c2 += 1;
-            s3 > 1 && (a2 = s3);
-          }
-          const d2 = [i3, t3], u2 = c2 === i3 + 1, p2 = { isHole: u2, points: d2, id: o2, parent: 0 };
-          l2.push(p2);
-          let g2;
-          for (const t4 of l2) if (t4.id === a2) {
-            g2 = t4;
-            break;
-          }
-          g2 ? g2.isHole ? p2.parent = u2 ? g2.parent : a2 : p2.parent = u2 ? a2 : g2.parent : p2.parent = u2 ? a2 : 0;
-          const m2 = this.#ah(r2, e2, t3, i3, h2, c2, 0);
-          if (-1 === m2) {
-            r2[n3] = -o2;
-            1 !== r2[n3] && (a2 = Math.abs(r2[n3]));
-            continue;
-          }
-          let f2 = this.#rh[2 * m2], b2 = this.#rh[2 * m2 + 1];
-          const y2 = t3 + f2, v2 = i3 + b2;
-          h2 = y2;
-          c2 = v2;
-          let w2 = t3, x2 = i3;
-          for (; ; ) {
-            const s4 = this.#oh(r2, e2, w2, x2, h2, c2, 1);
-            f2 = this.#rh[2 * s4];
-            b2 = this.#rh[2 * s4 + 1];
-            const l3 = w2 + f2, u3 = x2 + b2;
-            d2.push(u3, l3);
-            const p3 = w2 * e2 + x2;
-            0 === r2[p3 + 1] ? r2[p3] = -o2 : 1 === r2[p3] && (r2[p3] = o2);
-            if (l3 === t3 && u3 === i3 && w2 === y2 && x2 === v2) {
-              1 !== r2[n3] && (a2 = Math.abs(r2[n3]));
-              break;
-            }
-            h2 = w2;
-            c2 = x2;
-            w2 = l3;
-            x2 = u3;
-          }
-        }
-      }
-      return l2;
-    }
-    static #hh(t2, e2, i2, n2) {
-      if (i2 - e2 <= 4) {
-        for (let s3 = e2; s3 < i2 - 2; s3 += 2) n2.push(t2[s3], t2[s3 + 1]);
-        return;
-      }
-      const s2 = t2[e2], r2 = t2[e2 + 1], a2 = t2[i2 - 4] - s2, o2 = t2[i2 - 3] - r2, l2 = Math.hypot(a2, o2), h2 = a2 / l2, c2 = o2 / l2, d2 = h2 * r2 - c2 * s2, u2 = o2 / a2, p2 = 1 / l2, g2 = Math.atan(u2), m2 = Math.cos(g2), f2 = Math.sin(g2), b2 = p2 * (Math.abs(m2) + Math.abs(f2)), y2 = p2 * (1 - b2 + b2 ** 2), v2 = Math.max(Math.atan(Math.abs(f2 + m2) * y2), Math.atan(Math.abs(f2 - m2) * y2));
-      let w2 = 0, x2 = e2;
-      for (let n3 = e2 + 2; n3 < i2 - 2; n3 += 2) {
-        const e3 = Math.abs(d2 - h2 * t2[n3 + 1] + c2 * t2[n3]);
-        if (e3 > w2) {
-          x2 = n3;
-          w2 = e3;
-        }
-      }
-      if (w2 > (l2 * v2) ** 2) {
-        this.#hh(t2, e2, x2 + 2, n2);
-        this.#hh(t2, x2, i2, n2);
-      } else n2.push(s2, r2);
-    }
-    static #ch(t2) {
-      const e2 = [], i2 = t2.length;
-      this.#hh(t2, 0, i2, e2);
-      e2.push(t2[i2 - 2], t2[i2 - 1]);
-      return e2.length <= 4 ? null : e2;
-    }
-    static #dh(t2, e2, i2, n2, s2, r2) {
-      const a2 = new Float32Array(r2 ** 2), o2 = -2 * n2 ** 2, l2 = r2 >> 1;
-      for (let t3 = 0; t3 < r2; t3++) {
-        const e3 = (t3 - l2) ** 2;
-        for (let i3 = 0; i3 < r2; i3++) a2[t3 * r2 + i3] = Math.exp((e3 + (i3 - l2) ** 2) / o2);
-      }
-      const h2 = new Float32Array(256), c2 = -2 * s2 ** 2;
-      for (let t3 = 0; t3 < 256; t3++) h2[t3] = Math.exp(t3 ** 2 / c2);
-      const d2 = t2.length, u2 = new Uint8Array(d2), p2 = new Uint32Array(256);
-      for (let n3 = 0; n3 < i2; n3++) for (let s3 = 0; s3 < e2; s3++) {
-        const o3 = n3 * e2 + s3, c3 = t2[o3];
-        let d3 = 0, g2 = 0;
-        for (let o4 = 0; o4 < r2; o4++) {
-          const u3 = n3 + o4 - l2;
-          if (!(u3 < 0 || u3 >= i2)) for (let i3 = 0; i3 < r2; i3++) {
-            const n4 = s3 + i3 - l2;
-            if (n4 < 0 || n4 >= e2) continue;
-            const p3 = t2[u3 * e2 + n4], m2 = a2[o4 * r2 + i3] * h2[Math.abs(p3 - c3)];
-            d3 += p3 * m2;
-            g2 += m2;
-          }
-        }
-        p2[u2[o3] = Math.round(d3 / g2)]++;
-      }
-      return [u2, p2];
-    }
-    static #uh(t2) {
-      const e2 = new Uint32Array(256);
-      for (const i2 of t2) e2[i2]++;
-      return e2;
-    }
-    static #ph(t2) {
-      const e2 = t2.length, i2 = new Uint8ClampedArray(e2 >> 2);
-      let n2 = -1 / 0, s2 = 1 / 0;
-      for (let e3 = 0, r3 = i2.length; e3 < r3; e3++) {
-        const r4 = i2[e3] = t2[e3 << 2];
-        n2 = Math.max(n2, r4);
-        s2 = Math.min(s2, r4);
-      }
-      const r2 = 255 / (n2 - s2);
-      for (let t3 = 0, e3 = i2.length; t3 < e3; t3++) i2[t3] = (i2[t3] - s2) * r2;
-      return i2;
-    }
-    static #gh(t2) {
-      let e2, i2 = -1 / 0, n2 = -1 / 0;
-      const s2 = t2.findIndex((t3) => 0 !== t3);
-      let r2 = s2, a2 = s2;
-      for (e2 = s2; e2 < 256; e2++) {
-        const s3 = t2[e2];
-        if (s3 > i2) {
-          if (e2 - r2 > n2) {
-            n2 = e2 - r2;
-            a2 = e2 - 1;
-          }
-          i2 = s3;
-          r2 = e2;
-        }
-      }
-      for (e2 = a2 - 1; e2 >= 0 && !(t2[e2] > t2[e2 + 1]); e2--) ;
-      return e2;
-    }
-    static #mh(t2) {
-      const e2 = t2, { width: i2, height: n2 } = t2, { maxDim: s2 } = this.#nh;
-      let r2 = i2, a2 = n2;
-      if (i2 > s2 || n2 > s2) {
-        let o3 = i2, l3 = n2, h2 = Math.log2(Math.max(i2, n2) / s2);
-        const c2 = Math.floor(h2);
-        h2 = h2 === c2 ? c2 - 1 : c2;
-        for (let i3 = 0; i3 < h2; i3++) {
-          r2 = Math.ceil(o3 / 2);
-          a2 = Math.ceil(l3 / 2);
-          const i4 = new OffscreenCanvas(r2, a2);
-          i4.getContext("2d").drawImage(t2, 0, 0, o3, l3, 0, 0, r2, a2);
-          o3 = r2;
-          l3 = a2;
-          t2 !== e2 && t2.close();
-          t2 = i4.transferToImageBitmap();
-        }
-        const d2 = Math.min(s2 / r2, s2 / a2);
-        r2 = Math.round(r2 * d2);
-        a2 = Math.round(a2 * d2);
-      }
-      const o2 = new OffscreenCanvas(r2, a2).getContext("2d", { willReadFrequently: true });
-      o2.fillStyle = "white";
-      o2.fillRect(0, 0, r2, a2);
-      o2.filter = "grayscale(1)";
-      o2.drawImage(t2, 0, 0, t2.width, t2.height, 0, 0, r2, a2);
-      const l2 = o2.getImageData(0, 0, r2, a2).data;
-      return [this.#ph(l2), r2, a2];
-    }
     static extractContoursFromText(t2, { fontFamily: e2, fontStyle: i2, fontWeight: n2 }, s2, r2, a2, o2) {
       let l2 = new OffscreenCanvas(1, 1), h2 = l2.getContext("2d", { alpha: false });
       const c2 = h2.font = `${i2} ${n2} 200px ${e2}`, { actualBoundingBoxLeft: d2, actualBoundingBoxRight: u2, actualBoundingBoxAscent: p2, actualBoundingBoxDescent: g2, fontBoundingBoxAscent: m2, fontBoundingBoxDescent: f2, width: b2 } = h2.measureText(t2), y2 = 1.5, v2 = Math.ceil(Math.max(Math.abs(d2) + Math.abs(u2) || 0, b2) * y2), w2 = Math.ceil(Math.max(Math.abs(p2) + Math.abs(g2) || 200, Math.abs(m2) + Math.abs(f2) || 200) * y2);
@@ -22043,18 +22767,18 @@
       h2.fillRect(0, 0, v2, w2);
       h2.fillStyle = "black";
       h2.fillText(t2, 0.5 * v2 / 2, 1.5 * w2 / 2);
-      const x2 = this.#ph(h2.getImageData(0, 0, v2, w2).data), A2 = this.#uh(x2), E2 = this.#gh(A2), C2 = this.#lh(x2, v2, w2, E2);
+      const x2 = __privateMethod(this, _SignatureExtractor_static, ph_fn).call(this, h2.getImageData(0, 0, v2, w2).data), A2 = __privateMethod(this, _SignatureExtractor_static, uh_fn).call(this, x2), E2 = __privateMethod(this, _SignatureExtractor_static, gh_fn).call(this, A2), C2 = __privateMethod(this, _SignatureExtractor_static, lh_fn).call(this, x2, v2, w2, E2);
       return this.processDrawnLines({ lines: { curves: C2, width: v2, height: w2 }, pageWidth: s2, pageHeight: r2, rotation: a2, innerMargin: o2, mustSmooth: true, areContours: true });
     }
     static process(t2, e2, i2, n2, s2) {
-      const [r2, a2, o2] = this.#mh(t2), [l2, h2] = this.#dh(r2, a2, o2, Math.hypot(a2, o2) * this.#nh.sigmaSFactor, this.#nh.sigmaR, this.#nh.kernelSize), c2 = this.#gh(h2), d2 = this.#lh(l2, a2, o2, c2);
+      const [r2, a2, o2] = __privateMethod(this, _SignatureExtractor_static, mh_fn).call(this, t2), [l2, h2] = __privateMethod(this, _SignatureExtractor_static, dh_fn).call(this, r2, a2, o2, Math.hypot(a2, o2) * __privateGet(this, _nh).sigmaSFactor, __privateGet(this, _nh).sigmaR, __privateGet(this, _nh).kernelSize), c2 = __privateMethod(this, _SignatureExtractor_static, gh_fn).call(this, h2), d2 = __privateMethod(this, _SignatureExtractor_static, lh_fn).call(this, l2, a2, o2, c2);
       return this.processDrawnLines({ lines: { curves: d2, width: a2, height: o2 }, pageWidth: e2, pageHeight: i2, rotation: n2, innerMargin: s2, mustSmooth: true, areContours: true });
     }
     static processDrawnLines({ lines: t2, pageWidth: e2, pageHeight: i2, rotation: n2, innerMargin: s2, mustSmooth: r2, areContours: a2 }) {
       n2 % 180 != 0 && ([e2, i2] = [i2, e2]);
       const { curves: o2, width: l2, height: h2 } = t2, c2 = t2.thickness ?? 0, d2 = [], u2 = Math.min(e2 / l2, i2 / h2), p2 = u2 / e2, g2 = u2 / i2, m2 = [];
       for (const { points: t3 } of o2) {
-        const e3 = r2 ? this.#ch(t3) : t3;
+        const e3 = r2 ? __privateMethod(this, _SignatureExtractor_static, ch_fn).call(this, t3) : t3;
         if (!e3) continue;
         m2.push(e3);
         const i3 = e3.length, n3 = new Float32Array(i3), s3 = new Float32Array(3 * (2 === i3 ? 2 : i3 - 2));
@@ -22132,7 +22856,7 @@
         });
         let r2 = null, a2 = 0;
         for await (const t3 of i2) {
-          r2 ||= new Uint8Array(new Uint32Array(t3.buffer, 0, 4)[0]);
+          r2 || (r2 = new Uint8Array(new Uint32Array(t3.buffer, 0, 4)[0]));
           r2.set(t3, a2);
           a2 += t3.length;
         }
@@ -22164,6 +22888,212 @@
       }
     }
   };
+  _nh = new WeakMap();
+  _SignatureExtractor_static = new WeakSet();
+  sh_fn = function(t2, e2, i2, n2) {
+    n2 -= e2;
+    return 0 === (i2 -= t2) ? n2 > 0 ? 0 : 4 : 1 === i2 ? n2 + 6 : 2 - n2;
+  };
+  _rh = new WeakMap();
+  ah_fn = function(t2, e2, i2, n2, s2, r2, a2) {
+    const o2 = __privateMethod(this, _SignatureExtractor_static, sh_fn).call(this, i2, n2, s2, r2);
+    for (let s3 = 0; s3 < 8; s3++) {
+      const r3 = (-s3 + o2 - a2 + 16) % 8;
+      if (0 !== t2[(i2 + __privateGet(this, _rh)[2 * r3]) * e2 + (n2 + __privateGet(this, _rh)[2 * r3 + 1])]) return r3;
+    }
+    return -1;
+  };
+  oh_fn = function(t2, e2, i2, n2, s2, r2, a2) {
+    const o2 = __privateMethod(this, _SignatureExtractor_static, sh_fn).call(this, i2, n2, s2, r2);
+    for (let s3 = 0; s3 < 8; s3++) {
+      const r3 = (s3 + o2 + a2 + 16) % 8;
+      if (0 !== t2[(i2 + __privateGet(this, _rh)[2 * r3]) * e2 + (n2 + __privateGet(this, _rh)[2 * r3 + 1])]) return r3;
+    }
+    return -1;
+  };
+  lh_fn = function(t2, e2, i2, n2) {
+    const s2 = t2.length, r2 = new Int32Array(s2);
+    for (let e3 = 0; e3 < s2; e3++) r2[e3] = t2[e3] <= n2 ? 1 : 0;
+    for (let t3 = 1; t3 < i2 - 1; t3++) r2[t3 * e2] = r2[t3 * e2 + e2 - 1] = 0;
+    for (let t3 = 0; t3 < e2; t3++) r2[t3] = r2[e2 * i2 - 1 - t3] = 0;
+    let a2, o2 = 1;
+    const l2 = [];
+    for (let t3 = 1; t3 < i2 - 1; t3++) {
+      a2 = 1;
+      for (let i3 = 1; i3 < e2 - 1; i3++) {
+        const n3 = t3 * e2 + i3, s3 = r2[n3];
+        if (0 === s3) continue;
+        let h2 = t3, c2 = i3;
+        if (1 === s3 && 0 === r2[n3 - 1]) {
+          o2 += 1;
+          c2 -= 1;
+        } else {
+          if (!(s3 >= 1 && 0 === r2[n3 + 1])) {
+            1 !== s3 && (a2 = Math.abs(s3));
+            continue;
+          }
+          o2 += 1;
+          c2 += 1;
+          s3 > 1 && (a2 = s3);
+        }
+        const d2 = [i3, t3], u2 = c2 === i3 + 1, p2 = { isHole: u2, points: d2, id: o2, parent: 0 };
+        l2.push(p2);
+        let g2;
+        for (const t4 of l2) if (t4.id === a2) {
+          g2 = t4;
+          break;
+        }
+        g2 ? g2.isHole ? p2.parent = u2 ? g2.parent : a2 : p2.parent = u2 ? a2 : g2.parent : p2.parent = u2 ? a2 : 0;
+        const m2 = __privateMethod(this, _SignatureExtractor_static, ah_fn).call(this, r2, e2, t3, i3, h2, c2, 0);
+        if (-1 === m2) {
+          r2[n3] = -o2;
+          1 !== r2[n3] && (a2 = Math.abs(r2[n3]));
+          continue;
+        }
+        let f2 = __privateGet(this, _rh)[2 * m2], b2 = __privateGet(this, _rh)[2 * m2 + 1];
+        const y2 = t3 + f2, v2 = i3 + b2;
+        h2 = y2;
+        c2 = v2;
+        let w2 = t3, x2 = i3;
+        for (; ; ) {
+          const s4 = __privateMethod(this, _SignatureExtractor_static, oh_fn).call(this, r2, e2, w2, x2, h2, c2, 1);
+          f2 = __privateGet(this, _rh)[2 * s4];
+          b2 = __privateGet(this, _rh)[2 * s4 + 1];
+          const l3 = w2 + f2, u3 = x2 + b2;
+          d2.push(u3, l3);
+          const p3 = w2 * e2 + x2;
+          0 === r2[p3 + 1] ? r2[p3] = -o2 : 1 === r2[p3] && (r2[p3] = o2);
+          if (l3 === t3 && u3 === i3 && w2 === y2 && x2 === v2) {
+            1 !== r2[n3] && (a2 = Math.abs(r2[n3]));
+            break;
+          }
+          h2 = w2;
+          c2 = x2;
+          w2 = l3;
+          x2 = u3;
+        }
+      }
+    }
+    return l2;
+  };
+  hh_fn = function(t2, e2, i2, n2) {
+    if (i2 - e2 <= 4) {
+      for (let s3 = e2; s3 < i2 - 2; s3 += 2) n2.push(t2[s3], t2[s3 + 1]);
+      return;
+    }
+    const s2 = t2[e2], r2 = t2[e2 + 1], a2 = t2[i2 - 4] - s2, o2 = t2[i2 - 3] - r2, l2 = Math.hypot(a2, o2), h2 = a2 / l2, c2 = o2 / l2, d2 = h2 * r2 - c2 * s2, u2 = o2 / a2, p2 = 1 / l2, g2 = Math.atan(u2), m2 = Math.cos(g2), f2 = Math.sin(g2), b2 = p2 * (Math.abs(m2) + Math.abs(f2)), y2 = p2 * (1 - b2 + b2 ** 2), v2 = Math.max(Math.atan(Math.abs(f2 + m2) * y2), Math.atan(Math.abs(f2 - m2) * y2));
+    let w2 = 0, x2 = e2;
+    for (let n3 = e2 + 2; n3 < i2 - 2; n3 += 2) {
+      const e3 = Math.abs(d2 - h2 * t2[n3 + 1] + c2 * t2[n3]);
+      if (e3 > w2) {
+        x2 = n3;
+        w2 = e3;
+      }
+    }
+    if (w2 > (l2 * v2) ** 2) {
+      __privateMethod(this, _SignatureExtractor_static, hh_fn).call(this, t2, e2, x2 + 2, n2);
+      __privateMethod(this, _SignatureExtractor_static, hh_fn).call(this, t2, x2, i2, n2);
+    } else n2.push(s2, r2);
+  };
+  ch_fn = function(t2) {
+    const e2 = [], i2 = t2.length;
+    __privateMethod(this, _SignatureExtractor_static, hh_fn).call(this, t2, 0, i2, e2);
+    e2.push(t2[i2 - 2], t2[i2 - 1]);
+    return e2.length <= 4 ? null : e2;
+  };
+  dh_fn = function(t2, e2, i2, n2, s2, r2) {
+    const a2 = new Float32Array(r2 ** 2), o2 = -2 * n2 ** 2, l2 = r2 >> 1;
+    for (let t3 = 0; t3 < r2; t3++) {
+      const e3 = (t3 - l2) ** 2;
+      for (let i3 = 0; i3 < r2; i3++) a2[t3 * r2 + i3] = Math.exp((e3 + (i3 - l2) ** 2) / o2);
+    }
+    const h2 = new Float32Array(256), c2 = -2 * s2 ** 2;
+    for (let t3 = 0; t3 < 256; t3++) h2[t3] = Math.exp(t3 ** 2 / c2);
+    const d2 = t2.length, u2 = new Uint8Array(d2), p2 = new Uint32Array(256);
+    for (let n3 = 0; n3 < i2; n3++) for (let s3 = 0; s3 < e2; s3++) {
+      const o3 = n3 * e2 + s3, c3 = t2[o3];
+      let d3 = 0, g2 = 0;
+      for (let o4 = 0; o4 < r2; o4++) {
+        const u3 = n3 + o4 - l2;
+        if (!(u3 < 0 || u3 >= i2)) for (let i3 = 0; i3 < r2; i3++) {
+          const n4 = s3 + i3 - l2;
+          if (n4 < 0 || n4 >= e2) continue;
+          const p3 = t2[u3 * e2 + n4], m2 = a2[o4 * r2 + i3] * h2[Math.abs(p3 - c3)];
+          d3 += p3 * m2;
+          g2 += m2;
+        }
+      }
+      p2[u2[o3] = Math.round(d3 / g2)]++;
+    }
+    return [u2, p2];
+  };
+  uh_fn = function(t2) {
+    const e2 = new Uint32Array(256);
+    for (const i2 of t2) e2[i2]++;
+    return e2;
+  };
+  ph_fn = function(t2) {
+    const e2 = t2.length, i2 = new Uint8ClampedArray(e2 >> 2);
+    let n2 = -1 / 0, s2 = 1 / 0;
+    for (let e3 = 0, r3 = i2.length; e3 < r3; e3++) {
+      const r4 = i2[e3] = t2[e3 << 2];
+      n2 = Math.max(n2, r4);
+      s2 = Math.min(s2, r4);
+    }
+    const r2 = 255 / (n2 - s2);
+    for (let t3 = 0, e3 = i2.length; t3 < e3; t3++) i2[t3] = (i2[t3] - s2) * r2;
+    return i2;
+  };
+  gh_fn = function(t2) {
+    let e2, i2 = -1 / 0, n2 = -1 / 0;
+    const s2 = t2.findIndex((t3) => 0 !== t3);
+    let r2 = s2, a2 = s2;
+    for (e2 = s2; e2 < 256; e2++) {
+      const s3 = t2[e2];
+      if (s3 > i2) {
+        if (e2 - r2 > n2) {
+          n2 = e2 - r2;
+          a2 = e2 - 1;
+        }
+        i2 = s3;
+        r2 = e2;
+      }
+    }
+    for (e2 = a2 - 1; e2 >= 0 && !(t2[e2] > t2[e2 + 1]); e2--) ;
+    return e2;
+  };
+  mh_fn = function(t2) {
+    const e2 = t2, { width: i2, height: n2 } = t2, { maxDim: s2 } = __privateGet(this, _nh);
+    let r2 = i2, a2 = n2;
+    if (i2 > s2 || n2 > s2) {
+      let o3 = i2, l3 = n2, h2 = Math.log2(Math.max(i2, n2) / s2);
+      const c2 = Math.floor(h2);
+      h2 = h2 === c2 ? c2 - 1 : c2;
+      for (let i3 = 0; i3 < h2; i3++) {
+        r2 = Math.ceil(o3 / 2);
+        a2 = Math.ceil(l3 / 2);
+        const i4 = new OffscreenCanvas(r2, a2);
+        i4.getContext("2d").drawImage(t2, 0, 0, o3, l3, 0, 0, r2, a2);
+        o3 = r2;
+        l3 = a2;
+        t2 !== e2 && t2.close();
+        t2 = i4.transferToImageBitmap();
+      }
+      const d2 = Math.min(s2 / r2, s2 / a2);
+      r2 = Math.round(r2 * d2);
+      a2 = Math.round(a2 * d2);
+    }
+    const o2 = new OffscreenCanvas(r2, a2).getContext("2d", { willReadFrequently: true });
+    o2.fillStyle = "white";
+    o2.fillRect(0, 0, r2, a2);
+    o2.filter = "grayscale(1)";
+    o2.drawImage(t2, 0, 0, t2.width, t2.height, 0, 0, r2, a2);
+    const l2 = o2.getImageData(0, 0, r2, a2).data;
+    return [__privateMethod(this, _SignatureExtractor_static, ph_fn).call(this, l2), r2, a2];
+  };
+  __privateAdd(SignatureExtractor, _SignatureExtractor_static);
+  __privateAdd(SignatureExtractor, _nh, { maxDim: 512, sigmaSFactor: 0.02, sigmaR: 25, kernelSize: 16 });
+  __privateAdd(SignatureExtractor, _rh, new Int32Array([0, 1, -1, 1, -1, 0, -1, -1, 0, -1, 1, -1, 1, 0, 1, 1]));
   var SignatureOptions = class _SignatureOptions extends DrawingOptions {
     constructor() {
       super();
@@ -22186,19 +23116,17 @@
       return t2;
     }
   };
-  var SignatureEditor = class _SignatureEditor extends DrawingEditor {
-    #fh = false;
-    #bh = null;
-    #yh = null;
-    #vh = null;
-    static _type = "signature";
-    static _editorType = y.SIGNATURE;
-    static _defaultDrawingOptions = null;
+  var _fh, _bh, _yh, _vh;
+  var _SignatureEditor = class _SignatureEditor extends DrawingEditor {
     constructor(t2) {
       super({ ...t2, mustBeCommitted: true, name: "signatureEditor" });
+      __privateAdd(this, _fh, false);
+      __privateAdd(this, _bh, null);
+      __privateAdd(this, _yh, null);
+      __privateAdd(this, _vh, null);
       this._willKeepAspectRatio = true;
-      this.#yh = t2.signatureData || null;
-      this.#bh = null;
+      __privateSet(this, _yh, t2.signatureData || null);
+      __privateSet(this, _bh, null);
       this.defaultL10nId = "pdfjs-editor-signature-editor1";
     }
     static initialize(t2, e2) {
@@ -22221,7 +23149,7 @@
       return false;
     }
     get telemetryFinalData() {
-      return { type: "signature", hasDescription: !!this.#bh };
+      return { type: "signature", hasDescription: !!__privateGet(this, _bh) };
     }
     static computeTelemetryFinalData(t2) {
       const e2 = t2.get("hasDescription");
@@ -22243,15 +23171,15 @@
         e2 = this.y;
       }
       super.render();
-      if (null === this._drawId) if (this.#yh) {
-        const { lines: t3, mustSmooth: e3, areContours: i3, description: n2, uuid: s2, heightInPage: r2 } = this.#yh, { rawDims: { pageWidth: a2, pageHeight: o2 }, rotation: l2 } = this.parent.viewport, h2 = SignatureExtractor.processDrawnLines({ lines: t3, pageWidth: a2, pageHeight: o2, rotation: l2, innerMargin: _SignatureEditor._INNER_MARGIN, mustSmooth: e3, areContours: i3 });
+      if (null === this._drawId) if (__privateGet(this, _yh)) {
+        const { lines: t3, mustSmooth: e3, areContours: i3, description: n2, uuid: s2, heightInPage: r2 } = __privateGet(this, _yh), { rawDims: { pageWidth: a2, pageHeight: o2 }, rotation: l2 } = this.parent.viewport, h2 = SignatureExtractor.processDrawnLines({ lines: t3, pageWidth: a2, pageHeight: o2, rotation: l2, innerMargin: _SignatureEditor._INNER_MARGIN, mustSmooth: e3, areContours: i3 });
         this.addSignature(h2, r2, n2, s2);
       } else {
         this.div.setAttribute("data-l10n-args", JSON.stringify({ description: "" }));
         this.div.hidden = true;
         this._uiManager.getSignature(this);
       }
-      else this.div.setAttribute("data-l10n-args", JSON.stringify({ description: this.#bh || "" }));
+      else this.div.setAttribute("data-l10n-args", JSON.stringify({ description: __privateGet(this, _bh) || "" }));
       if (i2) {
         this._isCopy = true;
         this._moveAfterPaste(t2, e2);
@@ -22259,17 +23187,17 @@
       return this.div;
     }
     setUuid(t2) {
-      this.#vh = t2;
+      __privateSet(this, _vh, t2);
       this.addEditToolbar();
     }
     getUuid() {
-      return this.#vh;
+      return __privateGet(this, _vh);
     }
     get description() {
-      return this.#bh;
+      return __privateGet(this, _bh);
     }
     set description(t2) {
-      this.#bh = t2;
+      __privateSet(this, _bh, t2);
       if (this.div) {
         this.div.setAttribute("data-l10n-args", JSON.stringify({ description: t2 }));
         super.addEditToolbar().then((e2) => {
@@ -22278,18 +23206,18 @@
       }
     }
     getSignaturePreview() {
-      const { newCurves: t2, areContours: e2, thickness: i2, width: n2, height: s2 } = this.#yh, r2 = Math.max(n2, s2);
+      const { newCurves: t2, areContours: e2, thickness: i2, width: n2, height: s2 } = __privateGet(this, _yh), r2 = Math.max(n2, s2);
       return { areContours: e2, outline: SignatureExtractor.processDrawnLines({ lines: { curves: t2.map((t3) => ({ points: t3 })), thickness: i2, width: n2, height: s2 }, pageWidth: r2, pageHeight: r2, rotation: 0, innerMargin: 0, mustSmooth: false, areContours: e2 }).outline };
     }
     get toolbarButtons() {
       return this._uiManager.signatureManager ? [["editSignature", this._uiManager.signatureManager]] : super.toolbarButtons;
     }
     addSignature(t2, e2, i2, n2) {
-      const { x: s2, y: r2 } = this, { outline: a2 } = this.#yh = t2;
-      this.#fh = a2 instanceof ContourDrawOutline;
+      const { x: s2, y: r2 } = this, { outline: a2 } = __privateSet(this, _yh, t2);
+      __privateSet(this, _fh, a2 instanceof ContourDrawOutline);
       this.description = i2;
       let o2;
-      if (this.#fh) o2 = _SignatureEditor.getDefaultDrawingOptions();
+      if (__privateGet(this, _fh)) o2 = _SignatureEditor.getDefaultDrawingOptions();
       else {
         o2 = _SignatureEditor._defaultDrawnSignatureOptions.clone();
         o2.updateProperties({ "stroke-width": a2.thickness });
@@ -22337,14 +23265,14 @@
     }
     serialize(t2 = false) {
       if (this.isEmpty()) return null;
-      const { lines: e2, points: i2 } = this.serializeDraw(t2), { _drawingOptions: { "stroke-width": n2 } } = this, s2 = Object.assign(super.serialize(t2), { isSignature: true, areContours: this.#fh, color: [0, 0, 0], thickness: this.#fh ? 0 : n2 });
+      const { lines: e2, points: i2 } = this.serializeDraw(t2), { _drawingOptions: { "stroke-width": n2 } } = this, s2 = Object.assign(super.serialize(t2), { isSignature: true, areContours: __privateGet(this, _fh), color: [0, 0, 0], thickness: __privateGet(this, _fh) ? 0 : n2 });
       this.addComment(s2);
       if (t2) {
         s2.paths = { lines: e2, points: i2 };
-        s2.uuid = this.#vh;
+        s2.uuid = __privateGet(this, _vh);
         s2.isCopy = true;
       } else s2.lines = e2;
-      this.#bh && (s2.accessibilityData = { type: "Figure", alt: this.#bh });
+      __privateGet(this, _bh) && (s2.accessibilityData = { type: "Figure", alt: __privateGet(this, _bh) });
       return s2;
     }
     static deserializeDraw(t2, e2, i2, n2, s2, r2) {
@@ -22352,30 +23280,38 @@
     }
     static async deserialize(t2, e2, i2) {
       const n2 = await super.deserialize(t2, e2, i2);
-      n2.#fh = t2.areContours;
+      __privateSet(n2, _fh, t2.areContours);
       n2.description = t2.accessibilityData?.alt || "";
-      n2.#vh = t2.uuid;
+      __privateSet(n2, _vh, t2.uuid);
       return n2;
     }
   };
+  _fh = new WeakMap();
+  _bh = new WeakMap();
+  _yh = new WeakMap();
+  _vh = new WeakMap();
+  __publicField(_SignatureEditor, "_type", "signature");
+  __publicField(_SignatureEditor, "_editorType", y.SIGNATURE);
+  __publicField(_SignatureEditor, "_defaultDrawingOptions", null);
+  var SignatureEditor = _SignatureEditor;
+  var _wh, _xh, _Ah, _Eh, _Ch, _Sh, _Th, __h, _kh, _Dh, _Mh, _StampEditor_instances, Ph_fn, Fh_fn, Oh_fn, Ih_fn, Bh_fn, Rh_fn, Lh_fn, So_fn4;
   var StampEditor = class extends AnnotationEditor {
-    #wh = null;
-    #xh = null;
-    #Ah = null;
-    #Eh = null;
-    #Ch = null;
-    #Sh = "";
-    #Th = null;
-    #_h = false;
-    #kh = null;
-    #Dh = false;
-    #Mh = false;
-    static _type = "stamp";
-    static _editorType = y.STAMP;
     constructor(t2) {
       super({ ...t2, name: "stampEditor" });
-      this.#Eh = t2.bitmapUrl;
-      this.#Ch = t2.bitmapFile;
+      __privateAdd(this, _StampEditor_instances);
+      __privateAdd(this, _wh, null);
+      __privateAdd(this, _xh, null);
+      __privateAdd(this, _Ah, null);
+      __privateAdd(this, _Eh, null);
+      __privateAdd(this, _Ch, null);
+      __privateAdd(this, _Sh, "");
+      __privateAdd(this, _Th, null);
+      __privateAdd(this, __h, false);
+      __privateAdd(this, _kh, null);
+      __privateAdd(this, _Dh, false);
+      __privateAdd(this, _Mh, false);
+      __privateSet(this, _Eh, t2.bitmapUrl);
+      __privateSet(this, _Ch, t2.bitmapFile);
       this.defaultL10nId = "pdfjs-editor-stamp-editor";
     }
     static initialize(t2, e2) {
@@ -22398,35 +23334,6 @@
       const e2 = t2.get("hasAltText");
       return { hasAltText: e2.get(true) ?? 0, hasNoAltText: e2.get(false) ?? 0 };
     }
-    #Ph(t2, e2 = false) {
-      if (t2) {
-        this.#wh = t2.bitmap;
-        if (!e2) {
-          this.#xh = t2.id;
-          this.#Dh = t2.isSvg;
-        }
-        t2.file && (this.#Sh = t2.file.name);
-        this.#Ih();
-      } else this.remove();
-    }
-    #Fh() {
-      this.#Ah = null;
-      this._uiManager.enableWaiting(false);
-      if (this.#Th) if (this._uiManager.useNewAltTextWhenAddingImage && this._uiManager.useNewAltTextFlow && this.#wh) this.addEditToolbar().then(() => {
-        this._editToolbar.hide();
-        this._uiManager.editAltText(this, true);
-      });
-      else {
-        if (!this._uiManager.useNewAltTextWhenAddingImage && this._uiManager.useNewAltTextFlow && this.#wh) {
-          this._reportTelemetry({ action: "pdfjs.image.image_added", data: { alt_text_modal: false, alt_text_type: "empty" } });
-          try {
-            this.mlGuessAltText();
-          } catch {
-          }
-        }
-        this.div.focus();
-      }
-    }
     async mlGuessAltText(t2 = null, e2 = true) {
       if (this.hasAltTextData()) return null;
       const { mlManager: i2 } = this._uiManager;
@@ -22442,56 +23349,15 @@
       e2 && !this.hasAltTextData() && (this.altTextData = { alt: o2, decorative: false });
       return o2;
     }
-    #Oh() {
-      if (this.#xh) {
-        this._uiManager.enableWaiting(true);
-        this._uiManager.imageManager.getFromId(this.#xh).then((t3) => this.#Ph(t3, true)).finally(() => this.#Fh());
-        return;
-      }
-      if (this.#Eh) {
-        const t3 = this.#Eh;
-        this.#Eh = null;
-        this._uiManager.enableWaiting(true);
-        this.#Ah = this._uiManager.imageManager.getFromUrl(t3).then((t4) => this.#Ph(t4)).finally(() => this.#Fh());
-        return;
-      }
-      if (this.#Ch) {
-        const t3 = this.#Ch;
-        this.#Ch = null;
-        this._uiManager.enableWaiting(true);
-        this.#Ah = this._uiManager.imageManager.getFromFile(t3).then((t4) => this.#Ph(t4)).finally(() => this.#Fh());
-        return;
-      }
-      const t2 = document.createElement("input");
-      t2.type = "file";
-      t2.accept = X.join(",");
-      const e2 = this._uiManager._signal;
-      this.#Ah = new Promise((i2) => {
-        t2.addEventListener("change", async () => {
-          if (t2.files && 0 !== t2.files.length) {
-            this._uiManager.enableWaiting(true);
-            const e3 = await this._uiManager.imageManager.getFromFile(t2.files[0]);
-            this._reportTelemetry({ action: "pdfjs.image.image_selected", data: { alt_text_modal: this._uiManager.useNewAltTextFlow } });
-            this.#Ph(e3);
-          } else this.remove();
-          i2();
-        }, { signal: e2 });
-        t2.addEventListener("cancel", () => {
-          this.remove();
-          i2();
-        }, { signal: e2 });
-      }).finally(() => this.#Fh());
-      t2.click();
-    }
     remove() {
-      if (this.#xh) {
-        this.#wh = null;
-        this._uiManager.imageManager.deleteId(this.#xh);
-        this.#Th?.remove();
-        this.#Th = null;
-        if (this.#kh) {
-          clearTimeout(this.#kh);
-          this.#kh = null;
+      if (__privateGet(this, _xh)) {
+        __privateSet(this, _wh, null);
+        this._uiManager.imageManager.deleteId(__privateGet(this, _xh));
+        __privateGet(this, _Th)?.remove();
+        __privateSet(this, _Th, null);
+        if (__privateGet(this, _kh)) {
+          clearTimeout(__privateGet(this, _kh));
+          __privateSet(this, _kh, null);
         }
       }
       super.remove();
@@ -22500,17 +23366,17 @@
       if (this.parent) {
         super.rebuild();
         if (null !== this.div) {
-          this.#xh && null === this.#Th && this.#Oh();
+          __privateGet(this, _xh) && null === __privateGet(this, _Th) && __privateMethod(this, _StampEditor_instances, Oh_fn).call(this);
           this.isAttachedToDOM || this.parent.add(this);
         }
-      } else this.#xh && this.#Oh();
+      } else __privateGet(this, _xh) && __privateMethod(this, _StampEditor_instances, Oh_fn).call(this);
     }
     onceAdded(t2) {
       this._isDraggable = true;
       t2 && this.div.focus();
     }
     isEmpty() {
-      return !(this.#Ah || this.#wh || this.#Eh || this.#Ch || this.#xh || this.#_h);
+      return !(__privateGet(this, _Ah) || __privateGet(this, _wh) || __privateGet(this, _Eh) || __privateGet(this, _Ch) || __privateGet(this, _xh) || __privateGet(this, __h));
     }
     get toolbarButtons() {
       return [["altText", this.createAltText()]];
@@ -22528,7 +23394,7 @@
       super.render();
       this.div.hidden = true;
       this.createAltText();
-      this.#_h || (this.#wh ? this.#Ih() : this.#Oh());
+      __privateGet(this, __h) || (__privateGet(this, _wh) ? __privateMethod(this, _StampEditor_instances, Ih_fn).call(this) : __privateMethod(this, _StampEditor_instances, Oh_fn).call(this));
       this._isCopy && this._moveAfterPaste(t2, e2);
       this._uiManager.addShouldRescale(this);
       return this.div;
@@ -22537,10 +23403,10 @@
       const { id: i2, bitmap: n2 } = this._uiManager.imageManager.getFromCanvas(t2, e2);
       e2.remove();
       if (i2 && this._uiManager.imageManager.isValidId(i2)) {
-        this.#xh = i2;
-        n2 && (this.#wh = n2);
-        this.#_h = false;
-        this.#Ih();
+        __privateSet(this, _xh, i2);
+        n2 && __privateSet(this, _wh, n2);
+        __privateSet(this, __h, false);
+        __privateMethod(this, _StampEditor_instances, Ih_fn).call(this);
       }
     }
     _onResized() {
@@ -22548,47 +23414,16 @@
     }
     onScaleChanging() {
       if (!this.parent) return;
-      null !== this.#kh && clearTimeout(this.#kh);
-      this.#kh = setTimeout(() => {
-        this.#kh = null;
-        this.#Rh();
-      }, 200);
-    }
-    #Ih() {
-      const { div: t2 } = this;
-      let { width: e2, height: i2 } = this.#wh;
-      const [n2, s2] = this.pageDimensions, r2 = 0.75;
-      if (this.width) {
-        e2 = this.width * n2;
-        i2 = this.height * s2;
-      } else if (e2 > r2 * n2 || i2 > r2 * s2) {
-        const t3 = Math.min(r2 * n2 / e2, r2 * s2 / i2);
-        e2 *= t3;
-        i2 *= t3;
-      }
-      this._uiManager.enableWaiting(false);
-      const a2 = this.#Th = document.createElement("canvas");
-      a2.setAttribute("role", "img");
-      this.addContainer(a2);
-      this.width = e2 / n2;
-      this.height = i2 / s2;
-      this.setDims();
-      this._initialOptions?.isCentered ? this.center() : this.fixAndSetPosition();
-      this._initialOptions = null;
-      this._uiManager.useNewAltTextWhenAddingImage && this._uiManager.useNewAltTextFlow && !this.annotationElementId || (t2.hidden = false);
-      this.#Rh();
-      if (!this.#Mh) {
-        this.parent.addUndoableEditor(this);
-        this.#Mh = true;
-      }
-      this._reportTelemetry({ action: "inserted_image" });
-      this.#Sh && this.div.setAttribute("aria-description", this.#Sh);
-      this.annotationElementId || this._uiManager.a11yAlert(AnnotationEditor._l10nAlert.stamp);
+      null !== __privateGet(this, _kh) && clearTimeout(__privateGet(this, _kh));
+      __privateSet(this, _kh, setTimeout(() => {
+        __privateSet(this, _kh, null);
+        __privateMethod(this, _StampEditor_instances, Rh_fn).call(this);
+      }, 200));
     }
     copyCanvas(t2, e2, i2 = false) {
-      t2 ||= 224;
-      const { width: n2, height: s2 } = this.#wh, r2 = new OutputScale();
-      let a2 = this.#wh, o2 = n2, l2 = s2, h2 = null;
+      t2 || (t2 = 224);
+      const { width: n2, height: s2 } = __privateGet(this, _wh), r2 = new OutputScale();
+      let a2 = __privateGet(this, _wh), o2 = n2, l2 = s2, h2 = null;
       if (e2) {
         if (n2 > e2 || s2 > e2) {
           const t4 = Math.min(e2 / n2, e2 / s2);
@@ -22597,7 +23432,7 @@
         }
         h2 = document.createElement("canvas");
         const t3 = h2.width = Math.ceil(o2 * r2.sx), i3 = h2.height = Math.ceil(l2 * r2.sy);
-        this.#Dh || (a2 = this.#Bh(t3, i3));
+        __privateGet(this, _Dh) || (a2 = __privateMethod(this, _StampEditor_instances, Bh_fn).call(this, t3, i3));
         const c3 = h2.getContext("2d");
         c3.filter = this._uiManager.hcmFilter;
         let d2 = "white", u2 = "#cfcfd8";
@@ -22623,12 +23458,12 @@
           e3 = a2.width;
           i3 = a2.height;
         } else {
-          a2 = this.#wh;
+          a2 = __privateGet(this, _wh);
           if (n2 > t2 || s2 > t2) {
             const r3 = Math.min(t2 / n2, t2 / s2);
             e3 = Math.floor(n2 * r3);
             i3 = Math.floor(s2 * r3);
-            this.#Dh || (a2 = this.#Bh(e3, i3));
+            __privateGet(this, _Dh) || (a2 = __privateMethod(this, _StampEditor_instances, Bh_fn).call(this, e3, i3));
           }
         }
         const o3 = new OffscreenCanvas(e3, i3).getContext("2d", { willReadFrequently: true });
@@ -22636,46 +23471,6 @@
         c2 = { width: e3, height: i3, data: o3.getImageData(0, 0, e3, i3).data };
       }
       return { canvas: h2, width: o2, height: l2, imageData: c2 };
-    }
-    #Bh(t2, e2) {
-      const { width: i2, height: n2 } = this.#wh;
-      let s2 = i2, r2 = n2, a2 = this.#wh;
-      for (; s2 > 2 * t2 || r2 > 2 * e2; ) {
-        const i3 = s2, n3 = r2;
-        s2 > 2 * t2 && (s2 = Math.ceil(s2 / 2));
-        r2 > 2 * e2 && (r2 = Math.ceil(r2 / 2));
-        const o2 = new OffscreenCanvas(s2, r2);
-        o2.getContext("2d").drawImage(a2, 0, 0, i3, n3, 0, 0, s2, r2);
-        a2 = o2.transferToImageBitmap();
-      }
-      return a2;
-    }
-    #Rh() {
-      const [t2, e2] = this.parentDimensions, { width: i2, height: n2 } = this, s2 = new OutputScale(), r2 = Math.ceil(i2 * t2 * s2.sx), a2 = Math.ceil(n2 * e2 * s2.sy), o2 = this.#Th;
-      if (!o2 || o2.width === r2 && o2.height === a2) return;
-      o2.width = r2;
-      o2.height = a2;
-      const l2 = this.#Dh ? this.#wh : this.#Bh(r2, a2), h2 = o2.getContext("2d");
-      h2.filter = this._uiManager.hcmFilter;
-      h2.drawImage(l2, 0, 0, l2.width, l2.height, 0, 0, r2, a2);
-    }
-    #Lh(t2) {
-      if (t2) {
-        if (this.#Dh) {
-          const t4 = this._uiManager.imageManager.getSvgUrl(this.#xh);
-          if (t4) return t4;
-        }
-        const t3 = document.createElement("canvas");
-        ({ width: t3.width, height: t3.height } = this.#wh);
-        t3.getContext("2d").drawImage(this.#wh, 0, 0);
-        return t3.toDataURL();
-      }
-      if (this.#Dh) {
-        const [t3, e2] = this.pageDimensions, i2 = Math.round(this.width * t3 * PixelsPerInch.PDF_TO_CSS_UNITS), n2 = Math.round(this.height * e2 * PixelsPerInch.PDF_TO_CSS_UNITS), s2 = new OffscreenCanvas(i2, n2);
-        s2.getContext("2d").drawImage(this.#wh, 0, 0, this.#wh.width, this.#wh.height, 0, 0, i2, n2);
-        return s2.transferToImageBitmap();
-      }
-      return structuredClone(this.#wh);
     }
     static async deserialize(t2, e2, i2) {
       let n2 = null, s2 = false;
@@ -22696,28 +23491,28 @@
       const r2 = await super.deserialize(t2, e2, i2), { rect: a2, bitmap: o2, bitmapUrl: l2, bitmapId: h2, isSvg: c2, accessibilityData: d2 } = t2;
       if (s2) {
         i2.addMissingCanvas(t2.id, r2);
-        r2.#_h = true;
+        __privateSet(r2, __h, true);
       } else if (h2 && i2.imageManager.isValidId(h2)) {
-        r2.#xh = h2;
-        o2 && (r2.#wh = o2);
-      } else r2.#Eh = l2;
-      r2.#Dh = c2;
+        __privateSet(r2, _xh, h2);
+        o2 && __privateSet(r2, _wh, o2);
+      } else __privateSet(r2, _Eh, l2);
+      __privateSet(r2, _Dh, c2);
       const [u2, p2] = r2.pageDimensions;
       r2.width = (a2[2] - a2[0]) / u2;
       r2.height = (a2[3] - a2[1]) / p2;
       d2 && (r2.altTextData = d2);
       r2._initialData = n2;
       t2.comment && r2.setCommentData(t2);
-      r2.#Mh = !!n2;
+      __privateSet(r2, _Mh, !!n2);
       return r2;
     }
     serialize(t2 = false, e2 = null) {
       if (this.isEmpty()) return null;
       if (this.deleted) return this.serializeDeleted();
-      const i2 = Object.assign(super.serialize(t2), { bitmapId: this.#xh, isSvg: this.#Dh });
+      const i2 = Object.assign(super.serialize(t2), { bitmapId: __privateGet(this, _xh), isSvg: __privateGet(this, _Dh) });
       this.addComment(i2);
       if (t2) {
-        i2.bitmapUrl = this.#Lh(true);
+        i2.bitmapUrl = __privateMethod(this, _StampEditor_instances, Lh_fn).call(this, true);
         i2.accessibilityData = this.serializeAltText(true);
         i2.isCopy = true;
         return i2;
@@ -22725,7 +23520,7 @@
       const { decorative: n2, altText: s2 } = this.serializeAltText(false);
       !n2 && s2 && (i2.accessibilityData = { type: "Figure", alt: s2 });
       if (this.annotationElementId) {
-        const t3 = this.#So(i2);
+        const t3 = __privateMethod(this, _StampEditor_instances, So_fn4).call(this, i2);
         if (t3.isSame) return null;
         t3.isSameAltText ? delete i2.accessibilityData : i2.accessibilityData.structParent = this._initialData.structParent ?? -1;
         i2.id = this.annotationElementId;
@@ -22733,26 +23528,22 @@
         return i2;
       }
       if (null === e2) return i2;
-      e2.stamps ||= /* @__PURE__ */ new Map();
-      const r2 = this.#Dh ? (i2.rect[2] - i2.rect[0]) * (i2.rect[3] - i2.rect[1]) : null;
-      if (e2.stamps.has(this.#xh)) {
-        if (this.#Dh) {
-          const t3 = e2.stamps.get(this.#xh);
+      e2.stamps || (e2.stamps = /* @__PURE__ */ new Map());
+      const r2 = __privateGet(this, _Dh) ? (i2.rect[2] - i2.rect[0]) * (i2.rect[3] - i2.rect[1]) : null;
+      if (e2.stamps.has(__privateGet(this, _xh))) {
+        if (__privateGet(this, _Dh)) {
+          const t3 = e2.stamps.get(__privateGet(this, _xh));
           if (r2 > t3.area) {
             t3.area = r2;
             t3.serialized.bitmap.close();
-            t3.serialized.bitmap = this.#Lh(false);
+            t3.serialized.bitmap = __privateMethod(this, _StampEditor_instances, Lh_fn).call(this, false);
           }
         }
       } else {
-        e2.stamps.set(this.#xh, { area: r2, serialized: i2 });
-        i2.bitmap = this.#Lh(false);
+        e2.stamps.set(__privateGet(this, _xh), { area: r2, serialized: i2 });
+        i2.bitmap = __privateMethod(this, _StampEditor_instances, Lh_fn).call(this, false);
       }
       return i2;
-    }
-    #So(t2) {
-      const { pageIndex: e2, accessibilityData: { altText: i2 } } = this._initialData, n2 = t2.pageIndex === e2, s2 = (t2.accessibilityData?.alt || "") === i2;
-      return { isSame: !this.hasEditedComment && !this._hasBeenMoved && !this._hasBeenResized && n2 && s2, isSameAltText: s2 };
     }
     renderAnnotationElement(t2) {
       if (this.deleted) {
@@ -22763,54 +23554,213 @@
       return null;
     }
   };
-  var AnnotationEditorLayer = class _AnnotationEditorLayer {
-    #oo;
-    #Nh = false;
-    #Uh = null;
-    #Hh = null;
-    #zh = null;
-    #Gh = /* @__PURE__ */ new Map();
-    #jh = false;
-    #Wh = false;
-    #Vh = false;
-    #$h = null;
-    #qh = null;
-    #Kh = null;
-    #Xh = null;
-    #Yh = null;
-    #Jh = -1;
-    #v;
-    static _initialized = false;
-    static #Z = new Map([FreeTextEditor, InkEditor, StampEditor, HighlightEditor, SignatureEditor].map((t2) => [t2._editorType, t2]));
+  _wh = new WeakMap();
+  _xh = new WeakMap();
+  _Ah = new WeakMap();
+  _Eh = new WeakMap();
+  _Ch = new WeakMap();
+  _Sh = new WeakMap();
+  _Th = new WeakMap();
+  __h = new WeakMap();
+  _kh = new WeakMap();
+  _Dh = new WeakMap();
+  _Mh = new WeakMap();
+  _StampEditor_instances = new WeakSet();
+  Ph_fn = function(t2, e2 = false) {
+    if (t2) {
+      __privateSet(this, _wh, t2.bitmap);
+      if (!e2) {
+        __privateSet(this, _xh, t2.id);
+        __privateSet(this, _Dh, t2.isSvg);
+      }
+      t2.file && __privateSet(this, _Sh, t2.file.name);
+      __privateMethod(this, _StampEditor_instances, Ih_fn).call(this);
+    } else this.remove();
+  };
+  Fh_fn = function() {
+    __privateSet(this, _Ah, null);
+    this._uiManager.enableWaiting(false);
+    if (__privateGet(this, _Th)) if (this._uiManager.useNewAltTextWhenAddingImage && this._uiManager.useNewAltTextFlow && __privateGet(this, _wh)) this.addEditToolbar().then(() => {
+      this._editToolbar.hide();
+      this._uiManager.editAltText(this, true);
+    });
+    else {
+      if (!this._uiManager.useNewAltTextWhenAddingImage && this._uiManager.useNewAltTextFlow && __privateGet(this, _wh)) {
+        this._reportTelemetry({ action: "pdfjs.image.image_added", data: { alt_text_modal: false, alt_text_type: "empty" } });
+        try {
+          this.mlGuessAltText();
+        } catch {
+        }
+      }
+      this.div.focus();
+    }
+  };
+  Oh_fn = function() {
+    if (__privateGet(this, _xh)) {
+      this._uiManager.enableWaiting(true);
+      this._uiManager.imageManager.getFromId(__privateGet(this, _xh)).then((t3) => __privateMethod(this, _StampEditor_instances, Ph_fn).call(this, t3, true)).finally(() => __privateMethod(this, _StampEditor_instances, Fh_fn).call(this));
+      return;
+    }
+    if (__privateGet(this, _Eh)) {
+      const t3 = __privateGet(this, _Eh);
+      __privateSet(this, _Eh, null);
+      this._uiManager.enableWaiting(true);
+      __privateSet(this, _Ah, this._uiManager.imageManager.getFromUrl(t3).then((t4) => __privateMethod(this, _StampEditor_instances, Ph_fn).call(this, t4)).finally(() => __privateMethod(this, _StampEditor_instances, Fh_fn).call(this)));
+      return;
+    }
+    if (__privateGet(this, _Ch)) {
+      const t3 = __privateGet(this, _Ch);
+      __privateSet(this, _Ch, null);
+      this._uiManager.enableWaiting(true);
+      __privateSet(this, _Ah, this._uiManager.imageManager.getFromFile(t3).then((t4) => __privateMethod(this, _StampEditor_instances, Ph_fn).call(this, t4)).finally(() => __privateMethod(this, _StampEditor_instances, Fh_fn).call(this)));
+      return;
+    }
+    const t2 = document.createElement("input");
+    t2.type = "file";
+    t2.accept = X.join(",");
+    const e2 = this._uiManager._signal;
+    __privateSet(this, _Ah, new Promise((i2) => {
+      t2.addEventListener("change", async () => {
+        if (t2.files && 0 !== t2.files.length) {
+          this._uiManager.enableWaiting(true);
+          const e3 = await this._uiManager.imageManager.getFromFile(t2.files[0]);
+          this._reportTelemetry({ action: "pdfjs.image.image_selected", data: { alt_text_modal: this._uiManager.useNewAltTextFlow } });
+          __privateMethod(this, _StampEditor_instances, Ph_fn).call(this, e3);
+        } else this.remove();
+        i2();
+      }, { signal: e2 });
+      t2.addEventListener("cancel", () => {
+        this.remove();
+        i2();
+      }, { signal: e2 });
+    }).finally(() => __privateMethod(this, _StampEditor_instances, Fh_fn).call(this)));
+    t2.click();
+  };
+  Ih_fn = function() {
+    const { div: t2 } = this;
+    let { width: e2, height: i2 } = __privateGet(this, _wh);
+    const [n2, s2] = this.pageDimensions, r2 = 0.75;
+    if (this.width) {
+      e2 = this.width * n2;
+      i2 = this.height * s2;
+    } else if (e2 > r2 * n2 || i2 > r2 * s2) {
+      const t3 = Math.min(r2 * n2 / e2, r2 * s2 / i2);
+      e2 *= t3;
+      i2 *= t3;
+    }
+    this._uiManager.enableWaiting(false);
+    const a2 = __privateSet(this, _Th, document.createElement("canvas"));
+    a2.setAttribute("role", "img");
+    this.addContainer(a2);
+    this.width = e2 / n2;
+    this.height = i2 / s2;
+    this.setDims();
+    this._initialOptions?.isCentered ? this.center() : this.fixAndSetPosition();
+    this._initialOptions = null;
+    this._uiManager.useNewAltTextWhenAddingImage && this._uiManager.useNewAltTextFlow && !this.annotationElementId || (t2.hidden = false);
+    __privateMethod(this, _StampEditor_instances, Rh_fn).call(this);
+    if (!__privateGet(this, _Mh)) {
+      this.parent.addUndoableEditor(this);
+      __privateSet(this, _Mh, true);
+    }
+    this._reportTelemetry({ action: "inserted_image" });
+    __privateGet(this, _Sh) && this.div.setAttribute("aria-description", __privateGet(this, _Sh));
+    this.annotationElementId || this._uiManager.a11yAlert(AnnotationEditor._l10nAlert.stamp);
+  };
+  Bh_fn = function(t2, e2) {
+    const { width: i2, height: n2 } = __privateGet(this, _wh);
+    let s2 = i2, r2 = n2, a2 = __privateGet(this, _wh);
+    for (; s2 > 2 * t2 || r2 > 2 * e2; ) {
+      const i3 = s2, n3 = r2;
+      s2 > 2 * t2 && (s2 = Math.ceil(s2 / 2));
+      r2 > 2 * e2 && (r2 = Math.ceil(r2 / 2));
+      const o2 = new OffscreenCanvas(s2, r2);
+      o2.getContext("2d").drawImage(a2, 0, 0, i3, n3, 0, 0, s2, r2);
+      a2 = o2.transferToImageBitmap();
+    }
+    return a2;
+  };
+  Rh_fn = function() {
+    const [t2, e2] = this.parentDimensions, { width: i2, height: n2 } = this, s2 = new OutputScale(), r2 = Math.ceil(i2 * t2 * s2.sx), a2 = Math.ceil(n2 * e2 * s2.sy), o2 = __privateGet(this, _Th);
+    if (!o2 || o2.width === r2 && o2.height === a2) return;
+    o2.width = r2;
+    o2.height = a2;
+    const l2 = __privateGet(this, _Dh) ? __privateGet(this, _wh) : __privateMethod(this, _StampEditor_instances, Bh_fn).call(this, r2, a2), h2 = o2.getContext("2d");
+    h2.filter = this._uiManager.hcmFilter;
+    h2.drawImage(l2, 0, 0, l2.width, l2.height, 0, 0, r2, a2);
+  };
+  Lh_fn = function(t2) {
+    if (t2) {
+      if (__privateGet(this, _Dh)) {
+        const t4 = this._uiManager.imageManager.getSvgUrl(__privateGet(this, _xh));
+        if (t4) return t4;
+      }
+      const t3 = document.createElement("canvas");
+      ({ width: t3.width, height: t3.height } = __privateGet(this, _wh));
+      t3.getContext("2d").drawImage(__privateGet(this, _wh), 0, 0);
+      return t3.toDataURL();
+    }
+    if (__privateGet(this, _Dh)) {
+      const [t3, e2] = this.pageDimensions, i2 = Math.round(this.width * t3 * PixelsPerInch.PDF_TO_CSS_UNITS), n2 = Math.round(this.height * e2 * PixelsPerInch.PDF_TO_CSS_UNITS), s2 = new OffscreenCanvas(i2, n2);
+      s2.getContext("2d").drawImage(__privateGet(this, _wh), 0, 0, __privateGet(this, _wh).width, __privateGet(this, _wh).height, 0, 0, i2, n2);
+      return s2.transferToImageBitmap();
+    }
+    return structuredClone(__privateGet(this, _wh));
+  };
+  So_fn4 = function(t2) {
+    const { pageIndex: e2, accessibilityData: { altText: i2 } } = this._initialData, n2 = t2.pageIndex === e2, s2 = (t2.accessibilityData?.alt || "") === i2;
+    return { isSame: !this.hasEditedComment && !this._hasBeenMoved && !this._hasBeenResized && n2 && s2, isSameAltText: s2 };
+  };
+  __publicField(StampEditor, "_type", "stamp");
+  __publicField(StampEditor, "_editorType", y.STAMP);
+  var _oo2, _Nh, _Uh, _Hh, _zh, _Gh, _jh, _Wh, _Vh, _$h, _qh, _Kh, _Xh, _Yh, _Jh, _v4, _Z2, _AnnotationEditorLayer_instances, Zh_get, tc_fn, ec_get, ic_fn, nc_fn, Qh_fn;
+  var _AnnotationEditorLayer = class _AnnotationEditorLayer {
     constructor({ uiManager: t2, pageIndex: e2, div: i2, structTreeLayer: n2, accessibilityManager: s2, annotationLayer: r2, drawLayer: a2, textLayer: o2, viewport: l2, l10n: h2 }) {
-      const c2 = [..._AnnotationEditorLayer.#Z.values()];
+      __privateAdd(this, _AnnotationEditorLayer_instances);
+      __privateAdd(this, _oo2);
+      __privateAdd(this, _Nh, false);
+      __privateAdd(this, _Uh, null);
+      __privateAdd(this, _Hh, null);
+      __privateAdd(this, _zh, null);
+      __privateAdd(this, _Gh, /* @__PURE__ */ new Map());
+      __privateAdd(this, _jh, false);
+      __privateAdd(this, _Wh, false);
+      __privateAdd(this, _Vh, false);
+      __privateAdd(this, _$h, null);
+      __privateAdd(this, _qh, null);
+      __privateAdd(this, _Kh, null);
+      __privateAdd(this, _Xh, null);
+      __privateAdd(this, _Yh, null);
+      __privateAdd(this, _Jh, -1);
+      __privateAdd(this, _v4);
+      const c2 = [...__privateGet(_AnnotationEditorLayer, _Z2).values()];
       if (!_AnnotationEditorLayer._initialized) {
         _AnnotationEditorLayer._initialized = true;
         for (const e3 of c2) e3.initialize(h2, t2);
       }
       t2.registerEditorTypes(c2);
-      this.#v = t2;
+      __privateSet(this, _v4, t2);
       this.pageIndex = e2;
       this.div = i2;
-      this.#oo = s2;
-      this.#Uh = r2;
+      __privateSet(this, _oo2, s2);
+      __privateSet(this, _Uh, r2);
       this.viewport = l2;
-      this.#Kh = o2;
+      __privateSet(this, _Kh, o2);
       this.drawLayer = a2;
       this._structTree = n2;
-      this.#v.addLayer(this);
+      __privateGet(this, _v4).addLayer(this);
     }
     get isEmpty() {
-      return 0 === this.#Gh.size;
+      return 0 === __privateGet(this, _Gh).size;
     }
     get isInvisible() {
-      return this.isEmpty && this.#v.getMode() === y.NONE;
+      return this.isEmpty && __privateGet(this, _v4).getMode() === y.NONE;
     }
     updateToolbar(t2) {
-      this.#v.updateToolbar(t2);
+      __privateGet(this, _v4).updateToolbar(t2);
     }
-    updateMode(t2 = this.#v.getMode()) {
-      this.#Qh();
+    updateMode(t2 = __privateGet(this, _v4).getMode()) {
+      __privateMethod(this, _AnnotationEditorLayer_instances, Qh_fn).call(this);
       switch (t2) {
         case y.NONE:
           this.div.classList.toggle("nonEditing", true);
@@ -22840,21 +23790,21 @@
       if (t2 === y.POPUP) e2.toggle("commentEditing", true);
       else {
         e2.toggle("commentEditing", false);
-        for (const i2 of _AnnotationEditorLayer.#Z.values()) e2.toggle(`${i2._type}Editing`, t2 === i2._editorType);
+        for (const i2 of __privateGet(_AnnotationEditorLayer, _Z2).values()) e2.toggle(`${i2._type}Editing`, t2 === i2._editorType);
       }
       this.div.hidden = false;
     }
     hasTextLayer(t2) {
-      return t2 === this.#Kh?.div;
+      return t2 === __privateGet(this, _Kh)?.div;
     }
     setEditingState(t2) {
-      this.#v.setEditingState(t2);
+      __privateGet(this, _v4).setEditingState(t2);
     }
     addCommands(t2) {
-      this.#v.addCommands(t2);
+      __privateGet(this, _v4).addCommands(t2);
     }
     cleanUndoStack(t2) {
-      this.#v.cleanUndoStack(t2);
+      __privateGet(this, _v4).cleanUndoStack(t2);
     }
     toggleDrawing(t2 = false) {
       this.div.classList.toggle("drawing", !t2);
@@ -22863,31 +23813,28 @@
       this.div.classList.toggle("disabled", !t2);
     }
     toggleAnnotationLayerPointerEvents(t2 = false) {
-      this.#Uh?.togglePointerEvents(t2);
-    }
-    get #Zh() {
-      return 0 !== this.#Gh.size ? this.#Gh.values() : this.#v.getEditors(this.pageIndex);
+      __privateGet(this, _Uh)?.togglePointerEvents(t2);
     }
     async enable() {
-      this.#Vh = true;
+      __privateSet(this, _Vh, true);
       this.div.tabIndex = 0;
       this.togglePointerEvents(true);
       this.div.classList.toggle("nonEditing", false);
-      this.#Yh?.abort();
-      this.#Yh = null;
+      __privateGet(this, _Yh)?.abort();
+      __privateSet(this, _Yh, null);
       const t2 = /* @__PURE__ */ new Set();
-      for (const e3 of this.#Zh) {
+      for (const e3 of __privateGet(this, _AnnotationEditorLayer_instances, Zh_get)) {
         e3.enableEditing();
         e3.show(true);
         if (e3.annotationElementId) {
-          this.#v.removeChangedExistingAnnotation(e3);
+          __privateGet(this, _v4).removeChangedExistingAnnotation(e3);
           t2.add(e3.annotationElementId);
         }
       }
-      const e2 = this.#Uh;
+      const e2 = __privateGet(this, _Uh);
       if (e2) for (const i2 of e2.getEditableAnnotations()) {
         i2.hide();
-        if (this.#v.isDeletedAnnotationElement(i2.data.id)) continue;
+        if (__privateGet(this, _v4).isDeletedAnnotationElement(i2.data.id)) continue;
         if (t2.has(i2.data.id)) continue;
         const e3 = await this.deserialize(i2);
         if (e3) {
@@ -22895,24 +23842,24 @@
           e3.enableEditing();
         }
       }
-      this.#Vh = false;
-      this.#v._eventBus.dispatch("editorsrendered", { source: this, pageNumber: this.pageIndex + 1 });
+      __privateSet(this, _Vh, false);
+      __privateGet(this, _v4)._eventBus.dispatch("editorsrendered", { source: this, pageNumber: this.pageIndex + 1 });
     }
     disable() {
-      this.#Wh = true;
+      __privateSet(this, _Wh, true);
       this.div.tabIndex = -1;
       this.togglePointerEvents(false);
       this.div.classList.toggle("nonEditing", true);
-      if (this.#Kh && !this.#Yh) {
-        this.#Yh = new AbortController();
-        const t3 = this.#v.combinedSignal(this.#Yh);
-        this.#Kh.div.addEventListener("pointerdown", (t4) => {
+      if (__privateGet(this, _Kh) && !__privateGet(this, _Yh)) {
+        __privateSet(this, _Yh, new AbortController());
+        const t3 = __privateGet(this, _v4).combinedSignal(__privateGet(this, _Yh));
+        __privateGet(this, _Kh).div.addEventListener("pointerdown", (t4) => {
           const { clientX: e3, clientY: i3, timeStamp: n2 } = t4;
-          if (n2 - this.#Jh > 500) {
-            this.#Jh = n2;
+          if (n2 - __privateGet(this, _Jh) > 500) {
+            __privateSet(this, _Jh, n2);
             return;
           }
-          this.#Jh = -1;
+          __privateSet(this, _Jh, -1);
           const { classList: s2 } = this.div;
           s2.toggle("getElements", true);
           const r2 = document.elementsFromPoint(e3, i3);
@@ -22925,17 +23872,17 @@
             break;
           }
           if (!a2) return;
-          const l2 = this.#Gh.get(a2);
+          const l2 = __privateGet(this, _Gh).get(a2);
           if (null === l2?.annotationElementId) {
             stopEvent(t4);
             l2.dblclick(t4);
           }
         }, { signal: t3, capture: true });
       }
-      const t2 = this.#Uh, e2 = [];
+      const t2 = __privateGet(this, _Uh), e2 = [];
       if (t2) {
         const i3 = /* @__PURE__ */ new Map(), n2 = /* @__PURE__ */ new Map();
-        for (const t3 of this.#Zh) {
+        for (const t3 of __privateGet(this, _AnnotationEditorLayer_instances, Zh_get)) {
           t3.disableEditing();
           if (t3.annotationElementId) if (null === t3.serialize()) {
             n2.set(t3.annotationElementId, t3);
@@ -22946,7 +23893,7 @@
         }
         for (const e3 of t2.getEditableAnnotations()) {
           const { id: t3 } = e3.data;
-          if (this.#v.isDeletedAnnotationElement(t3)) {
+          if (__privateGet(this, _v4).isDeletedAnnotationElement(t3)) {
             e3.updateEdited({ deleted: true });
             continue;
           }
@@ -22958,95 +23905,78 @@
           } else {
             s2 = i3.get(t3);
             if (s2) {
-              this.#v.addChangedExistingAnnotation(s2);
+              __privateGet(this, _v4).addChangedExistingAnnotation(s2);
               s2.renderAnnotationElement(e3) && s2.show(false);
             }
             e3.show();
           }
         }
       }
-      this.#Qh();
+      __privateMethod(this, _AnnotationEditorLayer_instances, Qh_fn).call(this);
       this.isEmpty && (this.div.hidden = true);
       const { classList: i2 } = this.div;
-      for (const t3 of _AnnotationEditorLayer.#Z.values()) i2.remove(`${t3._type}Editing`);
+      for (const t3 of __privateGet(_AnnotationEditorLayer, _Z2).values()) i2.remove(`${t3._type}Editing`);
       this.disableTextSelection();
       this.toggleAnnotationLayerPointerEvents(true);
       t2?.updateFakeAnnotations(e2);
-      this.#Wh = false;
+      __privateSet(this, _Wh, false);
     }
     getEditableAnnotation(t2) {
-      return this.#Uh?.getEditableAnnotation(t2) || null;
+      return __privateGet(this, _Uh)?.getEditableAnnotation(t2) || null;
     }
     setActiveEditor(t2) {
-      this.#v.getActive() !== t2 && this.#v.setActiveEditor(t2);
+      __privateGet(this, _v4).getActive() !== t2 && __privateGet(this, _v4).setActiveEditor(t2);
     }
     enableTextSelection() {
       this.div.tabIndex = -1;
-      if (this.#Kh?.div && !this.#Xh) {
-        this.#Xh = new AbortController();
-        const t2 = this.#v.combinedSignal(this.#Xh);
-        this.#Kh.div.addEventListener("pointerdown", this.#tc.bind(this), { signal: t2 });
-        this.#Kh.div.classList.add("highlighting");
+      if (__privateGet(this, _Kh)?.div && !__privateGet(this, _Xh)) {
+        __privateSet(this, _Xh, new AbortController());
+        const t2 = __privateGet(this, _v4).combinedSignal(__privateGet(this, _Xh));
+        __privateGet(this, _Kh).div.addEventListener("pointerdown", __privateMethod(this, _AnnotationEditorLayer_instances, tc_fn).bind(this), { signal: t2 });
+        __privateGet(this, _Kh).div.classList.add("highlighting");
       }
     }
     disableTextSelection() {
       this.div.tabIndex = 0;
-      if (this.#Kh?.div && this.#Xh) {
-        this.#Xh.abort();
-        this.#Xh = null;
-        this.#Kh.div.classList.remove("highlighting");
-      }
-    }
-    #tc(t2) {
-      this.#v.unselectAll();
-      const { target: e2 } = t2;
-      if (e2 === this.#Kh.div || ("img" === e2.getAttribute("role") || e2.classList.contains("endOfContent") || e2.classList.contains("textLayerImages") || e2.classList.contains("textLayerImagePlaceholder")) && this.#Kh.div.contains(e2)) {
-        const { isMac: e3 } = FeatureTest.platform;
-        if (0 !== t2.button || t2.ctrlKey && e3) return;
-        this.#v.showAllEditors("highlight", true, true);
-        this.#Kh.div.classList.add("free");
-        this.toggleDrawing();
-        HighlightEditor.startHighlighting(this, "ltr" === this.#v.direction, { target: this.#Kh.div, x: t2.x, y: t2.y });
-        this.#Kh.div.addEventListener("pointerup", () => {
-          this.#Kh.div.classList.remove("free");
-          this.toggleDrawing(true);
-        }, { once: true, signal: this.#v._signal });
-        t2.preventDefault();
+      if (__privateGet(this, _Kh)?.div && __privateGet(this, _Xh)) {
+        __privateGet(this, _Xh).abort();
+        __privateSet(this, _Xh, null);
+        __privateGet(this, _Kh).div.classList.remove("highlighting");
       }
     }
     enableClick() {
-      if (this.#Hh) return;
-      this.#Hh = new AbortController();
-      const t2 = this.#v.combinedSignal(this.#Hh);
+      if (__privateGet(this, _Hh)) return;
+      __privateSet(this, _Hh, new AbortController());
+      const t2 = __privateGet(this, _v4).combinedSignal(__privateGet(this, _Hh));
       this.div.addEventListener("pointerdown", this.pointerdown.bind(this), { signal: t2 });
       const e2 = this.pointerup.bind(this);
       this.div.addEventListener("pointerup", e2, { signal: t2 });
       this.div.addEventListener("pointercancel", e2, { signal: t2 });
     }
     disableClick() {
-      this.#Hh?.abort();
-      this.#Hh = null;
+      __privateGet(this, _Hh)?.abort();
+      __privateSet(this, _Hh, null);
     }
     attach(t2) {
-      this.#Gh.set(t2.id, t2);
+      __privateGet(this, _Gh).set(t2.id, t2);
       const { annotationElementId: e2 } = t2;
-      e2 && this.#v.isDeletedAnnotationElement(e2) && this.#v.removeDeletedAnnotationElement(t2);
+      e2 && __privateGet(this, _v4).isDeletedAnnotationElement(e2) && __privateGet(this, _v4).removeDeletedAnnotationElement(t2);
     }
     detach(t2) {
-      this.#Gh.delete(t2.id);
-      this.#oo?.removePointerInTextLayer(t2.contentDiv);
-      !this.#Wh && t2.annotationElementId && this.#v.addDeletedAnnotationElement(t2);
+      __privateGet(this, _Gh).delete(t2.id);
+      __privateGet(this, _oo2)?.removePointerInTextLayer(t2.contentDiv);
+      !__privateGet(this, _Wh) && t2.annotationElementId && __privateGet(this, _v4).addDeletedAnnotationElement(t2);
     }
     remove(t2) {
       this.detach(t2);
-      this.#v.removeEditor(t2);
+      __privateGet(this, _v4).removeEditor(t2);
       t2.div.remove();
       t2.isAttachedToDOM = false;
     }
     changeParent(t2) {
       if (t2.parent !== this) {
         if (t2.parent && t2.annotationElementId) {
-          this.#v.addDeletedAnnotationElement(t2);
+          __privateGet(this, _v4).addDeletedAnnotationElement(t2);
           AnnotationEditor.deleteAnnotationElement(t2);
           t2.annotationElementId = null;
         }
@@ -23062,7 +23992,7 @@
     add(t2) {
       if (t2.parent !== this || !t2.isAttachedToDOM) {
         this.changeParent(t2);
-        this.#v.addEditor(t2);
+        __privateGet(this, _v4).addEditor(t2);
         this.attach(t2);
         if (!t2.isAttachedToDOM) {
           const e2 = t2.render();
@@ -23070,32 +24000,32 @@
           t2.isAttachedToDOM = true;
         }
         t2.fixAndSetPosition();
-        t2.onceAdded(!this.#Vh);
-        this.#v.addToAnnotationStorage(t2);
+        t2.onceAdded(!__privateGet(this, _Vh));
+        __privateGet(this, _v4).addToAnnotationStorage(t2);
         t2._reportTelemetry(t2.telemetryInitialData);
       }
     }
     moveEditorInDOM(t2) {
       if (!t2.isAttachedToDOM) return;
       const { activeElement: e2 } = document;
-      if (t2.div.contains(e2) && !this.#zh) {
+      if (t2.div.contains(e2) && !__privateGet(this, _zh)) {
         t2._focusEventsAllowed = false;
-        this.#zh = setTimeout(() => {
-          this.#zh = null;
+        __privateSet(this, _zh, setTimeout(() => {
+          __privateSet(this, _zh, null);
           if (t2.div.contains(document.activeElement)) t2._focusEventsAllowed = true;
           else {
             t2.div.addEventListener("focusin", () => {
               t2._focusEventsAllowed = true;
-            }, { once: true, signal: this.#v._signal });
+            }, { once: true, signal: __privateGet(this, _v4)._signal });
             e2.focus();
           }
-        }, 0);
+        }, 0));
       }
-      t2._structTreeParentId = this.#oo?.moveElementInDOM(this.div, t2.div, t2.contentDiv, true);
+      t2._structTreeParentId = __privateGet(this, _oo2)?.moveElementInDOM(this.div, t2.div, t2.contentDiv, true);
     }
     addOrRebuild(t2) {
       if (t2.needsToBeRebuilt()) {
-        t2.parent ||= this;
+        t2.parent || (t2.parent = this);
         t2.rebuild();
         t2.show();
       } else this.add(t2);
@@ -23106,188 +24036,229 @@
       }, mustExec: false });
     }
     getEditorByUID(t2) {
-      for (const e2 of this.#Gh.values()) if (e2.uid === t2) return e2;
+      for (const e2 of __privateGet(this, _Gh).values()) if (e2.uid === t2) return e2;
       return null;
     }
-    get #ec() {
-      return _AnnotationEditorLayer.#Z.get(this.#v.getMode());
-    }
     combinedSignal(t2) {
-      return this.#v.combinedSignal(t2);
-    }
-    #ic(t2) {
-      const e2 = this.#ec;
-      return e2 ? new e2.prototype.constructor(t2) : null;
+      return __privateGet(this, _v4).combinedSignal(t2);
     }
     canCreateNewEmptyEditor() {
-      return this.#ec?.canCreateNewEmptyEditor();
+      return __privateGet(this, _AnnotationEditorLayer_instances, ec_get)?.canCreateNewEmptyEditor();
     }
     async pasteEditor(t2, e2) {
       this.updateToolbar(t2);
-      await this.#v.updateMode(t2.mode);
-      const { offsetX: i2, offsetY: n2 } = this.#nc(), s2 = this.#v.getId(), r2 = this.#ic({ parent: this, id: s2, x: i2, y: n2, uiManager: this.#v, isCentered: true, ...e2 });
+      await __privateGet(this, _v4).updateMode(t2.mode);
+      const { offsetX: i2, offsetY: n2 } = __privateMethod(this, _AnnotationEditorLayer_instances, nc_fn).call(this), s2 = __privateGet(this, _v4).getId(), r2 = __privateMethod(this, _AnnotationEditorLayer_instances, ic_fn).call(this, { parent: this, id: s2, x: i2, y: n2, uiManager: __privateGet(this, _v4), isCentered: true, ...e2 });
       r2 && this.add(r2);
     }
     async deserialize(t2) {
-      return await _AnnotationEditorLayer.#Z.get(t2.annotationType ?? t2.annotationEditorType)?.deserialize(t2, this, this.#v) || null;
+      return await __privateGet(_AnnotationEditorLayer, _Z2).get(t2.annotationType ?? t2.annotationEditorType)?.deserialize(t2, this, __privateGet(this, _v4)) || null;
     }
     createAndAddNewEditor(t2, e2, i2 = {}) {
-      const n2 = this.#v.getId(), s2 = this.#ic({ parent: this, id: n2, x: t2.offsetX, y: t2.offsetY, uiManager: this.#v, isCentered: e2, ...i2 });
+      const n2 = __privateGet(this, _v4).getId(), s2 = __privateMethod(this, _AnnotationEditorLayer_instances, ic_fn).call(this, { parent: this, id: n2, x: t2.offsetX, y: t2.offsetY, uiManager: __privateGet(this, _v4), isCentered: e2, ...i2 });
       s2 && this.add(s2);
       return s2;
     }
     get boundingClientRect() {
       return this.div.getBoundingClientRect();
     }
-    #nc() {
-      const { x: t2, y: e2, width: i2, height: n2 } = this.boundingClientRect, s2 = Math.max(0, t2), r2 = Math.max(0, e2), a2 = (s2 + Math.min(window.innerWidth, t2 + i2)) / 2 - t2, o2 = (r2 + Math.min(window.innerHeight, e2 + n2)) / 2 - e2, [l2, h2] = this.viewport.rotation % 180 == 0 ? [a2, o2] : [o2, a2];
-      return { offsetX: l2, offsetY: h2 };
-    }
     addNewEditor(t2 = {}) {
-      this.createAndAddNewEditor(this.#nc(), true, t2);
+      this.createAndAddNewEditor(__privateMethod(this, _AnnotationEditorLayer_instances, nc_fn).call(this), true, t2);
     }
     setSelected(t2) {
-      this.#v.setSelected(t2);
+      __privateGet(this, _v4).setSelected(t2);
     }
     toggleSelected(t2) {
-      this.#v.toggleSelected(t2);
+      __privateGet(this, _v4).toggleSelected(t2);
     }
     unselect(t2) {
-      this.#v.unselect(t2);
+      __privateGet(this, _v4).unselect(t2);
     }
     pointerup(t2) {
       const { isMac: e2 } = FeatureTest.platform;
       if (0 !== t2.button || t2.ctrlKey && e2) return;
       if (t2.target !== this.div) return;
-      if (!this.#jh) return;
-      this.#jh = false;
-      if (this.#ec?.isDrawer && this.#ec.supportMultipleDrawings) return;
-      if (!this.#Nh) {
-        this.#Nh = true;
+      if (!__privateGet(this, _jh)) return;
+      __privateSet(this, _jh, false);
+      if (__privateGet(this, _AnnotationEditorLayer_instances, ec_get)?.isDrawer && __privateGet(this, _AnnotationEditorLayer_instances, ec_get).supportMultipleDrawings) return;
+      if (!__privateGet(this, _Nh)) {
+        __privateSet(this, _Nh, true);
         return;
       }
-      const i2 = this.#v.getMode();
-      i2 !== y.STAMP && i2 !== y.POPUP && i2 !== y.SIGNATURE ? this.createAndAddNewEditor(t2, false) : this.#v.unselectAll();
+      const i2 = __privateGet(this, _v4).getMode();
+      i2 !== y.STAMP && i2 !== y.POPUP && i2 !== y.SIGNATURE ? this.createAndAddNewEditor(t2, false) : __privateGet(this, _v4).unselectAll();
     }
     pointerdown(t2) {
-      this.#v.getMode() === y.HIGHLIGHT && this.enableTextSelection();
-      if (this.#jh) {
-        this.#jh = false;
+      __privateGet(this, _v4).getMode() === y.HIGHLIGHT && this.enableTextSelection();
+      if (__privateGet(this, _jh)) {
+        __privateSet(this, _jh, false);
         return;
       }
       const { isMac: e2 } = FeatureTest.platform;
       if (0 !== t2.button || t2.ctrlKey && e2) return;
       if (t2.target !== this.div) return;
-      this.#jh = true;
-      if (this.#ec?.isDrawer) {
+      __privateSet(this, _jh, true);
+      if (__privateGet(this, _AnnotationEditorLayer_instances, ec_get)?.isDrawer) {
         this.startDrawingSession(t2);
         return;
       }
-      const i2 = this.#v.getActive();
-      this.#Nh = !i2 || i2.isEmpty();
+      const i2 = __privateGet(this, _v4).getActive();
+      __privateSet(this, _Nh, !i2 || i2.isEmpty());
     }
     startDrawingSession(t2) {
       this.div.focus({ preventScroll: true });
-      if (this.#$h) {
-        this.#ec.startDrawing(this, this.#v, false, t2);
+      if (__privateGet(this, _$h)) {
+        __privateGet(this, _AnnotationEditorLayer_instances, ec_get).startDrawing(this, __privateGet(this, _v4), false, t2);
         return;
       }
-      this.#v.setCurrentDrawingSession(this);
-      this.#$h = new AbortController();
-      const e2 = this.#v.combinedSignal(this.#$h);
+      __privateGet(this, _v4).setCurrentDrawingSession(this);
+      __privateSet(this, _$h, new AbortController());
+      const e2 = __privateGet(this, _v4).combinedSignal(__privateGet(this, _$h));
       this.div.addEventListener("blur", ({ relatedTarget: t3 }) => {
         if (t3 && !this.div.contains(t3)) {
-          this.#qh = null;
+          __privateSet(this, _qh, null);
           this.commitOrRemove();
         }
       }, { signal: e2 });
-      this.#ec.startDrawing(this, this.#v, false, t2);
+      __privateGet(this, _AnnotationEditorLayer_instances, ec_get).startDrawing(this, __privateGet(this, _v4), false, t2);
     }
     pause(t2) {
       if (t2) {
         const { activeElement: t3 } = document;
-        this.div.contains(t3) && (this.#qh = t3);
+        this.div.contains(t3) && __privateSet(this, _qh, t3);
         return;
       }
-      this.#qh && setTimeout(() => {
-        this.#qh?.focus();
-        this.#qh = null;
+      __privateGet(this, _qh) && setTimeout(() => {
+        __privateGet(this, _qh)?.focus();
+        __privateSet(this, _qh, null);
       }, 0);
     }
     endDrawingSession(t2 = false) {
-      if (!this.#$h) return null;
-      this.#v.setCurrentDrawingSession(null);
-      this.#$h.abort();
-      this.#$h = null;
-      this.#qh = null;
-      return this.#ec.endDrawing(t2);
+      if (!__privateGet(this, _$h)) return null;
+      __privateGet(this, _v4).setCurrentDrawingSession(null);
+      __privateGet(this, _$h).abort();
+      __privateSet(this, _$h, null);
+      __privateSet(this, _qh, null);
+      return __privateGet(this, _AnnotationEditorLayer_instances, ec_get).endDrawing(t2);
     }
     findNewParent(t2, e2, i2) {
-      const n2 = this.#v.findParent(e2, i2);
+      const n2 = __privateGet(this, _v4).findParent(e2, i2);
       if (null === n2 || n2 === this) return false;
       n2.changeParent(t2);
       return true;
     }
     commitOrRemove() {
-      if (this.#$h) {
+      if (__privateGet(this, _$h)) {
         this.endDrawingSession();
         return true;
       }
       return false;
     }
     onScaleChanging() {
-      this.#$h && this.#ec.onScaleChangingWhenDrawing(this);
+      __privateGet(this, _$h) && __privateGet(this, _AnnotationEditorLayer_instances, ec_get).onScaleChangingWhenDrawing(this);
     }
     destroy() {
       this.commitOrRemove();
-      if (this.#v.getActive()?.parent === this) {
-        this.#v.commitOrRemove();
-        this.#v.setActiveEditor(null);
+      if (__privateGet(this, _v4).getActive()?.parent === this) {
+        __privateGet(this, _v4).commitOrRemove();
+        __privateGet(this, _v4).setActiveEditor(null);
       }
-      if (this.#zh) {
-        clearTimeout(this.#zh);
-        this.#zh = null;
+      if (__privateGet(this, _zh)) {
+        clearTimeout(__privateGet(this, _zh));
+        __privateSet(this, _zh, null);
       }
-      for (const t2 of this.#Gh.values()) {
-        this.#oo?.removePointerInTextLayer(t2.contentDiv);
+      for (const t2 of __privateGet(this, _Gh).values()) {
+        __privateGet(this, _oo2)?.removePointerInTextLayer(t2.contentDiv);
         t2.setParent(null);
         t2.isAttachedToDOM = false;
         t2.div.remove();
       }
       this.div = null;
-      this.#Gh.clear();
-      this.#v.removeLayer(this);
-    }
-    #Qh() {
-      for (const t2 of this.#Gh.values()) t2.isEmpty() && t2.remove();
+      __privateGet(this, _Gh).clear();
+      __privateGet(this, _v4).removeLayer(this);
     }
     async render({ viewport: t2 }) {
       this.viewport = t2;
       setLayerDimensions(this.div, t2);
-      for (const t3 of this.#v.getEditors(this.pageIndex)) {
+      for (const t3 of __privateGet(this, _v4).getEditors(this.pageIndex)) {
         this.add(t3);
         t3.rebuild();
       }
-      await this.#v.findClonesForPage(this);
+      await __privateGet(this, _v4).findClonesForPage(this);
       this.div.hidden = this.isEmpty;
       this.updateMode();
     }
     update({ viewport: t2 }) {
-      this.#v.commitOrRemove();
-      this.#Qh();
+      __privateGet(this, _v4).commitOrRemove();
+      __privateMethod(this, _AnnotationEditorLayer_instances, Qh_fn).call(this);
       const e2 = this.viewport.rotation, i2 = t2.rotation;
       this.viewport = t2;
       setLayerDimensions(this.div, { rotation: i2 });
-      if (e2 !== i2) for (const t3 of this.#Gh.values()) t3.rotate(i2);
+      if (e2 !== i2) for (const t3 of __privateGet(this, _Gh).values()) t3.rotate(i2);
     }
     get pageDimensions() {
       const { pageWidth: t2, pageHeight: e2 } = this.viewport.rawDims;
       return [t2, e2];
     }
     get scale() {
-      return this.#v.viewParameters.realScale;
+      return __privateGet(this, _v4).viewParameters.realScale;
     }
   };
+  _oo2 = new WeakMap();
+  _Nh = new WeakMap();
+  _Uh = new WeakMap();
+  _Hh = new WeakMap();
+  _zh = new WeakMap();
+  _Gh = new WeakMap();
+  _jh = new WeakMap();
+  _Wh = new WeakMap();
+  _Vh = new WeakMap();
+  _$h = new WeakMap();
+  _qh = new WeakMap();
+  _Kh = new WeakMap();
+  _Xh = new WeakMap();
+  _Yh = new WeakMap();
+  _Jh = new WeakMap();
+  _v4 = new WeakMap();
+  _Z2 = new WeakMap();
+  _AnnotationEditorLayer_instances = new WeakSet();
+  Zh_get = function() {
+    return 0 !== __privateGet(this, _Gh).size ? __privateGet(this, _Gh).values() : __privateGet(this, _v4).getEditors(this.pageIndex);
+  };
+  tc_fn = function(t2) {
+    __privateGet(this, _v4).unselectAll();
+    const { target: e2 } = t2;
+    if (e2 === __privateGet(this, _Kh).div || ("img" === e2.getAttribute("role") || e2.classList.contains("endOfContent") || e2.classList.contains("textLayerImages") || e2.classList.contains("textLayerImagePlaceholder")) && __privateGet(this, _Kh).div.contains(e2)) {
+      const { isMac: e3 } = FeatureTest.platform;
+      if (0 !== t2.button || t2.ctrlKey && e3) return;
+      __privateGet(this, _v4).showAllEditors("highlight", true, true);
+      __privateGet(this, _Kh).div.classList.add("free");
+      this.toggleDrawing();
+      HighlightEditor.startHighlighting(this, "ltr" === __privateGet(this, _v4).direction, { target: __privateGet(this, _Kh).div, x: t2.x, y: t2.y });
+      __privateGet(this, _Kh).div.addEventListener("pointerup", () => {
+        __privateGet(this, _Kh).div.classList.remove("free");
+        this.toggleDrawing(true);
+      }, { once: true, signal: __privateGet(this, _v4)._signal });
+      t2.preventDefault();
+    }
+  };
+  ec_get = function() {
+    return __privateGet(_AnnotationEditorLayer, _Z2).get(__privateGet(this, _v4).getMode());
+  };
+  ic_fn = function(t2) {
+    const e2 = __privateGet(this, _AnnotationEditorLayer_instances, ec_get);
+    return e2 ? new e2.prototype.constructor(t2) : null;
+  };
+  nc_fn = function() {
+    const { x: t2, y: e2, width: i2, height: n2 } = this.boundingClientRect, s2 = Math.max(0, t2), r2 = Math.max(0, e2), a2 = (s2 + Math.min(window.innerWidth, t2 + i2)) / 2 - t2, o2 = (r2 + Math.min(window.innerHeight, e2 + n2)) / 2 - e2, [l2, h2] = this.viewport.rotation % 180 == 0 ? [a2, o2] : [o2, a2];
+    return { offsetX: l2, offsetY: h2 };
+  };
+  Qh_fn = function() {
+    for (const t2 of __privateGet(this, _Gh).values()) t2.isEmpty() && t2.remove();
+  };
+  __publicField(_AnnotationEditorLayer, "_initialized", false);
+  __privateAdd(_AnnotationEditorLayer, _Z2, new Map([FreeTextEditor, InkEditor, StampEditor, HighlightEditor, SignatureEditor].map((t2) => [t2._editorType, t2])));
+  var AnnotationEditorLayer = _AnnotationEditorLayer;
   __webpack_require__(1806);
   function compareTextLayers(t2, e2) {
     return t2 === e2 ? 0 : t2.compareDocumentPosition(e2) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
@@ -23306,270 +24277,91 @@
     n2?.nodeType === Node.ELEMENT_NODE && n2.classList.contains("endOfContent") && (n2 = n2.previousSibling);
     return n2 && i2.contains(n2) ? n2.nodeType === Node.TEXT_NODE ? { container: n2, offset: n2.textContent.length } : { container: n2, offset: n2.childNodes.length } : null;
   }
-  var DrawLayer = class _DrawLayer {
-    #_a = null;
-    #sc = /* @__PURE__ */ new Map();
-    #Kh = null;
-    #st = null;
-    #Et = null;
-    #rc = null;
-    #ac = /* @__PURE__ */ new Map();
-    static #_ = 0;
-    static #oc = 0;
-    static #lc = null;
-    static #hc = /* @__PURE__ */ new Set();
-    static #cc = false;
-    static #dc = /* @__PURE__ */ new Set();
-    static #uc = /* @__PURE__ */ new WeakMap();
+  var __a2, _sc, _Kh2, _st2, _Et2, _rc, _ac, __5, _oc, _lc, _hc, _cc, _dc, _uc, _DrawLayer_static, gc_fn, pc_fn, mc_fn, Ut_fn2, fc_fn, _DrawLayer_instances, bc_fn, yc_fn, vc_fn;
+  var _DrawLayer = class _DrawLayer {
     constructor({ filterFactory: t2 = null, pageColors: e2 = null, pageIndex: i2, textLayer: n2 = null }) {
+      __privateAdd(this, _DrawLayer_instances);
+      __privateAdd(this, __a2, null);
+      __privateAdd(this, _sc, /* @__PURE__ */ new Map());
+      __privateAdd(this, _Kh2, null);
+      __privateAdd(this, _st2, null);
+      __privateAdd(this, _Et2, null);
+      __privateAdd(this, _rc, null);
+      __privateAdd(this, _ac, /* @__PURE__ */ new Map());
       this.pageIndex = i2;
-      this.#st = t2;
-      this.#Et = e2;
+      __privateSet(this, _st2, t2);
+      __privateSet(this, _Et2, e2);
       if (n2) {
-        const t3 = _DrawLayer.#uc.get(n2);
+        const t3 = __privateGet(_DrawLayer, _uc).get(n2);
         if (t3?.selectionDiv) {
           t3.selectionDiv.remove();
-          _DrawLayer.#hc.delete(t3.selectionDiv);
+          __privateGet(_DrawLayer, _hc).delete(t3.selectionDiv);
         }
-        _DrawLayer.#uc.set(n2, { drawLayer: this });
-        _DrawLayer.#dc.add(n2);
-        this.#Kh = n2;
-        this.#rc = new MutationObserver((t4) => {
-          if (this.#_a && this.#Kh?.isConnected && _DrawLayer.#pc()) {
+        __privateGet(_DrawLayer, _uc).set(n2, { drawLayer: this });
+        __privateGet(_DrawLayer, _dc).add(n2);
+        __privateSet(this, _Kh2, n2);
+        __privateSet(this, _rc, new MutationObserver((t4) => {
+          var _a4, _b;
+          if (__privateGet(this, __a2) && __privateGet(this, _Kh2)?.isConnected && __privateMethod(_a4 = _DrawLayer, _DrawLayer_static, pc_fn).call(_a4)) {
             for (const { addedNodes: e3 } of t4) for (const t5 of e3) if (t5.nodeType === Node.ELEMENT_NODE && t5.classList.contains("endOfContent")) {
-              _DrawLayer.#Ut();
+              __privateMethod(_b = _DrawLayer, _DrawLayer_static, Ut_fn2).call(_b);
               return;
             }
           }
-        });
-        this.#rc.observe(n2, { childList: true });
-        if (null === _DrawLayer.#lc) {
-          _DrawLayer.#lc = new AbortController();
-          const { signal: t4 } = _DrawLayer.#lc;
-          document.addEventListener("selectionchange", _DrawLayer.#Ut.bind(_DrawLayer), { signal: t4 });
+        }));
+        __privateGet(this, _rc).observe(n2, { childList: true });
+        if (null === __privateGet(_DrawLayer, _lc)) {
+          __privateSet(_DrawLayer, _lc, new AbortController());
+          const { signal: t4 } = __privateGet(_DrawLayer, _lc);
+          document.addEventListener("selectionchange", __privateMethod(_DrawLayer, _DrawLayer_static, Ut_fn2).bind(_DrawLayer), { signal: t4 });
           document.addEventListener("pointerdown", () => {
-            _DrawLayer.#cc = true;
+            __privateSet(_DrawLayer, _cc, true);
           }, { signal: t4 });
           document.addEventListener("pointerup", () => {
-            _DrawLayer.#cc = false;
+            __privateSet(_DrawLayer, _cc, false);
           }, { signal: t4 });
           window.addEventListener("blur", () => {
-            _DrawLayer.#cc = false;
+            __privateSet(_DrawLayer, _cc, false);
           }, { signal: t4 });
         }
       }
     }
     setParent(t2) {
-      if (this.#_a) {
-        if (this.#_a !== t2) {
-          if (this.#sc.size > 0) for (const e2 of this.#sc.values()) {
+      var _a4, _b;
+      if (__privateGet(this, __a2)) {
+        if (__privateGet(this, __a2) !== t2) {
+          if (__privateGet(this, _sc).size > 0) for (const e2 of __privateGet(this, _sc).values()) {
             e2.remove();
             t2.append(e2);
           }
-          this.#_a = t2;
+          __privateSet(this, __a2, t2);
         }
       } else {
-        this.#_a = t2;
-        this.#Kh?.isConnected && _DrawLayer.#pc() && _DrawLayer.#Ut();
-      }
-    }
-    static #gc(t2) {
-      const e2 = this.#uc.get(t2);
-      if (e2?.selectionDiv) {
-        e2.selectionDiv.remove();
-        this.#hc.delete(e2.selectionDiv);
-        e2.selectionDiv = null;
-        e2.path = null;
-      }
-    }
-    static #pc() {
-      const t2 = document.getSelection();
-      return !!t2 && !t2.isCollapsed;
-    }
-    static #mc() {
-      return this.#dc.keys().filter((t2) => t2.isConnected).toArray().sort(compareTextLayers);
-    }
-    static #Ut() {
-      const t2 = document.getSelection();
-      if (!t2 || t2.isCollapsed) {
-        for (const t3 of this.#hc) t3.remove();
-        this.#hc.clear();
-        return;
-      }
-      const e2 = /* @__PURE__ */ new WeakMap(), i2 = this.#mc(), n2 = [];
-      for (let e3 = 0, s3 = t2.rangeCount; e3 < s3; e3++) {
-        const s4 = t2.getRangeAt(e3);
-        if (s4.collapsed) continue;
-        let { startContainer: r2, startOffset: a2, endContainer: o2, endOffset: l2 } = s4, h2 = getTextLayer(r2), c2 = getTextLayer(o2);
-        const d2 = null === h2, u2 = null === c2;
-        if (this.#cc && d2 !== u2) return;
-        if (1 === t2.rangeCount) {
-          const { anchorNode: e4, anchorOffset: i3, focusNode: n3, focusOffset: s5 } = t2, d3 = getTextLayer(e4), u3 = getTextLayer(n3), p3 = isPointBefore(e4, i3, n3, s5);
-          if (d3 && u3 && null !== p3) if (p3) {
-            r2 = e4;
-            a2 = i3;
-            h2 = d3;
-            o2 = n3;
-            l2 = s5;
-            c2 = u3;
-          } else {
-            r2 = n3;
-            a2 = s5;
-            h2 = u3;
-            o2 = e4;
-            l2 = i3;
-            c2 = d3;
-          }
-        }
-        const p2 = i2.filter((t3) => s4.intersectsNode(t3));
-        if (0 === p2.length) continue;
-        let g2 = false;
-        if (!h2) {
-          h2 = p2[0];
-          r2 = h2;
-          a2 = 0;
-          g2 = true;
-        }
-        if (!c2) {
-          c2 = p2.at(-1);
-          o2 = c2;
-          l2 = c2.childNodes.length;
-          g2 = true;
-        }
-        if (o2.nodeType === Node.ELEMENT_NODE) {
-          if (o2.classList.contains("endOfContent")) {
-            const t3 = o2.previousSibling;
-            if (!t3) continue;
-            o2 = t3;
-            l2 = t3.nodeType === Node.TEXT_NODE ? t3.textContent.length : t3.childNodes.length;
-          } else if (o2.classList.contains("textLayer") && o2.childNodes.length === l2) {
-            const t3 = normalizeEdgeBoundary(o2, l2, c2);
-            if (!t3) continue;
-            o2 = t3.container;
-            l2 = t3.offset;
-          }
-        }
-        if (r2.nodeType === Node.ELEMENT_NODE) {
-          const t3 = normalizeEdgeBoundary(r2, a2, h2);
-          if (!t3) continue;
-          r2 = t3.container;
-          a2 = t3.offset;
-        }
-        if (h2 !== c2 || g2 || !p2.includes(h2)) for (const t3 of p2) {
-          const e4 = t3.firstChild;
-          if (!e4) continue;
-          const i3 = document.createRange();
-          t3 === h2 ? i3.setStart(r2, a2) : i3.setStartBefore(e4);
-          if (t3 === c2) i3.setEnd(o2, l2);
-          else {
-            const e5 = t3.lastChild;
-            if (!e5) continue;
-            if (e5.nodeType === Node.ELEMENT_NODE && e5.classList.contains("endOfContent")) {
-              const t4 = e5.previousSibling;
-              if (!t4) continue;
-              i3.setEndAfter(t4);
-            } else i3.setEndAfter(e5);
-          }
-          i3.collapsed || n2.push([i3, t3]);
-        }
-        else n2.push([s4, h2]);
-      }
-      const s2 = new Set(n2.map((t3) => t3[1]));
-      for (const t3 of this.#dc) s2.has(t3) || this.#gc(t3);
-      for (const [t3, i3] of n2) {
-        const n3 = _DrawLayer.#uc.get(i3);
-        if (!n3) continue;
-        let s3 = e2.get(i3);
-        if (!s3) {
-          const t4 = i3.getBoundingClientRect();
-          s3 = (e3, i4, n4, s4) => ({ x: (e3 - t4.x) / t4.width, y: (i4 - t4.y) / t4.height, width: n4 / t4.width, height: s4 / t4.height });
-          e2.set(i3, s3);
-        }
-        const r2 = [];
-        for (let { x: e3, y: i4, width: n4, height: a3 } of t3.getClientRects()) if (0 !== n4 && 0 !== a3) {
-          ({ x: e3, y: i4, width: n4, height: a3 } = s3(e3, i4, n4, a3));
-          1 === n4 && 1 === a3 || r2.push(`M${e3} ${i4} h${n4} v${a3} h-${n4} Z`);
-        }
-        if (0 === r2.length) continue;
-        const a2 = n3.drawLayer;
-        let o2 = n3.selectionDiv, l2 = n3.path;
-        if (!o2) {
-          const t4 = "clip_selection_" + _DrawLayer.#oc++;
-          o2 = document.createElement("div");
-          o2.className = "selection";
-          o2.style.clipPath = `url(#${t4})`;
-          const e3 = a2.#st?.createSelectionStyle(a2.#Et);
-          if (e3) for (const [t5, i5] of Object.entries(e3)) o2.style.setProperty(t5, i5);
-          const i4 = _DrawLayer._svgFactory.create(1, 1, true);
-          i4.setAttribute("aria-hidden", "true");
-          i4.setAttribute("width", "100%");
-          i4.setAttribute("height", "100%");
-          const s4 = _DrawLayer._svgFactory.createElement("clipPath");
-          s4.setAttribute("id", t4);
-          s4.setAttribute("clipPathUnits", "objectBoundingBox");
-          l2 = _DrawLayer._svgFactory.createElement("path");
-          s4.append(l2);
-          i4.append(s4);
-          o2.append(i4);
-          n3.path = l2;
-          n3.selectionDiv = o2;
-        }
-        if (!o2.parentNode && a2.#_a) {
-          a2.#_a.append(o2);
-          this.#hc.add(o2);
-        }
-        l2.setAttribute("d", r2.join(" "));
+        __privateSet(this, __a2, t2);
+        __privateGet(this, _Kh2)?.isConnected && __privateMethod(_a4 = _DrawLayer, _DrawLayer_static, pc_fn).call(_a4) && __privateMethod(_b = _DrawLayer, _DrawLayer_static, Ut_fn2).call(_b);
       }
     }
     static get _svgFactory() {
       return shadow(this, "_svgFactory", new DOMSVGFactory());
     }
-    static #fc(t2, [e2, i2, n2, s2]) {
-      const { style: r2 } = t2;
-      r2.top = 100 * i2 + "%";
-      r2.left = 100 * e2 + "%";
-      r2.width = 100 * n2 + "%";
-      r2.height = 100 * s2 + "%";
-    }
-    #bc() {
-      const t2 = _DrawLayer._svgFactory.create(1, 1, true);
-      this.#_a.append(t2);
-      t2.setAttribute("aria-hidden", "true");
-      return t2;
-    }
-    #yc(t2, e2) {
-      const i2 = _DrawLayer._svgFactory.createElement("clipPath");
-      t2.append(i2);
-      const n2 = `clip_${e2}`;
-      i2.setAttribute("id", n2);
-      i2.setAttribute("clipPathUnits", "objectBoundingBox");
-      const s2 = _DrawLayer._svgFactory.createElement("use");
-      i2.append(s2);
-      s2.setAttribute("href", `#${e2}`);
-      s2.classList.add("clip");
-      return n2;
-    }
-    #vc(t2, e2) {
-      for (const [i2, n2] of Object.entries(e2)) null === n2 ? t2.removeAttribute(i2) : t2.setAttribute(i2, n2);
-    }
     draw(t2, e2 = false, i2 = false) {
-      const n2 = _DrawLayer.#_++, s2 = this.#bc(), r2 = _DrawLayer._svgFactory.createElement("defs");
+      const n2 = __privateWrapper(_DrawLayer, __5)._++, s2 = __privateMethod(this, _DrawLayer_instances, bc_fn).call(this), r2 = _DrawLayer._svgFactory.createElement("defs");
       s2.append(r2);
       const a2 = _DrawLayer._svgFactory.createElement("path");
       r2.append(a2);
       const o2 = `path_${n2}`;
       a2.setAttribute("id", o2);
       a2.setAttribute("vector-effect", "non-scaling-stroke");
-      e2 && this.#ac.set(n2, a2);
-      const l2 = i2 ? this.#yc(r2, o2) : null, h2 = _DrawLayer._svgFactory.createElement("use");
+      e2 && __privateGet(this, _ac).set(n2, a2);
+      const l2 = i2 ? __privateMethod(this, _DrawLayer_instances, yc_fn).call(this, r2, o2) : null, h2 = _DrawLayer._svgFactory.createElement("use");
       s2.append(h2);
       h2.setAttribute("href", `#${o2}`);
       this.updateProperties(s2, t2);
-      this.#sc.set(n2, s2);
+      __privateGet(this, _sc).set(n2, s2);
       return { id: n2, clipPathId: `url(#${l2})` };
     }
     drawOutline(t2, e2) {
-      const i2 = _DrawLayer.#_++, n2 = this.#bc(), s2 = _DrawLayer._svgFactory.createElement("defs");
+      const i2 = __privateWrapper(_DrawLayer, __5)._++, n2 = __privateMethod(this, _DrawLayer_instances, bc_fn).call(this), s2 = _DrawLayer._svgFactory.createElement("defs");
       n2.append(s2);
       const r2 = _DrawLayer._svgFactory.createElement("path");
       s2.append(r2);
@@ -23605,105 +24397,309 @@
       l2.classList.add("mainOutline");
       h2.classList.add("secondaryOutline");
       this.updateProperties(n2, t2);
-      this.#sc.set(i2, n2);
+      __privateGet(this, _sc).set(i2, n2);
       return i2;
     }
     finalizeDraw(t2, e2) {
-      this.#ac.delete(t2);
+      __privateGet(this, _ac).delete(t2);
       this.updateProperties(t2, e2);
     }
     updateProperties(t2, e2) {
+      var _a4;
       if (!e2) return;
-      const { root: i2, bbox: n2, rootClass: s2, path: r2 } = e2, a2 = "number" == typeof t2 ? this.#sc.get(t2) : t2;
+      const { root: i2, bbox: n2, rootClass: s2, path: r2 } = e2, a2 = "number" == typeof t2 ? __privateGet(this, _sc).get(t2) : t2;
       if (a2) {
-        i2 && this.#vc(a2, i2);
-        n2 && _DrawLayer.#fc(a2, n2);
+        i2 && __privateMethod(this, _DrawLayer_instances, vc_fn).call(this, a2, i2);
+        n2 && __privateMethod(_a4 = _DrawLayer, _DrawLayer_static, fc_fn).call(_a4, a2, n2);
         if (s2) {
           const { classList: t3 } = a2;
           for (const [e3, i3] of Object.entries(s2)) t3.toggle(e3, i3);
         }
         if (r2) {
           const t3 = a2.firstElementChild.firstElementChild;
-          this.#vc(t3, r2);
+          __privateMethod(this, _DrawLayer_instances, vc_fn).call(this, t3, r2);
         }
       }
     }
     updateParent(t2, e2) {
       if (e2 === this) return;
-      const i2 = this.#sc.get(t2);
+      const i2 = __privateGet(this, _sc).get(t2);
       if (i2) {
-        e2.#_a.append(i2);
-        this.#sc.delete(t2);
-        e2.#sc.set(t2, i2);
+        __privateGet(e2, __a2).append(i2);
+        __privateGet(this, _sc).delete(t2);
+        __privateGet(e2, _sc).set(t2, i2);
       }
     }
     remove(t2) {
-      this.#ac.delete(t2);
-      if (null !== this.#_a) {
-        this.#sc.get(t2).remove();
-        this.#sc.delete(t2);
+      __privateGet(this, _ac).delete(t2);
+      if (null !== __privateGet(this, __a2)) {
+        __privateGet(this, _sc).get(t2).remove();
+        __privateGet(this, _sc).delete(t2);
       }
     }
     destroy() {
-      this.#_a = null;
-      for (const t2 of this.#sc.values()) t2.remove();
-      this.#sc.clear();
-      this.#ac.clear();
-      this.#rc?.disconnect();
-      this.#rc = null;
-      if (this.#Kh) {
-        const t2 = _DrawLayer.#uc.get(this.#Kh);
+      var _a4;
+      __privateSet(this, __a2, null);
+      for (const t2 of __privateGet(this, _sc).values()) t2.remove();
+      __privateGet(this, _sc).clear();
+      __privateGet(this, _ac).clear();
+      __privateGet(this, _rc)?.disconnect();
+      __privateSet(this, _rc, null);
+      if (__privateGet(this, _Kh2)) {
+        const t2 = __privateGet(_DrawLayer, _uc).get(__privateGet(this, _Kh2));
         if (t2?.drawLayer === this) {
-          _DrawLayer.#gc(this.#Kh);
-          _DrawLayer.#uc.delete(this.#Kh);
-          _DrawLayer.#dc.delete(this.#Kh);
-          if (0 === _DrawLayer.#dc.size) {
-            _DrawLayer.#lc?.abort();
-            _DrawLayer.#lc = null;
-            _DrawLayer.#cc = false;
+          __privateMethod(_a4 = _DrawLayer, _DrawLayer_static, gc_fn).call(_a4, __privateGet(this, _Kh2));
+          __privateGet(_DrawLayer, _uc).delete(__privateGet(this, _Kh2));
+          __privateGet(_DrawLayer, _dc).delete(__privateGet(this, _Kh2));
+          if (0 === __privateGet(_DrawLayer, _dc).size) {
+            __privateGet(_DrawLayer, _lc)?.abort();
+            __privateSet(_DrawLayer, _lc, null);
+            __privateSet(_DrawLayer, _cc, false);
           }
         }
-        this.#Kh = null;
+        __privateSet(this, _Kh2, null);
       }
     }
   };
+  __a2 = new WeakMap();
+  _sc = new WeakMap();
+  _Kh2 = new WeakMap();
+  _st2 = new WeakMap();
+  _Et2 = new WeakMap();
+  _rc = new WeakMap();
+  _ac = new WeakMap();
+  __5 = new WeakMap();
+  _oc = new WeakMap();
+  _lc = new WeakMap();
+  _hc = new WeakMap();
+  _cc = new WeakMap();
+  _dc = new WeakMap();
+  _uc = new WeakMap();
+  _DrawLayer_static = new WeakSet();
+  gc_fn = function(t2) {
+    const e2 = __privateGet(this, _uc).get(t2);
+    if (e2?.selectionDiv) {
+      e2.selectionDiv.remove();
+      __privateGet(this, _hc).delete(e2.selectionDiv);
+      e2.selectionDiv = null;
+      e2.path = null;
+    }
+  };
+  pc_fn = function() {
+    const t2 = document.getSelection();
+    return !!t2 && !t2.isCollapsed;
+  };
+  mc_fn = function() {
+    return __privateGet(this, _dc).keys().filter((t2) => t2.isConnected).toArray().sort(compareTextLayers);
+  };
+  Ut_fn2 = function() {
+    const t2 = document.getSelection();
+    if (!t2 || t2.isCollapsed) {
+      for (const t3 of __privateGet(this, _hc)) t3.remove();
+      __privateGet(this, _hc).clear();
+      return;
+    }
+    const e2 = /* @__PURE__ */ new WeakMap(), i2 = __privateMethod(this, _DrawLayer_static, mc_fn).call(this), n2 = [];
+    for (let e3 = 0, s3 = t2.rangeCount; e3 < s3; e3++) {
+      const s4 = t2.getRangeAt(e3);
+      if (s4.collapsed) continue;
+      let { startContainer: r2, startOffset: a2, endContainer: o2, endOffset: l2 } = s4, h2 = getTextLayer(r2), c2 = getTextLayer(o2);
+      const d2 = null === h2, u2 = null === c2;
+      if (__privateGet(this, _cc) && d2 !== u2) return;
+      if (1 === t2.rangeCount) {
+        const { anchorNode: e4, anchorOffset: i3, focusNode: n3, focusOffset: s5 } = t2, d3 = getTextLayer(e4), u3 = getTextLayer(n3), p3 = isPointBefore(e4, i3, n3, s5);
+        if (d3 && u3 && null !== p3) if (p3) {
+          r2 = e4;
+          a2 = i3;
+          h2 = d3;
+          o2 = n3;
+          l2 = s5;
+          c2 = u3;
+        } else {
+          r2 = n3;
+          a2 = s5;
+          h2 = u3;
+          o2 = e4;
+          l2 = i3;
+          c2 = d3;
+        }
+      }
+      const p2 = i2.filter((t3) => s4.intersectsNode(t3));
+      if (0 === p2.length) continue;
+      let g2 = false;
+      if (!h2) {
+        h2 = p2[0];
+        r2 = h2;
+        a2 = 0;
+        g2 = true;
+      }
+      if (!c2) {
+        c2 = p2.at(-1);
+        o2 = c2;
+        l2 = c2.childNodes.length;
+        g2 = true;
+      }
+      if (o2.nodeType === Node.ELEMENT_NODE) {
+        if (o2.classList.contains("endOfContent")) {
+          const t3 = o2.previousSibling;
+          if (!t3) continue;
+          o2 = t3;
+          l2 = t3.nodeType === Node.TEXT_NODE ? t3.textContent.length : t3.childNodes.length;
+        } else if (o2.classList.contains("textLayer") && o2.childNodes.length === l2) {
+          const t3 = normalizeEdgeBoundary(o2, l2, c2);
+          if (!t3) continue;
+          o2 = t3.container;
+          l2 = t3.offset;
+        }
+      }
+      if (r2.nodeType === Node.ELEMENT_NODE) {
+        const t3 = normalizeEdgeBoundary(r2, a2, h2);
+        if (!t3) continue;
+        r2 = t3.container;
+        a2 = t3.offset;
+      }
+      if (h2 !== c2 || g2 || !p2.includes(h2)) for (const t3 of p2) {
+        const e4 = t3.firstChild;
+        if (!e4) continue;
+        const i3 = document.createRange();
+        t3 === h2 ? i3.setStart(r2, a2) : i3.setStartBefore(e4);
+        if (t3 === c2) i3.setEnd(o2, l2);
+        else {
+          const e5 = t3.lastChild;
+          if (!e5) continue;
+          if (e5.nodeType === Node.ELEMENT_NODE && e5.classList.contains("endOfContent")) {
+            const t4 = e5.previousSibling;
+            if (!t4) continue;
+            i3.setEndAfter(t4);
+          } else i3.setEndAfter(e5);
+        }
+        i3.collapsed || n2.push([i3, t3]);
+      }
+      else n2.push([s4, h2]);
+    }
+    const s2 = new Set(n2.map((t3) => t3[1]));
+    for (const t3 of __privateGet(this, _dc)) s2.has(t3) || __privateMethod(this, _DrawLayer_static, gc_fn).call(this, t3);
+    for (const [t3, i3] of n2) {
+      const n3 = __privateGet(_DrawLayer, _uc).get(i3);
+      if (!n3) continue;
+      let s3 = e2.get(i3);
+      if (!s3) {
+        const t4 = i3.getBoundingClientRect();
+        s3 = (e3, i4, n4, s4) => ({ x: (e3 - t4.x) / t4.width, y: (i4 - t4.y) / t4.height, width: n4 / t4.width, height: s4 / t4.height });
+        e2.set(i3, s3);
+      }
+      const r2 = [];
+      for (let { x: e3, y: i4, width: n4, height: a3 } of t3.getClientRects()) if (0 !== n4 && 0 !== a3) {
+        ({ x: e3, y: i4, width: n4, height: a3 } = s3(e3, i4, n4, a3));
+        1 === n4 && 1 === a3 || r2.push(`M${e3} ${i4} h${n4} v${a3} h-${n4} Z`);
+      }
+      if (0 === r2.length) continue;
+      const a2 = n3.drawLayer;
+      let o2 = n3.selectionDiv, l2 = n3.path;
+      if (!o2) {
+        const t4 = "clip_selection_" + __privateWrapper(_DrawLayer, _oc)._++;
+        o2 = document.createElement("div");
+        o2.className = "selection";
+        o2.style.clipPath = `url(#${t4})`;
+        const e3 = __privateGet(a2, _st2)?.createSelectionStyle(__privateGet(a2, _Et2));
+        if (e3) for (const [t5, i5] of Object.entries(e3)) o2.style.setProperty(t5, i5);
+        const i4 = _DrawLayer._svgFactory.create(1, 1, true);
+        i4.setAttribute("aria-hidden", "true");
+        i4.setAttribute("width", "100%");
+        i4.setAttribute("height", "100%");
+        const s4 = _DrawLayer._svgFactory.createElement("clipPath");
+        s4.setAttribute("id", t4);
+        s4.setAttribute("clipPathUnits", "objectBoundingBox");
+        l2 = _DrawLayer._svgFactory.createElement("path");
+        s4.append(l2);
+        i4.append(s4);
+        o2.append(i4);
+        n3.path = l2;
+        n3.selectionDiv = o2;
+      }
+      if (!o2.parentNode && __privateGet(a2, __a2)) {
+        __privateGet(a2, __a2).append(o2);
+        __privateGet(this, _hc).add(o2);
+      }
+      l2.setAttribute("d", r2.join(" "));
+    }
+  };
+  fc_fn = function(t2, [e2, i2, n2, s2]) {
+    const { style: r2 } = t2;
+    r2.top = 100 * i2 + "%";
+    r2.left = 100 * e2 + "%";
+    r2.width = 100 * n2 + "%";
+    r2.height = 100 * s2 + "%";
+  };
+  _DrawLayer_instances = new WeakSet();
+  bc_fn = function() {
+    const t2 = _DrawLayer._svgFactory.create(1, 1, true);
+    __privateGet(this, __a2).append(t2);
+    t2.setAttribute("aria-hidden", "true");
+    return t2;
+  };
+  yc_fn = function(t2, e2) {
+    const i2 = _DrawLayer._svgFactory.createElement("clipPath");
+    t2.append(i2);
+    const n2 = `clip_${e2}`;
+    i2.setAttribute("id", n2);
+    i2.setAttribute("clipPathUnits", "objectBoundingBox");
+    const s2 = _DrawLayer._svgFactory.createElement("use");
+    i2.append(s2);
+    s2.setAttribute("href", `#${e2}`);
+    s2.classList.add("clip");
+    return n2;
+  };
+  vc_fn = function(t2, e2) {
+    for (const [i2, n2] of Object.entries(e2)) null === n2 ? t2.removeAttribute(i2) : t2.setAttribute(i2, n2);
+  };
+  __privateAdd(_DrawLayer, _DrawLayer_static);
+  __privateAdd(_DrawLayer, __5, 0);
+  __privateAdd(_DrawLayer, _oc, 0);
+  __privateAdd(_DrawLayer, _lc, null);
+  __privateAdd(_DrawLayer, _hc, /* @__PURE__ */ new Set());
+  __privateAdd(_DrawLayer, _cc, false);
+  __privateAdd(_DrawLayer, _dc, /* @__PURE__ */ new Set());
+  __privateAdd(_DrawLayer, _uc, /* @__PURE__ */ new WeakMap());
+  var DrawLayer = _DrawLayer;
   function percentage(t2) {
     return `${(100 * t2).toFixed(2)}%`;
   }
-  var TextLayerImages = class _TextLayerImages {
-    #wc = [];
-    #xc = /* @__PURE__ */ new Map();
-    #Ac = null;
-    #Ec = 0;
-    #Zs = 0;
-    #Qs = 0;
-    static #Cc = null;
+  var _wc, _xc, _Ac, _Ec, _Zs2, _Qs2, _Cc, _TextLayerImages_instances, Sc_fn;
+  var _TextLayerImages = class _TextLayerImages {
     constructor(t2, e2, i2, n2) {
-      this.#Ec = t2;
-      this.#wc = e2;
-      this.#Zs = i2.rawDims.pageWidth;
-      this.#Qs = i2.rawDims.pageHeight;
-      this.#Ac = n2;
+      __privateAdd(this, _TextLayerImages_instances);
+      __privateAdd(this, _wc, []);
+      __privateAdd(this, _xc, /* @__PURE__ */ new Map());
+      __privateAdd(this, _Ac, null);
+      __privateAdd(this, _Ec, 0);
+      __privateAdd(this, _Zs2, 0);
+      __privateAdd(this, _Qs2, 0);
+      __privateSet(this, _Ec, t2);
+      __privateSet(this, _wc, e2);
+      __privateSet(this, _Zs2, i2.rawDims.pageWidth);
+      __privateSet(this, _Qs2, i2.rawDims.pageHeight);
+      __privateSet(this, _Ac, n2);
     }
     render() {
       const t2 = document.createElement("div");
       t2.className = "textLayerImages";
-      for (let e2 = 0; e2 < this.#wc.length; e2 += 6) {
-        const i2 = this.#Sc(this.#wc.subarray(e2, e2 + 6));
+      for (let e2 = 0; e2 < __privateGet(this, _wc).length; e2 += 6) {
+        const i2 = __privateMethod(this, _TextLayerImages_instances, Sc_fn).call(this, __privateGet(this, _wc).subarray(e2, e2 + 6));
         i2 && t2.append(i2);
       }
       t2.addEventListener("contextmenu", (t3) => {
         if (!(t3.target instanceof HTMLCanvasElement)) return;
-        const e2 = t3.target, i2 = this.#xc.get(e2);
+        const e2 = t3.target, i2 = __privateGet(this, _xc).get(e2);
         if (!i2) return;
-        const n2 = _TextLayerImages.#Cc?.deref();
+        const n2 = __privateGet(_TextLayerImages, _Cc)?.deref();
         if (n2 === e2) return;
         if (n2) {
           n2.width = 0;
           n2.height = 0;
         }
-        _TextLayerImages.#Cc = new WeakRef(e2);
-        const { inverseTransform: s2, x1: r2, y1: a2, width: o2, height: l2 } = i2, h2 = this.#Ac(), c2 = Math.ceil(r2 * h2.width), d2 = Math.ceil(a2 * h2.height), u2 = Math.floor((r2 + o2 / this.#Zs) * h2.width), p2 = Math.floor((a2 + l2 / this.#Qs) * h2.height);
+        __privateSet(_TextLayerImages, _Cc, new WeakRef(e2));
+        const { inverseTransform: s2, x1: r2, y1: a2, width: o2, height: l2 } = i2, h2 = __privateGet(this, _Ac).call(this), c2 = Math.ceil(r2 * h2.width), d2 = Math.ceil(a2 * h2.height), u2 = Math.floor((r2 + o2 / __privateGet(this, _Zs2)) * h2.width), p2 = Math.floor((a2 + l2 / __privateGet(this, _Qs2)) * h2.height);
         e2.width = u2 - c2;
         e2.height = p2 - d2;
         const g2 = e2.getContext("2d");
@@ -23713,23 +24709,33 @@
       });
       return t2;
     }
-    #Sc([t2, e2, i2, n2, s2, r2]) {
-      const a2 = Math.hypot((s2 - t2) * this.#Zs, (r2 - e2) * this.#Qs), o2 = Math.hypot((i2 - t2) * this.#Zs, (n2 - e2) * this.#Qs);
-      if (a2 < this.#Ec || o2 < this.#Ec) return null;
-      const l2 = [(s2 - t2) * this.#Zs / a2, (r2 - e2) * this.#Qs / a2, (i2 - t2) * this.#Zs / o2, (n2 - e2) * this.#Qs / o2, 0, 0], h2 = Util.inverseTransform(l2), c2 = document.createElement("canvas");
-      c2.className = "textLayerImagePlaceholder";
-      c2.width = 0;
-      c2.height = 0;
-      Object.assign(c2.style, { opacity: 0, position: "absolute", left: percentage(t2), top: percentage(e2), width: percentage(a2 / this.#Zs), height: percentage(o2 / this.#Qs), transformOrigin: "0% 0%", transform: `matrix(${l2.join(",")})` });
-      this.#xc.set(c2, { inverseTransform: h2, width: a2, height: o2, x1: t2, y1: e2 });
-      return c2;
-    }
   };
+  _wc = new WeakMap();
+  _xc = new WeakMap();
+  _Ac = new WeakMap();
+  _Ec = new WeakMap();
+  _Zs2 = new WeakMap();
+  _Qs2 = new WeakMap();
+  _Cc = new WeakMap();
+  _TextLayerImages_instances = new WeakSet();
+  Sc_fn = function([t2, e2, i2, n2, s2, r2]) {
+    const a2 = Math.hypot((s2 - t2) * __privateGet(this, _Zs2), (r2 - e2) * __privateGet(this, _Qs2)), o2 = Math.hypot((i2 - t2) * __privateGet(this, _Zs2), (n2 - e2) * __privateGet(this, _Qs2));
+    if (a2 < __privateGet(this, _Ec) || o2 < __privateGet(this, _Ec)) return null;
+    const l2 = [(s2 - t2) * __privateGet(this, _Zs2) / a2, (r2 - e2) * __privateGet(this, _Qs2) / a2, (i2 - t2) * __privateGet(this, _Zs2) / o2, (n2 - e2) * __privateGet(this, _Qs2) / o2, 0, 0], h2 = Util.inverseTransform(l2), c2 = document.createElement("canvas");
+    c2.className = "textLayerImagePlaceholder";
+    c2.width = 0;
+    c2.height = 0;
+    Object.assign(c2.style, { opacity: 0, position: "absolute", left: percentage(t2), top: percentage(e2), width: percentage(a2 / __privateGet(this, _Zs2)), height: percentage(o2 / __privateGet(this, _Qs2)), transformOrigin: "0% 0%", transform: `matrix(${l2.join(",")})` });
+    __privateGet(this, _xc).set(c2, { inverseTransform: h2, width: a2, height: o2, x1: t2, y1: e2 });
+    return c2;
+  };
+  __privateAdd(_TextLayerImages, _Cc, null);
+  var TextLayerImages = _TextLayerImages;
   globalThis._pdfjsTestingUtils = { HighlightOutliner };
   globalThis.pdfjsLib = { AbortException, AnnotationEditorLayer, AnnotationEditorParamsType: v, AnnotationEditorType: y, AnnotationEditorUIManager, AnnotationLayer, AnnotationMode: m, AnnotationType: k, applyOpacity, build: zt, ColorPicker, createValidAbsoluteUrl, CSSConstants, DOMSVGFactory, DrawLayer, FeatureTest, fetchData, findContrastColor, getDocument, getFilenameFromUrl, getPdfFilenameFromUrl, getRGB, getRGBA, getUuid, GlobalWorkerOptions, ImageKind: _, InvalidPDFException, isDataScheme, isPdfFile, isValidExplicitDest: gt, makeArr, makeMap, makeObj, makeSet, MathClamp, noContextMenu, normalizeUnicode, OPS: B, OutputScale, PasswordException, PasswordResponses: G, PDFDataRangeTransport, PDFDateString, PDFWorker, PermissionFlag: w, PixelsPerInch, RenderingCancelledException, renderRichText, ResponseException, setLayerDimensions, shadow, SignatureExtractor, stopEvent, SupportedImageMimeTypes: X, TextLayer, TextLayerImages, TouchManager, updateUrlHash, Util, VerbosityLevel: R, version: Ht, XfaLayer };
 
   // src/app.js
-  var state = { route: "home", paperFilter: "all", activeReadingId: null, activePaperId: null, pictureBookDraft: null, paperTransform: null, paperStatus: null, bookObjectUrl: null, fileReader: null, fileReaderToken: 0, pdfZoom: 1, selectedBookIds: /* @__PURE__ */ new Set(), bookCacheRun: 0 };
+  var state = { route: "home", paperFilter: "all", activeReadingId: null, activePaperId: null, pictureBookDraft: null, paperTransform: null, paperStatus: null, bookObjectUrl: null, fileReader: null, fileReaderToken: 0, pdfZoom: 1, selectedBookIds: /* @__PURE__ */ new Set(), bookCacheRun: 0, knowledgeType: "idiom", knowledgeQuery: "", knowledgeAuthor: "", knowledgeDynasty: "", knowledgeCollection: "", knowledgePage: 1, knowledgeHasQueried: false, wrongType: "all", learningItems: [], learningIndex: 0, learningCompleted: /* @__PURE__ */ new Set() };
   var main = document.querySelector("#mainContent");
   var toast = document.querySelector("#toast");
   var modalRoot = document.querySelector("#modalRoot");
@@ -23740,6 +24746,7 @@
     standardFontDataUrl: "./src/vendor/pdfjs/standard_fonts/"
   });
   var READER_LOAD_TIMEOUT_MS = 6e4;
+  var BOOK_DEVICE_CACHE_NAME = "growth-desk-books-v1";
   function reportReaderRuntimeError(error, source) {
     if (state.route !== "reading" || !state.activeReadingId) return;
     const message = error instanceof Error ? error.message : String(error || "\u672A\u77E5\u9519\u8BEF");
@@ -23805,7 +24812,7 @@
     main.focus({ preventScroll: true });
   }
   async function render() {
-    const renderers = { home: renderHome, papers: renderPapers, generator: renderGenerator, reading: renderReading, games: renderGames, templates: renderTemplates, paper: renderPaper };
+    const renderers = { home: renderHome, papers: renderPapers, generator: renderGenerator, reading: renderReading, games: renderGames, templates: renderTemplates, knowledge: renderKnowledge, paper: renderPaper };
     try {
       await (renderers[state.route] || renderHome)();
     } catch (error) {
@@ -23882,7 +24889,7 @@
       ["unit", "\u5355\u4F4D\u6362\u7B97"],
       ["clock", "\u949F\u8868\u8BA4\u77E5"]
     ],
-    \u8BED\u6587: [["hanzi-trace", "\u6C49\u5B57\u63CF\u7EA2"], ["hanzi-stroke", "\u6309\u7B14\u753B\u7EC3\u5B57"], ["control", "\u63A7\u7B14\u8BAD\u7EC3"], ["composition", "\u7530\u5B57\u683C/\u4F5C\u4E1A\u7EB8"]],
+    \u8BED\u6587: [["hanzi-trace", "\u6C49\u5B57\u63CF\u7EA2"], ["hanzi-stroke", "\u6309\u7B14\u753B\u7EC3\u5B57"], ["control", "\u63A7\u7B14\u8BAD\u7EC3"], ["composition", "\u7530\u5B57\u683C/\u4F5C\u4E1A\u7EB8"], ["idiom-fill", "\u6210\u8BED\u586B\u7A7A\uFF08\u98DE\u82B1\u4EE4\uFF09"], ["poetry-match", "\u8BD7\u53E5\u4E0A\u4E0B\u6587\u914D\u5BF9"], ["pinyin-write", "\u770B\u62FC\u97F3\u5199\u6C49\u5B57"]],
     \u82F1\u8BED: [["english-word", "\u5355\u8BCD\u63CF\u7EA2"], ["english-sentence", "\u77ED\u53E5\u63CF\u7EA2"], ["english-lines", "\u82F1\u8BED\u56DB\u7EBF\u4E09\u683C"]]
   };
   function generatorFields(subject, template) {
@@ -23893,8 +24900,9 @@
       const hanziFontFields = template === "hanzi-trace" ? '<div class="field"><label>\u63CF\u7EA2\u5B57\u4F53</label><select name="hanziFont"><option value="kaiti">\u6977\u4F53</option><option value="songti">\u5B8B\u4F53</option><option value="heiti">\u9ED1\u4F53</option><option value="fangsong">\u4EFF\u5B8B</option></select></div>' : "";
       const englishFontFields = subject === "\u82F1\u8BED" && ["english-word", "english-sentence"].includes(template) ? '<div class="field"><label>\u82F1\u8BED\u63CF\u7EA2\u5B57\u4F53</label><select name="englishFont"><option value="comic">\u513F\u7AE5\u624B\u5199\u4F53</option><option value="print">\u5370\u5237\u4F53</option><option value="serif">\u886C\u7EBF\u4F53</option><option value="cursive">\u8FDE\u5199\u4F53</option></select></div>' : "";
       const contentField = isBlankPractice ? "" : '<div class="field"><label>\u7EC3\u4E60\u5185\u5BB9\uFF08\u6BCF\u884C\u4E00\u9879\uFF09</label><textarea name="customContent" placeholder="\u4E00\u884C\u53EF\u8F93\u5165\u591A\u4E2A\u5B57\uFF0C\u4F8B\u5982\uFF1A\u4F60\u597D"></textarea></div>';
+      const languageQuizFields = template === "idiom-fill" ? '<div class="field"><label>\u6210\u8BED\u7B5B\u9009\u5B57\uFF08\u53EF\u7559\u7A7A\uFF09</label><input name="knowledgeQuery" placeholder="\u4F8B\u5982\uFF1A\u76EE"></div><div class="field"><label>\u9898\u76EE\u6570\u91CF</label><input name="count" type="number" min="1" max="50" value="10"></div>' : template === "poetry-match" ? '<div class="field"><label>\u8BD7\u53E5\u7B5B\u9009\u5B57\uFF08\u53EF\u7559\u7A7A\uFF09</label><input name="knowledgeQuery" placeholder="\u4F8B\u5982\uFF1A\u6708"></div><div class="field"><label>\u96BE\u5EA6</label><select name="poetryDifficulty"><option value="low">\u4F4E\u96BE\u5EA6\uFF1A\u4E0A\u4E0B\u53E5</option><option value="high">\u9AD8\u96BE\u5EA6\uFF1A\u9010\u5B57\u6392\u5E8F</option></select></div><div class="field"><label>\u9898\u76EE\u6570\u91CF</label><input name="count" type="number" min="1" max="20" value="6"></div>' : template === "pinyin-write" ? '<div class="field"><label>\u8BCD\u8BED\uFF08\u6BCF\u884C\u4E00\u9879\uFF09</label><textarea name="customContent" placeholder="\u4F8B\u5982\uFF1A\u8BA4\u771F&#10;\u52AA\u529B"></textarea></div><div class="field"><label>\u9898\u76EE\u6570\u91CF</label><input name="count" type="number" min="1" max="50" value="10"></div>' : "";
       return `
-    ${countField}${contentField}${hanziFontFields}${englishFontFields}${strokeFields}`;
+    ${countField}${contentField}${languageQuizFields}${hanziFontFields}${englishFontFields}${strokeFields}`;
     }
     const operationTemplates = ["horizontal", "missing", "vertical", "equation"];
     const chainTemplates = ["chain-add", "chain-sub", "mixed"];
@@ -23943,7 +24951,7 @@
     return Object.fromEntries(new FormData(form));
   }
   async function renderGeneratedPreview(values) {
-    const problems = await createProblemsFromForm({ ...values, count: String(Math.min(Number(values.count || 12), 100)) });
+    const problems = await createProblemsFromForm({ ...values, count: String(Math.min(Number(values.count || 30), 100)) });
     const templateLabel = TEMPLATE_GROUPS[values.subject].find(([key]) => key === values.template)?.[1] || values.template;
     const paper = createPaperSnapshot({
       title: `${values.subject}\xB7${templateLabel}\xB7\u9884\u89C8`,
@@ -23960,11 +24968,15 @@
   function worksheetProblemsPerPage(paper) {
     const layout = worksheetLayoutClass(paper);
     const template = paper.config?.template || paper.problems?.[0]?.kind || paper.problems?.[0]?.type || "";
-    if (template === "composition") return paper.orientation === "landscape" ? 8 : 12;
-    if (template === "english-lines") return paper.orientation === "landscape" ? 8 : 10;
+    if (template === "composition") return paper.orientation === "landscape" ? 24 : 16;
+    if (template === "english-lines") return paper.orientation === "landscape" ? 20 : 14;
     if (layout.includes("vertical")) return 12;
     if (layout.includes("make-ten") || layout.includes("break-ten")) return paper.orientation === "landscape" ? 4 : 6;
     if (layout.includes("clock")) return 8;
+    if (template === "idiom-fill") return paper.orientation === "landscape" ? 18 : 12;
+    if (template === "poetry-match") return paper.orientation === "landscape" ? 12 : 8;
+    if (template === "pinyin-write") return paper.orientation === "landscape" ? 10 : 7;
+    if (layout.includes("language-quiz")) return 8;
     if (layout.includes("word-problem")) return 2;
     if (layout.includes("equation")) return 3;
     if (layout.includes("hanzi-practice") || layout.includes("english-practice")) return 8;
@@ -24113,6 +25125,21 @@
         "M69 62 L43 91",
         "M24 82 H78"
       ]
+    },
+    \u6211: {
+      text: "\u6211",
+      steps: ["\u6487", "\u6A2A", "\u7AD6\u94A9", "\u63D0", "\u659C\u94A9", "\u6487", "\u70B9"],
+      strokeProgress: buildStrokeProgress(["\u6487", "\u6A2A", "\u7AD6\u94A9", "\u63D0", "\u659C\u94A9", "\u6487", "\u70B9"], "\u6211"),
+      strokePaths: [
+        "M 350 571 Q 380 593 449 614 Q 465 615 468 623 Q 471 633 458 643 Q 439 656 396 668 Q 381 674 370 672 Q 363 668 363 657 Q 364 621 200 527 Q 196 518 201 516 Q 213 516 290 546 Q 303 550 316 556 L 350 571 Z",
+        "M 584 466 Q 666 485 734 497 Q 746 496 754 511 Q 755 524 729 533 Q 693 554 622 527 Q 598 520 575 511 L 537 499 Q 518 495 500 488 Q 442 472 386 457 L 337 446 Q 327 446 179 416 Q 148 409 173 392 Q 212 365 241 376 Q 287 389 339 404 L 387 416 Q 460 438 545 457 L 584 466 Z",
+        "M 386 457 Q 387 493 398 517 Q 405 535 390 548 Q 371 564 350 571 C 323 583 303 583 316 556 Q 315 556 316 555 Q 338 519 337 478 Q 337 462 337 446 L 339 404 Q 340 343 339 289 L 338 241 Q 337 180 334 133 Q 333 115 323 109 Q 317 105 250 119 Q 238 122 239 114 Q 240 108 249 100 Q 309 42 328 6 Q 341 -10 357 3 Q 390 36 390 126 Q 387 169 387 265 L 387 306 Q 387 355 387 416 L 386 457 Z",
+        "M 339 289 Q 254 261 161 229 Q 139 222 101 221 Q 86 220 85 207 Q 84 192 94 184 Q 119 166 157 147 Q 169 144 182 154 Q 239 199 338 241 L 387 265 Q 477 314 484 318 Q 499 327 498 337 Q 492 343 479 340 Q 434 324 387 306 L 339 289 Z",
+        "M 635 195 Q 690 75 797 -14 Q 876 -62 898 -47 Q 920 -37 914 3 Q 905 34 899 152 Q 900 174 894 178 Q 890 179 884 160 Q 857 75 838 60 Q 823 56 785 88 Q 710 155 670 226 L 644 279 Q 599 381 584 466 L 575 511 Q 547 659 576 752 Q 586 779 543 805 Q 509 827 489 825 Q 470 824 479 795 Q 503 752 507 707 Q 517 601 537 499 L 545 457 Q 573 334 612 245 L 635 195 Z",
+        "M 612 245 Q 558 197 452 138 Q 442 132 448 128 Q 455 124 468 126 Q 523 135 574 160 Q 608 175 635 195 L 670 226 Q 706 260 747 317 Q 762 336 778 354 Q 788 361 785 374 Q 781 386 753 410 Q 734 428 723 428 Q 708 427 707 411 Q 701 354 644 279 L 612 245 Z",
+        "M 687 669 Q 718 648 754 623 Q 770 613 786 615 Q 798 618 801 632 Q 802 648 789 678 Q 780 697 746 708 Q 665 726 651 715 Q 647 711 651 697 Q 655 687 687 669 Z"
+      ],
+      strokeDataSource: "hanzi-writer-data"
     }
   });
   var HANZI_WRITER_DATA_PATH = "./assets/hanzi-writer-data";
@@ -24121,7 +25148,7 @@
     const value = String(character || "").trim();
     if (!/^[\u3400-\u9fff]$/u.test(value)) return null;
     if (hanziWriterDataCache.has(value)) return hanziWriterDataCache.get(value);
-    if (typeof fetch !== "function") return null;
+    if (typeof fetch !== "function" || globalThis.location?.protocol === "file:") return null;
     try {
       const url = `${HANZI_WRITER_DATA_PATH}/${encodeURIComponent(value)}.json`;
       const response = await fetch(url, { cache: "force-cache" });
@@ -24160,9 +25187,124 @@
     if (!Number.isFinite(count)) return fallback;
     return Math.max(1, Math.min(100, Math.floor(count)));
   }
+  function splitHanziPracticeLines(lines) {
+    return lines.flatMap((line) => {
+      const characters = Array.from(line).filter((character) => character.trim());
+      if (characters.length <= 8) return [line];
+      const chunks = [];
+      for (let index = 0; index < characters.length; index += 12) {
+        chunks.push(characters.slice(index, index + 12).join(""));
+      }
+      return chunks;
+    });
+  }
+  function splitEnglishPracticeLines(lines, template) {
+    const maxLength = template === "english-word" ? 18 : 32;
+    return lines.flatMap((line) => {
+      const words = String(line).trim().split(/\s+/u).filter(Boolean);
+      if (!words.length) return [];
+      const chunks = [];
+      let current = "";
+      for (const word of words) {
+        if (word.length > maxLength) {
+          if (current) chunks.push(current);
+          for (let index = 0; index < word.length; index += maxLength) chunks.push(word.slice(index, index + maxLength));
+          current = "";
+          continue;
+        }
+        const next = current ? `${current} ${word}` : word;
+        if (current && next.length > maxLength) {
+          chunks.push(current);
+          current = word;
+        } else {
+          current = next;
+        }
+      }
+      if (current) chunks.push(current);
+      return chunks;
+    });
+  }
+  async function preloadLanguageTools() {
+    const loaders = [
+      loadScriptOnce("./src/vendor/chinese/cnchar.min.js", "cnchar"),
+      loadScriptOnce("./src/vendor/chinese/pinyin-pro.min.js", "pinyinPro")
+    ];
+    await Promise.allSettled(loaders);
+  }
+  function getPinyinText(text) {
+    const pinyinPro = globalThis.pinyinPro;
+    if (pinyinPro?.pinyin) {
+      try {
+        return String(pinyinPro.pinyin(text, { toneType: "symbol", separator: " " }) || "").trim();
+      } catch (error) {
+      }
+    }
+    return "";
+  }
+  function shuffleValues(values) {
+    return [...values].sort(() => Math.random() - 0.5);
+  }
+  async function createIdiomFillProblems(values) {
+    const candidates = await filterKnowledgeAsync("idiom", { query: values.knowledgeQuery });
+    const count = boundedPracticeCount(values.count, 10);
+    const selected = shuffleValues(candidates).slice(0, count);
+    const allCharacters = [...new Set(candidates.flatMap((item) => Array.from(item.word)))];
+    return selected.map((item, index) => {
+      const word = String(item.word);
+      const blankIndex = Math.floor(Math.random() * word.length);
+      const answer = word[blankIndex];
+      const options = shuffleValues([answer, ...shuffleValues(allCharacters.filter((character) => character !== answer)).slice(0, 3)]);
+      return {
+        id: `problem-${index + 1}`,
+        kind: "idiom-fill",
+        prompt: `${word.slice(0, blankIndex)}___${word.slice(blankIndex + 1)}`,
+        answer,
+        options,
+        meta: { word, explanation: item.explanation, example: item.example }
+      };
+    });
+  }
+  async function createPoetryMatchProblems(values) {
+    const count = boundedPracticeCount(values.count, 6);
+    const query = String(values.knowledgeQuery || "").trim();
+    const candidates = query ? await filterKnowledgeAsync("poetry", { query }) : await randomKnowledgeAsync("poetry", count);
+    return shuffleValues(candidates).slice(0, count).map((poem, index) => {
+      const lines = poem.lines || [];
+      const pairIndex = Math.floor(Math.random() * Math.max(1, Math.floor(lines.length / 2))) * 2;
+      const pair = lines.slice(pairIndex, pairIndex + 2);
+      const highDifficulty = values.poetryDifficulty === "high";
+      const target = highDifficulty ? [pair.join("")] : [pair[1] || ""];
+      return {
+        id: `problem-${index + 1}`,
+        kind: "poetry-match",
+        title: `${poem.title} \xB7 ${poem.author}`,
+        prompt: highDifficulty ? `\u8BF7\u9ED8\u5199\u201C${pair[0] || ""}\u201D\u53CA\u4E0B\u4E00\u53E5` : `\u8BF7\u5199\u51FA\u201C${pair[0] || ""}\u201D\u7684\u4E0B\u53E5`,
+        target,
+        options: [],
+        answer: target,
+        meta: { dynasty: poem.dynasty, author: poem.author }
+      };
+    });
+  }
+  async function createPinyinWriteProblems(values, lines) {
+    const knowledgeWords = lines.length ? [] : await filterKnowledgeAsync("word");
+    const source = lines.length ? lines : knowledgeWords.map((item) => item.word);
+    const count = boundedPracticeCount(values.count, source.length);
+    return shuffleValues([...new Set(source)]).slice(0, count).map((word, index) => ({
+      id: `problem-${index + 1}`,
+      kind: "pinyin-write",
+      prompt: word,
+      answer: word,
+      boxes: 0,
+      meta: { pinyin: getPinyinText(word) || knowledgeWords.find((item) => item.word === word)?.pinyin || "" }
+    }));
+  }
   async function createProblemsFromForm(values) {
     if (values.subject !== "\u6570\u5B66") {
       const lines = String(values.customContent || "").split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+      if (values.template === "idiom-fill") return createIdiomFillProblems(values);
+      if (values.template === "poetry-match") return createPoetryMatchProblems(values);
+      if (values.template === "pinyin-write") return createPinyinWriteProblems(values, lines);
       if (values.template === "hanzi-stroke") return createStrokePracticeProblems(values, lines);
       if (["composition", "english-lines"].includes(values.template)) {
         const count = boundedPracticeCount(values.count, values.template === "composition" ? 12 : 10);
@@ -24178,9 +25320,10 @@
       const meta = {};
       if (values.template === "hanzi-trace") meta.font = values.hanziFont || "kaiti";
       if (values.subject === "\u82F1\u8BED") meta.font = values.englishFont || "comic";
-      return (lines.length ? lines : ["\u8BF7\u5728\u6B64\u63CF\u5199"]).map((line, index) => ({ id: `problem-${index + 1}`, kind: values.template, prompt: line, answer: "", boxes: 0, meta: { ...meta } }));
+      const sourceLines = lines.length ? lines : ["\u8BF7\u5728\u6B64\u63CF\u5199"];
+      const practiceLines = values.template === "hanzi-trace" ? splitHanziPracticeLines(sourceLines) : values.subject === "\u82F1\u8BED" ? splitEnglishPracticeLines(sourceLines, values.template) : sourceLines;
+      return practiceLines.map((line, index) => ({ id: `problem-${index + 1}`, kind: values.template, prompt: line, answer: "", boxes: 0, meta: { ...meta } }));
     }
-    const module = await Promise.resolve().then(() => (init_math(), math_exports));
     const templateMap = {
       horizontal: "horizontal",
       missing: "missing-term",
@@ -24218,14 +25361,14 @@
         rightNumber: optionalNumber(values.rightNumber)
       }
     };
-    const result = module.generateWorksheet(config);
+    const result = generateWorksheet(config);
     return (result.problems || result).map(normalizeProblem);
   }
   async function handlePaperStrokeChange(paper, layer, strokes) {
     const previousStatus = paper.status;
     const savedPaper = await savePaperStrokes(paper, layer, strokes);
     if (previousStatus !== savedPaper.status && state.activePaperId === savedPaper.id) {
-      await renderPaper();
+      syncPaperStatusView(savedPaper);
     }
   }
   function applyPaperTransform(transform) {
@@ -24284,10 +25427,38 @@
     wrap.addEventListener("pointercancel", finish);
     wrap.addEventListener("lostpointercapture", finish);
   }
+  function renderPaperToolbarHtml(paper, focusView) {
+    const mode = paper.status === "review" || paper.status === "done" ? "red" : "black";
+    const editable = paper.status !== "done";
+    const scrollButtons = '<button class="secondary" data-paper-scroll="-1">\u2191 \u4E0A\u79FB</button><button class="secondary" data-paper-scroll="1">\u2193 \u4E0B\u79FB</button>';
+    const zoomControls = '<span class="paper-zoom-controls"><button class="secondary" data-paper-zoom="-1" aria-label="\u7F29\u5C0F\u8BD5\u5377">\u2212</button><span data-paper-zoom-value>100%</span><button class="secondary" data-paper-zoom="1" aria-label="\u653E\u5927\u8BD5\u5377">\uFF0B</button><button class="secondary" data-paper-zoom-reset>\u590D\u4F4D</button><button class="secondary" data-paper-pan-toggle>\u79FB\u52A8\u8BD5\u5377</button></span>';
+    return `
+    ${focusView ? '<button class="secondary" data-route="papers">\u9000\u51FA</button>' : ""}
+    ${zoomControls}
+    ${editable ? `<button class="toolbar-button active ${mode}" data-ink-mode="pen">${mode === "red" ? "\u{1F534} \u7EA2\u7B14\u6279\u6539" : "\u26AB \u9ED1\u7B14\u4F5C\u7B54"}</button>${scrollButtons}
+      <button class="toolbar-button" data-ink-mode="eraser">\u232B \u64E6\u9664\u5F53\u524D\u7B14\u8FF9</button><button class="toolbar-button" data-ink-action="undo">\u21B6 \u64A4\u9500</button>` : ""}
+    ${paper.status === "writing" ? '<button class="primary" data-paper-submit>\u63D0\u4EA4\u4F5C\u7B54</button>' : ""}
+    ${paper.status === "review" ? '<button class="primary" data-paper-reviewed>\u5B8C\u6210\u6279\u6539</button>' : ""}
+    ${paper.status === "done" ? '<button class="secondary" data-reopen-review>\u4FEE\u6539\u6279\u6539</button>' : ""}
+    ${focusView ? "" : '<select id="printVersion" class="toolbar-button"><option value="blank">\u6253\u5370\u7A7A\u767D\u7248</option><option value="answer">\u6253\u5370\u9ED1\u7B14\u4F5C\u7B54\u7248</option><option value="final">\u6253\u5370\u7EA2\u7B14\u6700\u7EC8\u7248</option></select><button class="secondary" data-print-paper>\u6253\u5370</button>'}
+  `;
+  }
+  function syncPaperStatusView(paper) {
+    state.paperStatus = paper.status;
+    const mode = paper.status === "review" || paper.status === "done" ? "red" : "black";
+    const editable = paper.status !== "done";
+    const focusView = Boolean(state.paperTransform?.focusMode);
+    const toolbar = document.querySelector(".paper-toolbar");
+    if (toolbar) toolbar.innerHTML = renderPaperToolbarHtml(paper, focusView);
+    state.drawing.active = mode;
+    state.drawing.black?.setEnabled(editable && !state.paperTransform?.panMode && ["unstarted", "writing"].includes(paper.status));
+    state.drawing.red?.setEnabled(editable && !state.paperTransform?.panMode && paper.status === "review");
+    applyPaperTransform(state.paperTransform);
+  }
   async function renderPaper() {
     const paper = await get("papers", state.activePaperId);
     if (!paper) return navigate("papers");
-    state.paperTransform ||= { paperId: paper.id, scale: 1, x: 0, y: 0, panMode: false, focusMode: false };
+    state.paperTransform || (state.paperTransform = { paperId: paper.id, scale: 1, x: 0, y: 0, panMode: false, focusMode: false });
     if (state.paperTransform.paperId !== paper.id) state.paperTransform = { paperId: paper.id, scale: 1, x: 0, y: 0, panMode: false, focusMode: false };
     state.paperStatus = paper.status;
     const mode = paper.status === "review" || paper.status === "done" ? "red" : "black";
@@ -24308,20 +25479,9 @@
     }
     const focusView = focusWriting || state.paperTransform.focusMode === true;
     document.body.classList.toggle("paper-focus-active", focusView);
-    const scrollButtons = '<button class="secondary" data-paper-scroll="-1">\u2191 \u4E0A\u79FB</button><button class="secondary" data-paper-scroll="1">\u2193 \u4E0B\u79FB</button>';
-    const zoomControls = '<span class="paper-zoom-controls"><button class="secondary" data-paper-zoom="-1" aria-label="\u7F29\u5C0F\u8BD5\u5377">\u2212</button><span data-paper-zoom-value>100%</span><button class="secondary" data-paper-zoom="1" aria-label="\u653E\u5927\u8BD5\u5377">\uFF0B</button><button class="secondary" data-paper-zoom-reset>\u590D\u4F4D</button><button class="secondary" data-paper-pan-toggle>\u79FB\u52A8\u8BD5\u5377</button></span>';
     const headerHtml = focusView ? "" : pageHeader(escapeHtml2(paper.title), `${PAPER_STATUS[paper.status]} \xB7 ${paper.subject}`, `<button class="secondary" data-route="papers">\u8FD4\u56DE\u76EE\u5F55</button>`);
     main.innerHTML = `${headerHtml}<section class="paper-view ${focusView ? "paper-writing-view" : ""}">
-    <div class="paper-toolbar no-print ${focusView ? "paper-floating-toolbar" : ""}">
-      ${focusView ? '<button class="secondary" data-route="papers">\u9000\u51FA</button>' : ""}
-      ${zoomControls}
-      ${editable ? `<button class="toolbar-button active ${mode}" data-ink-mode="pen">${mode === "red" ? "\u{1F534} \u7EA2\u7B14\u6279\u6539" : "\u26AB \u9ED1\u7B14\u4F5C\u7B54"}</button>${scrollButtons}
-      <button class="toolbar-button" data-ink-mode="eraser">\u232B \u64E6\u9664\u5F53\u524D\u7B14\u8FF9</button><button class="toolbar-button" data-ink-action="undo">\u21B6 \u64A4\u9500</button>` : ""}
-      ${paper.status === "writing" ? '<button class="primary" data-paper-submit>\u63D0\u4EA4\u4F5C\u7B54</button>' : ""}
-      ${paper.status === "review" ? '<button class="primary" data-paper-reviewed>\u5B8C\u6210\u6279\u6539</button>' : ""}
-      ${paper.status === "done" ? '<button class="secondary" data-reopen-review>\u4FEE\u6539\u6279\u6539</button>' : ""}
-      ${focusView ? "" : '<select id="printVersion" class="toolbar-button"><option value="blank">\u6253\u5370\u7A7A\u767D\u7248</option><option value="answer">\u6253\u5370\u9ED1\u7B14\u4F5C\u7B54\u7248</option><option value="final">\u6253\u5370\u7EA2\u7B14\u6700\u7EC8\u7248</option></select><button class="secondary" data-print-paper>\u6253\u5370</button>'}
-    </div>
+    <div class="paper-toolbar no-print ${focusView ? "paper-floating-toolbar" : ""}">${renderPaperToolbarHtml(paper, focusView)}</div>
     ${wrongTools}
     <div class="worksheet-wrap"><div id="activeWorksheet" class="worksheet-pages">${renderWorksheetPagesHtml(paper)}</div></div></section>`;
     const worksheet = document.querySelector("#activeWorksheet");
@@ -24423,6 +25583,47 @@
   async function cacheFileBook(item) {
     return cacheFileBookWithOptions(item);
   }
+  function canUseBookCacheStorage() {
+    return typeof caches !== "undefined" && typeof caches.open === "function";
+  }
+  function shouldPreferDirectEpubReader() {
+    const standalone = globalThis.matchMedia?.("(display-mode: standalone)").matches || globalThis.navigator?.standalone === true;
+    const isIos = /iPad|iPhone|iPod/u.test(globalThis.navigator?.userAgent || "") || globalThis.navigator?.platform === "MacIntel" && Number(globalThis.navigator?.maxTouchPoints || 0) > 1;
+    return Boolean(standalone || isIos);
+  }
+  async function putBookResponseCache(sourceUrl, response) {
+    if (!canUseBookCacheStorage() || !sourceUrl || !response?.ok) return false;
+    try {
+      const cache = await caches.open(BOOK_DEVICE_CACHE_NAME);
+      await cache.put(new Request(sourceUrl), response.clone());
+      return true;
+    } catch (error) {
+      console.warn("Book Cache Storage write failed", error);
+      return false;
+    }
+  }
+  async function matchBookResponseCache(sourceUrl) {
+    if (!canUseBookCacheStorage() || !sourceUrl) return null;
+    try {
+      const cache = await caches.open(BOOK_DEVICE_CACHE_NAME);
+      return await cache.match(new Request(sourceUrl));
+    } catch (error) {
+      console.warn("Book Cache Storage read failed", error);
+      return null;
+    }
+  }
+  async function deleteBookResponseCache(sourceUrl) {
+    if (!canUseBookCacheStorage() || !sourceUrl) return;
+    try {
+      const cache = await caches.open(BOOK_DEVICE_CACHE_NAME);
+      await cache.delete(new Request(sourceUrl));
+    } catch (error) {
+      console.warn("Book Cache Storage cleanup failed", error);
+    }
+  }
+  function isBookCacheStorageRecord(item) {
+    return item?.type === "file-book" && item?.cacheMode === "cache-storage" && Boolean(item.sourceUrl);
+  }
   async function cacheFileBookWithOptions(item, options = {}) {
     const sourceUrl = String(item.sourceUrl || "");
     const isLocalFileUrl = globalThis.location?.protocol === "file:" || sourceUrl.startsWith("file:");
@@ -24431,9 +25632,17 @@
     try {
       const response = await fetch(sourceUrl, { cache: "force-cache" });
       if (!response.ok) throw new Error(`\u7ED8\u672C\u6587\u4EF6\u8BFB\u53D6\u5931\u8D25\uFF1A${response.status}`);
+      const cachedInStorage = await putBookResponseCache(sourceUrl, response.clone());
       const blob = await response.blob();
       if (!blob.size) throw new Error("\u7ED8\u672C\u6587\u4EF6\u4E3A\u7A7A");
-      await put("readings", { ...item, sourceBlob: blob, cacheMode: "device", cacheUpdatedAt: Date.now(), size: blob.size, updatedAt: Date.now() });
+      try {
+        await put("readings", { ...item, sourceBlob: blob, cacheMode: "device", cacheUpdatedAt: Date.now(), size: blob.size, updatedAt: Date.now() });
+      } catch (error) {
+        if (!cachedInStorage) throw error;
+        const cacheStorageRecord = { ...item, cacheMode: "cache-storage", cacheUpdatedAt: Date.now(), size: blob.size, updatedAt: Date.now() };
+        delete cacheStorageRecord.sourceBlob;
+        await put("readings", cacheStorageRecord);
+      }
       return { ok: true, size: blob.size };
     } catch (error) {
       console.warn("\u7ED8\u672C\u79BB\u7EBF\u526F\u672C\u51C6\u5907\u5931\u8D25", error);
@@ -24441,7 +25650,7 @@
     }
   }
   function isBookCached(item) {
-    return item?.type === "file-book" && item?.cacheMode === "device" && item.sourceBlob instanceof Blob && item.sourceBlob.size > 0;
+    return item?.type === "file-book" && (item?.cacheMode === "device" && item.sourceBlob instanceof Blob && item.sourceBlob.size > 0 || isBookCacheStorageRecord(item));
   }
   function preloadReaderAssets(readings) {
     const hasEpub = readings.some((item) => ["epub", "equb"].includes(String(item.fileKind || "").toLowerCase()));
@@ -24496,6 +25705,7 @@
     }
     if (!confirm(`\u786E\u5B9A\u5220\u9664\u672C\u673A\u7F13\u5B58\u7684 ${cached.length} \u672C\u7ED8\u672C\u5417\uFF1F\u4E66\u67B6\u8BB0\u5F55\u4F1A\u4FDD\u7559\u3002`)) return;
     await Promise.all(cached.map(async (item) => {
+      await deleteBookResponseCache(String(item.sourceUrl || ""));
       const next = { ...item };
       delete next.sourceBlob;
       delete next.cacheMode;
@@ -24523,6 +25733,8 @@
     if (item.sourceBlob instanceof Blob) return item.sourceBlob.arrayBuffer();
     const sourceUrl = String(item.sourceUrl || "").trim();
     if (!sourceUrl) throw new Error("\u6CA1\u6709\u627E\u5230\u7ED8\u672C\u6587\u4EF6\u5730\u5740");
+    const cachedResponse = await matchBookResponseCache(sourceUrl);
+    if (cachedResponse) return cachedResponse.arrayBuffer();
     const response = await fetch(sourceUrl, { cache: "force-cache" });
     if (!response.ok) throw new Error(`\u7ED8\u672C\u6587\u4EF6\u8BFB\u53D6\u5931\u8D25\uFF1A${response.status}`);
     return response.arrayBuffer();
@@ -24561,14 +25773,21 @@
     const activeReader = state.fileReader;
     state.fileReader = null;
     if (!activeReader) return;
+    disposeReaderState(activeReader);
+  }
+  function disposeReaderState(readerState) {
+    if (!readerState) return;
     try {
-      if (activeReader.kind === "pdf") {
-        activeReader.loadingTask?.destroy?.();
-        activeReader.pdf?.cleanup?.();
+      if (readerState.kind === "pdf") {
+        readerState.loadingTask?.destroy?.();
+        readerState.pdf?.cleanup?.();
       }
-      if (activeReader.kind === "epub") {
-        activeReader.rendition?.destroy?.();
-        activeReader.book?.destroy?.();
+      if (readerState.kind === "epub") {
+        readerState.rendition?.destroy?.();
+        readerState.book?.destroy?.();
+      }
+      if (readerState.kind === "epub-direct") {
+        (readerState.objectUrls || []).forEach((url) => URL.revokeObjectURL(url));
       }
     } catch (error) {
       console.warn("\u9605\u8BFB\u5668\u9500\u6BC1\u5931\u8D25", error);
@@ -24649,6 +25868,140 @@
     }
     return false;
   }
+  function normalizeEpubArchivePath(path) {
+    const parts = String(path || "").split("/");
+    const normalized = [];
+    parts.forEach((part) => {
+      if (!part || part === ".") return;
+      if (part === "..") {
+        normalized.pop();
+        return;
+      }
+      normalized.push(part);
+    });
+    return normalized.join("/");
+  }
+  function resolveEpubArchivePath(currentPath, targetPath) {
+    const cleanTarget = String(targetPath || "").split(/[?#]/u)[0].replace(/^\/+/u, "");
+    if (!cleanTarget) return "";
+    const basePath = String(currentPath || "").split("/").slice(0, -1).join("/");
+    return normalizeEpubArchivePath(basePath ? `${basePath}/${cleanTarget}` : cleanTarget);
+  }
+  function isEpubRelativeAsset(source) {
+    return Boolean(source) && !/^(?:data:|blob:|https?:|file:|#)/iu.test(source);
+  }
+  async function parseEpubArchive(arrayBuffer) {
+    const JSZip = globalThis.JSZip;
+    if (!JSZip) throw new Error("EPUB \u89E3\u538B\u7EC4\u4EF6\u4E0D\u53EF\u7528");
+    const zip = await JSZip.loadAsync(arrayBuffer);
+    const containerFile = zip.file("META-INF/container.xml");
+    if (!containerFile) throw new Error("EPUB \u7F3A\u5C11 META-INF/container.xml");
+    const containerDocument = new DOMParser().parseFromString(await containerFile.async("string"), "application/xml");
+    const rootFilePath = containerDocument.querySelector("rootfile")?.getAttribute("full-path");
+    if (!rootFilePath) throw new Error("EPUB \u7F3A\u5C11\u5185\u5BB9\u76EE\u5F55");
+    const opfFile = zip.file(rootFilePath);
+    if (!opfFile) throw new Error("EPUB \u5185\u5BB9\u76EE\u5F55\u4E0D\u5B58\u5728");
+    const opfDocument = new DOMParser().parseFromString(await opfFile.async("string"), "application/xml");
+    const manifest = new Map([...opfDocument.querySelectorAll("manifest > item")].map((item) => [
+      item.getAttribute("id"),
+      {
+        href: resolveEpubArchivePath(rootFilePath, item.getAttribute("href")),
+        mediaType: item.getAttribute("media-type") || "",
+        properties: item.getAttribute("properties") || ""
+      }
+    ]));
+    const stylePaths = [...manifest.values()].filter((item) => item.mediaType === "text/css" && item.href).map((item) => item.href);
+    const chapters = [...opfDocument.querySelectorAll("spine > itemref")].filter((item) => item.getAttribute("linear") !== "no").map((item) => {
+      const id = item.getAttribute("idref");
+      return { id, path: manifest.get(id)?.href };
+    }).filter((item) => item.path && zip.file(item.path));
+    const fallbackChapters = [...manifest.values()].filter((item) => /(?:application\/xhtml\+xml|text\/html)/iu.test(item.mediaType) && item.href && zip.file(item.href)).map((item) => ({ id: item.href, path: item.href }));
+    const title = opfDocument.querySelector("metadata title, metadata dc\\:title")?.textContent?.trim() || "";
+    return { zip, chapters: chapters.length ? chapters : fallbackChapters, stylePaths, title };
+  }
+  async function hydrateEpubImages(body, zip, chapterPath, objectUrls) {
+    const images = [...body.querySelectorAll("img")];
+    await Promise.all(images.map(async (image) => {
+      const source = image.getAttribute("src") || image.getAttribute("data-src") || "";
+      if (!isEpubRelativeAsset(source)) return;
+      const asset = zip.file(resolveEpubArchivePath(chapterPath, source));
+      if (!asset) return;
+      const blob = await asset.async("blob");
+      const objectUrl = URL.createObjectURL(blob);
+      objectUrls.push(objectUrl);
+      image.setAttribute("src", objectUrl);
+      image.removeAttribute("srcset");
+      image.setAttribute("loading", "lazy");
+    }));
+  }
+  async function renderDirectEpubChapter(readerState, chapter, chapterIndex) {
+    if (readerState.renderedChapters.has(chapter.path)) return;
+    const archiveFile = readerState.zip.file(chapter.path);
+    if (!archiveFile) return;
+    const documentFragment = new DOMParser().parseFromString(await archiveFile.async("string"), "text/html");
+    const body = documentFragment.body;
+    if (!body) return;
+    body.querySelectorAll("script, iframe, object, embed, form").forEach((node) => node.remove());
+    await hydrateEpubImages(body, readerState.zip, chapter.path, readerState.objectUrls);
+    const section = document.createElement("article");
+    section.className = "epub-direct-chapter";
+    section.dataset.chapterIndex = String(chapterIndex + 1);
+    section.innerHTML = body.innerHTML || "<p>\u672C\u7AE0\u8282\u6CA1\u6709\u53EF\u663E\u793A\u5185\u5BB9\u3002</p>";
+    readerState.content.appendChild(section);
+    readerState.renderedChapters.add(chapter.path);
+  }
+  async function mountDirectEpubReader(item, token) {
+    const reader = document.querySelector("[data-epubjs-reader]");
+    const viewport = reader?.querySelector("[data-epub-viewport]");
+    if (!reader || !viewport) return false;
+    try {
+      setFileReaderStatus(reader, "\u6B63\u5728\u8BFB\u53D6 EPUB \u6587\u4EF6\u2026");
+      const [arrayBuffer] = await withReaderTimeout(Promise.all([
+        readBookArrayBuffer(item),
+        loadScriptOnce("./src/vendor/epubjs/jszip.min.js", "JSZip")
+      ]), "EPUB \u6587\u4EF6\u6216\u89E3\u538B\u7EC4\u4EF6\u8BFB\u53D6\u8D85\u65F6\uFF0C\u8BF7\u68C0\u67E5\u7F51\u7EDC\u6216\u672C\u5730\u7F13\u5B58");
+      if (token !== state.fileReaderToken || !reader.isConnected) return false;
+      const parsed = await withReaderTimeout(parseEpubArchive(arrayBuffer), "EPUB \u538B\u7F29\u5305\u89E3\u6790\u8D85\u65F6");
+      if (!parsed.chapters.length) throw new Error("EPUB \u6CA1\u6709\u53EF\u9605\u8BFB\u7AE0\u8282");
+      viewport.replaceChildren();
+      const content = document.createElement("div");
+      content.className = "epubjs-direct-content";
+      content.setAttribute("data-epub-direct-content", "true");
+      viewport.appendChild(content);
+      const readerState = {
+        kind: "epub-direct",
+        token,
+        zip: parsed.zip,
+        chapters: parsed.chapters,
+        content,
+        objectUrls: [],
+        renderedChapters: /* @__PURE__ */ new Set()
+      };
+      state.fileReader = readerState;
+      for (const stylePath of parsed.stylePaths) {
+        const styleFile = parsed.zip.file(stylePath);
+        if (!styleFile) continue;
+        const style = document.createElement("style");
+        style.textContent = await styleFile.async("string");
+        content.appendChild(style);
+      }
+      await renderDirectEpubChapter(readerState, parsed.chapters[0], 0);
+      if (token !== state.fileReaderToken || !reader.isConnected) return false;
+      setFileReaderStatus(reader, `EPUB \u5DF2\u6253\u5F00\uFF0C\u5171 ${parsed.chapters.length} \u7AE0`);
+      for (let index = 1; index < parsed.chapters.length; index += 1) {
+        if (token !== state.fileReaderToken || !reader.isConnected) return true;
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        await renderDirectEpubChapter(readerState, parsed.chapters[index], index);
+      }
+      return true;
+    } catch (error) {
+      if (token === state.fileReaderToken && reader.isConnected) {
+        setFileReaderStatus(reader, `EPUB \u540C\u9875\u9605\u8BFB\u5931\u8D25\uFF1A${error?.message || "\u672A\u77E5\u9519\u8BEF"}`);
+        console.warn("EPUB \u540C\u9875\u89E3\u6790\u5931\u8D25", error);
+      }
+      return false;
+    }
+  }
   async function mountPdfJsReader(item, token) {
     const reader = document.querySelector("[data-pdf-reader]");
     const viewportElement = reader?.querySelector("[data-pdf-viewport]");
@@ -24656,7 +26009,7 @@
     try {
       setFileReaderStatus(reader, canReaderRequestUrl(item) ? "\u6B63\u5728\u8FDE\u63A5 PDF\u2026" : "\u6B63\u5728\u8BFB\u53D6 PDF\u2026");
       if (token !== state.fileReaderToken) return;
-      const source = item.sourceBlob instanceof Blob ? { data: new Uint8Array(await item.sourceBlob.arrayBuffer()) } : canReaderRequestUrl(item) ? { url: String(item.sourceUrl).trim() } : { data: new Uint8Array(await readBookArrayBuffer(item)) };
+      const source = item.sourceBlob instanceof Blob || isBookCacheStorageRecord(item) ? { data: new Uint8Array(await readBookArrayBuffer(item)) } : canReaderRequestUrl(item) ? { url: String(item.sourceUrl).trim() } : { data: new Uint8Array(await readBookArrayBuffer(item)) };
       const loadingTask = getDocument({ ...source, ...PDF_JS_OPTIONS, disableStream: false, disableAutoFetch: false });
       const pdf = await withReaderTimeout(loadingTask.promise, "PDF \u8FDE\u63A5\u8D85\u65F6\uFF0C\u8BF7\u68C0\u67E5\u7F51\u7EDC\u540E\u91CD\u8BD5");
       if (token !== state.fileReaderToken || !reader.isConnected) {
@@ -24689,15 +26042,20 @@
     const viewport = reader?.querySelector("[data-epub-viewport]");
     if (!reader || !viewport) return;
     try {
+      if (shouldPreferDirectEpubReader()) {
+        if (await mountDirectEpubReader(item, token)) return;
+        disposeReaderState(state.fileReader);
+        state.fileReader = null;
+      }
       setFileReaderStatus(reader, "\u6B63\u5728\u52A0\u8F7D EPUB \u9605\u8BFB\u5668\u2026");
       await withReaderTimeout(loadScriptOnce("./src/vendor/epubjs/jszip.min.js", "JSZip"), "EPUB \u89E3\u538B\u7EC4\u4EF6\u52A0\u8F7D\u8D85\u65F6");
       const ePub = await withReaderTimeout(loadScriptOnce("./src/vendor/epubjs/epub.min.js", "ePub"), "EPUB \u9605\u8BFB\u5668\u52A0\u8F7D\u8D85\u65F6");
       if (token !== state.fileReaderToken) return;
-      const source = item.sourceBlob instanceof Blob ? await item.sourceBlob.arrayBuffer() : canReaderRequestUrl(item) ? String(item.sourceUrl).trim() : await withReaderTimeout(readBookArrayBuffer(item), "EPUB \u6587\u4EF6\u8BFB\u53D6\u8D85\u65F6\uFF0C\u8BF7\u68C0\u67E5\u7F51\u7EDC\u540E\u91CD\u8BD5");
+      const source = item.sourceBlob instanceof Blob || isBookCacheStorageRecord(item) ? await readBookArrayBuffer(item) : canReaderRequestUrl(item) ? String(item.sourceUrl).trim() : await withReaderTimeout(readBookArrayBuffer(item), "EPUB \u6587\u4EF6\u8BFB\u53D6\u8D85\u65F6\uFF0C\u8BF7\u68C0\u67E5\u7F51\u7EDC\u540E\u91CD\u8BD5");
       const book = ePub(source);
       const rendition = book.renderTo(viewport, {
         width: "100%",
-        height: "100%",
+        height: Math.max(240, viewport.clientHeight || (globalThis.innerHeight || 800) - 58),
         flow: "scrolled-doc",
         manager: "continuous",
         method: "write",
@@ -24714,6 +26072,9 @@
       setFileReaderStatus(reader, "EPUB \u5DF2\u6253\u5F00\uFF0C\u53EF\u5728\u5F53\u524D\u9875\u9762\u4E0A\u4E0B\u6EDA\u52A8\u9605\u8BFB");
     } catch (error) {
       if (token !== state.fileReaderToken || !reader.isConnected) return;
+      disposeReaderState(state.fileReader);
+      state.fileReader = null;
+      if (await mountDirectEpubReader(item, token)) return;
       setFileReaderStatus(reader, `EPUB \u52A0\u8F7D\u5931\u8D25\uFF1A${error?.message || "\u672A\u77E5\u9519\u8BEF"}`);
       showToast("EPUB \u65E0\u6CD5\u5728\u5F53\u524D\u9875\u9762\u6253\u5F00");
       console.error("epub.js \u9605\u8BFB\u5931\u8D25", error);
@@ -24732,6 +26093,113 @@
     main.innerHTML = `${pageHeader("\u5B66\u4E60\u6E38\u620F", "\u6E38\u620F\u6210\u7EE9\u53EA\u4FDD\u5B58\u5728\u5F53\u524D\u8BBE\u5907")}
     <section class="entry-grid"><button class="entry-card" data-start-game="hanzi"><span class="emoji">\u{1F004}</span><h3>\u6C49\u5B57\u7EC4\u8BCD\u6D88\u6D88\u4E50</h3><p>9\xD79 \u65B9\u683C\uFF0C\u4E0A\u4E0B\u5DE6\u53F3\u8FDE\u7EBF\u7EC4\u6210 2\uFF5E4 \u5B57\u8BCD\u3002</p></button><button class="entry-card" data-start-game="english"><span class="emoji">\u{1F9F8}</span><h3>\u82F1\u8BED\u5B9E\u7269\u914D\u5BF9</h3><p>\u62D6\u52A8\u513F\u7AE5\u56FE\u5361\u5230\u5BF9\u5E94\u82F1\u6587\u5355\u8BCD\u533A\u57DF\u3002</p></button></section>
     <div class="panel" style="margin-top:18px"><h2>\u6700\u8FD1\u6E38\u620F\u8BB0\u5F55</h2>${records.length ? records.map((record) => `<p><strong>${record.game === "hanzi" ? "\u6C49\u5B57\u6D88\u6D88\u4E50" : "\u82F1\u8BED\u914D\u5BF9"}</strong>\u3000${new Date(record.startedAt).toLocaleString("zh-CN")}\u3000\u7528\u65F6 ${Math.round(record.duration / 1e3)} \u79D2\u3000\u9519\u8BEF ${record.errors} \u6B21</p>`).join("") : '<p style="color:var(--muted)">\u5B8C\u6210\u4E00\u5C40\u540E\u4F1A\u663E\u793A\u5F00\u59CB\u65F6\u95F4\u3001\u5B8C\u6210\u65F6\u95F4\u3001\u7528\u65F6\u548C\u9519\u8BEF\u6B21\u6570\u3002</p>'}</div>`;
+  }
+  var KNOWLEDGE_LABELS = Object.freeze({
+    idiom: "\u6210\u8BED\u5E93",
+    char: "\u6C49\u5B57\u5E93",
+    xiehouyu: "\u6B47\u540E\u8BED",
+    word: "\u8BCD\u8BED\u5E93",
+    poetry: "\u53E4\u8BD7\u5E93"
+  });
+  async function renderKnowledge() {
+    const poetryMeta = state.knowledgeType === "poetry" ? await getPoetryMeta() : { authors: [], dynasties: [] };
+    const page = state.knowledgeHasQueried ? await pageKnowledge(state.knowledgeType, {
+      query: state.knowledgeQuery,
+      author: state.knowledgeAuthor,
+      dynasty: state.knowledgeDynasty,
+      collection: state.knowledgeCollection
+    }, state.knowledgePage, 20) : { items: [], total: 0, page: 1, pageSize: 20, pageCount: 1 };
+    state.knowledgePage = page.page;
+    const authors = poetryMeta.authors || [];
+    const dynasties = poetryMeta.dynasties || [];
+    const collections = poetryMeta.collections || [];
+    const wrongQuestions = (await getAll("wrongQuestions")).sort((a2, b2) => (b2.createdAt || 0) - (a2.createdAt || 0));
+    const wrongTypes = [...new Set(wrongQuestions.map((item) => item.type).filter(Boolean))];
+    const filteredWrong = state.wrongType === "all" ? wrongQuestions : wrongQuestions.filter((item) => item.type === state.wrongType);
+    const currentLearning = state.learningItems[state.learningIndex];
+    const learningPanel = currentLearning ? `<section class="panel learning-card"><div class="knowledge-learning-kicker">\u968F\u673A\u5B66\u4E60 \xB7 ${escapeHtml2(KNOWLEDGE_LABELS[state.knowledgeType])}</div>${renderKnowledgeSummary(state.knowledgeType, currentLearning)}<div class="header-actions"><button class="primary" data-learning-result="correct">\u5B66\u4F1A\u4E86</button><button class="secondary" data-learning-result="wrong">\u6807\u8BB0\u4E3A\u672A\u638C\u63E1</button></div><small>\u7B2C ${state.learningIndex + 1}/${state.learningItems.length} \u9879</small></section>` : `<section class="panel learning-card"><div class="knowledge-learning-kicker">\u968F\u673A\u5B66\u4E60</div><h2>\u4ECE${escapeHtml2(KNOWLEDGE_LABELS[state.knowledgeType])}\u5F00\u59CB</h2><p>\u5DF2\u5B66\u4F1A\u7684\u5185\u5BB9\u4E0D\u4F1A\u5728\u672C\u8F6E\u91CD\u590D\u51FA\u73B0\uFF0C\u672A\u638C\u63E1\u5185\u5BB9\u4F1A\u8FDB\u5165\u9519\u9898\u5E93\u3002</p><button class="primary" data-learning-start>\u5F00\u59CB\u968F\u673A\u5B66\u4E60</button></section>`;
+    const wrongPanel = filteredWrong.length ? `<section class="panel knowledge-wrong-panel"><div class="section-heading"><div><h2>\u9519\u9898\u5E93</h2><p>\u5F53\u524D ${filteredWrong.length} \u6761 / \u5168\u90E8 ${wrongQuestions.length} \u6761\uFF0C\u53EF\u6309\u7C7B\u578B\u590D\u4E60\u6216\u5220\u9664\u3002</p></div>${renderWrongTypeFilter(wrongTypes)}</div><div class="knowledge-list">${filteredWrong.map((item) => `<article class="knowledge-item"><button class="knowledge-main">${renderWrongQuestionSummary(item)}</button><button class="secondary" data-delete-wrong="${escapeHtml2(item.id)}">\u5220\u9664</button></article>`).join("")}</div></section>` : `<section class="panel knowledge-wrong-panel"><div class="section-heading"><div><h2>\u9519\u9898\u5E93</h2><p>${wrongQuestions.length ? "\u5F53\u524D\u7C7B\u578B\u6CA1\u6709\u9519\u9898\u3002" : "\u6682\u65F6\u6CA1\u6709\u9519\u9898\u3002"}</p></div>${renderWrongTypeFilter(wrongTypes)}</div></section>`;
+    main.innerHTML = `${pageHeader("\u77E5\u8BC6\u5E93", "\u79BB\u7EBF\u5B66\u4E60\u6210\u8BED\u3001\u6C49\u5B57\u3001\u6B47\u540E\u8BED\u3001\u8BCD\u8BED\u4E0E\u53E4\u8BD7", "")}
+    <section class="knowledge-toolbar panel">
+      <div class="segmented knowledge-tabs">${Object.entries(KNOWLEDGE_LABELS).map(([type, label]) => `<label><input type="radio" name="knowledgeType" data-knowledge-type value="${type}" ${state.knowledgeType === type ? "checked" : ""}><span>${label}</span></label>`).join("")}</div>
+      <div class="field-row knowledge-filters ${state.knowledgeType === "poetry" ? "knowledge-filters-poetry" : "knowledge-filters-basic"}"><input data-knowledge-filter="query" value="${escapeHtml2(state.knowledgeQuery)}" placeholder="${state.knowledgeType === "poetry" ? "\u6309\u4F5C\u8005\u3001\u5B57\u3001\u8BD7\u540D\u6216\u8BD7\u53E5\u7B5B\u9009" : "\u6309\u67D0\u4E2A\u6216\u67D0\u4E9B\u5B57\u7B5B\u9009"}">${state.knowledgeType === "poetry" ? `<select data-knowledge-filter="collection"><option value="">\u5168\u90E8\u7C7B\u578B</option>${collections.map((collection) => `<option value="${escapeHtml2(collection)}" ${state.knowledgeCollection === collection ? "selected" : ""}>${escapeHtml2(collection)}</option>`).join("")}</select><select data-knowledge-filter="author"><option value="">\u5168\u90E8\u4F5C\u8005</option>${authors.map((author) => `<option value="${escapeHtml2(author)}" ${state.knowledgeAuthor === author ? "selected" : ""}>${escapeHtml2(author)}</option>`).join("")}</select><select data-knowledge-filter="dynasty"><option value="">\u5168\u90E8\u671D\u4EE3</option>${dynasties.map((dynasty) => `<option value="${escapeHtml2(dynasty)}" ${state.knowledgeDynasty === dynasty ? "selected" : ""}>${escapeHtml2(dynasty)}</option>`).join("")}</select>` : ""}<button class="primary knowledge-search-button" data-knowledge-search>\u67E5\u8BE2</button></div>
+    </section>
+    ${learningPanel}
+    <section class="panel knowledge-list-panel"><div class="section-heading"><div><h2>${escapeHtml2(KNOWLEDGE_LABELS[state.knowledgeType])}</h2><p>${state.knowledgeHasQueried ? `\u5F53\u524D\u7B5B\u9009 ${page.total} \u6761\uFF0C\u7B2C ${page.page}/${page.pageCount} \u9875` : "\u8BF7\u8F93\u5165\u7B5B\u9009\u6761\u4EF6\u540E\u70B9\u51FB\u67E5\u8BE2\uFF0C\u5217\u8868\u4F1A\u5206\u9875\u5C55\u793A\u3002"}</p></div><div class="header-actions"><button class="secondary" data-knowledge-page="${page.page - 1}" ${!state.knowledgeHasQueried || page.page <= 1 ? "disabled" : ""}>\u4E0A\u4E00\u9875</button><button class="secondary" data-knowledge-page="${page.page + 1}" ${!state.knowledgeHasQueried || page.page >= page.pageCount ? "disabled" : ""}>\u4E0B\u4E00\u9875</button></div></div><div class="knowledge-list">${state.knowledgeHasQueried ? page.items.map((item) => renderKnowledgeItem(state.knowledgeType, item)).join("") : '<div class="empty-state compact"><span class="emoji">\u2315</span><h2>\u7B49\u5F85\u67E5\u8BE2</h2><p>\u9ED8\u8BA4\u4E0D\u52A0\u8F7D\u5168\u91CF\u77E5\u8BC6\u5E93\uFF0C\u907F\u514D iPad/PWA \u9996\u5C4F\u53D8\u6162\u3002</p></div>'}</div></section>
+    ${wrongPanel}`;
+  }
+  function renderWrongTypeFilter(types) {
+    const options = [["all", "\u5168\u90E8"], ...types.map((type) => [type, KNOWLEDGE_LABELS[type] || type])];
+    return `<div class="segmented wrong-tabs">${options.map(([type, label]) => `<label><input type="radio" name="wrongType" data-wrong-type value="${escapeHtml2(type)}" ${state.wrongType === type ? "checked" : ""}><span>${escapeHtml2(label)}</span></label>`).join("")}</div>`;
+  }
+  function renderKnowledgeSummary(type, item) {
+    if (type === "poetry") return `<h3>${escapeHtml2(item.title || "")}</h3><p>${escapeHtml2(item.collection || "\u53E4\u8BD7")} \xB7 ${escapeHtml2(item.dynasty || "")} \xB7 ${escapeHtml2(item.author || "")}</p><p class="knowledge-lines">${(item.lines || []).slice(0, 4).map((line) => escapeHtml2(line)).join("\u3000")}</p>`;
+    if (type === "xiehouyu") return `<h3>${escapeHtml2(item.riddle || "")} \u2014\u2014 ${escapeHtml2(item.answer || "")}</h3><p>${escapeHtml2(item.explanation || "")}</p>`;
+    if (type === "char") return `<h3>${escapeHtml2(item.char || "")}</h3><p>${escapeHtml2(item.pinyin || "")}\u3000\u90E8\u9996\uFF1A${escapeHtml2(item.radical || "")}\u3000\u7B14\u753B\uFF1A${escapeHtml2(item.strokes || "")}</p><p>${escapeHtml2(item.meaning || "")}</p>`;
+    return `<h3>${escapeHtml2(item.word || "")}</h3><p>${escapeHtml2(item.pinyin || "")}</p><p>${escapeHtml2(item.meaning || item.explanation || "")}</p>`;
+  }
+  function renderWrongQuestionSummary(record) {
+    const item = record.item || {};
+    if (["idiom", "char", "xiehouyu", "word", "poetry"].includes(record.type)) return `<div><span class="status status-review">${escapeHtml2(KNOWLEDGE_LABELS[record.type])}</span>${renderKnowledgeSummary(record.type, item)}</div>`;
+    return `<div><span class="status status-review">${escapeHtml2(record.type || "\u8BD5\u5377\u9519\u9898")}</span><h3>${escapeHtml2(record.title || item.prompt || "\u8BD5\u5377\u9519\u9898")}</h3><p>${escapeHtml2(item.prompt || item.expression || item.answer || "")}</p></div>`;
+  }
+  function renderKnowledgeItem(type, item) {
+    return `<article class="knowledge-item"><button class="knowledge-main" data-knowledge-detail-type="${escapeHtml2(type)}" data-knowledge-detail-key="${escapeHtml2(knowledgeKey(type, item))}">${renderKnowledgeSummary(type, item)}</button></article>`;
+  }
+  function openKnowledgeDetail(type, item) {
+    const title = item.word || item.char || item.title || item.riddle || "\u8BE6\u60C5";
+    const body = type === "poetry" ? `<p>${escapeHtml2(item.collection || "\u53E4\u8BD7")} \xB7 ${escapeHtml2(item.dynasty || "")} \xB7 ${escapeHtml2(item.author || "")}</p><div class="knowledge-detail-lines">${(item.lines || []).map((line) => `<p>${escapeHtml2(line)}</p>`).join("")}</div>` : type === "char" ? `<p>\u62FC\u97F3\uFF1A${escapeHtml2(item.pinyin || "")}</p><p>\u90E8\u9996\uFF1A${escapeHtml2(item.radical || "")}\u3000\u7B14\u753B\uFF1A${escapeHtml2(item.strokes || "")}</p><p>${escapeHtml2(item.meaning || "")}</p>${item.more ? `<pre>${escapeHtml2(item.more)}</pre>` : ""}` : type === "xiehouyu" ? `<p>\u7B54\u6848\uFF1A${escapeHtml2(item.answer || "")}</p><p>${escapeHtml2(item.explanation || "")}</p>` : `<p>${escapeHtml2(item.pinyin || "")}</p><p>${escapeHtml2(item.meaning || item.explanation || "")}</p>${item.example ? `<p>\u4F8B\uFF1A${escapeHtml2(item.example)}</p>` : ""}${item.derivation ? `<p>\u51FA\u5904\uFF1A${escapeHtml2(item.derivation)}</p>` : ""}`;
+    openModal(`<h2>${escapeHtml2(title)}</h2><div class="knowledge-detail">${body}</div><div class="header-actions"><button class="primary" data-close-modal>\u5173\u95ED</button></div>`, "knowledge-detail-modal");
+  }
+  async function submitKnowledgeSearch() {
+    document.querySelectorAll("[data-knowledge-filter]").forEach((element) => {
+      const field = element.dataset.knowledgeFilter;
+      state[`knowledge${field.charAt(0).toUpperCase()}${field.slice(1)}`] = element.value;
+    });
+    state.knowledgePage = 1;
+    state.knowledgeHasQueried = true;
+    await renderKnowledge();
+  }
+  async function syncPaperWrongQuestion(paper, problemId, isWrong) {
+    const problem = paper.problems?.find((item) => item.id === problemId);
+    if (!problem) return;
+    const id = `paper-wrong:${paper.id}:${problemId}`;
+    if (isWrong) {
+      await put("wrongQuestions", {
+        id,
+        type: paper.subject === "\u8BED\u6587" ? "chinese-paper" : paper.subject === "\u82F1\u8BED" ? "english-paper" : "math-paper",
+        sourceId: paper.id,
+        problemId,
+        title: paper.title,
+        item: structuredClone(problem),
+        createdAt: Date.now()
+      });
+      return;
+    }
+    await remove("wrongQuestions", id);
+  }
+  async function handleLearningResult(result) {
+    const item = state.learningItems[state.learningIndex];
+    if (!item) return;
+    const type = state.knowledgeType;
+    if (result === "wrong") {
+      await put("wrongQuestions", {
+        id: `knowledge-wrong:${knowledgeKey(type, item)}`,
+        type,
+        sourceId: knowledgeKey(type, item),
+        item: structuredClone(item),
+        createdAt: Date.now()
+      });
+    } else {
+      state.learningCompleted.add(knowledgeKey(type, item));
+    }
+    state.learningIndex += 1;
+    if (state.learningIndex >= state.learningItems.length) {
+      state.learningItems = [];
+      state.learningIndex = 0;
+      showToast("\u672C\u8F6E\u968F\u673A\u5B66\u4E60\u5B8C\u6210");
+    }
+    await renderKnowledge();
   }
   async function handleGeneratorSubmit(form) {
     const values = Object.fromEntries(new FormData(form));
@@ -24840,6 +26308,43 @@
   async function handleGlobalClick(event) {
     const route = event.target.closest("[data-route]")?.dataset.route;
     if (route) return navigate(route);
+    if (event.target.closest("[data-knowledge-search]")) {
+      return submitKnowledgeSearch();
+    }
+    if (event.target.closest("[data-learning-start]")) {
+      state.learningItems = await randomKnowledgeAsync(state.knowledgeType, 8, state.learningCompleted);
+      state.learningIndex = 0;
+      if (!state.learningItems.length) {
+        state.learningCompleted.clear();
+        state.learningItems = await randomKnowledgeAsync(state.knowledgeType, 8);
+      }
+      return renderKnowledge();
+    }
+    if (event.target.closest("[data-learning-result]")) {
+      return handleLearningResult(event.target.closest("[data-learning-result]").dataset.learningResult);
+    }
+    const knowledgePageButton = event.target.closest("[data-knowledge-page]");
+    if (knowledgePageButton) {
+      state.knowledgePage = Number(knowledgePageButton.dataset.knowledgePage) || 1;
+      return renderKnowledge();
+    }
+    const knowledgeDetailButton = event.target.closest("[data-knowledge-detail-key]");
+    if (knowledgeDetailButton) {
+      const type = knowledgeDetailButton.dataset.knowledgeDetailType;
+      const item = await getKnowledgeDetail(type, knowledgeDetailButton.dataset.knowledgeDetailKey);
+      if (!item) {
+        showToast("\u6CA1\u6709\u627E\u5230\u8BE6\u60C5");
+        return;
+      }
+      openKnowledgeDetail(type, item);
+      return;
+    }
+    if (event.target.closest("[data-delete-wrong]")) {
+      const id = event.target.closest("[data-delete-wrong]").dataset.deleteWrong;
+      await remove("wrongQuestions", id);
+      showToast("\u9519\u9898\u5DF2\u5220\u9664");
+      return renderKnowledge();
+    }
     const filter = event.target.closest("[data-paper-filter]")?.dataset.paperFilter;
     if (filter) {
       state.paperFilter = filter;
@@ -24917,7 +26422,8 @@
       paper.updatedAt = Date.now();
       await put("papers", paper);
       showToast("\u5DF2\u63D0\u4EA4\uFF0C\u7B49\u5F85\u7EA2\u7B14\u6279\u6539");
-      return renderPaper();
+      syncPaperStatusView(paper);
+      return;
     }
     if (event.target.closest("[data-paper-reviewed]")) {
       const paper = await get("papers", state.activePaperId);
@@ -24926,20 +26432,23 @@
       paper.updatedAt = Date.now();
       await put("papers", paper);
       showToast("\u6279\u6539\u5DF2\u4FDD\u5B58");
-      return renderPaper();
+      syncPaperStatusView(paper);
+      return;
     }
     if (event.target.closest("[data-reopen-review]")) {
       const paper = await get("papers", state.activePaperId);
       paper.status = getPaperStatusAfterAction(paper.status, "reopen-review");
       paper.updatedAt = Date.now();
       await put("papers", paper);
-      return renderPaper();
+      syncPaperStatusView(paper);
+      return;
     }
     if (event.target.closest("[data-toggle-wrong]")) {
       const id = event.target.closest("[data-toggle-wrong]").dataset.toggleWrong;
       const paper = await get("papers", state.activePaperId);
       const marked = paper.wrongProblemIds?.includes(id);
       await put("papers", setProblemWrong(paper, id, !marked));
+      await syncPaperWrongQuestion(paper, id, !marked);
       return renderPaper();
     }
     if (event.target.closest("[data-batch-wrong]")) {
@@ -24947,7 +26456,9 @@
       const input = prompt(`\u8F93\u5165\u9519\u9898\u9898\u53F7\uFF081\uFF5E${paper.problems.length}\uFF09\uFF0C\u652F\u6301 1\u30013-5`, "");
       if (input === null) return;
       try {
-        await put("papers", markWrongProblemsByNumbers(paper, input));
+        const nextPaper = markWrongProblemsByNumbers(paper, input);
+        await put("papers", nextPaper);
+        await Promise.all(nextPaper.wrongProblemIds.map((id) => syncPaperWrongQuestion(nextPaper, id, true)));
         return renderPaper();
       } catch (error) {
         showToast(error.message);
@@ -25240,6 +26751,29 @@
     }
   });
   document.addEventListener("change", async (event) => {
+    if (event.target.matches("[data-knowledge-type]")) {
+      state.knowledgeType = event.target.value;
+      state.knowledgeQuery = "";
+      state.knowledgeAuthor = "";
+      state.knowledgeDynasty = "";
+      state.knowledgeCollection = "";
+      state.knowledgePage = 1;
+      state.knowledgeHasQueried = false;
+      state.learningItems = [];
+      state.learningIndex = 0;
+      return renderKnowledge();
+    }
+    if (event.target.matches("[data-knowledge-filter]")) {
+      const field = event.target.dataset.knowledgeFilter;
+      state[`knowledge${field.charAt(0).toUpperCase()}${field.slice(1)}`] = event.target.value;
+      state.knowledgePage = 1;
+      state.knowledgeHasQueried = false;
+      return;
+    }
+    if (event.target.matches("[data-wrong-type]")) {
+      state.wrongType = event.target.value;
+      return renderKnowledge();
+    }
     if (event.target.matches("[data-book-select]")) {
       const id = event.target.dataset.bookSelect;
       if (event.target.checked) state.selectedBookIds.add(id);
@@ -25330,8 +26864,9 @@
       installReaderDiagnostics();
       await openDatabase();
       await ensureDefaultTemplates();
+      await preloadLanguageTools();
       await ensureReadingSeeds();
-      if ("serviceWorker" in navigator && location.protocol.startsWith("http")) navigator.serviceWorker.register("./sw.js?v=20260808-8").catch(console.warn);
+      if ("serviceWorker" in navigator && location.protocol.startsWith("http")) navigator.serviceWorker.register("./sw.js?v=20260811-7").catch(console.warn);
       await navigate("home");
     } finally {
       loading?.classList.add("is-hidden");

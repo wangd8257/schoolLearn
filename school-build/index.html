@@ -10,12 +10,12 @@
   <meta name="apple-mobile-web-app-title" content="光之进化">
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="assets/icon.svg">
-  <link rel="stylesheet" href="styles.css?v=20260808-8">
+  <link rel="stylesheet" href="styles.css?v=20260811-7">
   <script>
     if (location.protocol !== 'file:') {
       const manifest = document.createElement('link');
       manifest.rel = 'manifest';
-      manifest.href = 'manifest.webmanifest?v=20260808-8';
+      manifest.href = 'manifest.webmanifest?v=20260811-7';
       document.head.appendChild(manifest);
     }
   </script>
@@ -39,6 +39,7 @@
         <button class="nav-item" data-route="papers"><span class="nav-glyph">▤</span>试卷目录</button>
         <button class="nav-item" data-route="generator"><span class="nav-glyph">✦</span>生成试卷</button>
         <button class="nav-item" data-route="reading"><span class="nav-glyph">▥</span>阅读资料</button>
+        <button class="nav-item" data-route="knowledge"><span class="nav-glyph">字</span>知识库</button>
         <button class="nav-item" data-route="games"><span class="nav-glyph">◇</span>学习游戏</button>
         <button class="nav-item" data-route="templates"><span class="nav-glyph">⌘</span>配置模板</button>
       </nav>
@@ -61,10 +62,10 @@
   <script>
     const appScript = document.createElement('script');
     if (location.protocol === 'file:') {
-      appScript.src = 'dist/app.bundle.js?v=20260808-8';
+      appScript.src = 'dist/app.bundle.js?v=20260811-7';
     } else {
       appScript.type = 'module';
-      appScript.src = 'src/app.js?v=20260808-8';
+      appScript.src = 'src/app.js?v=20260811-7';
     }
     document.body.appendChild(appScript);
   </script>

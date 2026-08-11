@@ -1,4 +1,4 @@
-﻿import { openDatabase, getAll, put, get, remove } from './db.js';
+import { openDatabase, getAll, put, get, remove } from './db.js';
 import { createDrawingLayer } from './drawing.js';
 import {
   PAPER_STATUS,
@@ -33,9 +33,11 @@ import {
 } from './templates.js';
 import { renderProblemHtml, renderWorksheetMetaHtml, worksheetColumns, worksheetLayoutClass } from './worksheet-render.js';
 import { paperMoveDelta, paperScrollDelta } from './paper-controls.mjs';
+import { generateWorksheet } from './math/index.mjs';
+import { filterKnowledgeAsync, getKnowledgeDetail, getPoetryMeta, knowledgeKey, pageKnowledge, randomKnowledgeAsync } from './data/knowledge/index.mjs';
 import * as pdfjsLib from './vendor/pdfjs/pdf.min.mjs';
 
-const state = { route: 'home', paperFilter: 'all', activeReadingId: null, activePaperId: null, pictureBookDraft: null, paperTransform: null, paperStatus: null, bookObjectUrl: null, fileReader: null, fileReaderToken: 0, pdfZoom: 1, selectedBookIds: new Set(), bookCacheRun: 0 };
+const state = { route: 'home', paperFilter: 'all', activeReadingId: null, activePaperId: null, pictureBookDraft: null, paperTransform: null, paperStatus: null, bookObjectUrl: null, fileReader: null, fileReaderToken: 0, pdfZoom: 1, selectedBookIds: new Set(), bookCacheRun: 0, knowledgeType: 'idiom', knowledgeQuery: '', knowledgeAuthor: '', knowledgeDynasty: '', knowledgeCollection: '', knowledgePage: 1, knowledgeHasQueried: false, wrongType: 'all', learningItems: [], learningIndex: 0, learningCompleted: new Set() };
 const main = document.querySelector('#mainContent');
 const toast = document.querySelector('#toast');
 const modalRoot = document.querySelector('#modalRoot');
@@ -48,6 +50,7 @@ const PDF_JS_OPTIONS = Object.freeze({
   standardFontDataUrl: './src/vendor/pdfjs/standard_fonts/',
 });
 const READER_LOAD_TIMEOUT_MS = 60000;
+const BOOK_DEVICE_CACHE_NAME = 'growth-desk-books-v1';
 
 /**
  * 把阅读器异常转换为用户可理解的短消息，并同步到当前阅读界面。
@@ -141,7 +144,7 @@ export async function navigate(route, detail = null) {
 }
 
 async function render() {
-  const renderers = { home: renderHome, papers: renderPapers, generator: renderGenerator, reading: renderReading, games: renderGames, templates: renderTemplates, paper: renderPaper };
+  const renderers = { home: renderHome, papers: renderPapers, generator: renderGenerator, reading: renderReading, games: renderGames, templates: renderTemplates, knowledge: renderKnowledge, paper: renderPaper };
   try {
     await (renderers[state.route] || renderHome)();
   } catch (error) {
@@ -207,7 +210,7 @@ const TEMPLATE_GROUPS = {
     ['chain-add','连加'],['chain-sub','连减'],['mixed','连续加减'],['make-ten','凑十法'],['break-ten','破十法'],
     ['carry-add','进位加法'],['borrow-sub','退位减法'],['multiply','乘法'],['divide','除法'],['currency','人民币换算'],['unit','单位换算'],['clock','钟表认知']
   ],
-  语文: [['hanzi-trace','汉字描红'],['hanzi-stroke','按笔画练字'],['control','控笔训练'],['composition','田字格/作业纸']],
+  语文: [['hanzi-trace','汉字描红'],['hanzi-stroke','按笔画练字'],['control','控笔训练'],['composition','田字格/作业纸'],['idiom-fill','成语填空（飞花令）'],['poetry-match','诗句上下文配对'],['pinyin-write','看拼音写汉字']],
   英语: [['english-word','单词描红'],['english-sentence','短句描红'],['english-lines','英语四线三格']]
 };
 
@@ -229,8 +232,15 @@ function generatorFields(subject, template) {
     const contentField = isBlankPractice
       ? ''
       : '<div class="field"><label>练习内容（每行一项）</label><textarea name="customContent" placeholder="一行可输入多个字，例如：你好"></textarea></div>';
+    const languageQuizFields = template === 'idiom-fill'
+      ? '<div class="field"><label>成语筛选字（可留空）</label><input name="knowledgeQuery" placeholder="例如：目"></div><div class="field"><label>题目数量</label><input name="count" type="number" min="1" max="50" value="10"></div>'
+      : template === 'poetry-match'
+      ? '<div class="field"><label>诗句筛选字（可留空）</label><input name="knowledgeQuery" placeholder="例如：月"></div><div class="field"><label>难度</label><select name="poetryDifficulty"><option value="low">低难度：上下句</option><option value="high">高难度：逐字排序</option></select></div><div class="field"><label>题目数量</label><input name="count" type="number" min="1" max="20" value="6"></div>'
+      : template === 'pinyin-write'
+      ? '<div class="field"><label>词语（每行一项）</label><textarea name="customContent" placeholder="例如：认真&#10;努力"></textarea></div><div class="field"><label>题目数量</label><input name="count" type="number" min="1" max="50" value="10"></div>'
+      : '';
     return `
-    ${countField}${contentField}${hanziFontFields}${englishFontFields}${strokeFields}`;
+    ${countField}${contentField}${languageQuizFields}${hanziFontFields}${englishFontFields}${strokeFields}`;
   }
   const operationTemplates = ['horizontal', 'missing', 'vertical', 'equation'];
   const chainTemplates = ['chain-add', 'chain-sub', 'mixed'];
@@ -299,7 +309,7 @@ function readGeneratorValues(form) {
  * @returns {Promise<string>} 预览区域 HTML。
  */
 async function renderGeneratedPreview(values) {
-  const problems = await createProblemsFromForm({ ...values, count: String(Math.min(Number(values.count || 12), 100)) });
+  const problems = await createProblemsFromForm({ ...values, count: String(Math.min(Number(values.count || 30), 100)) });
   const templateLabel = TEMPLATE_GROUPS[values.subject].find(([key]) => key === values.template)?.[1] || values.template;
   const paper = createPaperSnapshot({
     title: `${values.subject}·${templateLabel}·预览`,
@@ -329,11 +339,15 @@ function renderStaticPreview(subject, template) {
 function worksheetProblemsPerPage(paper) {
   const layout = worksheetLayoutClass(paper);
   const template = paper.config?.template || paper.problems?.[0]?.kind || paper.problems?.[0]?.type || '';
-  if (template === 'composition') return paper.orientation === 'landscape' ? 8 : 12;
-  if (template === 'english-lines') return paper.orientation === 'landscape' ? 8 : 10;
+  if (template === 'composition') return paper.orientation === 'landscape' ? 24 : 16;
+  if (template === 'english-lines') return paper.orientation === 'landscape' ? 20 : 14;
   if (layout.includes('vertical')) return 12;
   if (layout.includes('make-ten') || layout.includes('break-ten')) return paper.orientation === 'landscape' ? 4 : 6;
   if (layout.includes('clock')) return 8;
+  if (template === 'idiom-fill') return paper.orientation === 'landscape' ? 18 : 12;
+  if (template === 'poetry-match') return paper.orientation === 'landscape' ? 12 : 8;
+  if (template === 'pinyin-write') return paper.orientation === 'landscape' ? 10 : 7;
+  if (layout.includes('language-quiz')) return 8;
   if (layout.includes('word-problem')) return 2;
   if (layout.includes('equation')) return 3;
   if (layout.includes('hanzi-practice') || layout.includes('english-practice')) return 8;
@@ -490,6 +504,21 @@ const HANZI_STROKE_LIBRARY = Object.freeze({
       'M50 34 L74 55', 'M36 60 L55 74 L34 91', 'M69 62 L43 91', 'M24 82 H78',
     ],
   },
+  我: {
+    text:'我',
+    steps:['撇', '横', '竖钩', '提', '斜钩', '撇', '点'],
+    strokeProgress: buildStrokeProgress(['撇', '横', '竖钩', '提', '斜钩', '撇', '点'], '我'),
+    strokePaths:[
+      'M 350 571 Q 380 593 449 614 Q 465 615 468 623 Q 471 633 458 643 Q 439 656 396 668 Q 381 674 370 672 Q 363 668 363 657 Q 364 621 200 527 Q 196 518 201 516 Q 213 516 290 546 Q 303 550 316 556 L 350 571 Z',
+      'M 584 466 Q 666 485 734 497 Q 746 496 754 511 Q 755 524 729 533 Q 693 554 622 527 Q 598 520 575 511 L 537 499 Q 518 495 500 488 Q 442 472 386 457 L 337 446 Q 327 446 179 416 Q 148 409 173 392 Q 212 365 241 376 Q 287 389 339 404 L 387 416 Q 460 438 545 457 L 584 466 Z',
+      'M 386 457 Q 387 493 398 517 Q 405 535 390 548 Q 371 564 350 571 C 323 583 303 583 316 556 Q 315 556 316 555 Q 338 519 337 478 Q 337 462 337 446 L 339 404 Q 340 343 339 289 L 338 241 Q 337 180 334 133 Q 333 115 323 109 Q 317 105 250 119 Q 238 122 239 114 Q 240 108 249 100 Q 309 42 328 6 Q 341 -10 357 3 Q 390 36 390 126 Q 387 169 387 265 L 387 306 Q 387 355 387 416 L 386 457 Z',
+      'M 339 289 Q 254 261 161 229 Q 139 222 101 221 Q 86 220 85 207 Q 84 192 94 184 Q 119 166 157 147 Q 169 144 182 154 Q 239 199 338 241 L 387 265 Q 477 314 484 318 Q 499 327 498 337 Q 492 343 479 340 Q 434 324 387 306 L 339 289 Z',
+      'M 635 195 Q 690 75 797 -14 Q 876 -62 898 -47 Q 920 -37 914 3 Q 905 34 899 152 Q 900 174 894 178 Q 890 179 884 160 Q 857 75 838 60 Q 823 56 785 88 Q 710 155 670 226 L 644 279 Q 599 381 584 466 L 575 511 Q 547 659 576 752 Q 586 779 543 805 Q 509 827 489 825 Q 470 824 479 795 Q 503 752 507 707 Q 517 601 537 499 L 545 457 Q 573 334 612 245 L 635 195 Z',
+      'M 612 245 Q 558 197 452 138 Q 442 132 448 128 Q 455 124 468 126 Q 523 135 574 160 Q 608 175 635 195 L 670 226 Q 706 260 747 317 Q 762 336 778 354 Q 788 361 785 374 Q 781 386 753 410 Q 734 428 723 428 Q 708 427 707 411 Q 701 354 644 279 L 612 245 Z',
+      'M 687 669 Q 718 648 754 623 Q 770 613 786 615 Q 798 618 801 632 Q 802 648 789 678 Q 780 697 746 708 Q 665 726 651 715 Q 647 711 651 697 Q 655 687 687 669 Z',
+    ],
+    strokeDataSource:'hanzi-writer-data',
+  },
 });
 
 const HANZI_WRITER_DATA_PATH = './assets/hanzi-writer-data';
@@ -504,7 +533,7 @@ async function loadHanziWriterStrokePaths(character) {
   const value = String(character || '').trim();
   if (!/^[\u3400-\u9fff]$/u.test(value)) return null;
   if (hanziWriterDataCache.has(value)) return hanziWriterDataCache.get(value);
-  if (typeof fetch !== 'function') return null;
+  if (typeof fetch !== 'function' || globalThis.location?.protocol === 'file:') return null;
 
   try {
     const url = `${HANZI_WRITER_DATA_PATH}/${encodeURIComponent(value)}.json`;
@@ -566,9 +595,179 @@ function boundedPracticeCount(value, fallback) {
   return Math.max(1, Math.min(100, Math.floor(count)));
 }
 
+/**
+ * 将汉字描红输入按米字格行宽切分，避免连续文字在 A4 页面中被裁切。
+ * @param {string[]} lines 用户输入的练习内容行。
+ * @returns {string[]} 可逐行渲染的汉字练习内容。
+ */
+function splitHanziPracticeLines(lines) {
+  return lines.flatMap((line) => {
+    const characters = Array.from(line).filter((character) => character.trim());
+    if (characters.length <= 8) return [line];
+    const chunks = [];
+    for (let index = 0; index < characters.length; index += 12) {
+      // 长文本按 12 格一行拆成独立题目，分页时可独立换页。
+      chunks.push(characters.slice(index, index + 12).join(''));
+    }
+    return chunks;
+  });
+}
+
+/**
+ * 将英文描红内容按四线三格可容纳宽度切分，避免长单词或短句超出试卷。
+ * @param {string[]} lines 用户输入的英文练习内容行。
+ * @param {'english-word'|'english-sentence'|string} template 当前英语模板。
+ * @returns {string[]} 可逐行渲染的英文练习内容。
+ */
+function splitEnglishPracticeLines(lines, template) {
+  const maxLength = template === 'english-word' ? 18 : 32;
+  return lines.flatMap((line) => {
+    const words = String(line).trim().split(/\s+/u).filter(Boolean);
+    if (!words.length) return [];
+    const chunks = [];
+    let current = '';
+    for (const word of words) {
+      if (word.length > maxLength) {
+        if (current) chunks.push(current);
+        // 单个超长词继续按容量拆分，避免字母撑出 A4 页面。
+        for (let index = 0; index < word.length; index += maxLength) chunks.push(word.slice(index, index + maxLength));
+        current = '';
+        continue;
+      }
+      const next = current ? `${current} ${word}` : word;
+      if (current && next.length > maxLength) {
+        // 超出单行容量时放到下一题行，保持四线三格不横向溢出。
+        chunks.push(current);
+        current = word;
+      } else {
+        current = next;
+      }
+    }
+    if (current) chunks.push(current);
+    return chunks;
+  });
+}
+
+/**
+ * 预热本地中文拼音工具，保证首次离线预览也能生成拼音。
+ * @returns {Promise<void>} 两个本地脚本加载完成或失败后的 Promise。
+ */
+async function preloadLanguageTools() {
+  const loaders = [
+    loadScriptOnce('./src/vendor/chinese/cnchar.min.js', 'cnchar'),
+    loadScriptOnce('./src/vendor/chinese/pinyin-pro.min.js', 'pinyinPro'),
+  ];
+  await Promise.allSettled(loaders);
+}
+
+/**
+ * 使用本地 pinyin-pro 将中文词语转换为拼音。
+ * @param {string} text 待转换的中文词语。
+ * @returns {string} 带声调拼音，工具不可用时返回空字符串。
+ */
+function getPinyinText(text) {
+  const pinyinPro = globalThis.pinyinPro;
+  if (pinyinPro?.pinyin) {
+    try {
+      return String(pinyinPro.pinyin(text, { toneType: 'symbol', separator: ' ' }) || '').trim();
+    } catch (error) {
+      // PWA 首次离线脚本加载失败时由题目渲染器的本地拼音字典兜底。
+    }
+  }
+  return '';
+}
+
+/**
+ * 打乱数组并返回独立副本。
+ * @param {unknown[]} values 待打乱数组。
+ * @returns {unknown[]} 打乱后的数组。
+ */
+function shuffleValues(values) {
+  return [...values].sort(() => Math.random() - 0.5);
+}
+
+/**
+ * 生成成语填空题，确保同一份试卷不重复。
+ * @param {Record<string, unknown>} values 生成配置。
+ * @returns {Array<Record<string, unknown>>} 成语填空题列表。
+ */
+async function createIdiomFillProblems(values) {
+  const candidates = await filterKnowledgeAsync('idiom', { query: values.knowledgeQuery });
+  const count = boundedPracticeCount(values.count, 10);
+  const selected = shuffleValues(candidates).slice(0, count);
+  const allCharacters = [...new Set(candidates.flatMap((item) => Array.from(item.word)))];
+  return selected.map((item, index) => {
+    const word = String(item.word);
+    const blankIndex = Math.floor(Math.random() * word.length);
+    const answer = word[blankIndex];
+    const options = shuffleValues([answer, ...shuffleValues(allCharacters.filter((character) => character !== answer)).slice(0, 3)]);
+    return {
+      id: `problem-${index + 1}`,
+      kind: 'idiom-fill',
+      prompt: `${word.slice(0, blankIndex)}___${word.slice(blankIndex + 1)}`,
+      answer,
+      options,
+      meta: { word, explanation: item.explanation, example: item.example },
+    };
+  });
+}
+
+/**
+ * 生成古诗上下文配对题，按题目数量截断且不重复。
+ * @param {Record<string, unknown>} values 生成配置。
+ * @returns {Array<Record<string, unknown>>} 古诗配对题列表。
+ */
+async function createPoetryMatchProblems(values) {
+  const count = boundedPracticeCount(values.count, 6);
+  const query = String(values.knowledgeQuery || '').trim();
+  const candidates = query
+    ? await filterKnowledgeAsync('poetry', { query })
+    : await randomKnowledgeAsync('poetry', count);
+  return shuffleValues(candidates).slice(0, count).map((poem, index) => {
+    const lines = poem.lines || [];
+    const pairIndex = Math.floor(Math.random() * Math.max(1, Math.floor(lines.length / 2))) * 2;
+    const pair = lines.slice(pairIndex, pairIndex + 2);
+    const highDifficulty = values.poetryDifficulty === 'high';
+    const target = highDifficulty ? [pair.join('')] : [pair[1] || ''];
+    return {
+      id: `problem-${index + 1}`,
+      kind: 'poetry-match',
+      title: `${poem.title} · ${poem.author}`,
+      prompt: highDifficulty ? `请默写“${pair[0] || ''}”及下一句` : `请写出“${pair[0] || ''}”的下句`,
+      target,
+      options: [],
+      answer: target,
+      meta: { dynasty: poem.dynasty, author: poem.author },
+    };
+  });
+}
+
+/**
+ * 生成看拼音写汉字题，题面只显示拼音，答案保留在快照用于批改。
+ * @param {Record<string, unknown>} values 生成配置。
+ * @param {string[]} lines 用户输入词语。
+ * @returns {Array<Record<string, unknown>>} 看拼音写汉字题列表。
+ */
+async function createPinyinWriteProblems(values, lines) {
+  const knowledgeWords = lines.length ? [] : await filterKnowledgeAsync('word');
+  const source = lines.length ? lines : knowledgeWords.map((item) => item.word);
+  const count = boundedPracticeCount(values.count, source.length);
+  return shuffleValues([...new Set(source)]).slice(0, count).map((word, index) => ({
+    id: `problem-${index + 1}`,
+    kind: 'pinyin-write',
+    prompt: word,
+    answer: word,
+    boxes: 0,
+    meta: { pinyin: getPinyinText(word) || knowledgeWords.find((item) => item.word === word)?.pinyin || '' },
+  }));
+}
+
 async function createProblemsFromForm(values) {
   if (values.subject !== '数学') {
     const lines = String(values.customContent || '').split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+    if (values.template === 'idiom-fill') return createIdiomFillProblems(values);
+    if (values.template === 'poetry-match') return createPoetryMatchProblems(values);
+    if (values.template === 'pinyin-write') return createPinyinWriteProblems(values, lines);
     if (values.template === 'hanzi-stroke') return createStrokePracticeProblems(values, lines);
     if (['composition', 'english-lines'].includes(values.template)) {
       const count = boundedPracticeCount(values.count, values.template === 'composition' ? 12 : 10);
@@ -584,9 +783,14 @@ async function createProblemsFromForm(values) {
     const meta = {};
     if (values.template === 'hanzi-trace') meta.font = values.hanziFont || 'kaiti';
     if (values.subject === '英语') meta.font = values.englishFont || 'comic';
-    return (lines.length ? lines : ['请在此描写']).map((line,index) => ({ id:`problem-${index+1}`, kind:values.template, prompt:line, answer:'', boxes:0, meta: { ...meta } }));
+    const sourceLines = lines.length ? lines : ['请在此描写'];
+    const practiceLines = values.template === 'hanzi-trace'
+      ? splitHanziPracticeLines(sourceLines)
+      : values.subject === '英语'
+      ? splitEnglishPracticeLines(sourceLines, values.template)
+      : sourceLines;
+    return practiceLines.map((line,index) => ({ id:`problem-${index+1}`, kind:values.template, prompt:line, answer:'', boxes:0, meta: { ...meta } }));
   }
-  const module = await import('./math/index.mjs');
   const templateMap = {
     horizontal:'horizontal', missing:'missing-term', vertical:'vertical', compare:'comparison',
     equation:'equation', 'word-problem':'word-problem', 'chain-add':'chain-addition', 'chain-sub':'chain-subtraction',
@@ -606,7 +810,7 @@ async function createProblemsFromForm(values) {
       leftNumber: optionalNumber(values.leftNumber), rightNumber: optionalNumber(values.rightNumber)
     }
   };
-  const result = module.generateWorksheet(config);
+  const result = generateWorksheet(config);
   return (result.problems || result).map(normalizeProblem);
 }
 
@@ -621,7 +825,7 @@ async function handlePaperStrokeChange(paper, layer, strokes) {
   const previousStatus = paper.status;
   const savedPaper = await savePaperStrokes(paper, layer, strokes);
   if (previousStatus !== savedPaper.status && state.activePaperId === savedPaper.id) {
-    await renderPaper();
+    syncPaperStatusView(savedPaper);
   }
 }
 
@@ -699,6 +903,47 @@ function bindPaperPanGesture(transform) {
   wrap.addEventListener('lostpointercapture', finish);
 }
 
+/**
+ * 渲染试卷操作工具栏。
+ * @param {Record<string, unknown>} paper 当前试卷快照。
+ * @param {boolean} focusView 是否处于全屏作答/批改模式。
+ * @returns {string} 工具栏 HTML。
+ */
+function renderPaperToolbarHtml(paper, focusView) {
+  const mode = paper.status === 'review' || paper.status === 'done' ? 'red' : 'black';
+  const editable = paper.status !== 'done';
+  const scrollButtons = '<button class="secondary" data-paper-scroll="-1">↑ 上移</button><button class="secondary" data-paper-scroll="1">↓ 下移</button>';
+  const zoomControls = '<span class="paper-zoom-controls"><button class="secondary" data-paper-zoom="-1" aria-label="缩小试卷">−</button><span data-paper-zoom-value>100%</span><button class="secondary" data-paper-zoom="1" aria-label="放大试卷">＋</button><button class="secondary" data-paper-zoom-reset>复位</button><button class="secondary" data-paper-pan-toggle>移动试卷</button></span>';
+  return `
+    ${focusView ? '<button class="secondary" data-route="papers">退出</button>' : ''}
+    ${zoomControls}
+    ${editable ? `<button class="toolbar-button active ${mode}" data-ink-mode="pen">${mode === 'red' ? '🔴 红笔批改' : '⚫ 黑笔作答'}</button>${scrollButtons}
+      <button class="toolbar-button" data-ink-mode="eraser">⌫ 擦除当前笔迹</button><button class="toolbar-button" data-ink-action="undo">↶ 撤销</button>` : ''}
+    ${paper.status === 'writing' ? '<button class="primary" data-paper-submit>提交作答</button>' : ''}
+    ${paper.status === 'review' ? '<button class="primary" data-paper-reviewed>完成批改</button>' : ''}
+    ${paper.status === 'done' ? '<button class="secondary" data-reopen-review>修改批改</button>' : ''}
+    ${focusView ? '' : '<select id="printVersion" class="toolbar-button"><option value="blank">打印空白版</option><option value="answer">打印黑笔作答版</option><option value="final">打印红笔最终版</option></select><button class="secondary" data-print-paper>打印</button>'}
+  `;
+}
+
+/**
+ * 在不重建试卷 DOM 和笔迹画布的情况下同步状态工具栏。
+ * @param {Record<string, unknown>} paper 已保存的新试卷快照。
+ * @returns {void}
+ */
+function syncPaperStatusView(paper) {
+  state.paperStatus = paper.status;
+  const mode = paper.status === 'review' || paper.status === 'done' ? 'red' : 'black';
+  const editable = paper.status !== 'done';
+  const focusView = Boolean(state.paperTransform?.focusMode);
+  const toolbar = document.querySelector('.paper-toolbar');
+  if (toolbar) toolbar.innerHTML = renderPaperToolbarHtml(paper, focusView);
+  state.drawing.active = mode;
+  state.drawing.black?.setEnabled(editable && !state.paperTransform?.panMode && ['unstarted', 'writing'].includes(paper.status));
+  state.drawing.red?.setEnabled(editable && !state.paperTransform?.panMode && paper.status === 'review');
+  applyPaperTransform(state.paperTransform);
+}
+
 async function renderPaper() {
   const paper = await get('papers', state.activePaperId);
   if (!paper) return navigate('papers');
@@ -724,20 +969,9 @@ async function renderPaper() {
   }
   const focusView = focusWriting || state.paperTransform.focusMode === true;
   document.body.classList.toggle('paper-focus-active', focusView);
-  const scrollButtons = '<button class="secondary" data-paper-scroll="-1">↑ 上移</button><button class="secondary" data-paper-scroll="1">↓ 下移</button>';
-  const zoomControls = '<span class="paper-zoom-controls"><button class="secondary" data-paper-zoom="-1" aria-label="缩小试卷">−</button><span data-paper-zoom-value>100%</span><button class="secondary" data-paper-zoom="1" aria-label="放大试卷">＋</button><button class="secondary" data-paper-zoom-reset>复位</button><button class="secondary" data-paper-pan-toggle>移动试卷</button></span>';
   const headerHtml = focusView ? '' : pageHeader(escapeHtml(paper.title),`${PAPER_STATUS[paper.status]} · ${paper.subject}`,`<button class="secondary" data-route="papers">返回目录</button>`);
   main.innerHTML = `${headerHtml}<section class="paper-view ${focusView ? 'paper-writing-view' : ''}">
-    <div class="paper-toolbar no-print ${focusView ? 'paper-floating-toolbar' : ''}">
-      ${focusView ? '<button class="secondary" data-route="papers">退出</button>' : ''}
-      ${zoomControls}
-      ${editable ? `<button class="toolbar-button active ${mode}" data-ink-mode="pen">${mode === 'red' ? '🔴 红笔批改' : '⚫ 黑笔作答'}</button>${scrollButtons}
-      <button class="toolbar-button" data-ink-mode="eraser">⌫ 擦除当前笔迹</button><button class="toolbar-button" data-ink-action="undo">↶ 撤销</button>` : ''}
-      ${paper.status === 'writing' ? '<button class="primary" data-paper-submit>提交作答</button>' : ''}
-      ${paper.status === 'review' ? '<button class="primary" data-paper-reviewed>完成批改</button>' : ''}
-      ${paper.status === 'done' ? '<button class="secondary" data-reopen-review>修改批改</button>' : ''}
-      ${focusView ? '' : '<select id="printVersion" class="toolbar-button"><option value="blank">打印空白版</option><option value="answer">打印黑笔作答版</option><option value="final">打印红笔最终版</option></select><button class="secondary" data-print-paper>打印</button>'}
-    </div>
+    <div class="paper-toolbar no-print ${focusView ? 'paper-floating-toolbar' : ''}">${renderPaperToolbarHtml(paper, focusView)}</div>
     ${wrongTools}
     <div class="worksheet-wrap"><div id="activeWorksheet" class="worksheet-pages">${renderWorksheetPagesHtml(paper)}</div></div></section>`;
   const worksheet = document.querySelector('#activeWorksheet');
@@ -884,11 +1118,85 @@ async function cacheFileBook(item) {
 }
 
 /**
- * 将单本静态绘本下载到应用自己的 IndexedDB 本地书库。
- * @param {Record<string, unknown>} item 书架中的文件绘本记录。
- * @param {{force?:boolean}} options 是否忽略已有缓存并重新下载。
- * @returns {Promise<{ok:boolean,skipped?:boolean,error?:Error,size?:number}>} 下载结果。
+ * 判断当前浏览器是否支持 Cache Storage 绘本缓存。
+ * @returns {boolean} 当前环境是否可打开 Cache Storage。
  */
+function canUseBookCacheStorage() {
+  return typeof caches !== 'undefined' && typeof caches.open === 'function';
+}
+
+/**
+ * 判断当前设备是否应优先使用同页 EPUB 解析器。
+ * @returns {boolean} iOS 或独立 PWA 模式返回 true。
+ */
+function shouldPreferDirectEpubReader() {
+  const standalone = globalThis.matchMedia?.('(display-mode: standalone)').matches || globalThis.navigator?.standalone === true;
+  const isIos = /iPad|iPhone|iPod/u.test(globalThis.navigator?.userAgent || '')
+    || (globalThis.navigator?.platform === 'MacIntel' && Number(globalThis.navigator?.maxTouchPoints || 0) > 1);
+  return Boolean(standalone || isIos);
+}
+
+/**
+ * 将单本绘本响应写入应用管理的 Cache Storage 缓存。
+ * @param {string} sourceUrl 同源静态绘本地址。
+ * @param {Response} response 已成功读取的绘本网络响应。
+ * @returns {Promise<boolean>} Cache Storage 是否成功接收该响应。
+ */
+async function putBookResponseCache(sourceUrl, response) {
+  if (!canUseBookCacheStorage() || !sourceUrl || !response?.ok) return false;
+  try {
+    const cache = await caches.open(BOOK_DEVICE_CACHE_NAME);
+    await cache.put(new Request(sourceUrl), response.clone());
+    return true;
+  } catch (error) {
+    // iPad PWA 在存储紧张时可能拒绝写入缓存，此时继续保留 IndexedDB 路径兜底。
+    console.warn('Book Cache Storage write failed', error);
+    return false;
+  }
+}
+
+/**
+ * 从应用管理的 Cache Storage 中读取单本静态绘本响应。
+ * @param {string} sourceUrl 同源静态绘本地址。
+ * @returns {Promise<Response|null>} 命中缓存时返回响应，否则返回 null。
+ */
+async function matchBookResponseCache(sourceUrl) {
+  if (!canUseBookCacheStorage() || !sourceUrl) return null;
+  try {
+    const cache = await caches.open(BOOK_DEVICE_CACHE_NAME);
+    return await cache.match(new Request(sourceUrl));
+  } catch (error) {
+    // 缓存读取失败时回退网络，避免只因缓存不可用导致阅读器空白。
+    console.warn('Book Cache Storage read failed', error);
+    return null;
+  }
+}
+
+/**
+ * 从应用管理的 Cache Storage 中删除单本静态绘本响应。
+ * @param {string} sourceUrl 同源静态绘本地址。
+ * @returns {Promise<void>} 删除尝试结束后的 Promise。
+ */
+async function deleteBookResponseCache(sourceUrl) {
+  if (!canUseBookCacheStorage() || !sourceUrl) return;
+  try {
+    const cache = await caches.open(BOOK_DEVICE_CACHE_NAME);
+    await cache.delete(new Request(sourceUrl));
+  } catch (error) {
+    // 缓存清理失败不阻塞书架元数据清理，下次下载会覆盖同一地址。
+    console.warn('Book Cache Storage cleanup failed', error);
+  }
+}
+
+/**
+ * 判断书架记录是否标记为 Cache Storage 本地副本。
+ * @param {Record<string, unknown>} item 需要检查的书架记录。
+ * @returns {boolean} 是否可以尝试从 Cache Storage 读取。
+ */
+function isBookCacheStorageRecord(item) {
+  return item?.type === 'file-book' && item?.cacheMode === 'cache-storage' && Boolean(item.sourceUrl);
+}
+
 async function cacheFileBookWithOptions(item, options = {}) {
   const sourceUrl = String(item.sourceUrl || '');
   const isLocalFileUrl = globalThis.location?.protocol === 'file:' || sourceUrl.startsWith('file:');
@@ -897,24 +1205,32 @@ async function cacheFileBookWithOptions(item, options = {}) {
   try {
     const response = await fetch(sourceUrl, { cache: 'force-cache' });
     if (!response.ok) throw new Error(`绘本文件读取失败：${response.status}`);
+    const cachedInStorage = await putBookResponseCache(sourceUrl, response.clone());
     const blob = await response.blob();
     if (!blob.size) throw new Error('绘本文件为空');
-    await put('readings', { ...item, sourceBlob: blob, cacheMode: 'device', cacheUpdatedAt: Date.now(), size: blob.size, updatedAt: Date.now() });
+    try {
+      await put('readings', { ...item, sourceBlob: blob, cacheMode: 'device', cacheUpdatedAt: Date.now(), size: blob.size, updatedAt: Date.now() });
+    } catch (error) {
+      if (!cachedInStorage) throw error;
+      const cacheStorageRecord = { ...item, cacheMode: 'cache-storage', cacheUpdatedAt: Date.now(), size: blob.size, updatedAt: Date.now() };
+      delete cacheStorageRecord.sourceBlob;
+      await put('readings', cacheStorageRecord);
+    }
     return { ok: true, size: blob.size };
   } catch (error) {
-    // 单本下载失败只返回结果，由批量任务汇总，不能中断其他书籍。
+    // 缓存兜底后仍下载失败时返回错误，由书架批量流程统一汇总。
     console.warn('绘本离线副本准备失败', error);
     return { ok: false, error: error instanceof Error ? error : new Error(String(error)) };
   }
 }
 
 /**
- * 判断书架记录是否包含应用管理的本地绘本缓存。
- * @param {Record<string, unknown>} item 书架中的阅读资料记录。
- * @returns {boolean} 是否存在可读取的本地 Blob。
+ * 判断书架记录是否包含可读取的本地绘本副本。
+ * @param {Record<string, unknown>} item 需要检查的书架记录。
+ * @returns {boolean} 是否存在 IndexedDB Blob 或 Cache Storage 副本。
  */
 function isBookCached(item) {
-  return item?.type === 'file-book' && item?.cacheMode === 'device' && item.sourceBlob instanceof Blob && item.sourceBlob.size > 0;
+  return item?.type === 'file-book' && ((item?.cacheMode === 'device' && item.sourceBlob instanceof Blob && item.sourceBlob.size > 0) || isBookCacheStorageRecord(item));
 }
 
 /**
@@ -984,6 +1300,7 @@ async function clearLocalBookCache() {
   }
   if (!confirm(`确定删除本机缓存的 ${cached.length} 本绘本吗？书架记录会保留。`)) return;
   await Promise.all(cached.map(async (item) => {
+    await deleteBookResponseCache(String(item.sourceUrl || ''));
     const next = { ...item };
     delete next.sourceBlob;
     delete next.cacheMode;
@@ -1023,24 +1340,26 @@ function withReaderTimeout(promise, message, timeoutMs = READER_LOAD_TIMEOUT_MS)
 }
 
 /**
- * 读取绘本文件的二进制内容，统一兼容 IndexedDB Blob、Data URL 和静态 URL。
- * @param {Record<string, unknown>} item 书架中的文件绘本记录。
- * @returns {Promise<ArrayBuffer>} 解析器使用的文件字节。
+ * 从 IndexedDB Blob、Cache Storage、Data URL 或静态 URL 读取绘本字节。
+ * @param {Record<string, unknown>} item 文件绘本书架记录。
+ * @returns {Promise<ArrayBuffer>} PDF.js 或 epub.js 使用的绘本字节。
  */
 async function readBookArrayBuffer(item) {
   if (item.sourceBlob instanceof Blob) return item.sourceBlob.arrayBuffer();
   const sourceUrl = String(item.sourceUrl || '').trim();
   if (!sourceUrl) throw new Error('没有找到绘本文件地址');
+  const cachedResponse = await matchBookResponseCache(sourceUrl);
+  if (cachedResponse) return cachedResponse.arrayBuffer();
   const response = await fetch(sourceUrl, { cache: 'force-cache' });
   if (!response.ok) throw new Error(`绘本文件读取失败：${response.status}`);
   return response.arrayBuffer();
 }
 
 /**
- * 在当前页面内按需加载本地 UMD 阅读器脚本，并复用已加载的脚本 Promise。
- * @param {string} sourceUrl 本地脚本相对地址。
- * @param {string} globalName 脚本加载后应提供的全局变量名。
- * @returns {Promise<unknown>} 脚本提供的全局对象。
+ * Load one local UMD reader script once and reuse its global object.
+ * @param {string} sourceUrl Local script URL.
+ * @param {string} globalName Global object name exported by the script.
+ * @returns {Promise<unknown>} Loaded global object.
  */
 function loadScriptOnce(sourceUrl, globalName) {
   const globalObject = globalThis[globalName];
@@ -1088,14 +1407,27 @@ function destroyActiveFileReader() {
   const activeReader = state.fileReader;
   state.fileReader = null;
   if (!activeReader) return;
+  disposeReaderState(activeReader);
+}
+
+/**
+ * 释放阅读器实例及其创建的临时资源。
+ * @param {Record<string, unknown>|null} readerState 当前阅读器实例状态。
+ * @returns {void}
+ */
+function disposeReaderState(readerState) {
+  if (!readerState) return;
   try {
-    if (activeReader.kind === 'pdf') {
-      activeReader.loadingTask?.destroy?.();
-      activeReader.pdf?.cleanup?.();
+    if (readerState.kind === 'pdf') {
+      readerState.loadingTask?.destroy?.();
+      readerState.pdf?.cleanup?.();
     }
-    if (activeReader.kind === 'epub') {
-      activeReader.rendition?.destroy?.();
-      activeReader.book?.destroy?.();
+    if (readerState.kind === 'epub') {
+      readerState.rendition?.destroy?.();
+      readerState.book?.destroy?.();
+    }
+    if (readerState.kind === 'epub-direct') {
+      (readerState.objectUrls || []).forEach((url) => URL.revokeObjectURL(url));
     }
   } catch (error) {
     console.warn('阅读器销毁失败', error);
@@ -1205,6 +1537,197 @@ async function waitForEpubContent(viewport, timeoutMs = 15000) {
 }
 
 /**
+ * 规范化 EPUB 压缩包内的相对路径。
+ * @param {string} path 原始压缩包路径。
+ * @returns {string} 不包含 . 和 .. 段的归一化路径。
+ */
+function normalizeEpubArchivePath(path) {
+  const parts = String(path || '').split('/');
+  const normalized = [];
+  parts.forEach((part) => {
+    if (!part || part === '.') return;
+    if (part === '..') {
+      normalized.pop();
+      return;
+    }
+    normalized.push(part);
+  });
+  return normalized.join('/');
+}
+
+/**
+ * 根据当前章节路径解析 EPUB 资源路径。
+ * @param {string} currentPath 当前章节在压缩包内的路径。
+ * @param {string} targetPath HTML 或 CSS 中引用的资源路径。
+ * @returns {string} 资源在压缩包中的规范化路径。
+ */
+function resolveEpubArchivePath(currentPath, targetPath) {
+  const cleanTarget = String(targetPath || '').split(/[?#]/u)[0].replace(/^\/+/u, '');
+  if (!cleanTarget) return '';
+  const basePath = String(currentPath || '').split('/').slice(0, -1).join('/');
+  return normalizeEpubArchivePath(basePath ? `${basePath}/${cleanTarget}` : cleanTarget);
+}
+
+/**
+ * 判断 EPUB 资源是否可以作为内嵌图片读取。
+ * @param {string} source 原始图片地址。
+ * @returns {boolean} data、blob 和网络外链之外的相对资源返回 true。
+ */
+function isEpubRelativeAsset(source) {
+  return Boolean(source) && !/^(?:data:|blob:|https?:|file:|#)/iu.test(source);
+}
+
+/**
+ * 解析 EPUB 的容器、目录和阅读顺序。
+ * @param {ArrayBuffer} arrayBuffer EPUB 文件字节。
+ * @returns {Promise<{zip:object,chapters:Array<{path:string,id:string}>,stylePaths:string[],title:string}>} 可逐章渲染的压缩包模型。
+ */
+async function parseEpubArchive(arrayBuffer) {
+  const JSZip = globalThis.JSZip;
+  if (!JSZip) throw new Error('EPUB 解压组件不可用');
+  const zip = await JSZip.loadAsync(arrayBuffer);
+  const containerFile = zip.file('META-INF/container.xml');
+  if (!containerFile) throw new Error('EPUB 缺少 META-INF/container.xml');
+  const containerDocument = new DOMParser().parseFromString(await containerFile.async('string'), 'application/xml');
+  const rootFilePath = containerDocument.querySelector('rootfile')?.getAttribute('full-path');
+  if (!rootFilePath) throw new Error('EPUB 缺少内容目录');
+  const opfFile = zip.file(rootFilePath);
+  if (!opfFile) throw new Error('EPUB 内容目录不存在');
+  const opfDocument = new DOMParser().parseFromString(await opfFile.async('string'), 'application/xml');
+  const manifest = new Map([...opfDocument.querySelectorAll('manifest > item')].map((item) => [
+    item.getAttribute('id'),
+    {
+      href: resolveEpubArchivePath(rootFilePath, item.getAttribute('href')),
+      mediaType: item.getAttribute('media-type') || '',
+      properties: item.getAttribute('properties') || '',
+    },
+  ]));
+  const stylePaths = [...manifest.values()]
+    .filter((item) => item.mediaType === 'text/css' && item.href)
+    .map((item) => item.href);
+  const chapters = [...opfDocument.querySelectorAll('spine > itemref')]
+    .filter((item) => item.getAttribute('linear') !== 'no')
+    .map((item) => {
+      const id = item.getAttribute('idref');
+      return { id, path: manifest.get(id)?.href };
+    })
+    .filter((item) => item.path && zip.file(item.path));
+  const fallbackChapters = [...manifest.values()]
+    .filter((item) => /(?:application\/xhtml\+xml|text\/html)/iu.test(item.mediaType) && item.href && zip.file(item.href))
+    .map((item) => ({ id: item.href, path: item.href }));
+  const title = opfDocument.querySelector('metadata title, metadata dc\\:title')?.textContent?.trim() || '';
+  return { zip, chapters: chapters.length ? chapters : fallbackChapters, stylePaths, title };
+}
+
+/**
+ * 将 EPUB 章节中的图片引用替换为同页可访问的临时 URL。
+ * @param {Element} body 章节正文节点。
+ * @param {object} zip EPUB 压缩包实例。
+ * @param {string} chapterPath 当前章节路径。
+ * @param {string[]} objectUrls 临时 URL 回收列表。
+ * @returns {Promise<void>} 图片资源替换完成。
+ */
+async function hydrateEpubImages(body, zip, chapterPath, objectUrls) {
+  const images = [...body.querySelectorAll('img')];
+  await Promise.all(images.map(async (image) => {
+    const source = image.getAttribute('src') || image.getAttribute('data-src') || '';
+    if (!isEpubRelativeAsset(source)) return;
+    const asset = zip.file(resolveEpubArchivePath(chapterPath, source));
+    if (!asset) return;
+    const blob = await asset.async('blob');
+    const objectUrl = URL.createObjectURL(blob);
+    objectUrls.push(objectUrl);
+    image.setAttribute('src', objectUrl);
+    image.removeAttribute('srcset');
+    image.setAttribute('loading', 'lazy');
+  }));
+}
+
+/**
+ * 在当前滚动容器中渲染一个 EPUB 章节。
+ * @param {Record<string, unknown>} readerState 同页 EPUB 阅读器状态。
+ * @param {{path:string,id:string}} chapter 章节压缩包路径。
+ * @param {number} chapterIndex 章节序号。
+ * @returns {Promise<void>} 章节插入完成。
+ */
+async function renderDirectEpubChapter(readerState, chapter, chapterIndex) {
+  if (readerState.renderedChapters.has(chapter.path)) return;
+  const archiveFile = readerState.zip.file(chapter.path);
+  if (!archiveFile) return;
+  const documentFragment = new DOMParser().parseFromString(await archiveFile.async('string'), 'text/html');
+  const body = documentFragment.body;
+  if (!body) return;
+  body.querySelectorAll('script, iframe, object, embed, form').forEach((node) => node.remove());
+  await hydrateEpubImages(body, readerState.zip, chapter.path, readerState.objectUrls);
+  const section = document.createElement('article');
+  section.className = 'epub-direct-chapter';
+  section.dataset.chapterIndex = String(chapterIndex + 1);
+  section.innerHTML = body.innerHTML || '<p>本章节没有可显示内容。</p>';
+  readerState.content.appendChild(section);
+  readerState.renderedChapters.add(chapter.path);
+}
+
+/**
+ * 使用 JSZip 直接在当前页面渲染 EPUB，绕开 iOS PWA 的 iframe 和布局超时。
+ * @param {Record<string, unknown>} item 书架中的 EPUB/EQUB 记录。
+ * @param {number} token 本次打开动作的令牌。
+ * @returns {Promise<boolean>} 是否成功显示至少一个章节。
+ */
+async function mountDirectEpubReader(item, token) {
+  const reader = document.querySelector('[data-epubjs-reader]');
+  const viewport = reader?.querySelector('[data-epub-viewport]');
+  if (!reader || !viewport) return false;
+  try {
+    setFileReaderStatus(reader, '正在读取 EPUB 文件…');
+    // 首次点击可能早于书架后台预热完成，因此同页解析器必须自行等待 JSZip。
+    const [arrayBuffer] = await withReaderTimeout(Promise.all([
+      readBookArrayBuffer(item),
+      loadScriptOnce('./src/vendor/epubjs/jszip.min.js', 'JSZip'),
+    ]), 'EPUB 文件或解压组件读取超时，请检查网络或本地缓存');
+    if (token !== state.fileReaderToken || !reader.isConnected) return false;
+    const parsed = await withReaderTimeout(parseEpubArchive(arrayBuffer), 'EPUB 压缩包解析超时');
+    if (!parsed.chapters.length) throw new Error('EPUB 没有可阅读章节');
+    viewport.replaceChildren();
+    const content = document.createElement('div');
+    content.className = 'epubjs-direct-content';
+    content.setAttribute('data-epub-direct-content', 'true');
+    viewport.appendChild(content);
+    const readerState = {
+      kind: 'epub-direct',
+      token,
+      zip: parsed.zip,
+      chapters: parsed.chapters,
+      content,
+      objectUrls: [],
+      renderedChapters: new Set(),
+    };
+    state.fileReader = readerState;
+    for (const stylePath of parsed.stylePaths) {
+      const styleFile = parsed.zip.file(stylePath);
+      if (!styleFile) continue;
+      const style = document.createElement('style');
+      style.textContent = await styleFile.async('string');
+      content.appendChild(style);
+    }
+    await renderDirectEpubChapter(readerState, parsed.chapters[0], 0);
+    if (token !== state.fileReaderToken || !reader.isConnected) return false;
+    setFileReaderStatus(reader, `EPUB 已打开，共 ${parsed.chapters.length} 章`);
+    for (let index = 1; index < parsed.chapters.length; index += 1) {
+      if (token !== state.fileReaderToken || !reader.isConnected) return true;
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      await renderDirectEpubChapter(readerState, parsed.chapters[index], index);
+    }
+    return true;
+  } catch (error) {
+    if (token === state.fileReaderToken && reader.isConnected) {
+      setFileReaderStatus(reader, `EPUB 同页阅读失败：${error?.message || '未知错误'}`);
+      console.warn('EPUB 同页解析失败', error);
+    }
+    return false;
+  }
+}
+
+/**
  * 使用 Mozilla PDF.js 在当前页面内渲染 PDF，并渐进式生成可滚动页面。
  * @param {Record<string, unknown>} item 书架中的 PDF 书籍记录。
  * @param {number} token 本次打开动作的令牌。
@@ -1217,8 +1740,8 @@ async function mountPdfJsReader(item, token) {
   try {
     setFileReaderStatus(reader, canReaderRequestUrl(item) ? '正在连接 PDF…' : '正在读取 PDF…');
     if (token !== state.fileReaderToken) return;
-    const source = item.sourceBlob instanceof Blob
-      ? { data: new Uint8Array(await item.sourceBlob.arrayBuffer()) }
+    const source = item.sourceBlob instanceof Blob || isBookCacheStorageRecord(item)
+      ? { data: new Uint8Array(await readBookArrayBuffer(item)) }
       : canReaderRequestUrl(item)
       ? { url: String(item.sourceUrl).trim() }
       : { data: new Uint8Array(await readBookArrayBuffer(item)) };
@@ -1260,19 +1783,24 @@ async function mountEpubJsReader(item, token) {
   const viewport = reader?.querySelector('[data-epub-viewport]');
   if (!reader || !viewport) return;
   try {
+    if (shouldPreferDirectEpubReader()) {
+      if (await mountDirectEpubReader(item, token)) return;
+      disposeReaderState(state.fileReader);
+      state.fileReader = null;
+    }
     setFileReaderStatus(reader, '正在加载 EPUB 阅读器…');
     await withReaderTimeout(loadScriptOnce('./src/vendor/epubjs/jszip.min.js', 'JSZip'), 'EPUB 解压组件加载超时');
     const ePub = await withReaderTimeout(loadScriptOnce('./src/vendor/epubjs/epub.min.js', 'ePub'), 'EPUB 阅读器加载超时');
     if (token !== state.fileReaderToken) return;
-    const source = item.sourceBlob instanceof Blob
-      ? await item.sourceBlob.arrayBuffer()
+    const source = item.sourceBlob instanceof Blob || isBookCacheStorageRecord(item)
+      ? await readBookArrayBuffer(item)
       : canReaderRequestUrl(item)
       ? String(item.sourceUrl).trim()
       : await withReaderTimeout(readBookArrayBuffer(item), 'EPUB 文件读取超时，请检查网络后重试');
     const book = ePub(source);
     const rendition = book.renderTo(viewport, {
       width: '100%',
-      height: '100%',
+      height: Math.max(240, viewport.clientHeight || (globalThis.innerHeight || 800) - 58),
       flow: 'scrolled-doc',
       manager: 'continuous',
       method: 'write',
@@ -1288,6 +1816,9 @@ async function mountEpubJsReader(item, token) {
     setFileReaderStatus(reader, 'EPUB 已打开，可在当前页面上下滚动阅读');
   } catch (error) {
     if (token !== state.fileReaderToken || !reader.isConnected) return;
+    disposeReaderState(state.fileReader);
+    state.fileReader = null;
+    if (await mountDirectEpubReader(item, token)) return;
     setFileReaderStatus(reader, `EPUB 加载失败：${error?.message || '未知错误'}`);
     showToast('EPUB 无法在当前页面打开');
     console.error('epub.js 阅读失败', error);
@@ -1306,6 +1837,182 @@ async function renderGames() {
   main.innerHTML = `${pageHeader('学习游戏','游戏成绩只保存在当前设备')}
     <section class="entry-grid"><button class="entry-card" data-start-game="hanzi"><span class="emoji">🀄</span><h3>汉字组词消消乐</h3><p>9×9 方格，上下左右连线组成 2～4 字词。</p></button><button class="entry-card" data-start-game="english"><span class="emoji">🧸</span><h3>英语实物配对</h3><p>拖动儿童图卡到对应英文单词区域。</p></button></section>
     <div class="panel" style="margin-top:18px"><h2>最近游戏记录</h2>${records.length ? records.map((record)=>`<p><strong>${record.game === 'hanzi' ? '汉字消消乐':'英语配对'}</strong>　${new Date(record.startedAt).toLocaleString('zh-CN')}　用时 ${Math.round(record.duration/1000)} 秒　错误 ${record.errors} 次</p>`).join('') : '<p style="color:var(--muted)">完成一局后会显示开始时间、完成时间、用时和错误次数。</p>'}</div>`;
+}
+
+const KNOWLEDGE_LABELS = Object.freeze({
+  idiom: '成语库',
+  char: '汉字库',
+  xiehouyu: '歇后语',
+  word: '词语库',
+  poetry: '古诗库',
+});
+
+/**
+ * 渲染知识库、随机学习和错题库页面。
+ * @returns {Promise<void>} 页面数据读取和 HTML 更新完成后的 Promise。
+ */
+async function renderKnowledge() {
+  const poetryMeta = state.knowledgeType === 'poetry' ? await getPoetryMeta() : { authors: [], dynasties: [] };
+  const page = state.knowledgeHasQueried
+    ? await pageKnowledge(state.knowledgeType, {
+      query: state.knowledgeQuery,
+      author: state.knowledgeAuthor,
+      dynasty: state.knowledgeDynasty,
+      collection: state.knowledgeCollection,
+    }, state.knowledgePage, 20)
+    : { items: [], total: 0, page: 1, pageSize: 20, pageCount: 1 };
+  state.knowledgePage = page.page;
+  const authors = poetryMeta.authors || [];
+  const dynasties = poetryMeta.dynasties || [];
+  const collections = poetryMeta.collections || [];
+  const wrongQuestions = (await getAll('wrongQuestions')).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  const wrongTypes = [...new Set(wrongQuestions.map((item) => item.type).filter(Boolean))];
+  const filteredWrong = state.wrongType === 'all' ? wrongQuestions : wrongQuestions.filter((item) => item.type === state.wrongType);
+  const currentLearning = state.learningItems[state.learningIndex];
+  const learningPanel = currentLearning
+    ? `<section class="panel learning-card"><div class="knowledge-learning-kicker">随机学习 · ${escapeHtml(KNOWLEDGE_LABELS[state.knowledgeType])}</div>${renderKnowledgeSummary(state.knowledgeType, currentLearning)}<div class="header-actions"><button class="primary" data-learning-result="correct">学会了</button><button class="secondary" data-learning-result="wrong">标记为未掌握</button></div><small>第 ${state.learningIndex + 1}/${state.learningItems.length} 项</small></section>`
+    : `<section class="panel learning-card"><div class="knowledge-learning-kicker">随机学习</div><h2>从${escapeHtml(KNOWLEDGE_LABELS[state.knowledgeType])}开始</h2><p>已学会的内容不会在本轮重复出现，未掌握内容会进入错题库。</p><button class="primary" data-learning-start>开始随机学习</button></section>`;
+  const wrongPanel = filteredWrong.length
+    ? `<section class="panel knowledge-wrong-panel"><div class="section-heading"><div><h2>错题库</h2><p>当前 ${filteredWrong.length} 条 / 全部 ${wrongQuestions.length} 条，可按类型复习或删除。</p></div>${renderWrongTypeFilter(wrongTypes)}</div><div class="knowledge-list">${filteredWrong.map((item) => `<article class="knowledge-item"><button class="knowledge-main">${renderWrongQuestionSummary(item)}</button><button class="secondary" data-delete-wrong="${escapeHtml(item.id)}">删除</button></article>`).join('')}</div></section>`
+    : `<section class="panel knowledge-wrong-panel"><div class="section-heading"><div><h2>错题库</h2><p>${wrongQuestions.length ? '当前类型没有错题。' : '暂时没有错题。'}</p></div>${renderWrongTypeFilter(wrongTypes)}</div></section>`;
+  main.innerHTML = `${pageHeader('知识库','离线学习成语、汉字、歇后语、词语与古诗','')}
+    <section class="knowledge-toolbar panel">
+      <div class="segmented knowledge-tabs">${Object.entries(KNOWLEDGE_LABELS).map(([type, label]) => `<label><input type="radio" name="knowledgeType" data-knowledge-type value="${type}" ${state.knowledgeType === type ? 'checked' : ''}><span>${label}</span></label>`).join('')}</div>
+      <div class="field-row knowledge-filters ${state.knowledgeType === 'poetry' ? 'knowledge-filters-poetry' : 'knowledge-filters-basic'}"><input data-knowledge-filter="query" value="${escapeHtml(state.knowledgeQuery)}" placeholder="${state.knowledgeType === 'poetry' ? '按作者、字、诗名或诗句筛选' : '按某个或某些字筛选'}">${state.knowledgeType === 'poetry' ? `<select data-knowledge-filter="collection"><option value="">全部类型</option>${collections.map((collection) => `<option value="${escapeHtml(collection)}" ${state.knowledgeCollection === collection ? 'selected' : ''}>${escapeHtml(collection)}</option>`).join('')}</select><select data-knowledge-filter="author"><option value="">全部作者</option>${authors.map((author) => `<option value="${escapeHtml(author)}" ${state.knowledgeAuthor === author ? 'selected' : ''}>${escapeHtml(author)}</option>`).join('')}</select><select data-knowledge-filter="dynasty"><option value="">全部朝代</option>${dynasties.map((dynasty) => `<option value="${escapeHtml(dynasty)}" ${state.knowledgeDynasty === dynasty ? 'selected' : ''}>${escapeHtml(dynasty)}</option>`).join('')}</select>` : ''}<button class="primary knowledge-search-button" data-knowledge-search>查询</button></div>
+    </section>
+    ${learningPanel}
+    <section class="panel knowledge-list-panel"><div class="section-heading"><div><h2>${escapeHtml(KNOWLEDGE_LABELS[state.knowledgeType])}</h2><p>${state.knowledgeHasQueried ? `当前筛选 ${page.total} 条，第 ${page.page}/${page.pageCount} 页` : '请输入筛选条件后点击查询，列表会分页展示。'}</p></div><div class="header-actions"><button class="secondary" data-knowledge-page="${page.page - 1}" ${!state.knowledgeHasQueried || page.page <= 1 ? 'disabled' : ''}>上一页</button><button class="secondary" data-knowledge-page="${page.page + 1}" ${!state.knowledgeHasQueried || page.page >= page.pageCount ? 'disabled' : ''}>下一页</button></div></div><div class="knowledge-list">${state.knowledgeHasQueried ? page.items.map((item) => renderKnowledgeItem(state.knowledgeType, item)).join('') : '<div class="empty-state compact"><span class="emoji">⌕</span><h2>等待查询</h2><p>默认不加载全量知识库，避免 iPad/PWA 首屏变慢。</p></div>'}</div></section>
+    ${wrongPanel}`;
+}
+
+/**
+ * 渲染错题库类型筛选按钮。
+ * @param {string[]} types 当前错题库里存在的类型。
+ * @returns {string} 类型筛选按钮 HTML。
+ */
+function renderWrongTypeFilter(types) {
+  const options = [['all', '全部'], ...types.map((type) => [type, KNOWLEDGE_LABELS[type] || type])];
+  return `<div class="segmented wrong-tabs">${options.map(([type, label]) => `<label><input type="radio" name="wrongType" data-wrong-type value="${escapeHtml(type)}" ${state.wrongType === type ? 'checked' : ''}><span>${escapeHtml(label)}</span></label>`).join('')}</div>`;
+}
+
+/**
+ * 渲染知识条目的摘要标题和说明。
+ * @param {string} type 知识库分类。
+ * @param {Record<string, unknown>} item 知识条目。
+ * @returns {string} 摘要 HTML。
+ */
+function renderKnowledgeSummary(type, item) {
+  if (type === 'poetry') return `<h3>${escapeHtml(item.title || '')}</h3><p>${escapeHtml(item.collection || '古诗')} · ${escapeHtml(item.dynasty || '')} · ${escapeHtml(item.author || '')}</p><p class="knowledge-lines">${(item.lines || []).slice(0, 4).map((line) => escapeHtml(line)).join('　')}</p>`;
+  if (type === 'xiehouyu') return `<h3>${escapeHtml(item.riddle || '')} —— ${escapeHtml(item.answer || '')}</h3><p>${escapeHtml(item.explanation || '')}</p>`;
+  if (type === 'char') return `<h3>${escapeHtml(item.char || '')}</h3><p>${escapeHtml(item.pinyin || '')}　部首：${escapeHtml(item.radical || '')}　笔画：${escapeHtml(item.strokes || '')}</p><p>${escapeHtml(item.meaning || '')}</p>`;
+  return `<h3>${escapeHtml(item.word || '')}</h3><p>${escapeHtml(item.pinyin || '')}</p><p>${escapeHtml(item.meaning || item.explanation || '')}</p>`;
+}
+
+/**
+ * 渲染单条错题摘要，兼容知识库错题和试卷题目错题。
+ * @param {Record<string, unknown>} record 错题库记录。
+ * @returns {string} 错题摘要 HTML。
+ */
+function renderWrongQuestionSummary(record) {
+  const item = record.item || {};
+  if (['idiom', 'char', 'xiehouyu', 'word', 'poetry'].includes(record.type)) return `<div><span class="status status-review">${escapeHtml(KNOWLEDGE_LABELS[record.type])}</span>${renderKnowledgeSummary(record.type, item)}</div>`;
+  return `<div><span class="status status-review">${escapeHtml(record.type || '试卷错题')}</span><h3>${escapeHtml(record.title || item.prompt || '试卷错题')}</h3><p>${escapeHtml(item.prompt || item.expression || item.answer || '')}</p></div>`;
+}
+
+/**
+ * 渲染单条知识库内容，按类型展示字段。
+ * @param {string} type 知识库分类。
+ * @param {Record<string, unknown>} item 知识条目。
+ * @returns {string} 知识条目 HTML。
+ */
+function renderKnowledgeItem(type, item) {
+  return `<article class="knowledge-item"><button class="knowledge-main" data-knowledge-detail-type="${escapeHtml(type)}" data-knowledge-detail-key="${escapeHtml(knowledgeKey(type, item))}">${renderKnowledgeSummary(type, item)}</button></article>`;
+}
+
+/**
+ * 渲染知识库条目的详情弹窗。
+ * @param {string} type 知识库分类。
+ * @param {Record<string, unknown>} item 知识条目。
+ * @returns {void}
+ */
+function openKnowledgeDetail(type, item) {
+  const title = item.word || item.char || item.title || item.riddle || '详情';
+  const body = type === 'poetry'
+    ? `<p>${escapeHtml(item.collection || '古诗')} · ${escapeHtml(item.dynasty || '')} · ${escapeHtml(item.author || '')}</p><div class="knowledge-detail-lines">${(item.lines || []).map((line) => `<p>${escapeHtml(line)}</p>`).join('')}</div>`
+    : type === 'char'
+    ? `<p>拼音：${escapeHtml(item.pinyin || '')}</p><p>部首：${escapeHtml(item.radical || '')}　笔画：${escapeHtml(item.strokes || '')}</p><p>${escapeHtml(item.meaning || '')}</p>${item.more ? `<pre>${escapeHtml(item.more)}</pre>` : ''}`
+    : type === 'xiehouyu'
+    ? `<p>答案：${escapeHtml(item.answer || '')}</p><p>${escapeHtml(item.explanation || '')}</p>`
+    : `<p>${escapeHtml(item.pinyin || '')}</p><p>${escapeHtml(item.meaning || item.explanation || '')}</p>${item.example ? `<p>例：${escapeHtml(item.example)}</p>` : ''}${item.derivation ? `<p>出处：${escapeHtml(item.derivation)}</p>` : ''}`;
+  openModal(`<h2>${escapeHtml(title)}</h2><div class="knowledge-detail">${body}</div><div class="header-actions"><button class="primary" data-close-modal>关闭</button></div>`, 'knowledge-detail-modal');
+}
+
+/**
+ * 从知识库筛选控件读取当前条件并触发分页查询。
+ * @returns {Promise<void>} 查询状态更新和页面刷新完成后的 Promise。
+ */
+async function submitKnowledgeSearch() {
+  document.querySelectorAll('[data-knowledge-filter]').forEach((element) => {
+    const field = element.dataset.knowledgeFilter;
+    state[`knowledge${field.charAt(0).toUpperCase()}${field.slice(1)}`] = element.value;
+  });
+  state.knowledgePage = 1;
+  state.knowledgeHasQueried = true;
+  await renderKnowledge();
+}
+/**
+ * 同步试卷错题到独立错题库。
+ * @param {Record<string, unknown>} paper 当前试卷。
+ * @param {string} problemId 题目标识。
+ * @param {boolean} isWrong 是否标记为错题。
+ * @returns {Promise<void>} 错题库写入完成后的 Promise。
+ */
+async function syncPaperWrongQuestion(paper, problemId, isWrong) {
+  const problem = paper.problems?.find((item) => item.id === problemId);
+  if (!problem) return;
+  const id = `paper-wrong:${paper.id}:${problemId}`;
+  if (isWrong) {
+    await put('wrongQuestions', {
+      id,
+      type: paper.subject === '语文' ? 'chinese-paper' : paper.subject === '英语' ? 'english-paper' : 'math-paper',
+      sourceId: paper.id,
+      problemId,
+      title: paper.title,
+      item: structuredClone(problem),
+      createdAt: Date.now(),
+    });
+    return;
+  }
+  await remove('wrongQuestions', id);
+}
+
+/**
+ * 保存随机学习结果并推进学习进度。
+ * @param {'correct'|'wrong'} result 用户对当前内容的判断。
+ * @returns {Promise<void>} 结果保存和页面刷新完成后的 Promise。
+ */
+async function handleLearningResult(result) {
+  const item = state.learningItems[state.learningIndex];
+  if (!item) return;
+  const type = state.knowledgeType;
+  if (result === 'wrong') {
+    await put('wrongQuestions', {
+      id: `knowledge-wrong:${knowledgeKey(type, item)}`,
+      type,
+      sourceId: knowledgeKey(type, item),
+      item: structuredClone(item),
+      createdAt: Date.now(),
+    });
+  } else {
+    state.learningCompleted.add(knowledgeKey(type, item));
+  }
+  state.learningIndex += 1;
+  if (state.learningIndex >= state.learningItems.length) {
+    state.learningItems = [];
+    state.learningIndex = 0;
+    showToast('本轮随机学习完成');
+  }
+  await renderKnowledge();
 }
 
 async function handleGeneratorSubmit(form) {
@@ -1443,6 +2150,40 @@ function bindPictureBookTextDragging() {
 async function handleGlobalClick(event) {
   const route = event.target.closest('[data-route]')?.dataset.route;
   if (route) return navigate(route);
+  if (event.target.closest('[data-knowledge-search]')) {
+    return submitKnowledgeSearch();
+  }
+  if (event.target.closest('[data-learning-start]')) {
+    state.learningItems = await randomKnowledgeAsync(state.knowledgeType, 8, state.learningCompleted);
+    state.learningIndex = 0;
+    if (!state.learningItems.length) {
+      state.learningCompleted.clear();
+      state.learningItems = await randomKnowledgeAsync(state.knowledgeType, 8);
+    }
+    return renderKnowledge();
+  }
+  if (event.target.closest('[data-learning-result]')) {
+    return handleLearningResult(event.target.closest('[data-learning-result]').dataset.learningResult);
+  }
+  const knowledgePageButton = event.target.closest('[data-knowledge-page]');
+  if (knowledgePageButton) {
+    state.knowledgePage = Number(knowledgePageButton.dataset.knowledgePage) || 1;
+    return renderKnowledge();
+  }
+  const knowledgeDetailButton = event.target.closest('[data-knowledge-detail-key]');
+  if (knowledgeDetailButton) {
+    const type = knowledgeDetailButton.dataset.knowledgeDetailType;
+    const item = await getKnowledgeDetail(type, knowledgeDetailButton.dataset.knowledgeDetailKey);
+    if (!item) { showToast('没有找到详情'); return; }
+    openKnowledgeDetail(type, item);
+    return;
+  }
+  if (event.target.closest('[data-delete-wrong]')) {
+    const id = event.target.closest('[data-delete-wrong]').dataset.deleteWrong;
+    await remove('wrongQuestions', id);
+    showToast('错题已删除');
+    return renderKnowledge();
+  }
   const filter = event.target.closest('[data-paper-filter]')?.dataset.paperFilter;
   if (filter) { state.paperFilter = filter; return renderPapers(); }
   const paperId = event.target.closest('[data-open-paper]')?.dataset.openPaper;
@@ -1484,16 +2225,23 @@ async function handleGlobalClick(event) {
     if (name?.trim()) { paper.title=name.trim(); paper.updatedAt=Date.now(); await put('papers',paper); renderPapers(); }
     return;
   }
-  if (event.target.closest('[data-paper-submit]')) { const paper=await get('papers',state.activePaperId); paper.status=getPaperStatusAfterAction(paper.status,'submit'); paper.submittedAt=Date.now(); paper.updatedAt=Date.now(); await put('papers',paper); showToast('已提交，等待红笔批改'); return renderPaper(); }
-  if (event.target.closest('[data-paper-reviewed]')) { const paper=await get('papers',state.activePaperId); paper.status=getPaperStatusAfterAction(paper.status,'finish-review'); paper.reviewedAt=Date.now(); paper.updatedAt=Date.now(); await put('papers',paper); showToast('批改已保存'); return renderPaper(); }
-  if (event.target.closest('[data-reopen-review]')) { const paper=await get('papers',state.activePaperId); paper.status=getPaperStatusAfterAction(paper.status,'reopen-review'); paper.updatedAt=Date.now(); await put('papers',paper); return renderPaper(); }
+  if (event.target.closest('[data-paper-submit]')) { const paper=await get('papers',state.activePaperId); paper.status=getPaperStatusAfterAction(paper.status,'submit'); paper.submittedAt=Date.now(); paper.updatedAt=Date.now(); await put('papers',paper); showToast('已提交，等待红笔批改'); syncPaperStatusView(paper); return; }
+  if (event.target.closest('[data-paper-reviewed]')) { const paper=await get('papers',state.activePaperId); paper.status=getPaperStatusAfterAction(paper.status,'finish-review'); paper.reviewedAt=Date.now(); paper.updatedAt=Date.now(); await put('papers',paper); showToast('批改已保存'); syncPaperStatusView(paper); return; }
+  if (event.target.closest('[data-reopen-review]')) { const paper=await get('papers',state.activePaperId); paper.status=getPaperStatusAfterAction(paper.status,'reopen-review'); paper.updatedAt=Date.now(); await put('papers',paper); syncPaperStatusView(paper); return; }
   if (event.target.closest('[data-toggle-wrong]')) {
     const id=event.target.closest('[data-toggle-wrong]').dataset.toggleWrong; const paper=await get('papers',state.activePaperId); const marked=paper.wrongProblemIds?.includes(id);
-    await put('papers',setProblemWrong(paper,id,!marked)); return renderPaper();
+    await put('papers',setProblemWrong(paper,id,!marked));
+    await syncPaperWrongQuestion(paper, id, !marked);
+    return renderPaper();
   }
   if (event.target.closest('[data-batch-wrong]')) {
     const paper=await get('papers',state.activePaperId); const input=prompt(`输入错题题号（1～${paper.problems.length}），支持 1、3-5`, '');
-    if (input === null) return; try { await put('papers',markWrongProblemsByNumbers(paper,input)); return renderPaper(); } catch(error) { showToast(error.message); return; }
+    if (input === null) return; try {
+      const nextPaper = markWrongProblemsByNumbers(paper,input);
+      await put('papers',nextPaper);
+      await Promise.all(nextPaper.wrongProblemIds.map((id) => syncPaperWrongQuestion(nextPaper, id, true)));
+      return renderPaper();
+    } catch(error) { showToast(error.message); return; }
   }
   if (event.target.closest('[data-retry-wrong]')) {
     const paper=await get('papers',state.activePaperId);
@@ -1683,6 +2431,29 @@ document.addEventListener('submit', async (event) => {
   }
 });
 document.addEventListener('change', async (event) => {
+  if (event.target.matches('[data-knowledge-type]')) {
+    state.knowledgeType = event.target.value;
+    state.knowledgeQuery = '';
+    state.knowledgeAuthor = '';
+    state.knowledgeDynasty = '';
+    state.knowledgeCollection = '';
+    state.knowledgePage = 1;
+    state.knowledgeHasQueried = false;
+    state.learningItems = [];
+    state.learningIndex = 0;
+    return renderKnowledge();
+  }
+  if (event.target.matches('[data-knowledge-filter]')) {
+    const field = event.target.dataset.knowledgeFilter;
+    state[`knowledge${field.charAt(0).toUpperCase()}${field.slice(1)}`] = event.target.value;
+    state.knowledgePage = 1;
+    state.knowledgeHasQueried = false;
+    return;
+  }
+  if (event.target.matches('[data-wrong-type]')) {
+    state.wrongType = event.target.value;
+    return renderKnowledge();
+  }
   if (event.target.matches('[data-book-select]')) {
     const id = event.target.dataset.bookSelect;
     if (event.target.checked) state.selectedBookIds.add(id);
@@ -1761,8 +2532,9 @@ async function init() {
     installReaderDiagnostics();
     await openDatabase();
     await ensureDefaultTemplates();
+    await preloadLanguageTools();
     await ensureReadingSeeds();
-    if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('./sw.js?v=20260808-8').catch(console.warn);
+    if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('./sw.js?v=20260811-7').catch(console.warn);
     await navigate('home');
   } finally {
     loading?.classList.add('is-hidden');
