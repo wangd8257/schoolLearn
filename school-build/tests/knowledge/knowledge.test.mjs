@@ -1,4 +1,4 @@
-import test from 'node:test';
+﻿import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
@@ -129,14 +129,19 @@ test('古诗库作者筛选兼容朝代前缀和简繁格式', async () => {
 });
 
 test('古诗库支持按诗句精确查询并按类型联动作者朝代', async () => {
-  const page = await knowledge.pageKnowledge('poetry', { query: '床前明月光' }, 1, 10);
-  const meta = await knowledge.getPoetryMeta({ collection: '诗经' });
+  const freshKnowledge = await import(`../../src/data/knowledge/index.mjs?poetry-query=${Date.now()}`);
+  fetchedPaths.length = 0;
+
+  const page = await freshKnowledge.pageKnowledge('poetry', { query: '床前明月光' }, 1, 10);
+  const meta = await freshKnowledge.getPoetryMeta({ collection: '诗经' });
 
   assert.ok(page.total > 0);
   assert.ok(page.items.some((item) => String(item.title).includes('静夜思') || (item.lines || []).join('').includes('床前明月光')));
   assert.ok(meta.authors.length > 0);
   assert.ok(meta.dynasties.length > 0);
   assert.ok(meta.collections.includes('诗经'));
+  assert.ok(!fetchedPaths.some((path) => path.includes('poetry/indexes/shard-character.json')));
+  assert.ok(fetchedPaths.some((path) => path.includes('poetry/indexes/characters/character-')));
 });
 
 test('偏好加权抽样会优先保留喜欢内容并跳过不喜欢内容', () => {

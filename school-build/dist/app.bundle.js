@@ -23260,10 +23260,10 @@
     };
   }
   function createFileBookReading(values, file, options = {}) {
-    if (!file?.dataUrl) throw new Error("\u8BF7\u5148\u9009\u62E9\u8981\u5BFC\u5165\u7684\u7ED8\u672C\u6587\u4EF6");
+    if (!file?.blob && !file?.dataUrl) throw new Error("\u8BF7\u5148\u9009\u62E9\u8981\u5BFC\u5165\u7684\u7ED8\u672C\u6587\u4EF6");
     const now = options.now ?? Date.now();
     const title = String(values.title || "").trim() || String(file.name || "").replace(/\.[^.]+$/u, "") || "\u672A\u547D\u540D\u7ED8\u672C";
-    return {
+    const record = {
       id: options.id || uid("reading"),
       type: "file-book",
       category: values.category || "\u7ED8\u672C",
@@ -23273,11 +23273,14 @@
       source: "imported",
       fileName: file.name || title,
       fileKind: bookFileKind(file.name || file.type || ""),
-      sourceUrl: file.dataUrl,
       size: file.size || 0,
       createdAt: now,
       updatedAt: now
     };
+    if (file.blob instanceof Blob) {
+      return { ...record, sourceBlob: file.blob, cacheMode: "device" };
+    }
+    return { ...record, sourceUrl: file.dataUrl };
   }
   function movePictureBookPage(book, pageId, offset, options = {}) {
     const next = structuredClone(book);
@@ -24470,6 +24473,7 @@
   var poetryShardCache = /* @__PURE__ */ new Map();
   var poetryFilterCache = /* @__PURE__ */ new Map();
   var poetryMetaCache = /* @__PURE__ */ new Map();
+  var poetryIndexCache = /* @__PURE__ */ new Map();
   var xinhuaShardCache = /* @__PURE__ */ new Map();
   var xinhuaFilterCache = /* @__PURE__ */ new Map();
   var poetryManifestCache;
@@ -25107,6 +25111,20 @@
     poetryManifestCache = await fetchJson(`${POETRY_BASE}/manifest.json`);
     return poetryManifestCache;
   }
+  async function loadPoetryIndex(name) {
+    if (poetryIndexCache.has(name)) return poetryIndexCache.get(name);
+    const manifest = await loadPoetryManifest();
+    const inline = manifest?.[name];
+    if (inline && typeof inline === "object") {
+      poetryIndexCache.set(name, inline);
+      return inline;
+    }
+    const file = manifest?.indexFiles?.[name] || `indexes/${name}.json`;
+    const data = await fetchJson(`${POETRY_BASE}/${file}`);
+    const value = data && typeof data === "object" ? data : {};
+    poetryIndexCache.set(name, value);
+    return value;
+  }
   async function loadPoetryShard(kind, shardIndex) {
     const prefix = kind === "catalog" ? "catalog" : kind === "search" ? "search" : "poetry";
     const key = `${kind}:${shardIndex}`;
@@ -25160,7 +25178,7 @@
     const query = String(filters.query || "").trim();
     const size = Math.max(1, Number(pageSize) || 20);
     const candidateShards = getCandidateXinhuaShards(manifest, type, query);
-    const indexedTotal = query.length === 1 ? Number(meta.characterCounts?.[query] || 0) : void 0;
+    const indexedTotal = !query ? Number(meta.total || 0) : query.length === 1 ? Number(meta.characterCounts?.[query] || 0) : void 0;
     const total = indexedTotal ?? await countXinhuaMatches(type, candidateShards, query);
     const pageCount = Math.max(1, Math.ceil(total / size));
     const currentPage = Math.max(1, Math.min(pageCount, Number(page) || 1));
@@ -25270,18 +25288,31 @@
     }
     return items;
   }
-  function getIndexedPoetryShards(manifest, type, key) {
-    const indexes = manifest?.shardIndexes && typeof manifest.shardIndexes === "object" ? manifest.shardIndexes : {};
-    const group = indexes[type] && typeof indexes[type] === "object" ? indexes[type] : {};
+  function getIndexedPoetryShards(indexes, type, key) {
+    const group = indexes?.[type] && typeof indexes[type] === "object" ? indexes[type] : {};
     const shards = group[key];
     return Array.isArray(shards) ? shards : void 0;
   }
-  function getCandidatePoetryShards(manifest, filters = {}) {
+  async function loadPoetryCharacterIndex(character) {
+    const bucketKey = Number(character.codePointAt(0)).toString(16).padStart(5, "0").slice(0, 3);
+    const manifest = await loadPoetryManifest();
+    const bucketManifest = await loadPoetryIndex("shardCharacterManifest");
+    const file = bucketManifest?.[bucketKey] || manifest?.indexFiles?.shardCharacter;
+    if (!file) return {};
+    const cacheKey = `character:${bucketKey}`;
+    if (poetryIndexCache.has(cacheKey)) return poetryIndexCache.get(cacheKey);
+    const data = await fetchJson(`${POETRY_BASE}/${file}`);
+    const value = data && typeof data === "object" ? data : {};
+    poetryIndexCache.set(cacheKey, value);
+    return value;
+  }
+  async function getCandidatePoetryShards(manifest, filters = {}) {
     const query = normalizePoetryFilterText(filters.query);
     const author = normalizePoetryAuthorKey(filters.author);
     const dynasty = normalizePoetryFilterText(filters.dynasty);
     const collection = normalizePoetryFilterText(filters.collection);
     const allShards = Array.from({ length: Number(manifest?.shardCount || 0) }, (_2, index) => index);
+    if (!query && !author && !dynasty && !collection) return allShards;
     let candidates;
     const apply = (shards) => {
       if (!Array.isArray(shards)) {
@@ -25290,11 +25321,23 @@
       }
       candidates = candidates ? intersectSortedNumbers(candidates, shards) : shards;
     };
-    if (collection) apply(getIndexedPoetryShards(manifest, "collection", collection));
-    if (dynasty) apply(getIndexedPoetryShards(manifest, "dynasty", dynasty));
-    if (author) apply(getIndexedPoetryShards(manifest, "author", author));
-    for (const character of [...new Set(Array.from(query).filter(Boolean))]) {
-      apply(getIndexedPoetryShards(manifest, "character", character));
+    if (collection) {
+      const indexes = await loadPoetryIndex("shardCollection");
+      apply(getIndexedPoetryShards({ collection: indexes }, "collection", collection));
+    }
+    if (dynasty) {
+      const indexes = await loadPoetryIndex("shardDynasty");
+      apply(getIndexedPoetryShards({ dynasty: indexes }, "dynasty", dynasty));
+    }
+    if (author) {
+      const indexes = await loadPoetryIndex("shardAuthor");
+      apply(getIndexedPoetryShards({ author: indexes }, "author", author));
+    }
+    if (query) {
+      for (const character of [...new Set(Array.from(query).filter(Boolean))]) {
+        const indexes = await loadPoetryCharacterIndex(character);
+        apply(getIndexedPoetryShards({ character: indexes }, "character", character));
+      }
     }
     return candidates || allShards;
   }
@@ -25311,12 +25354,12 @@
     const requiredCharacters = [...query].filter(Boolean);
     return searchable.includes(query) || requiredCharacters.every((character) => searchable.includes(character));
   }
-  function getIndexedPoetryCount(manifest, filters = {}) {
+  async function getIndexedPoetryCount(manifest, filters = {}) {
     const author = normalizePoetryAuthorKey(filters.author);
     const dynasty = normalizePoetryFilterText(filters.dynasty);
     const collection = normalizePoetryFilterText(filters.collection);
-    const counts = manifest?.indexCounts && typeof manifest.indexCounts === "object" ? manifest.indexCounts : {};
-    const compound = manifest?.compoundCounts && typeof manifest.compoundCounts === "object" ? manifest.compoundCounts : {};
+    const counts = await loadPoetryIndex("indexCounts");
+    const compound = await loadPoetryIndex("compoundCounts");
     if (collection && dynasty && author) return compound.collectionDynastyAuthor?.[[collection, dynasty, author].join("	")] || 0;
     if (collection && dynasty) return compound.collectionDynasty?.[[collection, dynasty].join("	")] || 0;
     if (collection && author) return compound.collectionAuthor?.[[collection, author].join("	")] || 0;
@@ -25329,7 +25372,7 @@
   async function loadPoetryCatalogPageByIndex(manifest, filters, start, size) {
     const items = [];
     let matchedCount = 0;
-    const candidateShards = getCandidatePoetryShards(manifest, filters);
+    const candidateShards = await getCandidatePoetryShards(manifest, filters);
     for (const shardIndex of candidateShards) {
       const shard = await loadPoetryShard("catalog", shardIndex);
       for (const row of shard) {
@@ -25352,7 +25395,7 @@
     const cacheKey = JSON.stringify({ query, author, dynasty, collection });
     if (poetryFilterCache.has(cacheKey)) return poetryFilterCache.get(cacheKey);
     const matched = [];
-    const candidateShards = getCandidatePoetryShards(manifest, { query, author, dynasty, collection });
+    const candidateShards = await getCandidatePoetryShards(manifest, { query, author, dynasty, collection });
     for (const shardIndex of candidateShards) {
       const shard = await loadPoetryShard("catalog", shardIndex);
       for (const row of shard) {
@@ -25388,7 +25431,8 @@
     }
     const cacheKey = JSON.stringify({ query, author, dynasty, collection });
     if (poetryMetaCache.has(cacheKey)) return poetryMetaCache.get(cacheKey);
-    const collectionMeta = manifest.collectionMeta && typeof manifest.collectionMeta === "object" ? manifest.collectionMeta[collection] : void 0;
+    const collectionMetaIndex = collection && !query && !author && !dynasty ? await loadPoetryIndex("collectionMeta") : {};
+    const collectionMeta = collectionMetaIndex && typeof collectionMetaIndex === "object" ? collectionMetaIndex[collection] : void 0;
     if (collection && !query && !author && !dynasty && collectionMeta) {
       const meta2 = {
         authors: simplifyStringList(collectionMeta.authors),
@@ -25506,7 +25550,7 @@
           return { items, total, page: currentPage3, pageSize: size2, pageCount: pageCount3 };
         }
         const hasQuery = Boolean(String(filters.query || "").trim());
-        const indexedTotal = hasQuery ? void 0 : getIndexedPoetryCount(manifest, filters);
+        const indexedTotal = hasQuery ? void 0 : await getIndexedPoetryCount(manifest, filters);
         if (indexedTotal !== void 0) {
           const pageCount3 = Math.max(1, Math.ceil(indexedTotal / size2));
           const currentPage3 = Math.max(1, Math.min(pageCount3, Number(page) || 1));
@@ -26703,50 +26747,103 @@
     reader.querySelector('[data-pdf-page="-1"]')?.toggleAttribute("disabled", page <= 1);
     reader.querySelector('[data-pdf-page="1"]')?.toggleAttribute("disabled", page >= readerState.pdf.numPages);
   }
+  function createPdfPagePlaceholders(readerState) {
+    const reader = document.querySelector("[data-pdf-reader]");
+    const viewportElement = reader?.querySelector("[data-pdf-viewport]");
+    if (!reader || !viewportElement || !readerState?.pdf) return;
+    readerState.pdfObserver?.disconnect?.();
+    readerState.renderedPages = /* @__PURE__ */ new Set();
+    readerState.renderingPages = /* @__PURE__ */ new Map();
+    viewportElement.replaceChildren();
+    const estimatedHeight = Math.max(360, Math.round(Math.min(viewportElement.clientWidth || 680, 720) * 1.42));
+    for (let pageNumber = 1; pageNumber <= readerState.pdf.numPages; pageNumber += 1) {
+      const pageElement = document.createElement("section");
+      pageElement.className = "pdfjs-page pdfjs-page--pending";
+      pageElement.dataset.pdfPageNumber = String(pageNumber);
+      pageElement.style.minHeight = `${estimatedHeight}px`;
+      pageElement.innerHTML = `<span>\u7B2C ${pageNumber} \u9875</span>`;
+      viewportElement.appendChild(pageElement);
+    }
+  }
+  function getPdfPageElement(viewportElement, pageNumber) {
+    return viewportElement.querySelector(`[data-pdf-page-number="${pageNumber}"]`);
+  }
   async function renderPdfPage(readerState, pageNumber, renderRun = readerState.renderRun) {
     const reader = document.querySelector("[data-pdf-reader]");
     const viewportElement = reader?.querySelector("[data-pdf-viewport]");
     if (!reader || !viewportElement || readerState.token !== state.fileReaderToken || renderRun !== readerState.renderRun) return;
-    const page = await readerState.pdf.getPage(pageNumber);
-    if (readerState.token !== state.fileReaderToken || renderRun !== readerState.renderRun || !reader.isConnected) return;
-    const baseViewport = page.getViewport({ scale: 1 });
-    const availableWidth = Math.max(240, viewportElement.clientWidth - 24);
-    const scale = Math.max(0.5, Math.min(3, availableWidth / baseViewport.width * state.pdfZoom));
-    const viewport = page.getViewport({ scale });
-    const pageElement = document.createElement("section");
-    pageElement.className = "pdfjs-page";
-    pageElement.dataset.pdfPageNumber = String(pageNumber);
-    const canvas = document.createElement("canvas");
-    canvas.className = "pdfjs-canvas";
-    const deviceScale = Math.min(2, window.devicePixelRatio || 1);
-    canvas.width = Math.floor(viewport.width * deviceScale);
-    canvas.height = Math.floor(viewport.height * deviceScale);
-    canvas.style.width = `${viewport.width}px`;
-    canvas.style.height = `${viewport.height}px`;
-    pageElement.appendChild(canvas);
-    viewportElement.appendChild(pageElement);
-    await page.render({
-      canvasContext: canvas.getContext("2d", { alpha: false }),
-      viewport,
-      transform: deviceScale === 1 ? void 0 : [deviceScale, 0, 0, deviceScale, 0, 0]
-    }).promise;
-    page.cleanup();
+    if (pageNumber < 1 || pageNumber > readerState.pdf.numPages) return;
+    const pageElement = getPdfPageElement(viewportElement, pageNumber);
+    if (!pageElement) return;
+    const renderKey = `${renderRun}:${pageNumber}:${state.pdfZoom}:${Math.round(viewportElement.clientWidth || 0)}`;
+    if (pageElement.dataset.pdfRenderKey === renderKey && pageElement.querySelector("canvas")) return;
+    if (readerState.renderingPages?.has(pageNumber)) return readerState.renderingPages.get(pageNumber);
+    const task = (async () => {
+      pageElement.classList.add("pdfjs-page--pending");
+      pageElement.textContent = `\u6B63\u5728\u6E32\u67D3\u7B2C ${pageNumber} \u9875\u2026`;
+      const page = await readerState.pdf.getPage(pageNumber);
+      if (readerState.token !== state.fileReaderToken || renderRun !== readerState.renderRun || !reader.isConnected) return;
+      const baseViewport = page.getViewport({ scale: 1 });
+      const availableWidth = Math.max(240, viewportElement.clientWidth - 24);
+      const scale = Math.max(0.5, Math.min(3, availableWidth / baseViewport.width * state.pdfZoom));
+      const viewport = page.getViewport({ scale });
+      const canvas = document.createElement("canvas");
+      canvas.className = "pdfjs-canvas";
+      const deviceScale = Math.min(2, window.devicePixelRatio || 1);
+      canvas.width = Math.floor(viewport.width * deviceScale);
+      canvas.height = Math.floor(viewport.height * deviceScale);
+      canvas.style.width = `${viewport.width}px`;
+      canvas.style.height = `${viewport.height}px`;
+      pageElement.replaceChildren(canvas);
+      pageElement.style.minHeight = `${viewport.height}px`;
+      await page.render({
+        canvasContext: canvas.getContext("2d", { alpha: false }),
+        viewport,
+        transform: deviceScale === 1 ? void 0 : [deviceScale, 0, 0, deviceScale, 0, 0]
+      }).promise;
+      page.cleanup();
+      pageElement.dataset.pdfRenderKey = renderKey;
+      pageElement.classList.remove("pdfjs-page--pending");
+      readerState.renderedPages?.add(pageNumber);
+    })().finally(() => readerState.renderingPages?.delete(pageNumber));
+    readerState.renderingPages?.set(pageNumber, task);
+    return task;
+  }
+  function scheduleVisiblePdfPages(readerState) {
+    const reader = document.querySelector("[data-pdf-reader]");
+    const viewportElement = reader?.querySelector("[data-pdf-viewport]");
+    if (!reader || !viewportElement || readerState.kind !== "pdf") return;
+    readerState.pdfObserver?.disconnect?.();
+    const renderAround = (pageNumber) => {
+      for (const targetPage of [pageNumber - 1, pageNumber, pageNumber + 1]) {
+        void renderPdfPage(readerState, targetPage, readerState.renderRun);
+      }
+    };
+    if (!("IntersectionObserver" in window)) {
+      renderAround(readerState.currentPage || 1);
+      return;
+    }
+    readerState.pdfObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        const pageNumber = Number(entry.target.dataset.pdfPageNumber || 1);
+        readerState.currentPage = pageNumber;
+        updatePdfReaderControls(readerState);
+        renderAround(pageNumber);
+      });
+    }, { root: viewportElement, rootMargin: "720px 0px", threshold: 0.01 });
+    viewportElement.querySelectorAll("[data-pdf-page-number]").forEach((pageElement) => readerState.pdfObserver.observe(pageElement));
+    renderAround(readerState.currentPage || 1);
   }
   async function rerenderPdfDocument(readerState) {
     const reader = document.querySelector("[data-pdf-reader]");
     const viewportElement = reader?.querySelector("[data-pdf-viewport]");
     if (!reader || !viewportElement || readerState.kind !== "pdf") return;
     readerState.renderRun += 1;
-    const renderRun = readerState.renderRun;
-    viewportElement.replaceChildren();
-    setFileReaderStatus(reader, "\u6B63\u5728\u8C03\u6574\u9875\u9762\u2026");
-    for (let pageNumber = 1; pageNumber <= readerState.pdf.numPages; pageNumber += 1) {
-      if (renderRun !== readerState.renderRun || readerState.token !== state.fileReaderToken) return;
-      await renderPdfPage(readerState, pageNumber, renderRun);
-      await new Promise((resolve) => requestAnimationFrame(resolve));
-    }
+    createPdfPagePlaceholders(readerState);
     updatePdfReaderControls(readerState);
-    const currentPage = viewportElement.querySelector(`[data-pdf-page-number="${readerState.currentPage}"]`);
+    scheduleVisiblePdfPages(readerState);
+    const currentPage = getPdfPageElement(viewportElement, readerState.currentPage || 1);
     currentPage?.scrollIntoView({ block: "start" });
   }
   async function waitForEpubContent(viewport, timeoutMs = 15e3) {
@@ -26989,13 +27086,10 @@
       reader.querySelectorAll("[data-pdf-page], [data-reader-zoom]").forEach((button) => {
         button.disabled = false;
       });
+      createPdfPagePlaceholders(readerState);
       await renderPdfPage(readerState, 1, readerState.renderRun);
       updatePdfReaderControls(readerState);
-      for (let pageNumber = 2; pageNumber <= pdf.numPages; pageNumber += 1) {
-        if (token !== state.fileReaderToken) return;
-        await new Promise((resolve) => requestAnimationFrame(resolve));
-        await renderPdfPage(readerState, pageNumber, readerState.renderRun);
-      }
+      scheduleVisiblePdfPages(readerState);
       setFileReaderStatus(reader, `\u7B2C 1 / ${pdf.numPages} \u9875`);
     } catch (error) {
       if (token !== state.fileReaderToken || !reader.isConnected) return;
@@ -27073,9 +27167,10 @@
     const poetryMeta = state.knowledgeType === "poetry" ? await getPoetryMeta({ collection: state.knowledgeCollection }) : { authors: [], dynasties: [] };
     const page = state.knowledgeHasQueried ? await pageKnowledge(state.knowledgeType, currentKnowledgeFilters(), state.knowledgePage, 20) : { items: [], total: 0, page: 1, pageSize: 20, pageCount: 1 };
     state.knowledgePage = page.page;
-    const authors = poetryMeta.authors || [];
+    const authors = (poetryMeta.authors || []).slice(0, 120);
     const dynasties = poetryMeta.dynasties || [];
     const collections = poetryMeta.collections || [];
+    const poetryFiltersHtml = state.knowledgeType === "poetry" ? `<select data-knowledge-filter="collection"><option value="">\u5168\u90E8\u7C7B\u578B</option>${collections.map((collection) => `<option value="${escapeHtml2(collection)}" ${state.knowledgeCollection === collection ? "selected" : ""}>${escapeHtml2(collection)}</option>`).join("")}</select><input data-knowledge-filter="author" value="${escapeHtml2(state.knowledgeAuthor)}" placeholder="\u4F5C\u8005\uFF0C\u53EF\u8F93\u5165\u7B5B\u9009" list="knowledgeAuthorList"><datalist id="knowledgeAuthorList">${authors.map((author) => `<option value="${escapeHtml2(author)}"></option>`).join("")}</datalist><select data-knowledge-filter="dynasty"><option value="">\u5168\u90E8\u671D\u4EE3</option>${dynasties.map((dynasty) => `<option value="${escapeHtml2(dynasty)}" ${state.knowledgeDynasty === dynasty ? "selected" : ""}>${escapeHtml2(dynasty)}</option>`).join("")}</select>` : "";
     const wrongQuestions = (await getAll("wrongQuestions")).sort((a2, b2) => (b2.createdAt || 0) - (a2.createdAt || 0));
     const wrongTypes = [...new Set(wrongQuestions.map((item) => item.type).filter(Boolean))];
     const filteredWrong = state.wrongType === "all" ? wrongQuestions : wrongQuestions.filter((item) => item.type === state.wrongType);
@@ -27085,7 +27180,7 @@
     main.innerHTML = `${pageHeader("\u77E5\u8BC6\u5E93", "\u79BB\u7EBF\u5B66\u4E60\u6210\u8BED\u3001\u6C49\u5B57\u3001\u6B47\u540E\u8BED\u3001\u8BCD\u8BED\u4E0E\u53E4\u8BD7", "")}
     <section class="knowledge-toolbar panel">
       <div class="segmented knowledge-tabs">${Object.entries(KNOWLEDGE_LABELS).map(([type, label]) => `<label><input type="radio" name="knowledgeType" data-knowledge-type value="${type}" ${state.knowledgeType === type ? "checked" : ""}><span>${label}</span></label>`).join("")}</div>
-      <div class="field-row knowledge-filters ${state.knowledgeType === "poetry" ? "knowledge-filters-poetry" : "knowledge-filters-basic"}"><input data-knowledge-filter="query" value="${escapeHtml2(state.knowledgeQuery)}" placeholder="${state.knowledgeType === "poetry" ? "\u6309\u4F5C\u8005\u3001\u5B57\u3001\u8BD7\u540D\u6216\u8BD7\u53E5\u7B5B\u9009" : "\u6309\u67D0\u4E2A\u6216\u67D0\u4E9B\u5B57\u7B5B\u9009"}">${state.knowledgeType === "poetry" ? `<select data-knowledge-filter="collection"><option value="">\u5168\u90E8\u7C7B\u578B</option>${collections.map((collection) => `<option value="${escapeHtml2(collection)}" ${state.knowledgeCollection === collection ? "selected" : ""}>${escapeHtml2(collection)}</option>`).join("")}</select><select data-knowledge-filter="author"><option value="">\u5168\u90E8\u4F5C\u8005</option>${authors.map((author) => `<option value="${escapeHtml2(author)}" ${state.knowledgeAuthor === author ? "selected" : ""}>${escapeHtml2(author)}</option>`).join("")}</select><select data-knowledge-filter="dynasty"><option value="">\u5168\u90E8\u671D\u4EE3</option>${dynasties.map((dynasty) => `<option value="${escapeHtml2(dynasty)}" ${state.knowledgeDynasty === dynasty ? "selected" : ""}>${escapeHtml2(dynasty)}</option>`).join("")}</select>` : ""}<button class="primary knowledge-search-button" data-knowledge-search>\u67E5\u8BE2</button></div>
+      <div class="field-row knowledge-filters ${state.knowledgeType === "poetry" ? "knowledge-filters-poetry" : "knowledge-filters-basic"}"><input data-knowledge-filter="query" value="${escapeHtml2(state.knowledgeQuery)}" placeholder="${state.knowledgeType === "poetry" ? "\u6309\u4F5C\u8005\u3001\u5B57\u3001\u8BD7\u540D\u6216\u8BD7\u53E5\u7B5B\u9009" : "\u6309\u67D0\u4E2A\u6216\u67D0\u4E9B\u5B57\u7B5B\u9009"}">${poetryFiltersHtml}<button class="primary knowledge-search-button" data-knowledge-search>\u67E5\u8BE2</button></div>
     </section>
     ${learningPanel}
     <section class="panel knowledge-list-panel"><div class="section-heading"><div><h2>${escapeHtml2(KNOWLEDGE_LABELS[state.knowledgeType])}</h2><p>${state.knowledgeHasQueried ? `\u5F53\u524D\u7B5B\u9009 ${page.total} \u6761\uFF0C\u7B2C ${page.page}/${page.pageCount} \u9875` : "\u8BF7\u8F93\u5165\u7B5B\u9009\u6761\u4EF6\u540E\u70B9\u51FB\u67E5\u8BE2\uFF0C\u5217\u8868\u4F1A\u5206\u9875\u5C55\u793A\u3002"}</p></div><div class="header-actions"><button class="secondary" data-knowledge-page="${page.page - 1}" ${!state.knowledgeHasQueried || page.page <= 1 ? "disabled" : ""}>\u4E0A\u4E00\u9875</button><button class="secondary" data-knowledge-page="${page.page + 1}" ${!state.knowledgeHasQueried || page.page >= page.pageCount ? "disabled" : ""}>\u4E0B\u4E00\u9875</button></div></div><div class="knowledge-list">${state.knowledgeHasQueried ? page.items.map((item) => renderKnowledgeItem(state.knowledgeType, item)).join("") : '<div class="empty-state compact"><span class="emoji">\u2315</span><h2>\u7B49\u5F85\u67E5\u8BE2</h2><p>\u9ED8\u8BA4\u4E0D\u52A0\u8F7D\u5168\u91CF\u77E5\u8BC6\u5E93\uFF0C\u907F\u514D iPad/PWA \u9996\u5C4F\u53D8\u6162\u3002</p></div>'}</div></section>
@@ -27238,6 +27333,29 @@
       reader.onerror = () => reject(reader.error || new Error("\u6587\u4EF6\u8BFB\u53D6\u5931\u8D25"));
       reader.readAsDataURL(file);
     });
+  }
+  async function readFileAsBlob(file) {
+    if (!(file instanceof Blob)) throw new Error("\u6587\u4EF6\u8BFB\u53D6\u5931\u8D25");
+    return file.slice(0, file.size, file.type || "application/octet-stream");
+  }
+  async function assertStorageForFiles(files) {
+    if (!navigator.storage?.estimate) return;
+    const incomingSize = files.reduce((sum, file) => sum + Number(file.size || 0), 0);
+    if (!incomingSize) return;
+    try {
+      const estimate = await navigator.storage.estimate();
+      const quota = Number(estimate.quota || 0);
+      const usage = Number(estimate.usage || 0);
+      if (!quota) return;
+      const remaining = Math.max(0, quota - usage);
+      if (incomingSize * 1.25 > remaining) {
+        const needMb = Math.ceil(incomingSize * 1.25 / 1024 / 1024);
+        const remainMb = Math.floor(remaining / 1024 / 1024);
+        throw new Error(`\u672C\u673A\u53EF\u7528\u79BB\u7EBF\u7A7A\u95F4\u4E0D\u8DB3\uFF1A\u9884\u8BA1\u9700\u8981 ${needMb}MB\uFF0C\u5F53\u524D\u7EA6\u5269\u4F59 ${remainMb}MB`);
+      }
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("\u672C\u673A\u53EF\u7528\u79BB\u7EBF\u7A7A\u95F4\u4E0D\u8DB3")) throw error;
+    }
   }
   function renderPictureBookEditorModal() {
     const book = state.pictureBookDraft;
@@ -27547,6 +27665,7 @@
       if (readerState?.kind !== "pdf") return;
       const nextPage = Math.max(1, Math.min(readerState.pdf.numPages, readerState.currentPage + Number(button.dataset.pdfPage || 0)));
       readerState.currentPage = nextPage;
+      await renderPdfPage(readerState, nextPage, readerState.renderRun);
       document.querySelector(`[data-pdf-page-number="${nextPage}"]`)?.scrollIntoView({ behavior: "smooth", block: "start" });
       updatePdfReaderControls(readerState);
       return;
@@ -27723,7 +27842,8 @@
           return;
         }
         if (imageFiles.length) throw new Error("\u56FE\u7247\u9875\u548C PDF/EPUB/EQUB \u8BF7\u5206\u5F00\u5BFC\u5165");
-        const books = await Promise.all(files.map(async (file) => createFileBookReading(values, { name: file.name, type: file.type, size: file.size, dataUrl: await readFileAsDataUrl(file) })));
+        await assertStorageForFiles(files);
+        const books = await Promise.all(files.map(async (file) => createFileBookReading(values, { name: file.name, type: file.type, size: file.size, blob: await readFileAsBlob(file) })));
         await Promise.all(books.map((book) => put("readings", book)));
         closeModal();
         state.activeReadingId = books[0]?.id || null;
@@ -27776,12 +27896,13 @@
       const file = event.target.files?.[0];
       if (!file) return;
       try {
-        const dataUrl = await readFileAsDataUrl(file);
+        await assertStorageForFiles([file]);
+        const blob = await readFileAsBlob(file);
         const current = await get("readings", state.activeReadingId);
         if (!current) throw new Error("\u5F53\u524D\u7ED8\u672C\u8BB0\u5F55\u4E0D\u5B58\u5728\uFF0C\u8BF7\u8FD4\u56DE\u4E66\u67B6\u540E\u91CD\u8BD5");
         const imported = createFileBookReading(
           { title: current.title, category: current.category, language: current.language },
-          { name: file.name, type: file.type, size: file.size, dataUrl },
+          { name: file.name, type: file.type, size: file.size, blob },
           { id: current.id }
         );
         await put("readings", imported);
@@ -27848,12 +27969,40 @@
   }
   document.addEventListener("wheel", handleMainContentWheel, { passive: false });
   document.querySelector("#menuButton").addEventListener("click", () => document.querySelector("#sidebar").classList.toggle("open"));
+  function notifyServiceWorkerUpdate(registration) {
+    if (!registration.waiting) return;
+    showToast("\u53D1\u73B0\u65B0\u7248\u672C\uFF0C\u786E\u8BA4\u540E\u5237\u65B0");
+    setTimeout(() => {
+      if (!registration.waiting || !confirm("\u53D1\u73B0\u65B0\u7248\u672C\uFF0C\u662F\u5426\u73B0\u5728\u5237\u65B0\uFF1F")) return;
+      let hasReloaded = false;
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (hasReloaded) return;
+        hasReloaded = true;
+        location.reload();
+      });
+      registration.waiting.postMessage({ type: "SKIP_WAITING" });
+    }, 600);
+  }
+  async function registerServiceWorker() {
+    if (!("serviceWorker" in navigator) || !location.protocol.startsWith("http")) return;
+    try {
+      const registration = await navigator.serviceWorker.register("./sw.js?v=20260812-3");
+      if (registration.waiting && navigator.serviceWorker.controller) notifyServiceWorkerUpdate(registration);
+      registration.addEventListener("updatefound", () => {
+        const worker = registration.installing;
+        if (!worker) return;
+        worker.addEventListener("statechange", () => {
+          if (worker.state === "installed" && navigator.serviceWorker.controller) notifyServiceWorkerUpdate(registration);
+        });
+      });
+    } catch (error) {
+      console.warn("Service Worker \u6CE8\u518C\u5931\u8D25", error);
+    }
+  }
   function startPostBootTasks() {
     void preloadLanguageTools().catch((error) => console.warn("\u8BED\u8A00\u5DE5\u5177\u540E\u53F0\u9884\u70ED\u5931\u8D25", error));
     void ensureReadingSeeds().catch((error) => console.warn("\u9605\u8BFB\u8D44\u6599\u540E\u53F0\u540C\u6B65\u5931\u8D25", error));
-    if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
-      navigator.serviceWorker.register("./sw.js?v=20260812-1").catch(console.warn);
-    }
+    void registerServiceWorker();
   }
   async function init() {
     const loading = document.querySelector("#appLoading");

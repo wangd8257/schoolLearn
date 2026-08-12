@@ -189,15 +189,15 @@ export function createPictureBookReading(values, uploadedPages, options = {}) {
 /**
  * 从上传的 PDF、EPUB、EQUB 或单文件绘本创建书架记录。
  * @param {Record<string, unknown>} values 标题、分类和语言。
- * @param {{name:string,type?:string,size?:number,dataUrl:string}} file 已读取的文件信息。
+ * @param {{name:string,type?:string,size?:number,blob?:Blob,dataUrl?:string}} file 已读取的文件信息。
  * @param {{id?:string,now?:number}} options 稳定标识和时间配置。
  * @returns {Record<string, unknown>} 可保存到书架的文件绘本记录。
  */
 export function createFileBookReading(values, file, options = {}) {
-  if (!file?.dataUrl) throw new Error('请先选择要导入的绘本文件');
+  if (!file?.blob && !file?.dataUrl) throw new Error('请先选择要导入的绘本文件');
   const now = options.now ?? Date.now();
   const title = String(values.title || '').trim() || String(file.name || '').replace(/\.[^.]+$/u, '') || '未命名绘本';
-  return {
+  const record = {
     id: options.id || uid('reading'),
     type: 'file-book',
     category: values.category || '绘本',
@@ -207,11 +207,16 @@ export function createFileBookReading(values, file, options = {}) {
     source: 'imported',
     fileName: file.name || title,
     fileKind: bookFileKind(file.name || file.type || ''),
-    sourceUrl: file.dataUrl,
     size: file.size || 0,
     createdAt: now,
     updatedAt: now,
   };
+  if (file.blob instanceof Blob) {
+    // 文件绘本保存二进制 Blob，避免 Data URL 膨胀并降低 iPad PWA 的 IndexedDB 写入压力。
+    return { ...record, sourceBlob: file.blob, cacheMode: 'device' };
+  }
+  // 兼容历史记录和旧测试数据，新的导入路径不再主动生成 Data URL。
+  return { ...record, sourceUrl: file.dataUrl };
 }
 /**
  * 调整指定绘本页面的顺序。
@@ -310,3 +315,4 @@ export function removePictureBookTextBox(book, pageId, textBoxId, options = {}) 
   next.updatedAt = options.now ?? Date.now();
   return next;
 }
+

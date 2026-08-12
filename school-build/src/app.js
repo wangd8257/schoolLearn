@@ -1541,61 +1541,134 @@ function updatePdfReaderControls(readerState) {
 }
 
 /**
- * 按当前阅读容器宽度渲染一个 PDF 页面。
+ * 为 PDF 创建稳定占位页，避免 iPad 一次性渲染大文件导致白屏或内存崩溃。
+ * @param {Record<string, unknown>} readerState 当前 PDF.js 状态。
+ * @returns {void}
+ */
+function createPdfPagePlaceholders(readerState) {
+  const reader = document.querySelector('[data-pdf-reader]');
+  const viewportElement = reader?.querySelector('[data-pdf-viewport]');
+  if (!reader || !viewportElement || !readerState?.pdf) return;
+  readerState.pdfObserver?.disconnect?.();
+  readerState.renderedPages = new Set();
+  readerState.renderingPages = new Map();
+  viewportElement.replaceChildren();
+  const estimatedHeight = Math.max(360, Math.round(Math.min(viewportElement.clientWidth || 680, 720) * 1.42));
+  for (let pageNumber = 1; pageNumber <= readerState.pdf.numPages; pageNumber += 1) {
+    const pageElement = document.createElement('section');
+    pageElement.className = 'pdfjs-page pdfjs-page--pending';
+    pageElement.dataset.pdfPageNumber = String(pageNumber);
+    pageElement.style.minHeight = `${estimatedHeight}px`;
+    pageElement.innerHTML = `<span>第 ${pageNumber} 页</span>`;
+    viewportElement.appendChild(pageElement);
+  }
+}
+
+/**
+ * 查找指定 PDF 页面的占位容器。
+ * @param {Element} viewportElement PDF 滚动视口。
+ * @param {number} pageNumber 待查找的页码，从 1 开始。
+ * @returns {HTMLElement|null} 页面容器。
+ */
+function getPdfPageElement(viewportElement, pageNumber) {
+  return viewportElement.querySelector(`[data-pdf-page-number="${pageNumber}"]`);
+}
+
+/**
+ * 按当前阅读容器宽度懒渲染一个 PDF 页面。
  * @param {Record<string, unknown>} readerState 当前 PDF.js 状态。
  * @param {number} pageNumber 待渲染的页码，从 1 开始。
+ * @param {number} renderRun 当前渲染批次，缩放或重载时用于丢弃过期任务。
  * @returns {Promise<void>} 页面渲染完成。
  */
 async function renderPdfPage(readerState, pageNumber, renderRun = readerState.renderRun) {
   const reader = document.querySelector('[data-pdf-reader]');
   const viewportElement = reader?.querySelector('[data-pdf-viewport]');
   if (!reader || !viewportElement || readerState.token !== state.fileReaderToken || renderRun !== readerState.renderRun) return;
-  const page = await readerState.pdf.getPage(pageNumber);
-  if (readerState.token !== state.fileReaderToken || renderRun !== readerState.renderRun || !reader.isConnected) return;
-  const baseViewport = page.getViewport({ scale: 1 });
-  const availableWidth = Math.max(240, viewportElement.clientWidth - 24);
-  const scale = Math.max(.5, Math.min(3, availableWidth / baseViewport.width * state.pdfZoom));
-  const viewport = page.getViewport({ scale });
-  const pageElement = document.createElement('section');
-  pageElement.className = 'pdfjs-page';
-  pageElement.dataset.pdfPageNumber = String(pageNumber);
-  const canvas = document.createElement('canvas');
-  canvas.className = 'pdfjs-canvas';
-  const deviceScale = Math.min(2, window.devicePixelRatio || 1);
-  canvas.width = Math.floor(viewport.width * deviceScale);
-  canvas.height = Math.floor(viewport.height * deviceScale);
-  canvas.style.width = `${viewport.width}px`;
-  canvas.style.height = `${viewport.height}px`;
-  pageElement.appendChild(canvas);
-  viewportElement.appendChild(pageElement);
-  await page.render({
-    canvasContext: canvas.getContext('2d', { alpha: false }),
-    viewport,
-    transform: deviceScale === 1 ? undefined : [deviceScale, 0, 0, deviceScale, 0, 0],
-  }).promise;
-  page.cleanup();
+  if (pageNumber < 1 || pageNumber > readerState.pdf.numPages) return;
+  const pageElement = getPdfPageElement(viewportElement, pageNumber);
+  if (!pageElement) return;
+  const renderKey = `${renderRun}:${pageNumber}:${state.pdfZoom}:${Math.round(viewportElement.clientWidth || 0)}`;
+  if (pageElement.dataset.pdfRenderKey === renderKey && pageElement.querySelector('canvas')) return;
+  if (readerState.renderingPages?.has(pageNumber)) return readerState.renderingPages.get(pageNumber);
+  const task = (async () => {
+    pageElement.classList.add('pdfjs-page--pending');
+    pageElement.textContent = `正在渲染第 ${pageNumber} 页…`;
+    const page = await readerState.pdf.getPage(pageNumber);
+    if (readerState.token !== state.fileReaderToken || renderRun !== readerState.renderRun || !reader.isConnected) return;
+    const baseViewport = page.getViewport({ scale: 1 });
+    const availableWidth = Math.max(240, viewportElement.clientWidth - 24);
+    const scale = Math.max(.5, Math.min(3, availableWidth / baseViewport.width * state.pdfZoom));
+    const viewport = page.getViewport({ scale });
+    const canvas = document.createElement('canvas');
+    canvas.className = 'pdfjs-canvas';
+    const deviceScale = Math.min(2, window.devicePixelRatio || 1);
+    canvas.width = Math.floor(viewport.width * deviceScale);
+    canvas.height = Math.floor(viewport.height * deviceScale);
+    canvas.style.width = `${viewport.width}px`;
+    canvas.style.height = `${viewport.height}px`;
+    pageElement.replaceChildren(canvas);
+    pageElement.style.minHeight = `${viewport.height}px`;
+    await page.render({
+      canvasContext: canvas.getContext('2d', { alpha: false }),
+      viewport,
+      transform: deviceScale === 1 ? undefined : [deviceScale, 0, 0, deviceScale, 0, 0],
+    }).promise;
+    page.cleanup();
+    pageElement.dataset.pdfRenderKey = renderKey;
+    pageElement.classList.remove('pdfjs-page--pending');
+    readerState.renderedPages?.add(pageNumber);
+  })().finally(() => readerState.renderingPages?.delete(pageNumber));
+  readerState.renderingPages?.set(pageNumber, task);
+  return task;
 }
 
 /**
- * 按当前缩放比例重新渲染 PDF 全部页面。
+ * 监听 PDF 可视页，只渲染当前视口附近页面。
  * @param {Record<string, unknown>} readerState 当前 PDF.js 状态。
- * @returns {Promise<void>} 所有页面重绘完成。
+ * @returns {void}
+ */
+function scheduleVisiblePdfPages(readerState) {
+  const reader = document.querySelector('[data-pdf-reader]');
+  const viewportElement = reader?.querySelector('[data-pdf-viewport]');
+  if (!reader || !viewportElement || readerState.kind !== 'pdf') return;
+  readerState.pdfObserver?.disconnect?.();
+  const renderAround = (pageNumber) => {
+    for (const targetPage of [pageNumber - 1, pageNumber, pageNumber + 1]) {
+      void renderPdfPage(readerState, targetPage, readerState.renderRun);
+    }
+  };
+  if (!('IntersectionObserver' in window)) {
+    renderAround(readerState.currentPage || 1);
+    return;
+  }
+  readerState.pdfObserver = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting) return;
+      const pageNumber = Number(entry.target.dataset.pdfPageNumber || 1);
+      readerState.currentPage = pageNumber;
+      updatePdfReaderControls(readerState);
+      renderAround(pageNumber);
+    });
+  }, { root: viewportElement, rootMargin: '720px 0px', threshold: .01 });
+  viewportElement.querySelectorAll('[data-pdf-page-number]').forEach((pageElement) => readerState.pdfObserver.observe(pageElement));
+  renderAround(readerState.currentPage || 1);
+}
+
+/**
+ * 按当前缩放比例重建 PDF 占位页，并只重绘当前页附近。
+ * @param {Record<string, unknown>} readerState 当前 PDF.js 状态。
+ * @returns {Promise<void>} 当前页附近重绘调度完成。
  */
 async function rerenderPdfDocument(readerState) {
   const reader = document.querySelector('[data-pdf-reader]');
   const viewportElement = reader?.querySelector('[data-pdf-viewport]');
   if (!reader || !viewportElement || readerState.kind !== 'pdf') return;
   readerState.renderRun += 1;
-  const renderRun = readerState.renderRun;
-  viewportElement.replaceChildren();
-  setFileReaderStatus(reader, '正在调整页面…');
-  for (let pageNumber = 1; pageNumber <= readerState.pdf.numPages; pageNumber += 1) {
-    if (renderRun !== readerState.renderRun || readerState.token !== state.fileReaderToken) return;
-    await renderPdfPage(readerState, pageNumber, renderRun);
-    await new Promise((resolve) => requestAnimationFrame(resolve));
-  }
+  createPdfPagePlaceholders(readerState);
   updatePdfReaderControls(readerState);
-  const currentPage = viewportElement.querySelector(`[data-pdf-page-number="${readerState.currentPage}"]`);
+  scheduleVisiblePdfPages(readerState);
+  const currentPage = getPdfPageElement(viewportElement, readerState.currentPage || 1);
   currentPage?.scrollIntoView({ block: 'start' });
 }
 
@@ -1954,14 +2027,11 @@ async function mountPdfJsReader(item, token) {
     state.fileReader = readerState;
     setFileReaderStatus(reader, `共 ${pdf.numPages} 页`);
     reader.querySelectorAll('[data-pdf-page], [data-reader-zoom]').forEach((button) => { button.disabled = false; });
-    // 先渲染第一页，让 iPad 首屏尽快出现，再顺序渲染其余页面。
+    createPdfPagePlaceholders(readerState);
+    // 先渲染第一页，让 iPad 首屏尽快出现，后续页面交给可视区域调度。
     await renderPdfPage(readerState, 1, readerState.renderRun);
     updatePdfReaderControls(readerState);
-    for (let pageNumber = 2; pageNumber <= pdf.numPages; pageNumber += 1) {
-      if (token !== state.fileReaderToken) return;
-      await new Promise((resolve) => requestAnimationFrame(resolve));
-      await renderPdfPage(readerState, pageNumber, readerState.renderRun);
-    }
+    scheduleVisiblePdfPages(readerState);
     setFileReaderStatus(reader, `第 1 / ${pdf.numPages} 页`);
   } catch (error) {
     if (token !== state.fileReaderToken || !reader.isConnected) return;
@@ -2057,9 +2127,12 @@ async function renderKnowledge() {
     ? await pageKnowledge(state.knowledgeType, currentKnowledgeFilters(), state.knowledgePage, 20)
     : { items: [], total: 0, page: 1, pageSize: 20, pageCount: 1 };
   state.knowledgePage = page.page;
-  const authors = poetryMeta.authors || [];
+  const authors = (poetryMeta.authors || []).slice(0, 120);
   const dynasties = poetryMeta.dynasties || [];
   const collections = poetryMeta.collections || [];
+  const poetryFiltersHtml = state.knowledgeType === 'poetry'
+    ? `<select data-knowledge-filter="collection"><option value="">全部类型</option>${collections.map((collection) => `<option value="${escapeHtml(collection)}" ${state.knowledgeCollection === collection ? 'selected' : ''}>${escapeHtml(collection)}</option>`).join('')}</select><input data-knowledge-filter="author" value="${escapeHtml(state.knowledgeAuthor)}" placeholder="作者，可输入筛选" list="knowledgeAuthorList"><datalist id="knowledgeAuthorList">${authors.map((author) => `<option value="${escapeHtml(author)}"></option>`).join('')}</datalist><select data-knowledge-filter="dynasty"><option value="">全部朝代</option>${dynasties.map((dynasty) => `<option value="${escapeHtml(dynasty)}" ${state.knowledgeDynasty === dynasty ? 'selected' : ''}>${escapeHtml(dynasty)}</option>`).join('')}</select>`
+    : '';
   const wrongQuestions = (await getAll('wrongQuestions')).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
   const wrongTypes = [...new Set(wrongQuestions.map((item) => item.type).filter(Boolean))];
   const filteredWrong = state.wrongType === 'all' ? wrongQuestions : wrongQuestions.filter((item) => item.type === state.wrongType);
@@ -2073,7 +2146,7 @@ async function renderKnowledge() {
   main.innerHTML = `${pageHeader('知识库','离线学习成语、汉字、歇后语、词语与古诗','')}
     <section class="knowledge-toolbar panel">
       <div class="segmented knowledge-tabs">${Object.entries(KNOWLEDGE_LABELS).map(([type, label]) => `<label><input type="radio" name="knowledgeType" data-knowledge-type value="${type}" ${state.knowledgeType === type ? 'checked' : ''}><span>${label}</span></label>`).join('')}</div>
-      <div class="field-row knowledge-filters ${state.knowledgeType === 'poetry' ? 'knowledge-filters-poetry' : 'knowledge-filters-basic'}"><input data-knowledge-filter="query" value="${escapeHtml(state.knowledgeQuery)}" placeholder="${state.knowledgeType === 'poetry' ? '按作者、字、诗名或诗句筛选' : '按某个或某些字筛选'}">${state.knowledgeType === 'poetry' ? `<select data-knowledge-filter="collection"><option value="">全部类型</option>${collections.map((collection) => `<option value="${escapeHtml(collection)}" ${state.knowledgeCollection === collection ? 'selected' : ''}>${escapeHtml(collection)}</option>`).join('')}</select><select data-knowledge-filter="author"><option value="">全部作者</option>${authors.map((author) => `<option value="${escapeHtml(author)}" ${state.knowledgeAuthor === author ? 'selected' : ''}>${escapeHtml(author)}</option>`).join('')}</select><select data-knowledge-filter="dynasty"><option value="">全部朝代</option>${dynasties.map((dynasty) => `<option value="${escapeHtml(dynasty)}" ${state.knowledgeDynasty === dynasty ? 'selected' : ''}>${escapeHtml(dynasty)}</option>`).join('')}</select>` : ''}<button class="primary knowledge-search-button" data-knowledge-search>查询</button></div>
+      <div class="field-row knowledge-filters ${state.knowledgeType === 'poetry' ? 'knowledge-filters-poetry' : 'knowledge-filters-basic'}"><input data-knowledge-filter="query" value="${escapeHtml(state.knowledgeQuery)}" placeholder="${state.knowledgeType === 'poetry' ? '按作者、字、诗名或诗句筛选' : '按某个或某些字筛选'}">${poetryFiltersHtml}<button class="primary knowledge-search-button" data-knowledge-search>查询</button></div>
     </section>
     ${learningPanel}
     <section class="panel knowledge-list-panel"><div class="section-heading"><div><h2>${escapeHtml(KNOWLEDGE_LABELS[state.knowledgeType])}</h2><p>${state.knowledgeHasQueried ? `当前筛选 ${page.total} 条，第 ${page.page}/${page.pageCount} 页` : '请输入筛选条件后点击查询，列表会分页展示。'}</p></div><div class="header-actions"><button class="secondary" data-knowledge-page="${page.page - 1}" ${!state.knowledgeHasQueried || page.page <= 1 ? 'disabled' : ''}>上一页</button><button class="secondary" data-knowledge-page="${page.page + 1}" ${!state.knowledgeHasQueried || page.page >= page.pageCount ? 'disabled' : ''}>下一页</button></div></div><div class="knowledge-list">${state.knowledgeHasQueried ? page.items.map((item) => renderKnowledgeItem(state.knowledgeType, item)).join('') : '<div class="empty-state compact"><span class="emoji">⌕</span><h2>等待查询</h2><p>默认不加载全量知识库，避免 iPad/PWA 首屏变慢。</p></div>'}</div></section>
@@ -2296,9 +2369,9 @@ function createPictureBookModal() {
 }
 
 /**
- * 将本地文件读取为可保存在 IndexedDB 的 Data URL。
- * @param {File} file 用户选择的文件。
- * @returns {Promise<string>} 文件 Data URL。
+ * 将本地图片读取为可嵌入页面的 Data URL；仅用于图片绘本页。
+ * @param {File} file 用户选择的图片文件。
+ * @returns {Promise<string>} 图片 Data URL。
  */
 function readFileAsDataUrl(file) {
   return new Promise((resolve, reject) => {
@@ -2307,6 +2380,44 @@ function readFileAsDataUrl(file) {
     reader.onerror = () => reject(reader.error || new Error('文件读取失败'));
     reader.readAsDataURL(file);
   });
+}
+
+/**
+ * 将本地书籍文件保留为 Blob，避免 Data URL 造成体积膨胀和 iPad PWA 存储失败。
+ * @param {File} file 用户选择的 PDF、EPUB 或 EQUB 文件。
+ * @returns {Promise<Blob>} 可直接写入 IndexedDB 的二进制副本。
+ */
+async function readFileAsBlob(file) {
+  if (!(file instanceof Blob)) throw new Error('文件读取失败');
+  // 通过 slice 生成独立 Blob 记录，避免把 File 句柄语义带入后续持久化逻辑。
+  return file.slice(0, file.size, file.type || 'application/octet-stream');
+}
+
+/**
+ * 在导入大文件前估算浏览器剩余存储空间，避免 PWA 静默写入失败。
+ * @param {File[]} files 用户本次准备导入的文件列表。
+ * @returns {Promise<void>} 空间足够或浏览器不支持估算时正常返回。
+ */
+async function assertStorageForFiles(files) {
+  if (!navigator.storage?.estimate) return;
+  const incomingSize = files.reduce((sum, file) => sum + Number(file.size || 0), 0);
+  if (!incomingSize) return;
+  try {
+    const estimate = await navigator.storage.estimate();
+    const quota = Number(estimate.quota || 0);
+    const usage = Number(estimate.usage || 0);
+    if (!quota) return;
+    const remaining = Math.max(0, quota - usage);
+    // 预留 25% 写入膨胀和索引开销，降低 iPad PWA 在 IndexedDB 提交时失败的概率。
+    if (incomingSize * 1.25 > remaining) {
+      const needMb = Math.ceil((incomingSize * 1.25) / 1024 / 1024);
+      const remainMb = Math.floor(remaining / 1024 / 1024);
+      throw new Error(`本机可用离线空间不足：预计需要 ${needMb}MB，当前约剩余 ${remainMb}MB`);
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('本机可用离线空间不足')) throw error;
+    // Safari 可能拒绝容量估算；此时继续导入，由 IndexedDB 写入错误兜底提示。
+  }
 }
 
 /** 渲染当前绘本草稿的页面和文本框编辑器。 */
@@ -2531,6 +2642,7 @@ async function handleGlobalClick(event) {
     if (readerState?.kind !== 'pdf') return;
     const nextPage = Math.max(1, Math.min(readerState.pdf.numPages, readerState.currentPage + Number(button.dataset.pdfPage || 0)));
     readerState.currentPage = nextPage;
+    await renderPdfPage(readerState, nextPage, readerState.renderRun);
     document.querySelector(`[data-pdf-page-number="${nextPage}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     updatePdfReaderControls(readerState);
     return;
@@ -2636,7 +2748,8 @@ document.addEventListener('submit', async (event) => {
         return;
       }
       if (imageFiles.length) throw new Error('图片页和 PDF/EPUB/EQUB 请分开导入');
-      const books = await Promise.all(files.map(async(file) => createFileBookReading(values, { name:file.name, type:file.type, size:file.size, dataUrl:await readFileAsDataUrl(file) })));
+      await assertStorageForFiles(files);
+      const books = await Promise.all(files.map(async(file) => createFileBookReading(values, { name:file.name, type:file.type, size:file.size, blob:await readFileAsBlob(file) })));
       await Promise.all(books.map((book) => put('readings', book)));
       closeModal();
       state.activeReadingId = books[0]?.id || null;
@@ -2687,12 +2800,13 @@ document.addEventListener('change', async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
     try {
-      const dataUrl = await readFileAsDataUrl(file);
+      await assertStorageForFiles([file]);
+      const blob = await readFileAsBlob(file);
       const current = await get('readings', state.activeReadingId);
       if (!current) throw new Error('当前绘本记录不存在，请返回书架后重试');
       const imported = createFileBookReading(
         { title: current.title, category: current.category, language: current.language },
-        { name: file.name, type: file.type, size: file.size, dataUrl },
+        { name: file.name, type: file.type, size: file.size, blob },
         { id: current.id },
       );
       await put('readings', imported);
@@ -2748,6 +2862,48 @@ document.addEventListener('wheel', handleMainContentWheel, { passive: false });
 document.querySelector('#menuButton').addEventListener('click',()=>document.querySelector('#sidebar').classList.toggle('open'));
 
 /**
+ * 提示用户主动刷新到新版 Service Worker，避免 PWA 运行中被无感替换。
+ * @param {ServiceWorkerRegistration} registration 当前注册信息。
+ * @returns {void}
+ */
+function notifyServiceWorkerUpdate(registration) {
+  if (!registration.waiting) return;
+  showToast('发现新版本，确认后刷新');
+  setTimeout(() => {
+    // 让家长明确决定是否刷新，避免正在书写或阅读时页面突然重载。
+    if (!registration.waiting || !confirm('发现新版本，是否现在刷新？')) return;
+    let hasReloaded = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (hasReloaded) return;
+      hasReloaded = true;
+      location.reload();
+    });
+    registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+  }, 600);
+}
+
+/**
+ * 注册 Service Worker，并把更新切换交给用户确认。
+ * @returns {Promise<void>} 注册流程完成。
+ */
+async function registerServiceWorker() {
+  if (!('serviceWorker' in navigator) || !location.protocol.startsWith('http')) return;
+  try {
+    const registration = await navigator.serviceWorker.register('./sw.js?v=20260812-3');
+    if (registration.waiting && navigator.serviceWorker.controller) notifyServiceWorkerUpdate(registration);
+    registration.addEventListener('updatefound', () => {
+      const worker = registration.installing;
+      if (!worker) return;
+      worker.addEventListener('statechange', () => {
+        if (worker.state === 'installed' && navigator.serviceWorker.controller) notifyServiceWorkerUpdate(registration);
+      });
+    });
+  } catch (error) {
+    console.warn('Service Worker 注册失败', error);
+  }
+}
+
+/**
  * 首屏完成后再启动非首页必需的后台任务，避免阅读清单和语言脚本阻塞导航点击。
  * @returns {void}
  */
@@ -2756,9 +2912,7 @@ function startPostBootTasks() {
   void preloadLanguageTools().catch((error) => console.warn('语言工具后台预热失败', error));
   // huiben 清单可能包含较多本地书籍，延后同步可以让首页和知识库先响应点击。
   void ensureReadingSeeds().catch((error) => console.warn('阅读资料后台同步失败', error));
-  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('./sw.js?v=20260812-1').catch(console.warn);
-  }
+  void registerServiceWorker();
 }
 
 async function init() {
@@ -2775,3 +2929,5 @@ async function init() {
   }
 }
 init();
+
+

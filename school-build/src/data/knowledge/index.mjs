@@ -1,4 +1,4 @@
-const seed = {
+﻿const seed = {
   idiom: [
     { word: '一心一意', pinyin: 'yī xīn yī yì', explanation: '只有一个心眼，形容专心专意。', example: '我们要一心一意做好这件事。' },
     { word: '井井有条', pinyin: 'jǐng jǐng yǒu tiáo', explanation: '形容整齐不乱，条理分明。', example: '他的书桌整理得井井有条。' },
@@ -56,6 +56,7 @@ const XINHUA_BASE = './src/data/knowledge/xinhua';
 const poetryShardCache = new Map();
 const poetryFilterCache = new Map();
 const poetryMetaCache = new Map();
+const poetryIndexCache = new Map();
 const xinhuaShardCache = new Map();
 const xinhuaFilterCache = new Map();
 let poetryManifestCache;
@@ -748,6 +749,26 @@ async function loadPoetryManifest() {
 }
 
 /**
+ * 按需读取古诗索引文件，避免进入古诗库时解析 6MB manifest。
+ * @param {'shardIndexes'|'shardCollection'|'shardDynasty'|'shardAuthor'|'shardCharacter'|'shardCharacterManifest'|'indexCounts'|'compoundCounts'|'collectionMeta'} name 索引文件名称。
+ * @returns {Promise<Record<string, unknown>>} 索引内容。
+ */
+async function loadPoetryIndex(name) {
+  if (poetryIndexCache.has(name)) return poetryIndexCache.get(name);
+  const manifest = await loadPoetryManifest();
+  const inline = manifest?.[name];
+  if (inline && typeof inline === 'object') {
+    poetryIndexCache.set(name, inline);
+    return inline;
+  }
+  const file = manifest?.indexFiles?.[name] || `indexes/${name}.json`;
+  const data = await fetchJson(`${POETRY_BASE}/${file}`);
+  const value = data && typeof data === 'object' ? data : {};
+  poetryIndexCache.set(name, value);
+  return value;
+}
+
+/**
  * 读取古诗指定类型的分片，并进行内存缓存。
  * @param {'catalog'|'search'|'shards'} kind 分片类型。
  * @param {number} shardIndex 分片编号。
@@ -850,7 +871,11 @@ async function pageXinhuaKnowledge(type, filters = {}, page = 1, pageSize = 20) 
   const query = String(filters.query || '').trim();
   const size = Math.max(1, Number(pageSize) || 20);
   const candidateShards = getCandidateXinhuaShards(manifest, type, query);
-  const indexedTotal = query.length === 1 ? Number(meta.characterCounts?.[query] || 0) : undefined;
+  const indexedTotal = !query
+    ? Number(meta.total || 0)
+    : query.length === 1
+    ? Number(meta.characterCounts?.[query] || 0)
+    : undefined;
   const total = indexedTotal ?? await countXinhuaMatches(type, candidateShards, query);
   const pageCount = Math.max(1, Math.ceil(total / size));
   const currentPage = Math.max(1, Math.min(pageCount, Number(page) || 1));
@@ -1020,33 +1045,50 @@ async function loadPoetryCatalogRange(start, count) {
   }
   return items;
 }
-
 /**
- * 从 manifest 的索引表中读取分片列表。
- * @param {Record<string, unknown>} manifest 古诗 manifest。
+ * 从按需索引表中读取古诗分片列表。
+ * @param {Record<string, unknown>} indexes 古诗分片索引内容。
  * @param {'collection'|'dynasty'|'author'|'character'} type 索引类型。
  * @param {string} key 已归一化的索引键。
  * @returns {number[]|undefined} 匹配的分片列表。
  */
-function getIndexedPoetryShards(manifest, type, key) {
-  const indexes = manifest?.shardIndexes && typeof manifest.shardIndexes === 'object' ? manifest.shardIndexes : {};
-  const group = indexes[type] && typeof indexes[type] === 'object' ? indexes[type] : {};
+function getIndexedPoetryShards(indexes, type, key) {
+  const group = indexes?.[type] && typeof indexes[type] === 'object' ? indexes[type] : {};
   const shards = group[key];
   return Array.isArray(shards) ? shards : undefined;
 }
+/**
+ * 按单字读取古诗字符索引桶，避免查询时解析完整字符索引。
+ * @param {string} character 待查询的单个字符。
+ * @returns {Promise<Record<string, number[]>>} 该字符所在桶的索引内容。
+ */
+async function loadPoetryCharacterIndex(character) {
+  const bucketKey = Number(character.codePointAt(0)).toString(16).padStart(5, '0').slice(0, 3);
+  const manifest = await loadPoetryManifest();
+  const bucketManifest = await loadPoetryIndex('shardCharacterManifest');
+  const file = bucketManifest?.[bucketKey] || manifest?.indexFiles?.shardCharacter;
+  if (!file) return {};
+  const cacheKey = `character:${bucketKey}`;
+  if (poetryIndexCache.has(cacheKey)) return poetryIndexCache.get(cacheKey);
+  const data = await fetchJson(`${POETRY_BASE}/${file}`);
+  const value = data && typeof data === 'object' ? data : {};
+  poetryIndexCache.set(cacheKey, value);
+  return value;
+}
 
 /**
- * 根据筛选条件从 manifest 索引中收敛候选 catalog 分片，避免每次扫描 66MB 全量目录。
+ * 根据筛选条件从按需索引中收敛候选 catalog 分片，避免每次扫描 66MB 全量目录。
  * @param {Record<string, unknown>} manifest 古诗 manifest。
  * @param {{query?:string,author?:string,dynasty?:string,collection?:string}} filters 筛选条件。
- * @returns {number[]} 需要读取的 catalog 分片编号。
+ * @returns {Promise<number[]>} 需要读取的 catalog 分片编号。
  */
-function getCandidatePoetryShards(manifest, filters = {}) {
+async function getCandidatePoetryShards(manifest, filters = {}) {
   const query = normalizePoetryFilterText(filters.query);
   const author = normalizePoetryAuthorKey(filters.author);
   const dynasty = normalizePoetryFilterText(filters.dynasty);
   const collection = normalizePoetryFilterText(filters.collection);
   const allShards = Array.from({ length: Number(manifest?.shardCount || 0) }, (_, index) => index);
+  if (!query && !author && !dynasty && !collection) return allShards;
   let candidates;
   const apply = (shards) => {
     if (!Array.isArray(shards)) {
@@ -1056,11 +1098,23 @@ function getCandidatePoetryShards(manifest, filters = {}) {
     candidates = candidates ? intersectSortedNumbers(candidates, shards) : shards;
   };
 
-  if (collection) apply(getIndexedPoetryShards(manifest, 'collection', collection));
-  if (dynasty) apply(getIndexedPoetryShards(manifest, 'dynasty', dynasty));
-  if (author) apply(getIndexedPoetryShards(manifest, 'author', author));
-  for (const character of [...new Set(Array.from(query).filter(Boolean))]) {
-    apply(getIndexedPoetryShards(manifest, 'character', character));
+  if (collection) {
+    const indexes = await loadPoetryIndex('shardCollection');
+    apply(getIndexedPoetryShards({ collection: indexes }, 'collection', collection));
+  }
+  if (dynasty) {
+    const indexes = await loadPoetryIndex('shardDynasty');
+    apply(getIndexedPoetryShards({ dynasty: indexes }, 'dynasty', dynasty));
+  }
+  if (author) {
+    const indexes = await loadPoetryIndex('shardAuthor');
+    apply(getIndexedPoetryShards({ author: indexes }, 'author', author));
+  }
+  if (query) {
+    for (const character of [...new Set(Array.from(query).filter(Boolean))]) {
+      const indexes = await loadPoetryCharacterIndex(character);
+      apply(getIndexedPoetryShards({ character: indexes }, 'character', character));
+    }
   }
   return candidates || allShards;
 }
@@ -1087,17 +1141,17 @@ function matchesPoetryFilters(item, filters = {}) {
 }
 
 /**
- * 从 manifest 数量索引中读取无 query 条件的古诗总数。
+ * 从按需数量索引中读取无 query 条件的古诗总数。
  * @param {Record<string, unknown>} manifest 古诗 manifest。
  * @param {{author?:string,dynasty?:string,collection?:string}} filters 筛选条件。
- * @returns {number|undefined} 可直接读取的总数，无法命中索引时返回 undefined。
+ * @returns {Promise<number|undefined>} 可直接读取的总数，无法命中索引时返回 undefined。
  */
-function getIndexedPoetryCount(manifest, filters = {}) {
+async function getIndexedPoetryCount(manifest, filters = {}) {
   const author = normalizePoetryAuthorKey(filters.author);
   const dynasty = normalizePoetryFilterText(filters.dynasty);
   const collection = normalizePoetryFilterText(filters.collection);
-  const counts = manifest?.indexCounts && typeof manifest.indexCounts === 'object' ? manifest.indexCounts : {};
-  const compound = manifest?.compoundCounts && typeof manifest.compoundCounts === 'object' ? manifest.compoundCounts : {};
+  const counts = await loadPoetryIndex('indexCounts');
+  const compound = await loadPoetryIndex('compoundCounts');
   if (collection && dynasty && author) return compound.collectionDynastyAuthor?.[[collection, dynasty, author].join('\t')] || 0;
   if (collection && dynasty) return compound.collectionDynasty?.[[collection, dynasty].join('\t')] || 0;
   if (collection && author) return compound.collectionAuthor?.[[collection, author].join('\t')] || 0;
@@ -1107,7 +1161,6 @@ function getIndexedPoetryCount(manifest, filters = {}) {
   if (author) return counts.author?.[author] || 0;
   return undefined;
 }
-
 /**
  * 从候选 catalog 分片中只读取当前分页窗口，避免为了第一页扫描完整古诗库。
  * @param {Record<string, unknown>} manifest 古诗 manifest。
@@ -1119,7 +1172,7 @@ function getIndexedPoetryCount(manifest, filters = {}) {
 async function loadPoetryCatalogPageByIndex(manifest, filters, start, size) {
   const items = [];
   let matchedCount = 0;
-  const candidateShards = getCandidatePoetryShards(manifest, filters);
+  const candidateShards = await getCandidatePoetryShards(manifest, filters);
   for (const shardIndex of candidateShards) {
     const shard = await loadPoetryShard('catalog', shardIndex);
     for (const row of shard) {
@@ -1148,7 +1201,7 @@ async function filterPoetryCatalog(filters = {}) {
   const cacheKey = JSON.stringify({ query, author, dynasty, collection });
   if (poetryFilterCache.has(cacheKey)) return poetryFilterCache.get(cacheKey);
   const matched = [];
-  const candidateShards = getCandidatePoetryShards(manifest, { query, author, dynasty, collection });
+  const candidateShards = await getCandidatePoetryShards(manifest, { query, author, dynasty, collection });
   for (const shardIndex of candidateShards) {
     const shard = await loadPoetryShard('catalog', shardIndex);
     for (const row of shard) {
@@ -1196,7 +1249,8 @@ export async function getPoetryMeta(filters = {}) {
   }
   const cacheKey = JSON.stringify({ query, author, dynasty, collection });
   if (poetryMetaCache.has(cacheKey)) return poetryMetaCache.get(cacheKey);
-  const collectionMeta = manifest.collectionMeta && typeof manifest.collectionMeta === 'object' ? manifest.collectionMeta[collection] : undefined;
+  const collectionMetaIndex = collection && !query && !author && !dynasty ? await loadPoetryIndex('collectionMeta') : {};
+  const collectionMeta = collectionMetaIndex && typeof collectionMetaIndex === 'object' ? collectionMetaIndex[collection] : undefined;
   if (collection && !query && !author && !dynasty && collectionMeta) {
     const meta = {
       authors: simplifyStringList(collectionMeta.authors),
@@ -1368,7 +1422,7 @@ export async function pageKnowledge(type, filters = {}, page = 1, pageSize = 20)
         return { items, total, page: currentPage, pageSize: size, pageCount };
       }
       const hasQuery = Boolean(String(filters.query || '').trim());
-      const indexedTotal = hasQuery ? undefined : getIndexedPoetryCount(manifest, filters);
+      const indexedTotal = hasQuery ? undefined : await getIndexedPoetryCount(manifest, filters);
       if (indexedTotal !== undefined) {
         const pageCount = Math.max(1, Math.ceil(indexedTotal / size));
         const currentPage = Math.max(1, Math.min(pageCount, Number(page) || 1));
@@ -1506,3 +1560,8 @@ export function knowledgeKey(type, item) {
 }
 
 export { seed as KNOWLEDGE_SEED };
+
+
+
+
+

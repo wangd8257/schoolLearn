@@ -1,4 +1,4 @@
-import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+﻿import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { toSimplifiedChinese } from '../src/data/knowledge/index.mjs';
 
@@ -270,7 +270,7 @@ for (const rootName of contentRoots) {
 }
 
 rmSync(outputRoot, { recursive: true, force: true });
-for (const name of ['catalog', 'search', 'shards']) mkdirSync(path.join(outputRoot, name), { recursive: true });
+for (const name of ['catalog', 'shards', 'indexes']) mkdirSync(path.join(outputRoot, name), { recursive: true });
 
 const authors = new Set();
 const dynasties = new Set();
@@ -299,7 +299,6 @@ for (let start = 0; start < poems.length; start += shardSize) {
   const shardIndex = Math.floor(start / shardSize);
   const poemsInShard = poems.slice(start, start + shardSize).map((poem, offset) => ({ ...poem, id: start + offset }));
   const catalog = [];
-  const search = [];
   for (const poem of poemsInShard) {
     authors.add(poem.author);
     dynasties.add(poem.dynasty);
@@ -321,16 +320,23 @@ for (let start = 0; start < poems.length; start += shardSize) {
       addIndexEntry(shardIndexes, indexCounts, 'character', character, shardIndex);
     }
     catalog.push([poem.id, poem.title, poem.author, poem.dynasty, poem.collection, shardIndex, poem.id - start, poem.lines.slice(0, 2)]);
-    // 搜索层只保留唯一字符集合，满足“某个或某些字”筛选，同时避免复制完整正文。
-    search.push([poem.id, [...new Set(Array.from([poem.title, poem.author, poem.dynasty, poem.collection, ...poem.lines].join('')))].join('')]);
   }
   writeFileSync(path.join(outputRoot, 'catalog', `catalog-${String(shardIndex).padStart(4, '0')}.json`), `${JSON.stringify(catalog)}\n`, 'utf8');
-  writeFileSync(path.join(outputRoot, 'search', `search-${String(shardIndex).padStart(4, '0')}.json`), `${JSON.stringify(search)}\n`, 'utf8');
   writeFileSync(path.join(outputRoot, 'shards', `poetry-${String(shardIndex).padStart(4, '0')}.json`), `${JSON.stringify(poemsInShard)}\n`, 'utf8');
 }
 
+const indexRoot = path.join(outputRoot, 'indexes');
+writeFileSync(path.join(indexRoot, 'shard-collection.json'), `${JSON.stringify(serializeShardIndexGroup(shardIndexes.collection))}\n`, 'utf8');
+writeFileSync(path.join(indexRoot, 'shard-dynasty.json'), `${JSON.stringify(serializeShardIndexGroup(shardIndexes.dynasty))}\n`, 'utf8');
+writeFileSync(path.join(indexRoot, 'shard-author.json'), `${JSON.stringify(serializeShardIndexGroup(shardIndexes.author))}\n`, 'utf8');
+writeCharacterShardBuckets(indexRoot, shardIndexes.character);
+writeFileSync(path.join(indexRoot, 'indexCounts.json'), `${JSON.stringify(indexCounts)}\n`, 'utf8');
+writeFileSync(path.join(indexRoot, 'compoundCounts.json'), `${JSON.stringify(compoundCounts)}\n`, 'utf8');
+writeFileSync(path.join(indexRoot, 'collectionMeta.json'), `${JSON.stringify(serializeCollectionMeta(collectionMeta))}\n`, 'utf8');
+
 const manifest = {
-  version: '20260811-3',
+  version: '20260812-2',
+  indexedVersion: '20260812-character-bucket-index',
   sourceRootTypes: contentRoots,
   shardSize,
   total: poems.length,
@@ -338,15 +344,15 @@ const manifest = {
   authors: [...authors].sort((a, b) => a.localeCompare(b, 'zh-CN')),
   dynasties: [...dynasties].sort((a, b) => a.localeCompare(b, 'zh-CN')),
   collections: [...collections].sort((a, b) => a.localeCompare(b, 'zh-CN')),
-  shardIndexes: {
-    collection: serializeShardIndexGroup(shardIndexes.collection),
-    dynasty: serializeShardIndexGroup(shardIndexes.dynasty),
-    author: serializeShardIndexGroup(shardIndexes.author),
-    character: serializeShardIndexGroup(shardIndexes.character),
+  indexFiles: {
+    shardCollection: 'indexes/shard-collection.json',
+    shardDynasty: 'indexes/shard-dynasty.json',
+    shardAuthor: 'indexes/shard-author.json',
+    shardCharacterManifest: 'indexes/character-manifest.json',
+    indexCounts: 'indexes/indexCounts.json',
+    compoundCounts: 'indexes/compoundCounts.json',
+    collectionMeta: 'indexes/collectionMeta.json',
   },
-  indexCounts,
-  compoundCounts,
-  collectionMeta: serializeCollectionMeta(collectionMeta),
 };
 writeFileSync(path.join(outputRoot, 'manifest.json'), `${JSON.stringify(manifest)}\n`, 'utf8');
 console.log(`source=${resolvedSourceRoot} types=${contentRoots.length} poems=${poems.length} shards=${manifest.shardCount}`);

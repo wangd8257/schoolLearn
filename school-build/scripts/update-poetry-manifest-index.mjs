@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { toSimplifiedChinese } from '../src/data/knowledge/index.mjs';
 
@@ -114,20 +114,40 @@ for (const fileName of readdirSync(catalogRoot).filter((name) => name.endsWith('
   }
 }
 
-manifest.indexedVersion = '20260811-knowledge-shard-index';
-manifest.authors = (manifest.authors || []).map((value) => toSimplifiedChinese(value)).sort((a, b) => a.localeCompare(b, 'zh-CN'));
-manifest.dynasties = (manifest.dynasties || []).map((value) => toSimplifiedChinese(value)).sort((a, b) => a.localeCompare(b, 'zh-CN'));
-manifest.collections = (manifest.collections || []).map((value) => toSimplifiedChinese(value)).sort((a, b) => a.localeCompare(b, 'zh-CN'));
-manifest.sourceRootTypes = (manifest.sourceRootTypes || manifest.collections || []).map((value) => toSimplifiedChinese(value)).sort((a, b) => a.localeCompare(b, 'zh-CN'));
-manifest.shardIndexes = {
+const indexRoot = path.join(poetryRoot, 'indexes');
+mkdirSync(indexRoot, { recursive: true });
+const serializedShardIndexes = {
   collection: serializeShardIndexGroup(shardIndexes.collection),
   dynasty: serializeShardIndexGroup(shardIndexes.dynasty),
   author: serializeShardIndexGroup(shardIndexes.author),
   character: serializeShardIndexGroup(shardIndexes.character),
 };
-manifest.indexCounts = indexCounts;
-manifest.compoundCounts = compoundCounts;
-manifest.collectionMeta = serializeCollectionMeta(collectionMeta);
+writeFileSync(path.join(indexRoot, 'shard-collection.json'), `${JSON.stringify(serializedShardIndexes.collection)}\n`, 'utf8');
+writeFileSync(path.join(indexRoot, 'shard-dynasty.json'), `${JSON.stringify(serializedShardIndexes.dynasty)}\n`, 'utf8');
+writeFileSync(path.join(indexRoot, 'shard-author.json'), `${JSON.stringify(serializedShardIndexes.author)}\n`, 'utf8');
+writeCharacterShardBuckets(indexRoot, shardIndexes.character);
+writeFileSync(path.join(indexRoot, 'indexCounts.json'), `${JSON.stringify(indexCounts)}\n`, 'utf8');
+writeFileSync(path.join(indexRoot, 'compoundCounts.json'), `${JSON.stringify(compoundCounts)}\n`, 'utf8');
+writeFileSync(path.join(indexRoot, 'collectionMeta.json'), `${JSON.stringify(serializeCollectionMeta(collectionMeta))}\n`, 'utf8');
+
+manifest.indexedVersion = '20260812-character-bucket-index';
+manifest.authors = (manifest.authors || []).map((value) => toSimplifiedChinese(value)).sort((a, b) => a.localeCompare(b, 'zh-CN'));
+manifest.dynasties = (manifest.dynasties || []).map((value) => toSimplifiedChinese(value)).sort((a, b) => a.localeCompare(b, 'zh-CN'));
+manifest.collections = (manifest.collections || []).map((value) => toSimplifiedChinese(value)).sort((a, b) => a.localeCompare(b, 'zh-CN'));
+manifest.sourceRootTypes = (manifest.sourceRootTypes || manifest.collections || []).map((value) => toSimplifiedChinese(value)).sort((a, b) => a.localeCompare(b, 'zh-CN'));
+delete manifest.shardIndexes;
+delete manifest.indexCounts;
+delete manifest.compoundCounts;
+delete manifest.collectionMeta;
+manifest.indexFiles = {
+  shardCollection: 'indexes/shard-collection.json',
+  shardDynasty: 'indexes/shard-dynasty.json',
+  shardAuthor: 'indexes/shard-author.json',
+  shardCharacterManifest: 'indexes/character-manifest.json',
+  indexCounts: 'indexes/indexCounts.json',
+  compoundCounts: 'indexes/compoundCounts.json',
+  collectionMeta: 'indexes/collectionMeta.json',
+};
 
 writeFileSync(manifestPath, `${JSON.stringify(manifest)}\n`, 'utf8');
-console.log(`updated ${manifestPath}: collections=${Object.keys(manifest.shardIndexes.collection).length} authors=${Object.keys(manifest.shardIndexes.author).length} characters=${Object.keys(manifest.shardIndexes.character).length}`);
+console.log(`updated ${manifestPath}: collections=${Object.keys(serializedShardIndexes.collection).length} authors=${Object.keys(serializedShardIndexes.author).length} characters=${Object.keys(serializedShardIndexes.character).length}`);
