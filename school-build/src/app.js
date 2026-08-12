@@ -1,4 +1,4 @@
-import { openDatabase, getAll, put, get, remove } from './db.js';
+﻿import { openDatabase, getAll, put, get, remove } from './db.js';
 import { createDrawingLayer } from './drawing.js';
 import {
   PAPER_STATUS,
@@ -2757,7 +2757,7 @@ function startPostBootTasks() {
   // huiben 清单可能包含较多本地书籍，延后同步可以让首页和知识库先响应点击。
   void ensureReadingSeeds().catch((error) => console.warn('阅读资料后台同步失败', error));
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('./sw.js?v=20260811-10').catch(console.warn);
+    navigator.serviceWorker.register('./sw.js?v=20260812-1').catch(console.warn);
   }
 }
 

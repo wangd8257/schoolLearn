@@ -27852,7 +27852,7 @@
     void preloadLanguageTools().catch((error) => console.warn("\u8BED\u8A00\u5DE5\u5177\u540E\u53F0\u9884\u70ED\u5931\u8D25", error));
     void ensureReadingSeeds().catch((error) => console.warn("\u9605\u8BFB\u8D44\u6599\u540E\u53F0\u540C\u6B65\u5931\u8D25", error));
     if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
-      navigator.serviceWorker.register("./sw.js?v=20260811-10").catch(console.warn);
+      navigator.serviceWorker.register("./sw.js?v=20260812-1").catch(console.warn);
     }
   }
   async function init() {

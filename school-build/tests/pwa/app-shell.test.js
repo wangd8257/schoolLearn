@@ -1,6 +1,11 @@
-import test from 'node:test';
+﻿import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+
+function extractVersion(source, pattern) {
+  const match = source.match(pattern);
+  return match?.[1] || '';
+}
 
 test('应用壳包含移动端安装和 favicon 声明', () => {
   const html = readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
@@ -22,17 +27,26 @@ test('file 协议使用经典脚本入口避免浏览器 CORS 限制', () => {
 
 test('入口资源带版本参数，避免线上旧缓存继续加载旧文件', () => {
   const html = readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
+  const appSource = readFileSync(new URL('../../src/app.js', import.meta.url), 'utf8');
 
   assert.match(html, /styles\.css\?v=\d{8}-\d/);
   assert.match(html, /manifest\.webmanifest\?v=\d{8}-\d/);
   assert.match(html, /dist\/app\.bundle\.js\?v=\d{8}-\d/);
   assert.match(html, /src\/app\.js\?v=\d{8}-\d/);
+  const htmlVersions = [
+    extractVersion(html, /styles\.css\?v=(\d{8}-\d)/),
+    extractVersion(html, /manifest\.webmanifest\?v=(\d{8}-\d)/),
+    extractVersion(html, /app\.bundle\.js\?v=(\d{8}-\d)/),
+    extractVersion(html, /src\/app\.js\?v=(\d{8}-\d)/),
+  ];
+  const serviceWorkerVersion = extractVersion(appSource, /sw\.js\?v=(\d{8}-\d)/);
+  assert.deepEqual([...new Set([...htmlVersions, serviceWorkerVersion])], ['20260812-1']);
 });
 
 test('Service Worker 升级缓存名并优先读取网络文件', () => {
   const source = readFileSync(new URL('../../sw.js', import.meta.url), 'utf8');
 
-  assert.match(source, /growth-desk-v32-20260811/);
+  assert.match(source, /growth-desk-v33-20260812/);
   assert.match(source, /src\/data\/knowledge\/index\.mjs/);
   assert.doesNotMatch(source, /cache\.addAll\(\[[\s\S]*?src\/vendor\/chinese\/cnchar\.min\.js/);
   assert.doesNotMatch(source, /cache\.addAll\(\[[\s\S]*?src\/data\/knowledge\/poetry\/manifest\.json/);
@@ -63,7 +77,7 @@ test('app.js statically imports math and supports local book cache fallback', ()
   assert.match(source, /growth-desk-books-v1/);
   assert.match(source, /cache-storage/);
   assert.match(source, /falling back to IndexedDB Blob/);
-  assert.match(source, /serviceWorker' in navigator[\s\S]*?register\('\.\/sw\.js\?v=20260811-10'\)/);
+  assert.match(source, /serviceWorker' in navigator[\s\S]*?register\('\.\/sw\.js\?v=20260812-1'\)/);
   assert.doesNotMatch(source, /sw\.js\?v=20260811-8/);
   assert.match(source, /function startPostBootTasks/);
   assert.match(source, /await navigate\('home'\);[\s\S]*?startPostBootTasks\(\)/);
@@ -93,3 +107,5 @@ test('file 协议 bundle 不包含 import.meta 语法', () => {
 
   assert.doesNotMatch(bundle, /import\.meta/);
 });
+
+
