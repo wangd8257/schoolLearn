@@ -144,6 +144,21 @@ test('古诗库支持按诗句精确查询并按类型联动作者朝代', async
   assert.ok(fetchedPaths.some((path) => path.includes('poetry/indexes/characters/character-')));
 });
 
+test('古诗诗句查询使用绝对编号倒排索引，不扫描全部 catalog 分片', async () => {
+  const freshKnowledge = await import(`../../src/data/knowledge/index.mjs?absolute-poetry=${Date.now()}`);
+  fetchedPaths.length = 0;
+
+  const startedAt = Date.now();
+  const page = await freshKnowledge.pageKnowledge('poetry', { query: '床前明月光' }, 1, 10);
+  const elapsed = Date.now() - startedAt;
+  const catalogFetches = fetchedPaths.filter((path) => path.includes('poetry/catalog/catalog-'));
+
+  assert.ok(page.total > 0);
+  assert.ok(page.items.some((item) => (item.lines || []).join('').includes('床前明月光')));
+  assert.ok(catalogFetches.length <= 2, `诗句查询读取 catalog 分片过多：${catalogFetches.length}`);
+  assert.ok(elapsed < 2000, `诗句查询耗时超过 2 秒：${elapsed}ms`);
+});
+
 test('偏好加权抽样会优先保留喜欢内容并跳过不喜欢内容', () => {
   const candidates = [
     { word: '一心一意' },

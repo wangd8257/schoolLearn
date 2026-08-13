@@ -47,6 +47,7 @@ test('Service Worker 使用分层缓存并排除 raw 大 JSON', () => {
   assert.match(sw, /BOOK_CACHE_NAME/);
   assert.match(sw, /MAX_DATA_CACHE_ENTRIES/);
   assert.match(sw, /isRawKnowledgeRequest/);
+  assert.match(sw, /cacheKnowledgeThenUpdate/);
   assert.match(sw, /knowledge\\\/raw/);
   assert.match(sw, /pruneCache/);
   assert.doesNotMatch(sw, /cache\.addAll\([\s\S]*?src\/data\/knowledge\/raw\//);

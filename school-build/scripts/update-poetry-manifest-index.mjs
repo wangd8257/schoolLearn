@@ -80,11 +80,36 @@ function serializeCollectionMeta(meta) {
   }]));
 }
 
+/**
+ * 把古诗字符倒排索引按 Unicode 前缀拆分成小文件。
+ * @param {string} indexRoot 古诗索引目录。
+ * @param {Record<string, Set<number>>} characterPostings 字符到古诗绝对编号的倒排索引。
+ * @returns {Record<string, string>} Unicode 桶到文件路径的映射。
+ */
+function writeCharacterPostingBuckets(indexRoot, characterPostings) {
+  const buckets = {};
+  for (const [character, values] of Object.entries(characterPostings)) {
+    const bucket = Number(character.codePointAt(0) || 0).toString(16).padStart(5, '0').slice(0, 3);
+    buckets[bucket] ||= {};
+    buckets[bucket][character] = [...values].sort((left, right) => left - right);
+  }
+  const manifest = {};
+  for (const [bucket, values] of Object.entries(buckets)) {
+    const file = `characters/character-${bucket}.json`;
+    mkdirSync(path.join(indexRoot, 'characters'), { recursive: true });
+    writeFileSync(path.join(indexRoot, file), `${JSON.stringify(values)}\n`, 'utf8');
+    manifest[bucket] = file;
+  }
+  writeFileSync(path.join(indexRoot, 'character-manifest.json'), `${JSON.stringify(manifest)}\n`, 'utf8');
+  return manifest;
+}
+
 const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
 const shardIndexes = { collection: {}, dynasty: {}, author: {}, character: {} };
 const indexCounts = { collection: {}, dynasty: {}, author: {}, character: {} };
 const compoundCounts = { collectionDynasty: {}, collectionAuthor: {}, dynastyAuthor: {}, collectionDynastyAuthor: {} };
 const collectionMeta = {};
+const characterPostings = {};
 
 for (const fileName of readdirSync(catalogRoot).filter((name) => name.endsWith('.json')).sort()) {
   const shardIndex = Number(fileName.match(/(\d+)\.json$/u)?.[1] || 0);
@@ -110,6 +135,8 @@ for (const fileName of readdirSync(catalogRoot).filter((name) => name.endsWith('
     addCompoundCount(compoundCounts, 'collectionDynastyAuthor', [collectionKey, dynastyKey, authorKey]);
     for (const character of new Set(Array.from(normalizePoetryIndexText([title, author, dynasty, collection, ...lines].join(''))))) {
       addIndexEntry(shardIndexes, indexCounts, 'character', character, shardIndex);
+      characterPostings[character] ||= new Set();
+      characterPostings[character].add(row[0]);
     }
   }
 }
@@ -125,12 +152,12 @@ const serializedShardIndexes = {
 writeFileSync(path.join(indexRoot, 'shard-collection.json'), `${JSON.stringify(serializedShardIndexes.collection)}\n`, 'utf8');
 writeFileSync(path.join(indexRoot, 'shard-dynasty.json'), `${JSON.stringify(serializedShardIndexes.dynasty)}\n`, 'utf8');
 writeFileSync(path.join(indexRoot, 'shard-author.json'), `${JSON.stringify(serializedShardIndexes.author)}\n`, 'utf8');
-writeCharacterShardBuckets(indexRoot, shardIndexes.character);
+writeCharacterPostingBuckets(indexRoot, characterPostings);
 writeFileSync(path.join(indexRoot, 'indexCounts.json'), `${JSON.stringify(indexCounts)}\n`, 'utf8');
 writeFileSync(path.join(indexRoot, 'compoundCounts.json'), `${JSON.stringify(compoundCounts)}\n`, 'utf8');
 writeFileSync(path.join(indexRoot, 'collectionMeta.json'), `${JSON.stringify(serializeCollectionMeta(collectionMeta))}\n`, 'utf8');
 
-manifest.indexedVersion = '20260812-character-bucket-index';
+manifest.indexedVersion = '20260813-absolute-character-index';
 manifest.authors = (manifest.authors || []).map((value) => toSimplifiedChinese(value)).sort((a, b) => a.localeCompare(b, 'zh-CN'));
 manifest.dynasties = (manifest.dynasties || []).map((value) => toSimplifiedChinese(value)).sort((a, b) => a.localeCompare(b, 'zh-CN'));
 manifest.collections = (manifest.collections || []).map((value) => toSimplifiedChinese(value)).sort((a, b) => a.localeCompare(b, 'zh-CN'));

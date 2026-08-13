@@ -24476,6 +24476,8 @@
   var poetryIndexCache = /* @__PURE__ */ new Map();
   var xinhuaShardCache = /* @__PURE__ */ new Map();
   var xinhuaFilterCache = /* @__PURE__ */ new Map();
+  var xinhuaCharacterIndexCache = /* @__PURE__ */ new Map();
+  var staticRequestCache = /* @__PURE__ */ new Map();
   var poetryManifestCache;
   var xinhuaManifestCache;
   var TRADITIONAL_SIMPLIFIED_MAP = Object.freeze({
@@ -25068,10 +25070,24 @@
   }
   async function fetchJson(path) {
     if (!canFetchStaticAssets()) return void 0;
+    if (staticRequestCache.has(path)) return staticRequestCache.get(path);
+    const request = (async () => {
+      const controller = typeof AbortController === "function" ? new AbortController() : void 0;
+      const timer = setTimeout(() => controller?.abort(), 1e4);
+      try {
+        const response = await fetch(path, { cache: "force-cache", signal: controller?.signal });
+        if (!response.ok) throw new Error(`\u8D44\u6E90\u52A0\u8F7D\u5931\u8D25\uFF1A${response.status}`);
+        return await response.json();
+      } catch (error) {
+        return void 0;
+      } finally {
+        clearTimeout(timer);
+        staticRequestCache.delete(path);
+      }
+    })();
+    staticRequestCache.set(path, request);
     try {
-      const response = await fetch(path, { cache: "force-cache" });
-      if (!response.ok) throw new Error(`\u8D44\u6E90\u52A0\u8F7D\u5931\u8D25\uFF1A${response.status}`);
-      return response.json();
+      return await request;
     } catch (error) {
       return void 0;
     }
@@ -25147,6 +25163,57 @@
     xinhuaShardCache.set(key, list);
     return list;
   }
+  async function loadXinhuaCharacterIndex(type, character) {
+    const manifest = await loadXinhuaManifest();
+    const indexManifestPath = manifest?.types?.[type]?.characterIndex;
+    if (!indexManifestPath) return void 0;
+    const indexManifestKey = `manifest:${type}`;
+    let indexManifest = xinhuaCharacterIndexCache.get(indexManifestKey);
+    if (!indexManifest) {
+      indexManifest = await fetchJson(`${XINHUA_BASE}/${indexManifestPath}`);
+      if (!indexManifest || typeof indexManifest !== "object") return void 0;
+      xinhuaCharacterIndexCache.set(indexManifestKey, indexManifest);
+    }
+    const bucketCount = Math.max(1, Number(indexManifest.bucketCount) || 1);
+    const bucket = Number(character.codePointAt(0) || 0) % bucketCount;
+    const bucketPath = indexManifest.files?.[bucket];
+    if (!bucketPath) return void 0;
+    const cacheKey = `${type}:${bucketPath}`;
+    if (xinhuaCharacterIndexCache.has(cacheKey)) {
+      return xinhuaCharacterIndexCache.get(cacheKey);
+    }
+    const request = fetchJson(`${XINHUA_BASE}/indexes/${bucketPath}`);
+    xinhuaCharacterIndexCache.set(cacheKey, request);
+    return request;
+  }
+  async function getIndexedXinhuaPositions(type, meta, query) {
+    const characters = [...new Set(Array.from(String(query || "").trim()).filter((item) => item.trim()))];
+    if (!characters.length || !meta?.characterIndex) return void 0;
+    let candidates;
+    for (const character of characters) {
+      const index = await loadXinhuaCharacterIndex(type, character);
+      if (!index || typeof index !== "object") return void 0;
+      const positions = Array.isArray(index?.[character]) ? index[character] : [];
+      candidates = candidates ? intersectSortedNumbers(candidates, positions) : positions;
+      if (!candidates.length) return [];
+    }
+    return candidates || [];
+  }
+  async function loadXinhuaItemsByPositions(type, manifest, positions, start, size) {
+    const selected = positions.slice(start, start + size);
+    const shardSize = Number(manifest?.shardSize || 1e3);
+    const grouped = /* @__PURE__ */ new Map();
+    selected.forEach((absoluteIndex, order) => {
+      const shardIndex = Math.floor(absoluteIndex / shardSize);
+      if (!grouped.has(shardIndex)) grouped.set(shardIndex, []);
+      grouped.get(shardIndex).push({ absoluteIndex, order });
+    });
+    const chunks = await Promise.all([...grouped.entries()].map(async ([shardIndex, entries]) => {
+      const shard = await loadXinhuaShard(type, shardIndex);
+      return entries.map(({ absoluteIndex, order }) => ({ order, item: shard[absoluteIndex % shardSize] })).filter((entry) => entry.item);
+    }));
+    return chunks.flat().sort((left, right) => left.order - right.order).map((entry) => entry.item);
+  }
   function knowledgeTitle(type, item) {
     if (type === "char") return String(item.char || "");
     if (type === "xiehouyu") return String(item.riddle || "");
@@ -25177,6 +25244,15 @@
     if (!meta) return void 0;
     const query = String(filters.query || "").trim();
     const size = Math.max(1, Number(pageSize) || 20);
+    const indexedPositions = await getIndexedXinhuaPositions(type, meta, query);
+    if (indexedPositions) {
+      const total2 = indexedPositions.length;
+      const pageCount2 = Math.max(1, Math.ceil(total2 / size));
+      const currentPage2 = Math.max(1, Math.min(pageCount2, Number(page) || 1));
+      const start2 = (currentPage2 - 1) * size;
+      const items2 = await loadXinhuaItemsByPositions(type, manifest, indexedPositions, start2, size);
+      return { items: items2, total: total2, page: currentPage2, pageSize: size, pageCount: pageCount2 };
+    }
     const candidateShards = getCandidateXinhuaShards(manifest, type, query);
     const indexedTotal = !query ? Number(meta.total || 0) : query.length === 1 ? Number(meta.characterCounts?.[query] || 0) : void 0;
     const total = indexedTotal ?? await countXinhuaMatches(type, candidateShards, query);
@@ -25214,6 +25290,12 @@
     const query = String(filters.query || "").trim();
     const cacheKey = JSON.stringify({ type, query });
     if (xinhuaFilterCache.has(cacheKey)) return xinhuaFilterCache.get(cacheKey);
+    const indexedPositions = await getIndexedXinhuaPositions(type, manifest.types[type], query);
+    if (indexedPositions) {
+      const matched2 = await loadXinhuaItemsByPositions(type, manifest, indexedPositions, 0, indexedPositions.length);
+      xinhuaFilterCache.set(cacheKey, matched2);
+      return matched2;
+    }
     const candidateShards = getCandidateXinhuaShards(manifest, type, query);
     const matched = [];
     for (const shardIndex of candidateShards) {
@@ -25232,13 +25314,18 @@
     const seen = /* @__PURE__ */ new Set();
     const total = Number(meta.total || 0);
     const maxAttempts = Math.min(total, targetCount * 30 + 120);
+    const randomIndexes = /* @__PURE__ */ new Set();
     for (let attempt = 0; attempt < maxAttempts && selected.length < targetCount; attempt += 1) {
       const absoluteIndex = Math.floor(Math.random() * total);
-      const item = await getXinhuaItemByIndex(type, absoluteIndex);
+      randomIndexes.add(absoluteIndex);
+    }
+    const randomItems = await loadXinhuaItemsByPositions(type, manifest, [...randomIndexes], 0, randomIndexes.size);
+    for (const item of randomItems) {
       const key = item ? knowledgeKey(type, item) : "";
       if (!item || seen.has(key) || excluded.has(key)) continue;
       seen.add(key);
       selected.push(item);
+      if (selected.length >= targetCount) break;
     }
     for (let index = 0; index < total && selected.length < targetCount; index += 1) {
       const item = await getXinhuaItemByIndex(type, index);
@@ -25305,6 +25392,46 @@
     const value = data && typeof data === "object" ? data : {};
     poetryIndexCache.set(cacheKey, value);
     return value;
+  }
+  async function loadPoetryCharacterPostings(character) {
+    const manifest = await loadPoetryIndex("shardCharacterManifest");
+    const bucketKey = Number(character.codePointAt(0) || 0).toString(16).padStart(5, "0").slice(0, 3);
+    const file = manifest?.[bucketKey];
+    if (!file) return void 0;
+    const cacheKey = `posting:${bucketKey}`;
+    if (poetryIndexCache.has(cacheKey)) return poetryIndexCache.get(cacheKey);
+    const data = await fetchJson(`${POETRY_BASE}/indexes/${file}`);
+    const value = data && typeof data === "object" ? data : {};
+    poetryIndexCache.set(cacheKey, value);
+    return value;
+  }
+  async function getPoetryPostingPositions(query) {
+    const characters = [...new Set(Array.from(normalizePoetryFilterText(query)).filter(Boolean))];
+    if (!characters.length) return void 0;
+    let candidates;
+    for (const character of characters) {
+      const index = await loadPoetryCharacterPostings(character);
+      if (!index || typeof index !== "object") return void 0;
+      const positions = Array.isArray(index?.[character]) ? index[character] : [];
+      candidates = candidates ? intersectSortedNumbers(candidates, positions) : positions;
+      if (!candidates.length) return [];
+    }
+    return candidates || [];
+  }
+  async function loadPoetryItemsByPositions(manifest, positions, start, size) {
+    const selected = positions.slice(start, start + size);
+    const shardSize = Number(manifest?.shardSize || 1e3);
+    const grouped = /* @__PURE__ */ new Map();
+    selected.forEach((absoluteIndex, order) => {
+      const shardIndex = Math.floor(absoluteIndex / shardSize);
+      if (!grouped.has(shardIndex)) grouped.set(shardIndex, []);
+      grouped.get(shardIndex).push({ absoluteIndex, order });
+    });
+    const chunks = await Promise.all([...grouped.entries()].map(async ([shardIndex, entries]) => {
+      const shard = await loadPoetryShard("catalog", shardIndex);
+      return entries.map(({ absoluteIndex, order }) => ({ order, item: catalogRowToPoetry(shard[absoluteIndex % shardSize]) })).filter((entry) => entry.item);
+    }));
+    return chunks.flat().sort((left, right) => left.order - right.order).map((entry) => entry.item);
   }
   async function getCandidatePoetryShards(manifest, filters = {}) {
     const query = normalizePoetryFilterText(filters.query);
@@ -25550,6 +25677,19 @@
           return { items, total, page: currentPage3, pageSize: size2, pageCount: pageCount3 };
         }
         const hasQuery = Boolean(String(filters.query || "").trim());
+        const author = normalizePoetryAuthorKey(filters.author);
+        const dynasty = normalizePoetryFilterText(filters.dynasty);
+        const collection = normalizePoetryFilterText(filters.collection);
+        if (hasQuery && !author && !dynasty && !collection) {
+          const positions = await getPoetryPostingPositions(filters.query);
+          if (positions) {
+            const pageCount3 = Math.max(1, Math.ceil(positions.length / size2));
+            const currentPage3 = Math.max(1, Math.min(pageCount3, Number(page) || 1));
+            const start3 = (currentPage3 - 1) * size2;
+            const items = await loadPoetryItemsByPositions(manifest, positions, start3, size2);
+            return { items, total: positions.length, page: currentPage3, pageSize: size2, pageCount: pageCount3 };
+          }
+        }
         const indexedTotal = hasQuery ? void 0 : await getIndexedPoetryCount(manifest, filters);
         if (indexedTotal !== void 0) {
           const pageCount3 = Math.max(1, Math.ceil(indexedTotal / size2));
@@ -25642,7 +25782,7 @@
   }
 
   // src/app.js
-  var state = { route: "home", paperFilter: "all", activeReadingId: null, activePaperId: null, pictureBookDraft: null, paperTransform: null, paperStatus: null, bookObjectUrl: null, fileReader: null, fileReaderToken: 0, pdfZoom: 1, selectedBookIds: /* @__PURE__ */ new Set(), bookCacheRun: 0, knowledgeType: "idiom", knowledgeQuery: "", knowledgeAuthor: "", knowledgeDynasty: "", knowledgeCollection: "", knowledgePage: 1, knowledgeHasQueried: false, knowledgePreferences: {}, wrongType: "all", learningItems: [], learningIndex: 0, learningCompleted: /* @__PURE__ */ new Set() };
+  var state = { route: "home", paperFilter: "all", activeReadingId: null, activePaperId: null, pictureBookDraft: null, paperTransform: null, paperStatus: null, bookObjectUrl: null, fileReader: null, fileReaderToken: 0, pdfZoom: 1, selectedBookIds: /* @__PURE__ */ new Set(), bookCacheRun: 0, knowledgeType: "idiom", knowledgeQuery: "", knowledgeAuthor: "", knowledgeDynasty: "", knowledgeCollection: "", knowledgePage: 1, knowledgeHasQueried: false, knowledgeLoading: false, knowledgePreferences: {}, wrongType: "all", learningItems: [], learningIndex: 0, learningCompleted: /* @__PURE__ */ new Set() };
   var main = document.querySelector("#mainContent");
   var toast = document.querySelector("#toast");
   var modalRoot = document.querySelector("#modalRoot");
@@ -26679,7 +26819,14 @@
     if (!sourceUrl) throw new Error("\u6CA1\u6709\u627E\u5230\u7ED8\u672C\u6587\u4EF6\u5730\u5740");
     const cachedResponse = await matchBookResponseCache(sourceUrl);
     if (cachedResponse) return cachedResponse.arrayBuffer();
-    const response = await fetch(sourceUrl, { cache: "force-cache" });
+    const controller = typeof AbortController === "function" ? new AbortController() : void 0;
+    const timer = setTimeout(() => controller?.abort(), READER_LOAD_TIMEOUT_MS);
+    let response;
+    try {
+      response = await fetch(sourceUrl, { cache: "force-cache", signal: controller?.signal });
+    } finally {
+      clearTimeout(timer);
+    }
     if (!response.ok) throw new Error(`\u7ED8\u672C\u6587\u4EF6\u8BFB\u53D6\u5931\u8D25\uFF1A${response.status}`);
     return response.arrayBuffer();
   }
@@ -27161,6 +27308,9 @@
     poetry: "\u53E4\u8BD7\u5E93"
   });
   async function renderKnowledge() {
+    if (state.knowledgeLoading) {
+      main.innerHTML = `${pageHeader("???", "???????????????????", "")}<section class="panel knowledge-list-panel" aria-busy="true"><div class="empty-state compact"><span class="emoji">?</span><h2>???? ${escapeHtml2(KNOWLEDGE_LABELS[state.knowledgeType])}</h2><p>????????????????</p></div></section>`;
+    }
     if (!state.knowledgePreferences || !Object.keys(state.knowledgePreferences).length) {
       state.knowledgePreferences = await loadKnowledgePreferences();
     }
@@ -27220,7 +27370,14 @@
     });
     state.knowledgePage = 1;
     state.knowledgeHasQueried = true;
-    await renderKnowledge();
+    state.knowledgeLoading = true;
+    try {
+      await renderKnowledge();
+    } catch (error) {
+      showToast(error?.message || "???????");
+    } finally {
+      state.knowledgeLoading = false;
+    }
   }
   async function syncPaperWrongQuestion(paper, problemId, isWrong) {
     const problem = paper.problems?.find((item) => item.id === problemId);
@@ -27864,6 +28021,7 @@
       state.knowledgeCollection = "";
       state.knowledgePage = 1;
       state.knowledgeHasQueried = false;
+      state.knowledgeLoading = false;
       state.learningItems = [];
       state.learningIndex = 0;
       return renderKnowledge();
@@ -27877,6 +28035,7 @@
       }
       state.knowledgePage = 1;
       state.knowledgeHasQueried = false;
+      state.knowledgeLoading = false;
       if (state.knowledgeType === "poetry" && field === "collection") return renderKnowledge();
       return;
     }
@@ -27953,6 +28112,7 @@
     const form = document.querySelector("#generatorForm");
     const preview = document.querySelector("#worksheetPreview");
     try {
+      preview.innerHTML = '<div class="empty-state"><span class="emoji">?</span><h2>??????</h2><p>????</p></div>';
       preview.innerHTML = await renderGeneratedPreview(readGeneratorValues(form));
     } catch (error) {
       preview.innerHTML = `<div class="empty-state"><span class="emoji">\u26A0\uFE0F</span><h2>\u9884\u89C8\u5931\u8D25</h2><p>${escapeHtml2(error.message)}</p></div>`;
@@ -27986,7 +28146,7 @@
   async function registerServiceWorker() {
     if (!("serviceWorker" in navigator) || !location.protocol.startsWith("http")) return;
     try {
-      const registration = await navigator.serviceWorker.register("./sw.js?v=20260812-3");
+      const registration = await navigator.serviceWorker.register("./sw.js?v=20260813-1");
       if (registration.waiting && navigator.serviceWorker.controller) notifyServiceWorkerUpdate(registration);
       registration.addEventListener("updatefound", () => {
         const worker = registration.installing;
@@ -28001,8 +28161,30 @@
   }
   function startPostBootTasks() {
     void preloadLanguageTools().catch((error) => console.warn("\u8BED\u8A00\u5DE5\u5177\u540E\u53F0\u9884\u70ED\u5931\u8D25", error));
+    void registerServiceWorker().then(() => warmKnowledgeShell()).catch((error) => console.warn("\u77E5\u8BC6\u5E93\u7D22\u5F15\u540E\u53F0\u9884\u70ED\u5931\u8D25", error));
     void ensureReadingSeeds().catch((error) => console.warn("\u9605\u8BFB\u8D44\u6599\u540E\u53F0\u540C\u6B65\u5931\u8D25", error));
-    void registerServiceWorker();
+  }
+  async function warmKnowledgeShell() {
+    if (location.protocol === "file:" || typeof fetch !== "function") return;
+    if ("serviceWorker" in navigator) {
+      await navigator.serviceWorker.ready.catch(() => void 0);
+    }
+    const resources = [
+      "./src/data/knowledge/xinhua/manifest.json",
+      "./src/data/knowledge/poetry/manifest.json",
+      "./src/data/knowledge/poetry/indexes/character-manifest.json"
+    ];
+    const run = async () => {
+      for (let index = 0; index < resources.length; index += 2) {
+        await Promise.all(resources.slice(index, index + 2).map((resource) => fetch(resource, { cache: "force-cache" }).catch(() => void 0)));
+      }
+    };
+    if (typeof requestIdleCallback === "function") {
+      await new Promise((resolve) => requestIdleCallback(() => resolve(), { timeout: 1200 }));
+    } else {
+      await new Promise((resolve) => setTimeout(resolve, 80));
+    }
+    await run();
   }
   async function init() {
     const loading = document.querySelector("#appLoading");

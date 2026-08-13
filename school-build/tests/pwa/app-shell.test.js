@@ -41,7 +41,7 @@ test('入口资源带版本参数，避免线上旧缓存继续加载旧文件',
     extractVersion(html, /src\/app\.js\?v=(\d{8}-\d)/),
   ];
   const serviceWorkerVersion = extractVersion(appSource, /sw\.js\?v=(\d{8}-\d)/);
-  assert.deepEqual([...new Set([...htmlVersions, serviceWorkerVersion])], ['20260812-3']);
+  assert.deepEqual([...new Set([...htmlVersions, serviceWorkerVersion])], ['20260813-1']);
 });
 
 test('Service Worker 分层缓存并优先读取网络文件', () => {
@@ -82,7 +82,7 @@ test('app.js statically imports math and supports local book cache fallback', ()
   assert.match(source, /cache-storage/);
   assert.match(source, /falling back to IndexedDB Blob/);
   assert.match(source, /async function registerServiceWorker/);
-  assert.match(source, /register\('\.\/sw\.js\?v=20260812-3'\)/);
+  assert.match(source, /register\('\.\/sw\.js\?v=20260813-1'\)/);
   assert.match(source, /function notifyServiceWorkerUpdate/);
   assert.match(source, /SKIP_WAITING/);
   assert.doesNotMatch(source, /sw\.js\?v=20260811-8/);

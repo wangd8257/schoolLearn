@@ -59,6 +59,8 @@ const poetryMetaCache = new Map();
 const poetryIndexCache = new Map();
 const xinhuaShardCache = new Map();
 const xinhuaFilterCache = new Map();
+const xinhuaCharacterIndexCache = new Map();
+const staticRequestCache = new Map();
 let poetryManifestCache;
 let xinhuaManifestCache;
 const TRADITIONAL_SIMPLIFIED_MAP = Object.freeze({
@@ -662,10 +664,24 @@ function canFetchStaticAssets() {
  */
 async function fetchJson(path) {
   if (!canFetchStaticAssets()) return undefined;
+  if (staticRequestCache.has(path)) return staticRequestCache.get(path);
+  const request = (async () => {
+    const controller = typeof AbortController === 'function' ? new AbortController() : undefined;
+    const timer = setTimeout(() => controller?.abort(), 10000);
+    try {
+      const response = await fetch(path, { cache: 'force-cache', signal: controller?.signal });
+      if (!response.ok) throw new Error(`资源加载失败：${response.status}`);
+      return await response.json();
+    } catch (error) {
+      return undefined;
+    } finally {
+      clearTimeout(timer);
+      staticRequestCache.delete(path);
+    }
+  })();
+  staticRequestCache.set(path, request);
   try {
-    const response = await fetch(path, { cache: 'force-cache' });
-    if (!response.ok) throw new Error(`资源加载失败：${response.status}`);
-    return response.json();
+    return await request;
   } catch (error) {
     return undefined;
   }
@@ -810,6 +826,82 @@ async function loadXinhuaShard(type, shardIndex) {
 }
 
 /**
+ * 读取指定新华知识库类型的字符倒排索引桶。
+ * @param {string} type 知识库分类。
+ * @param {string} character 查询字符。
+ * @returns {Promise<Record<string, number[]>|undefined>} 字符到全局条目序号的倒排索引。
+ */
+async function loadXinhuaCharacterIndex(type, character) {
+  const manifest = await loadXinhuaManifest();
+  const indexManifestPath = manifest?.types?.[type]?.characterIndex;
+  if (!indexManifestPath) return undefined;
+  const indexManifestKey = `manifest:${type}`;
+  let indexManifest = xinhuaCharacterIndexCache.get(indexManifestKey);
+  if (!indexManifest) {
+    indexManifest = await fetchJson(`${XINHUA_BASE}/${indexManifestPath}`);
+    if (!indexManifest || typeof indexManifest !== 'object') return undefined;
+    xinhuaCharacterIndexCache.set(indexManifestKey, indexManifest);
+  }
+  const bucketCount = Math.max(1, Number(indexManifest.bucketCount) || 1);
+  const bucket = Number(character.codePointAt(0) || 0) % bucketCount;
+  const bucketPath = indexManifest.files?.[bucket];
+  if (!bucketPath) return undefined;
+  const cacheKey = `${type}:${bucketPath}`;
+  if (xinhuaCharacterIndexCache.has(cacheKey)) {
+    return xinhuaCharacterIndexCache.get(cacheKey);
+  }
+  const request = fetchJson(`${XINHUA_BASE}/indexes/${bucketPath}`);
+  xinhuaCharacterIndexCache.set(cacheKey, request);
+  return request;
+}
+
+/**
+ * 根据字符倒排索引计算新华条目的全局序号交集。
+ * @param {string} type 知识库分类。
+ * @param {Record<string, unknown>} meta 类型元数据。
+ * @param {string} query 标题查询文本。
+ * @returns {Promise<number[]|undefined>} 精确命中的条目序号；旧索引或无结果时返回 undefined 或空数组。
+ */
+async function getIndexedXinhuaPositions(type, meta, query) {
+  const characters = [...new Set(Array.from(String(query || '').trim()).filter((item) => item.trim()))];
+  if (!characters.length || !meta?.characterIndex) return undefined;
+  let candidates;
+  for (const character of characters) {
+    const index = await loadXinhuaCharacterIndex(type, character);
+    if (!index || typeof index !== 'object') return undefined;
+    const positions = Array.isArray(index?.[character]) ? index[character] : [];
+    candidates = candidates ? intersectSortedNumbers(candidates, positions) : positions;
+    if (!candidates.length) return [];
+  }
+  return candidates || [];
+}
+
+/**
+ * 根据倒排索引中的全局序号读取当前页条目，并按原始数据顺序返回。
+ * @param {string} type 知识库分类。
+ * @param {Record<string, unknown>} manifest 新华知识库 manifest。
+ * @param {number[]} positions 命中的全局序号。
+ * @param {number} start 当前页起始位置。
+ * @param {number} size 当前页数量。
+ * @returns {Promise<Record<string, unknown>[]>} 当前页条目。
+ */
+async function loadXinhuaItemsByPositions(type, manifest, positions, start, size) {
+  const selected = positions.slice(start, start + size);
+  const shardSize = Number(manifest?.shardSize || 1000);
+  const grouped = new Map();
+  selected.forEach((absoluteIndex, order) => {
+    const shardIndex = Math.floor(absoluteIndex / shardSize);
+    if (!grouped.has(shardIndex)) grouped.set(shardIndex, []);
+    grouped.get(shardIndex).push({ absoluteIndex, order });
+  });
+  const chunks = await Promise.all([...grouped.entries()].map(async ([shardIndex, entries]) => {
+    const shard = await loadXinhuaShard(type, shardIndex);
+    return entries.map(({ absoluteIndex, order }) => ({ order, item: shard[absoluteIndex % shardSize] })).filter((entry) => entry.item);
+  }));
+  return chunks.flat().sort((left, right) => left.order - right.order).map((entry) => entry.item);
+}
+
+/**
  * 返回非古诗知识库用于标题筛选的主标题。
  * @param {string} type 知识库分类。
  * @param {Record<string, unknown>} item 知识条目。
@@ -870,6 +962,15 @@ async function pageXinhuaKnowledge(type, filters = {}, page = 1, pageSize = 20) 
   if (!meta) return undefined;
   const query = String(filters.query || '').trim();
   const size = Math.max(1, Number(pageSize) || 20);
+  const indexedPositions = await getIndexedXinhuaPositions(type, meta, query);
+  if (indexedPositions) {
+    const total = indexedPositions.length;
+    const pageCount = Math.max(1, Math.ceil(total / size));
+    const currentPage = Math.max(1, Math.min(pageCount, Number(page) || 1));
+    const start = (currentPage - 1) * size;
+    const items = await loadXinhuaItemsByPositions(type, manifest, indexedPositions, start, size);
+    return { items, total, page: currentPage, pageSize: size, pageCount };
+  }
   const candidateShards = getCandidateXinhuaShards(manifest, type, query);
   const indexedTotal = !query
     ? Number(meta.total || 0)
@@ -936,6 +1037,12 @@ async function filterXinhuaKnowledge(type, filters = {}) {
   const query = String(filters.query || '').trim();
   const cacheKey = JSON.stringify({ type, query });
   if (xinhuaFilterCache.has(cacheKey)) return xinhuaFilterCache.get(cacheKey);
+  const indexedPositions = await getIndexedXinhuaPositions(type, manifest.types[type], query);
+  if (indexedPositions) {
+    const matched = await loadXinhuaItemsByPositions(type, manifest, indexedPositions, 0, indexedPositions.length);
+    xinhuaFilterCache.set(cacheKey, matched);
+    return matched;
+  }
   const candidateShards = getCandidateXinhuaShards(manifest, type, query);
   const matched = [];
   for (const shardIndex of candidateShards) {
@@ -962,13 +1069,19 @@ async function randomXinhuaKnowledge(type, count = 1, excluded = new Set()) {
   const seen = new Set();
   const total = Number(meta.total || 0);
   const maxAttempts = Math.min(total, targetCount * 30 + 120);
+  const randomIndexes = new Set();
   for (let attempt = 0; attempt < maxAttempts && selected.length < targetCount; attempt += 1) {
     const absoluteIndex = Math.floor(Math.random() * total);
-    const item = await getXinhuaItemByIndex(type, absoluteIndex);
+    randomIndexes.add(absoluteIndex);
+  }
+  // 随机编号按分片并发读取，避免弱网下逐个等待几十个 catalog 请求。
+  const randomItems = await loadXinhuaItemsByPositions(type, manifest, [...randomIndexes], 0, randomIndexes.size);
+  for (const item of randomItems) {
     const key = item ? knowledgeKey(type, item) : '';
     if (!item || seen.has(key) || excluded.has(key)) continue;
     seen.add(key);
     selected.push(item);
+    if (selected.length >= targetCount) break;
   }
   for (let index = 0; index < total && selected.length < targetCount; index += 1) {
     const item = await getXinhuaItemByIndex(type, index);
@@ -1074,6 +1187,67 @@ async function loadPoetryCharacterIndex(character) {
   const value = data && typeof data === 'object' ? data : {};
   poetryIndexCache.set(cacheKey, value);
   return value;
+}
+
+/**
+ * 读取古诗字符绝对编号倒排索引，避免常用字退化为全量分片扫描。
+ * @param {string} character 待查询的单个字符。
+ * @returns {Promise<Record<string, number[]>|undefined>} 字符到古诗编号的倒排索引。
+ */
+async function loadPoetryCharacterPostings(character) {
+  const manifest = await loadPoetryIndex('shardCharacterManifest');
+  const bucketKey = Number(character.codePointAt(0) || 0).toString(16).padStart(5, '0').slice(0, 3);
+  const file = manifest?.[bucketKey];
+  if (!file) return undefined;
+  const cacheKey = `posting:${bucketKey}`;
+  if (poetryIndexCache.has(cacheKey)) return poetryIndexCache.get(cacheKey);
+  const data = await fetchJson(`${POETRY_BASE}/indexes/${file}`);
+  const value = data && typeof data === 'object' ? data : {};
+  poetryIndexCache.set(cacheKey, value);
+  return value;
+}
+
+/**
+ * 计算古诗字符查询的绝对编号交集。
+ * @param {string} query 古诗查询文本。
+ * @returns {Promise<number[]|undefined>} 命中的古诗编号。
+ */
+async function getPoetryPostingPositions(query) {
+  const characters = [...new Set(Array.from(normalizePoetryFilterText(query)).filter(Boolean))];
+  if (!characters.length) return undefined;
+  let candidates;
+  for (const character of characters) {
+    const index = await loadPoetryCharacterPostings(character);
+    if (!index || typeof index !== 'object') return undefined;
+    const positions = Array.isArray(index?.[character]) ? index[character] : [];
+    candidates = candidates ? intersectSortedNumbers(candidates, positions) : positions;
+    if (!candidates.length) return [];
+  }
+  return candidates || [];
+}
+
+/**
+ * 根据古诗绝对编号读取当前页 catalog 条目。
+ * @param {Record<string, unknown>} manifest 古诗 manifest。
+ * @param {number[]} positions 命中的古诗编号。
+ * @param {number} start 当前页起始位置。
+ * @param {number} size 当前页数量。
+ * @returns {Promise<Record<string, unknown>[]>} 当前页古诗条目。
+ */
+async function loadPoetryItemsByPositions(manifest, positions, start, size) {
+  const selected = positions.slice(start, start + size);
+  const shardSize = Number(manifest?.shardSize || 1000);
+  const grouped = new Map();
+  selected.forEach((absoluteIndex, order) => {
+    const shardIndex = Math.floor(absoluteIndex / shardSize);
+    if (!grouped.has(shardIndex)) grouped.set(shardIndex, []);
+    grouped.get(shardIndex).push({ absoluteIndex, order });
+  });
+  const chunks = await Promise.all([...grouped.entries()].map(async ([shardIndex, entries]) => {
+    const shard = await loadPoetryShard('catalog', shardIndex);
+    return entries.map(({ absoluteIndex, order }) => ({ order, item: catalogRowToPoetry(shard[absoluteIndex % shardSize]) })).filter((entry) => entry.item);
+  }));
+  return chunks.flat().sort((left, right) => left.order - right.order).map((entry) => entry.item);
 }
 
 /**
@@ -1422,6 +1596,19 @@ export async function pageKnowledge(type, filters = {}, page = 1, pageSize = 20)
         return { items, total, page: currentPage, pageSize: size, pageCount };
       }
       const hasQuery = Boolean(String(filters.query || '').trim());
+      const author = normalizePoetryAuthorKey(filters.author);
+      const dynasty = normalizePoetryFilterText(filters.dynasty);
+      const collection = normalizePoetryFilterText(filters.collection);
+      if (hasQuery && !author && !dynasty && !collection) {
+        const positions = await getPoetryPostingPositions(filters.query);
+        if (positions) {
+          const pageCount = Math.max(1, Math.ceil(positions.length / size));
+          const currentPage = Math.max(1, Math.min(pageCount, Number(page) || 1));
+          const start = (currentPage - 1) * size;
+          const items = await loadPoetryItemsByPositions(manifest, positions, start, size);
+          return { items, total: positions.length, page: currentPage, pageSize: size, pageCount };
+        }
+      }
       const indexedTotal = hasQuery ? undefined : await getIndexedPoetryCount(manifest, filters);
       if (indexedTotal !== undefined) {
         const pageCount = Math.max(1, Math.ceil(indexedTotal / size));

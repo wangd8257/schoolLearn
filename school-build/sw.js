@@ -1,4 +1,4 @@
-const APP_VERSION = '20260812-3';
+const APP_VERSION = '20260813-1';
 const CORE_CACHE_NAME = `growth-desk-core-${APP_VERSION}`;
 const DATA_CACHE_NAME = `growth-desk-data-${APP_VERSION}`;
 const RUNTIME_CACHE_NAME = `growth-desk-runtime-${APP_VERSION}`;
@@ -61,6 +61,33 @@ async function fetchFreshThenCache(request, cacheName = RUNTIME_CACHE_NAME, maxE
 }
 
 /**
+ * 先返回知识库缓存，再在后台更新网络副本，避免 GitHub Pages 网络延迟阻塞查询。
+ * @param {Request} request 当前 fetch 请求。
+ * @param {string} cacheName 知识库缓存名称。
+ * @param {number} maxEntries 当前缓存层最大条目数。
+ * @returns {Promise<Response>} 缓存响应、网络响应或请求失败。
+ */
+async function cacheKnowledgeThenUpdate(request, cacheName = DATA_CACHE_NAME, maxEntries = MAX_DATA_CACHE_ENTRIES) {
+  const cache = await caches.open(cacheName);
+  const cached = await cache.match(request);
+  const update = fetch(request).then((response) => {
+    if (response.ok) {
+      return cache.put(request, response.clone())
+        .then(() => pruneCache(cacheName, maxEntries))
+        .then(() => response);
+    }
+    return response;
+  }).catch(() => null);
+  if (cached) {
+    void update;
+    return cached;
+  }
+  const response = await update;
+  if (response) return response;
+  throw new Error('知识库资源暂时无法读取');
+}
+
+/**
  * 判断是否为绘本二进制文件请求，避免 Service Worker 改写 PDF.js 的 Range 流。
  * @param {Request} request 当前 fetch 请求。
  * @returns {boolean} 是否为 huiben 目录下的 PDF、EPUB 或 EQUB 文件。
@@ -103,7 +130,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   if (isKnowledgeShardRequest(url)) {
-    event.respondWith(fetchFreshThenCache(event.request, DATA_CACHE_NAME, MAX_DATA_CACHE_ENTRIES));
+    event.respondWith(cacheKnowledgeThenUpdate(event.request, DATA_CACHE_NAME, MAX_DATA_CACHE_ENTRIES));
     return;
   }
   event.respondWith(fetchFreshThenCache(event.request, RUNTIME_CACHE_NAME, MAX_RUNTIME_CACHE_ENTRIES));

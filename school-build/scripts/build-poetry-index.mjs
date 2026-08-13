@@ -89,6 +89,30 @@ function serializeCollectionMeta(meta) {
 }
 
 /**
+ * 把古诗字符倒排索引按 Unicode 前缀拆分成小文件。
+ * @param {string} indexRoot 古诗索引目录。
+ * @param {Record<string, Set<number>>} characterPostings 字符到古诗绝对编号的倒排索引。
+ * @returns {Record<string, string>} Unicode 桶到文件路径的映射。
+ */
+function writeCharacterPostingBuckets(indexRoot, characterPostings) {
+  const buckets = {};
+  for (const [character, values] of Object.entries(characterPostings)) {
+    const bucket = Number(character.codePointAt(0) || 0).toString(16).padStart(5, '0').slice(0, 3);
+    buckets[bucket] ||= {};
+    buckets[bucket][character] = [...values].sort((left, right) => left - right);
+  }
+  const manifest = {};
+  for (const [bucket, values] of Object.entries(buckets)) {
+    const file = `characters/character-${bucket}.json`;
+    mkdirSync(path.join(indexRoot, 'characters'), { recursive: true });
+    writeFileSync(path.join(indexRoot, file), `${JSON.stringify(values)}\n`, 'utf8');
+    manifest[bucket] = file;
+  }
+  writeFileSync(path.join(indexRoot, 'character-manifest.json'), `${JSON.stringify(manifest)}\n`, 'utf8');
+  return manifest;
+}
+
+/**
  * 判断目录树中是否包含 JSON 文件，用于识别 chinese-poetry 的内容类型目录。
  * @param {string} directory 待检查目录。
  * @returns {boolean} 是否包含 JSON 内容。
@@ -294,6 +318,7 @@ const compoundCounts = {
   collectionDynastyAuthor: {},
 };
 const collectionMeta = {};
+const characterPostings = {};
 
 for (let start = 0; start < poems.length; start += shardSize) {
   const shardIndex = Math.floor(start / shardSize);
@@ -318,6 +343,8 @@ for (let start = 0; start < poems.length; start += shardSize) {
     addCompoundCount(compoundCounts, 'collectionDynastyAuthor', [collectionKey, dynastyKey, authorKey]);
     for (const character of new Set(Array.from(normalizePoetryIndexText([poem.title, poem.author, poem.dynasty, poem.collection, ...poem.lines].join(''))))) {
       addIndexEntry(shardIndexes, indexCounts, 'character', character, shardIndex);
+      characterPostings[character] ||= new Set();
+      characterPostings[character].add(poem.id);
     }
     catalog.push([poem.id, poem.title, poem.author, poem.dynasty, poem.collection, shardIndex, poem.id - start, poem.lines.slice(0, 2)]);
   }
@@ -329,14 +356,14 @@ const indexRoot = path.join(outputRoot, 'indexes');
 writeFileSync(path.join(indexRoot, 'shard-collection.json'), `${JSON.stringify(serializeShardIndexGroup(shardIndexes.collection))}\n`, 'utf8');
 writeFileSync(path.join(indexRoot, 'shard-dynasty.json'), `${JSON.stringify(serializeShardIndexGroup(shardIndexes.dynasty))}\n`, 'utf8');
 writeFileSync(path.join(indexRoot, 'shard-author.json'), `${JSON.stringify(serializeShardIndexGroup(shardIndexes.author))}\n`, 'utf8');
-writeCharacterShardBuckets(indexRoot, shardIndexes.character);
+writeCharacterPostingBuckets(indexRoot, characterPostings);
 writeFileSync(path.join(indexRoot, 'indexCounts.json'), `${JSON.stringify(indexCounts)}\n`, 'utf8');
 writeFileSync(path.join(indexRoot, 'compoundCounts.json'), `${JSON.stringify(compoundCounts)}\n`, 'utf8');
 writeFileSync(path.join(indexRoot, 'collectionMeta.json'), `${JSON.stringify(serializeCollectionMeta(collectionMeta))}\n`, 'utf8');
 
 const manifest = {
-  version: '20260812-2',
-  indexedVersion: '20260812-character-bucket-index',
+  version: '20260813-absolute-character-index',
+  indexedVersion: '20260813-absolute-character-index',
   sourceRootTypes: contentRoots,
   shardSize,
   total: poems.length,

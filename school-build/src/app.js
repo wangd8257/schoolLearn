@@ -1440,7 +1440,14 @@ async function readBookArrayBuffer(item) {
   if (!sourceUrl) throw new Error('没有找到绘本文件地址');
   const cachedResponse = await matchBookResponseCache(sourceUrl);
   if (cachedResponse) return cachedResponse.arrayBuffer();
-  const response = await fetch(sourceUrl, { cache: 'force-cache' });
+  const controller = typeof AbortController === 'function' ? new AbortController() : undefined;
+  const timer = setTimeout(() => controller?.abort(), READER_LOAD_TIMEOUT_MS);
+  let response;
+  try {
+    response = await fetch(sourceUrl, { cache: 'force-cache', signal: controller?.signal });
+  } finally {
+    clearTimeout(timer);
+  }
   if (!response.ok) throw new Error(`绘本文件读取失败：${response.status}`);
   return response.arrayBuffer();
 }
@@ -2902,7 +2909,7 @@ function notifyServiceWorkerUpdate(registration) {
 async function registerServiceWorker() {
   if (!('serviceWorker' in navigator) || !location.protocol.startsWith('http')) return;
   try {
-    const registration = await navigator.serviceWorker.register('./sw.js?v=20260812-3');
+    const registration = await navigator.serviceWorker.register('./sw.js?v=20260813-1');
     if (registration.waiting && navigator.serviceWorker.controller) notifyServiceWorkerUpdate(registration);
     registration.addEventListener('updatefound', () => {
       const worker = registration.installing;
@@ -2923,9 +2930,39 @@ async function registerServiceWorker() {
 function startPostBootTasks() {
   // 中文拼音工具只在生成语文试卷时需要，后台预热失败不影响首页可用。
   void preloadLanguageTools().catch((error) => console.warn('语言工具后台预热失败', error));
+  // 先完成 SW 注册，再预热轻量索引，确保资源进入知识库分层缓存。
+  void registerServiceWorker()
+    .then(() => warmKnowledgeShell())
+    .catch((error) => console.warn('知识库索引后台预热失败', error));
   // huiben 清单可能包含较多本地书籍，延后同步可以让首页和知识库先响应点击。
   void ensureReadingSeeds().catch((error) => console.warn('阅读资料后台同步失败', error));
-  void registerServiceWorker();
+}
+
+/**
+ * 在首页空闲时预热知识库的轻量索引资源。
+ * @returns {Promise<void>} 预热任务完成。
+ */
+async function warmKnowledgeShell() {
+  if (location.protocol === 'file:' || typeof fetch !== 'function') return;
+  if ('serviceWorker' in navigator) {
+    await navigator.serviceWorker.ready.catch(() => undefined);
+  }
+  const resources = [
+    './src/data/knowledge/xinhua/manifest.json',
+    './src/data/knowledge/poetry/manifest.json',
+    './src/data/knowledge/poetry/indexes/character-manifest.json',
+  ];
+  const run = async () => {
+    for (let index = 0; index < resources.length; index += 2) {
+      await Promise.all(resources.slice(index, index + 2).map((resource) => fetch(resource, { cache: 'force-cache' }).catch(() => undefined)));
+    }
+  };
+  if (typeof requestIdleCallback === 'function') {
+    await new Promise((resolve) => requestIdleCallback(() => resolve(), { timeout: 1200 }));
+  } else {
+    await new Promise((resolve) => setTimeout(resolve, 80));
+  }
+  await run();
 }
 
 async function init() {
