@@ -1,0 +1,81 @@
+- generic [ref=f3e1]:
+  - generic [ref=f3e2]:
+    - complementary [ref=f3e3]:
+      - generic [ref=f3e8]:
+        - strong [ref=f3e9]: 光之进化
+        - text: 学习能量控制台
+      - navigation "主导航" [ref=f3e10]:
+        - button "⌂ 首页" [ref=f3e11] [cursor=pointer]:
+          - generic [ref=f3e12]: ⌂
+          - text: 首页
+        - button "▤ 试卷目录" [ref=f3e13] [cursor=pointer]:
+          - generic [ref=f3e14]: ▤
+          - text: 试卷目录
+        - button "✦ 生成试卷" [ref=f3e15] [cursor=pointer]:
+          - generic [ref=f3e16]: ✦
+          - text: 生成试卷
+        - button "▥ 阅读资料" [ref=f3e17] [cursor=pointer]:
+          - generic [ref=f3e18]: ▥
+          - text: 阅读资料
+        - button "字 知识库" [ref=f3e19] [cursor=pointer]:
+          - generic [ref=f3e20]: 字
+          - text: 知识库
+        - button "◇ 学习游戏" [ref=f3e21] [cursor=pointer]:
+          - generic [ref=f3e22]: ◇
+          - text: 学习游戏
+        - button "⌘ 配置模板" [ref=f3e23] [cursor=pointer]:
+          - generic [ref=f3e24]: ⌘
+          - text: 配置模板
+      - paragraph [ref=f3e27]:
+        - strong [ref=f3e28]: 本机离线保存
+        - text: 请勿清除 Safari 网站数据
+    - main [active] [ref=f3e29]:
+      - generic [ref=f3e111]:
+        - generic [ref=f3e112]: 光之进化 / COMMAND DECK
+        - heading "知识库" [level=1] [ref=f3e113]
+        - paragraph [ref=f3e114]: 离线学习成语、汉字、歇后语、词语与古诗
+      - generic [ref=f3e120]:
+        - generic [ref=f3e121]:
+          - generic [ref=f3e122]:
+            - radio "成语库" [checked] [ref=f3e123]
+            - generic [ref=f3e124]: 成语库
+          - generic [ref=f3e125]:
+            - radio "汉字库" [ref=f3e126]
+            - generic [ref=f3e127]: 汉字库
+          - generic [ref=f3e128]:
+            - radio "歇后语" [ref=f3e129]
+            - generic [ref=f3e130]: 歇后语
+          - generic [ref=f3e131]:
+            - radio "词语库" [ref=f3e132]
+            - generic [ref=f3e133]: 词语库
+          - generic [ref=f3e134]:
+            - radio "古诗库" [ref=f3e135]
+            - generic [ref=f3e136]: 古诗库
+        - generic [ref=f3e137]:
+          - textbox "按某个或某些字筛选" [ref=f3e138]
+          - button "查询" [ref=f3e139] [cursor=pointer]
+      - generic [ref=f3e140]:
+        - generic [ref=f3e141]: 随机学习
+        - heading "从成语库开始" [level=2] [ref=f3e142]
+        - paragraph [ref=f3e143]: 已学会的内容不会在本轮重复出现，未掌握内容会进入错题库。
+        - button "开始随机学习" [ref=f3e144] [cursor=pointer]
+      - generic [ref=f3e145]:
+        - generic [ref=f3e146]:
+          - generic [ref=f3e147]:
+            - heading "成语库" [level=2] [ref=f3e148]
+            - paragraph [ref=f3e149]: 请输入筛选条件后点击查询，列表会分页展示。
+          - generic [ref=f3e150]:
+            - button "上一页" [disabled] [ref=f3e151] [cursor=pointer]
+            - button "下一页" [disabled] [ref=f3e152] [cursor=pointer]
+        - generic [ref=f3e154]:
+          - generic [ref=f3e155]: ⌕
+          - heading "等待查询" [level=2] [ref=f3e156]
+          - paragraph [ref=f3e157]: 默认不加载全量知识库，避免 iPad/PWA 首屏变慢。
+      - generic [ref=f3e159]:
+        - generic [ref=f3e160]:
+          - heading "错题库" [level=2] [ref=f3e161]
+          - paragraph [ref=f3e162]: 暂时没有错题。
+        - generic [ref=f3e164]:
+          - radio "全部" [checked] [ref=f3e165]
+          - generic [ref=f3e166]: 全部
+  - status

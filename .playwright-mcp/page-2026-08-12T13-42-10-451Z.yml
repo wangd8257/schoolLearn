@@ -1,0 +1,36 @@
+- generic [active] [ref=f2e1]:
+  - generic [ref=f2e2]:
+    - complementary [ref=f2e3]:
+      - generic [ref=f2e8]:
+        - strong [ref=f2e9]: 光之进化
+        - text: 学习能量控制台
+      - navigation "主导航" [ref=f2e10]:
+        - button "⌂ 首页" [ref=f2e11] [cursor=pointer]:
+          - generic [ref=f2e12]: ⌂
+          - text: 首页
+        - button "▤ 试卷目录" [ref=f2e13] [cursor=pointer]:
+          - generic [ref=f2e14]: ▤
+          - text: 试卷目录
+        - button "✦ 生成试卷" [ref=f2e15] [cursor=pointer]:
+          - generic [ref=f2e16]: ✦
+          - text: 生成试卷
+        - button "▥ 阅读资料" [ref=f2e17] [cursor=pointer]:
+          - generic [ref=f2e18]: ▥
+          - text: 阅读资料
+        - button "字 知识库" [ref=f2e19] [cursor=pointer]:
+          - generic [ref=f2e20]: 字
+          - text: 知识库
+        - button "◇ 学习游戏" [ref=f2e21] [cursor=pointer]:
+          - generic [ref=f2e22]: ◇
+          - text: 学习游戏
+        - button "⌘ 配置模板" [ref=f2e23] [cursor=pointer]:
+          - generic [ref=f2e24]: ⌘
+          - text: 配置模板
+      - paragraph [ref=f2e27]:
+        - strong [ref=f2e28]: 本机离线保存
+        - text: 请勿清除 Safari 网站数据
+    - main [ref=f2e29]
+  - status [ref=f2e30]:
+    - strong [ref=f2e33]: 光之进化
+    - generic [ref=f2e34]: 正在启动学习控制台
+  - status

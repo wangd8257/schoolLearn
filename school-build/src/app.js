@@ -36,7 +36,7 @@ import { paperMoveDelta, paperScrollDelta } from './paper-controls.mjs';
 import { generateWorksheet } from './math/index.mjs';
 import { filterKnowledgeAsync, getKnowledgeDetail, getPoetryMeta, knowledgeKey, pageKnowledge, randomKnowledgeAsync, toSimplifiedChinese, weightedKnowledgeSample } from './data/knowledge/index.mjs';
 
-const state = { route: 'home', paperFilter: 'all', activeReadingId: null, activePaperId: null, pictureBookDraft: null, paperTransform: null, paperStatus: null, bookObjectUrl: null, fileReader: null, fileReaderToken: 0, pdfZoom: 1, selectedBookIds: new Set(), bookCacheRun: 0, knowledgeType: 'idiom', knowledgeQuery: '', knowledgeAuthor: '', knowledgeDynasty: '', knowledgeCollection: '', knowledgePage: 1, knowledgeHasQueried: false, knowledgePreferences: {}, wrongType: 'all', learningItems: [], learningIndex: 0, learningCompleted: new Set() };
+const state = { route: 'home', paperFilter: 'all', activeReadingId: null, activePaperId: null, pictureBookDraft: null, paperTransform: null, paperStatus: null, bookObjectUrl: null, fileReader: null, fileReaderToken: 0, pdfZoom: 1, selectedBookIds: new Set(), bookCacheRun: 0, knowledgeType: 'idiom', knowledgeQuery: '', knowledgeAuthor: '', knowledgeDynasty: '', knowledgeCollection: '', knowledgePage: 1, knowledgeHasQueried: false, knowledgeLoading: false, knowledgePreferences: {}, wrongType: 'all', learningItems: [], learningIndex: 0, learningCompleted: new Set() };
 const main = document.querySelector('#mainContent');
 const toast = document.querySelector('#toast');
 const modalRoot = document.querySelector('#modalRoot');
@@ -2119,6 +2119,9 @@ const KNOWLEDGE_LABELS = Object.freeze({
  * @returns {Promise<void>} 页面数据读取和 HTML 更新完成后的 Promise。
  */
 async function renderKnowledge() {
+  if (state.knowledgeLoading) {
+    main.innerHTML = `${pageHeader('???','???????????????????','')}<section class="panel knowledge-list-panel" aria-busy="true"><div class="empty-state compact"><span class="emoji">?</span><h2>???? ${escapeHtml(KNOWLEDGE_LABELS[state.knowledgeType])}</h2><p>????????????????</p></div></section>`;
+  }
   if (!state.knowledgePreferences || !Object.keys(state.knowledgePreferences).length) {
     state.knowledgePreferences = await loadKnowledgePreferences();
   }
@@ -2230,7 +2233,14 @@ async function submitKnowledgeSearch() {
   });
   state.knowledgePage = 1;
   state.knowledgeHasQueried = true;
-  await renderKnowledge();
+  state.knowledgeLoading = true;
+  try {
+    await renderKnowledge();
+  } catch (error) {
+    showToast(error?.message || '???????');
+  } finally {
+    state.knowledgeLoading = false;
+  }
 }
 /**
  * 同步试卷错题到独立错题库。
@@ -2768,6 +2778,7 @@ document.addEventListener('change', async (event) => {
     state.knowledgeCollection = '';
     state.knowledgePage = 1;
     state.knowledgeHasQueried = false;
+    state.knowledgeLoading = false;
     state.learningItems = [];
     state.learningIndex = 0;
     return renderKnowledge();
@@ -2781,6 +2792,7 @@ document.addEventListener('change', async (event) => {
     }
     state.knowledgePage = 1;
     state.knowledgeHasQueried = false;
+    state.knowledgeLoading = false;
     if (state.knowledgeType === 'poetry' && field === 'collection') return renderKnowledge();
     return;
   }
@@ -2835,6 +2847,7 @@ document.addEventListener('click', async (event) => {
   const form = document.querySelector('#generatorForm');
   const preview = document.querySelector('#worksheetPreview');
   try {
+    preview.innerHTML = '<div class="empty-state"><span class="emoji">?</span><h2>??????</h2><p>????</p></div>';
     preview.innerHTML = await renderGeneratedPreview(readGeneratorValues(form));
   } catch (error) {
     preview.innerHTML = `<div class="empty-state"><span class="emoji">⚠️</span><h2>预览失败</h2><p>${escapeHtml(error.message)}</p></div>`;
