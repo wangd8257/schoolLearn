@@ -27309,7 +27309,8 @@
   });
   async function renderKnowledge() {
     if (state.knowledgeLoading) {
-      main.innerHTML = `${pageHeader("???", "???????????????????", "")}<section class="panel knowledge-list-panel" aria-busy="true"><div class="empty-state compact"><span class="emoji">?</span><h2>???? ${escapeHtml2(KNOWLEDGE_LABELS[state.knowledgeType])}</h2><p>????????????????</p></div></section>`;
+      main.innerHTML = `${pageHeader("\u77E5\u8BC6\u5E93", "\u6B63\u5728\u8BFB\u53D6\u672C\u5730\u7D22\u5F15\u4E0E\u7F13\u5B58", "")}<section class="panel knowledge-list-panel" aria-busy="true"><div class="empty-state compact"><span class="emoji">\u2315</span><h2>\u6B63\u5728\u67E5\u8BE2 ${escapeHtml2(KNOWLEDGE_LABELS[state.knowledgeType])}</h2><p>\u9996\u6B21\u8BFB\u53D6\u4F1A\u5EFA\u7ACB\u7F13\u5B58\uFF0C\u4E4B\u540E\u4F1A\u66F4\u5FEB\u3002</p></div></section>`;
+      return;
     }
     if (!state.knowledgePreferences || !Object.keys(state.knowledgePreferences).length) {
       state.knowledgePreferences = await loadKnowledgePreferences();

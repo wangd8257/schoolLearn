@@ -2127,7 +2127,8 @@ const KNOWLEDGE_LABELS = Object.freeze({
  */
 async function renderKnowledge() {
   if (state.knowledgeLoading) {
-    main.innerHTML = `${pageHeader('???','???????????????????','')}<section class="panel knowledge-list-panel" aria-busy="true"><div class="empty-state compact"><span class="emoji">?</span><h2>???? ${escapeHtml(KNOWLEDGE_LABELS[state.knowledgeType])}</h2><p>????????????????</p></div></section>`;
+    main.innerHTML = `${pageHeader('知识库','正在读取本地索引与缓存','')}<section class="panel knowledge-list-panel" aria-busy="true"><div class="empty-state compact"><span class="emoji">⌕</span><h2>正在查询 ${escapeHtml(KNOWLEDGE_LABELS[state.knowledgeType])}</h2><p>首次读取会建立缓存，之后会更快。</p></div></section>`;
+    return;
   }
   if (!state.knowledgePreferences || !Object.keys(state.knowledgePreferences).length) {
     state.knowledgePreferences = await loadKnowledgePreferences();
@@ -2979,5 +2980,4 @@ async function init() {
   }
 }
 init();
-
 
