@@ -1,0 +1,26 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - button "打开导航" [ref=e4]: ☰
+      - generic [ref=e5]: 光之进化
+      - button "新建试卷" [ref=e6]: ＋
+    - complementary [ref=e7]:
+      - generic [ref=e9]:
+        - strong [ref=e10]: 光之进化
+        - text: 学习能量控制台
+      - navigation "主导航" [ref=e11]:
+        - button "⌂首页" [ref=e12]
+        - button "▤试卷目录" [ref=e13]
+        - button "✦生成试卷" [ref=e14]
+        - button "▥阅读资料" [ref=e15]
+        - button "字知识库" [ref=e16]
+        - button "◇学习游戏" [ref=e17]
+        - button "⌘配置模板" [ref=e18]
+      - paragraph [ref=e20]:
+        - strong [ref=e21]: 本机离线保存
+        - text: 请勿清除 Safari 网站数据
+    - main
+  - status [ref=e22]:
+    - strong [ref=e23]: 光之进化
+    - text: 正在启动学习控制台
+  - status

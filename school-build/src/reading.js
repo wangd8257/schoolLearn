@@ -3,8 +3,17 @@
 import { getEmbeddedHuibenBooks } from './data/huiben-manifest.mjs';
 
 let speechRun = 0;
+const READING_API_BASE = String(
+  globalThis.__SCHOOL_BUILD_READING_API__
+  || globalThis.__SCHOOL_BUILD_KNOWLEDGE_API__
+  || 'https://learn-d0g10smkjc24144a1-1468989884.ap-shanghai.app.tcloudbase.com/api'
+).replace(/\/+$/u, '');
+const REMOTE_READING_TIMEOUT_MS = 2500;
 
-/** 初始化阅读资料，移除旧内置绘本，并同步 huiben 文件夹清单。 */
+/**
+ * 初始化阅读资料，优先同步 CloudBase 私有云存储清单，并保留本地 huiben 回退。
+ * @returns {Promise<Array<Record<string, unknown>>>} 当前设备可用的阅读资料。
+ */
 export async function ensureReadingSeeds() {
   const existing = await getAll('readings');
   const builtinItems = existing.filter((item) => item.builtin);
@@ -12,12 +21,12 @@ export async function ensureReadingSeeds() {
 
   const keptItems = existing.filter((item) => !item.builtin);
   const knownHuibenFiles = new Set(keptItems.filter((item) => item.source === 'huiben').map((item) => item.fileName));
-  const localBooks = await loadHuibenBooks();
-  const localBooksByFileName = new Map(localBooks.map((book) => [book.fileName, book]));
+  const books = await loadReadingBooks();
+  const booksByFileName = new Map(books.map((book) => [book.fileName, book]));
   const migratedItems = keptItems
-    .filter((item) => item.source === 'huiben' && localBooksByFileName.has(item.fileName))
+    .filter((item) => item.source === 'huiben' && booksByFileName.has(item.fileName))
     .map((item) => {
-      const currentBook = localBooksByFileName.get(item.fileName);
+      const currentBook = booksByFileName.get(item.fileName);
       return {
         ...item,
         ...currentBook,
@@ -28,14 +37,49 @@ export async function ensureReadingSeeds() {
     });
   if (migratedItems.length) await Promise.all(migratedItems.map((book) => put('readings', book)));
   const knownIds = new Set(keptItems.map((item) => item.id));
-  const newBooks = localBooks.filter((book) => !knownIds.has(book.id) && !knownHuibenFiles.has(book.fileName));
+  const newBooks = books.filter((book) => !knownIds.has(book.id) && !knownHuibenFiles.has(book.fileName));
   if (newBooks.length) await Promise.all(newBooks.map((book) => put('readings', book)));
   return getAll('readings');
 }
 
 /**
+ * 读取 CloudBase 书籍清单，失败时回退到本地 huiben 清单。
+ * @returns {Promise<Array<Record<string, unknown>>>} 规范化后的书目条目。
+ */
+async function loadReadingBooks() {
+  const remoteBooks = await loadCloudBaseBooks();
+  if (remoteBooks.length) return remoteBooks;
+  return loadHuibenBooks();
+}
+
+/**
+ * 从 CloudBase HTTP 接口读取私有云存储中的默认书目。
+ * @returns {Promise<Array<Record<string, unknown>>>} CloudBase 书目，失败时为空数组。
+ */
+async function loadCloudBaseBooks() {
+  if (typeof fetch !== 'function' || globalThis.location?.protocol === 'file:') return [];
+  const controller = typeof AbortController === 'function' ? new AbortController() : undefined;
+  const timer = setTimeout(() => controller?.abort(), REMOTE_READING_TIMEOUT_MS);
+  try {
+    const response = await fetch(`${READING_API_BASE}/reading/books`, {
+      cache: 'force-cache',
+      signal: controller?.signal,
+    });
+    if (!response.ok) return [];
+    const payload = await response.json();
+    const books = Array.isArray(payload.books) ? payload.books : [];
+    return books.map((entry) => createCloudBaseBookReading(entry));
+  } catch (error) {
+    console.warn('CloudBase 阅读资料清单读取失败，将回退本地清单', error);
+    return [];
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
  * 读取 huiben 静态书籍清单。
- * @returns {Promise<Array<Record<string, unknown>>>} 规范化前的书目条目。
+ * @returns {Promise<Array<Record<string, unknown>>>} 规范化后的书目条目。
  */
 async function loadHuibenBooks() {
   const embeddedBooks = () => getEmbeddedHuibenBooks().map((entry) => createHuibenBookReading(entry));
@@ -93,6 +137,32 @@ export function createHuibenBookReading(entry, options = {}) {
     size: entry.size || 0,
     createdAt: entry.createdAt || now,
     updatedAt: entry.updatedAt || now,
+  };
+}
+
+/**
+ * 根据 CloudBase 书目元数据创建前端阅读记录。
+ * @param {Record<string, unknown>} entry CloudBase 返回的书目条目。
+ * @param {{now?: number}} options 可选时间配置。
+ * @returns {Record<string, unknown>} 可保存到 IndexedDB 的阅读记录。
+ */
+export function createCloudBaseBookReading(entry, options = {}) {
+  const fileKind = String(entry.fileKind || bookFileKind(entry.fileName || '')).toLowerCase();
+  const now = options.now ?? Date.now();
+  return {
+    id: String(entry.id || `cloudbase-${stableBookId(String(entry.fileName || entry.title || now))}`),
+    type: 'file-book',
+    category: entry.category || '绘本',
+    title: String(entry.title || entry.fileName || '未命名绘本').trim(),
+    language: entry.language === 'en' ? 'en' : 'zh',
+    builtin: false,
+    source: 'cloudbase',
+    fileName: String(entry.fileName || entry.title || '未命名绘本'),
+    fileKind,
+    sourceUrl: `${READING_API_BASE}/reading/file?id=${encodeURIComponent(String(entry.id || ''))}`,
+    size: Number(entry.size || 0),
+    createdAt: Number(entry.createdAt || now),
+    updatedAt: Number(entry.updatedAt || now),
   };
 }
 

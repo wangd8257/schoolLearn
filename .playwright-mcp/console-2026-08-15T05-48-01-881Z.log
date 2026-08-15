@@ -1,0 +1,18 @@
+[  271098ms] [ERROR] Failed to load resource: the server responded with a status of 406 (Not Acceptable) @ https://learn-d0g10smkjc24144a1-1468989884.ap-shanghai.app.tcloudbase.com/api/reading/file?id=huiben-4ab12b36:0
+[  271099ms] [WARNING] 绘本离线副本准备失败 Error: 绘本文件读取失败：406
+    at cacheFileBookWithOptions (http://127.0.0.1:4177/src/app.js?v=20260815-1:1301:29) @ http://127.0.0.1:4177/src/app.js?v=20260815-1:1318
+[  271099ms] [ERROR] Failed to load resource: the server responded with a status of 406 (Not Acceptable) @ https://learn-d0g10smkjc24144a1-1468989884.ap-shanghai.app.tcloudbase.com/api/reading/file?id=huiben-4ab12b36:0
+[  271099ms] [WARNING] EPUB 同页解析失败 Error: 绘本文件读取失败：406
+    at readBookArrayBuffer (http://127.0.0.1:4177/src/app.js?v=20260815-1:1452:27)
+    at async Promise.all (index 0)
+    at async mountDirectEpubReader (http://127.0.0.1:4177/src/app.js?v=20260815-1:1960:27)
+    at async mountEpubJsReader (http://127.0.0.1:4177/src/app.js?v=20260815-1:2063:9) @ http://127.0.0.1:4177/src/app.js?v=20260815-1:2001
+[  271231ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ https://learn-d0g10smkjc24144a1-1468989884.ap-shanghai.app.tcloudbase.com/api/reading/META-INF/container.xml:0
+[  331145ms] [ERROR] Failed to load resource: the server responded with a status of 406 (Not Acceptable) @ https://learn-d0g10smkjc24144a1-1468989884.ap-shanghai.app.tcloudbase.com/api/reading/file?id=huiben-4ab12b36:0
+[  331145ms] [WARNING] EPUB 同页解析失败 Error: 绘本文件读取失败：406
+    at readBookArrayBuffer (http://127.0.0.1:4177/src/app.js?v=20260815-1:1452:27)
+    at async Promise.all (index 0)
+    at async mountDirectEpubReader (http://127.0.0.1:4177/src/app.js?v=20260815-1:1960:27)
+    at async mountEpubJsReader (http://127.0.0.1:4177/src/app.js?v=20260815-1:2096:9) @ http://127.0.0.1:4177/src/app.js?v=20260815-1:2001
+[  331145ms] [ERROR] epub.js 阅读失败 Error: EPUB 首章渲染超时，请检查文件或网络
+    at http://127.0.0.1:4177/src/app.js?v=20260815-1:1428:37 @ http://127.0.0.1:4177/src/app.js?v=20260815-1:2098

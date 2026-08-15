@@ -1,0 +1,15 @@
+{
+  "name": "cloudbase-todo-knowledge",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "npx http-server . -p 4177 -c-1",
+    "prepare:knowledge": "node scripts/prepare-knowledge-import.mjs",
+    "import:knowledge": "node scripts/import-knowledge.mjs",
+    "check": "node scripts/prepare-knowledge-import.mjs --sample"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}

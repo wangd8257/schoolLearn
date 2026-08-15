@@ -1,0 +1,36 @@
+[    1383ms] [ERROR] Access to fetch at 'https://learn-d0g10smkjc24144a1-1468989884.ap-shanghai.app.tcloudbase.com/api/reading/books' from origin 'http://127.0.0.1:4177' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header contains multiple values 'http://127.0.0.1:4177,http://127.0.0.1:4177', but only one is allowed. Have the server send the header with a valid value. @ http://127.0.0.1:4177/?v=20260815-1:0
+[    1384ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://learn-d0g10smkjc24144a1-1468989884.ap-shanghai.app.tcloudbase.com/api/reading/books:0
+[    1384ms] [WARNING] CloudBase 阅读资料清单读取失败，将回退本地清单 TypeError: Failed to fetch
+    at loadCloudBaseBooks (http://127.0.0.1:4177/src/reading.js:64:28)
+    at loadReadingBooks (http://127.0.0.1:4177/src/reading.js:50:29)
+    at ensureReadingSeeds (http://127.0.0.1:4177/src/reading.js:24:23)
+    at async renderHome (http://127.0.0.1:4177/src/app.js?v=20260815-1:172:20)
+    at async render (http://127.0.0.1:4177/src/app.js?v=20260815-1:163:5)
+    at async navigate (http://127.0.0.1:4177/src/app.js?v=20260815-1:156:3)
+    at async init (http://127.0.0.1:4177/src/app.js?v=20260815-1:2980:5) @ http://127.0.0.1:4177/src/reading.js:72
+[    1523ms] [ERROR] Access to fetch at 'https://learn-d0g10smkjc24144a1-1468989884.ap-shanghai.app.tcloudbase.com/api/reading/books' from origin 'http://127.0.0.1:4177' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header contains multiple values 'http://127.0.0.1:4177,http://127.0.0.1:4177', but only one is allowed. Have the server send the header with a valid value. @ http://127.0.0.1:4177/?v=20260815-1:0
+[    1523ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://learn-d0g10smkjc24144a1-1468989884.ap-shanghai.app.tcloudbase.com/api/reading/books:0
+[    1523ms] [WARNING] CloudBase 阅读资料清单读取失败，将回退本地清单 TypeError: Failed to fetch
+    at loadCloudBaseBooks (http://127.0.0.1:4177/src/reading.js:64:28)
+    at loadReadingBooks (http://127.0.0.1:4177/src/reading.js:50:29)
+    at ensureReadingSeeds (http://127.0.0.1:4177/src/reading.js:24:23) @ http://127.0.0.1:4177/src/reading.js:72
+[    1774ms] [ERROR] Access to fetch at 'https://learn-d0g10smkjc24144a1-1468989884.ap-shanghai.app.tcloudbase.com/api/health' from origin 'http://127.0.0.1:4177' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header contains multiple values 'http://127.0.0.1:4177,http://127.0.0.1:4177', but only one is allowed. Have the server send the header with a valid value. @ http://127.0.0.1:4177/?v=20260815-1:0
+[    1775ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://learn-d0g10smkjc24144a1-1468989884.ap-shanghai.app.tcloudbase.com/api/health:0
+[  121417ms] [ERROR] Access to fetch at 'https://learn-d0g10smkjc24144a1-1468989884.ap-shanghai.app.tcloudbase.com/api/reading/books' from origin 'http://127.0.0.1:4177' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header contains multiple values 'http://127.0.0.1:4177,http://127.0.0.1:4177', but only one is allowed. Have the server send the header with a valid value. @ http://127.0.0.1:4177/?v=20260815-1:0
+[  121417ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://learn-d0g10smkjc24144a1-1468989884.ap-shanghai.app.tcloudbase.com/api/reading/books:0
+[  121417ms] [WARNING] CloudBase 阅读资料清单读取失败，将回退本地清单 TypeError: Failed to fetch
+    at loadCloudBaseBooks (http://127.0.0.1:4177/src/reading.js:64:28)
+    at loadReadingBooks (http://127.0.0.1:4177/src/reading.js:50:29)
+    at ensureReadingSeeds (http://127.0.0.1:4177/src/reading.js:24:23)
+    at async renderHome (http://127.0.0.1:4177/src/app.js?v=20260815-1:172:20)
+    at async render (http://127.0.0.1:4177/src/app.js?v=20260815-1:163:5)
+    at async navigate (http://127.0.0.1:4177/src/app.js?v=20260815-1:156:3)
+    at async init (http://127.0.0.1:4177/src/app.js?v=20260815-1:2980:5) @ http://127.0.0.1:4177/src/reading.js:72
+[  121521ms] [ERROR] Access to fetch at 'https://learn-d0g10smkjc24144a1-1468989884.ap-shanghai.app.tcloudbase.com/api/reading/books' from origin 'http://127.0.0.1:4177' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header contains multiple values 'http://127.0.0.1:4177,http://127.0.0.1:4177', but only one is allowed. Have the server send the header with a valid value. @ http://127.0.0.1:4177/?v=20260815-1:0
+[  121521ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://learn-d0g10smkjc24144a1-1468989884.ap-shanghai.app.tcloudbase.com/api/reading/books:0
+[  121521ms] [WARNING] CloudBase 阅读资料清单读取失败，将回退本地清单 TypeError: Failed to fetch
+    at loadCloudBaseBooks (http://127.0.0.1:4177/src/reading.js:64:28)
+    at loadReadingBooks (http://127.0.0.1:4177/src/reading.js:50:29)
+    at ensureReadingSeeds (http://127.0.0.1:4177/src/reading.js:24:23) @ http://127.0.0.1:4177/src/reading.js:72
+[  121569ms] [ERROR] Access to fetch at 'https://learn-d0g10smkjc24144a1-1468989884.ap-shanghai.app.tcloudbase.com/api/health' from origin 'http://127.0.0.1:4177' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header contains multiple values 'http://127.0.0.1:4177,http://127.0.0.1:4177', but only one is allowed. Have the server send the header with a valid value. @ http://127.0.0.1:4177/?v=20260815-1:0
+[  121569ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://learn-d0g10smkjc24144a1-1468989884.ap-shanghai.app.tcloudbase.com/api/health:0

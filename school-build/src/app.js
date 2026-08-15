@@ -758,9 +758,10 @@ async function sampleKnowledgeForUse(type, candidates, count, excluded = new Set
  * 为不填写内容的语文试卷构造轻量候选池，喜欢项优先进入候选，随机项只取小池子。
  * @param {string} type 知识库分类。
  * @param {number} count 需要生成的题目数量。
+ * @param {{query?:string,author?:string,dynasty?:string,collection?:string}} filters 当前筛选条件。
  * @returns {Promise<Record<string, unknown>[]>} 带偏好倾向的候选池。
  */
-async function buildPreferredRandomKnowledgePool(type, count) {
+async function buildPreferredRandomKnowledgePool(type, count, filters = {}) {
   if (!state.knowledgePreferences || !Object.keys(state.knowledgePreferences).length) {
     state.knowledgePreferences = await loadKnowledgePreferences();
   }
@@ -768,7 +769,7 @@ async function buildPreferredRandomKnowledgePool(type, count) {
     .filter(([key, value]) => value === 'like' && key.startsWith(`${type}:`))
     .map(([key]) => key);
   const likedItems = (await Promise.all(likedKeys.map((key) => getKnowledgeDetail(type, key)))).filter(Boolean);
-  const randomItems = await randomKnowledgeAsync(type, Math.max(Number(count) * 8, 40));
+  const randomItems = await randomKnowledgeAsync(type, Math.max(Number(count) * 8, 40), new Set(), filters);
   return [...likedItems, ...randomItems];
 }
 
@@ -1113,7 +1114,7 @@ function renderReadingShelf(readings) {
   const selectableIds = new Set(fileBooks.map((item) => item.id));
   state.selectedBookIds.forEach((id) => { if (!selectableIds.has(id)) state.selectedBookIds.delete(id); });
   preloadReaderAssets(readings);
-  main.innerHTML = `${pageHeader('绘本书架','读取 huiben 文件夹和已导入书籍','<button class="primary" data-new-picture-book>＋ 导入书籍</button><button class="secondary" data-new-text-reading>＋ 新建文字</button>')}
+  main.innerHTML = `${pageHeader('绘本书架','CloudBase 云存储默认资料与本机已导入书籍','<button class="primary" data-new-picture-book>＋ 导入书籍</button><button class="secondary" data-new-text-reading>＋ 新建文字</button>')}
     <div class="book-cache-toolbar" data-book-cache-toolbar>
       <span data-book-cache-status>本地书库：${cachedCount} 本已下载</span>
       <button class="secondary" data-book-select-all>${fileBooks.length && state.selectedBookIds.size === fileBooks.length ? '取消全选' : '全选书籍'}</button>
@@ -1140,7 +1141,7 @@ function renderActiveReading(item) {
     if (kind === 'pdf') void mountPdfJsReader(readerItem, state.fileReaderToken);
     if (['epub', 'equb'].includes(kind)) void mountEpubJsReader(readerItem, state.fileReaderToken);
   }
-  if (item.type === 'file-book' && item.source !== 'huiben') void cacheFileBook(item);
+  if (item.type === 'file-book' && ['cloudbase', 'imported'].includes(item.source)) void cacheFileBook(item);
 }
 
 function renderBookCard(item) {
@@ -1174,7 +1175,7 @@ function renderFileBookReader(item) {
     : '';
   const fallback = source
     ? `<div class="book-file-fallback"><h2>${title}</h2><p>${kind === 'PDF' ? 'PDF 文件已载入。若内置查看器没有显示，请点击“打开原文件”。' : `${kind} 文件已载入。浏览器不保证直接排版显示此格式，请使用系统阅读器打开。`}</p><a class="primary" href="${sourceUrl}" target="_blank" rel="noopener">打开原文件</a></div>`
-    : `<div class="book-file-fallback"><h2>${title}</h2><p>没有找到书籍文件地址，请重新导入或检查 huiben/manifest.json。</p></div>`;
+    : `<div class="book-file-fallback"><h2>${title}</h2><p>没有找到书籍文件地址，请重新导入或检查 CloudBase 阅读资料接口。</p></div>`;
   const body = localFileFallback
     ? localFileFallback
     : isEpub
@@ -2127,7 +2128,7 @@ const KNOWLEDGE_LABELS = Object.freeze({
  */
 async function renderKnowledge() {
   if (state.knowledgeLoading) {
-    main.innerHTML = `${pageHeader('知识库','正在读取本地索引与缓存','')}<section class="panel knowledge-list-panel" aria-busy="true"><div class="empty-state compact"><span class="emoji">⌕</span><h2>正在查询 ${escapeHtml(KNOWLEDGE_LABELS[state.knowledgeType])}</h2><p>首次读取会建立缓存，之后会更快。</p></div></section>`;
+    main.innerHTML = `${pageHeader('知识库','正在请求 CloudBase 查询接口','')}<section class="panel knowledge-list-panel" aria-busy="true"><div class="empty-state compact"><span class="emoji">⌕</span><h2>正在查询 ${escapeHtml(KNOWLEDGE_LABELS[state.knowledgeType])}</h2><p>只读取当前页，避免解析本地大 JSON。</p></div></section>`;
     return;
   }
   if (!state.knowledgePreferences || !Object.keys(state.knowledgePreferences).length) {
@@ -2138,6 +2139,9 @@ async function renderKnowledge() {
     ? await pageKnowledge(state.knowledgeType, currentKnowledgeFilters(), state.knowledgePage, 20)
     : { items: [], total: 0, page: 1, pageSize: 20, pageCount: 1 };
   state.knowledgePage = page.page;
+  const pageSummary = page.total === null || page.total === undefined
+    ? `当前第 ${page.page} 页${page.hasMore ? '，还有下一页' : ''}`
+    : `当前筛选 ${page.total} 条，第 ${page.page}/${page.pageCount} 页`;
   const authors = (poetryMeta.authors || []).slice(0, 120);
   const dynasties = poetryMeta.dynasties || [];
   const collections = poetryMeta.collections || [];
@@ -2160,7 +2164,7 @@ async function renderKnowledge() {
       <div class="field-row knowledge-filters ${state.knowledgeType === 'poetry' ? 'knowledge-filters-poetry' : 'knowledge-filters-basic'}"><input data-knowledge-filter="query" value="${escapeHtml(state.knowledgeQuery)}" placeholder="${state.knowledgeType === 'poetry' ? '按作者、字、诗名或诗句筛选' : '按某个或某些字筛选'}">${poetryFiltersHtml}<button class="primary knowledge-search-button" data-knowledge-search>查询</button></div>
     </section>
     ${learningPanel}
-    <section class="panel knowledge-list-panel"><div class="section-heading"><div><h2>${escapeHtml(KNOWLEDGE_LABELS[state.knowledgeType])}</h2><p>${state.knowledgeHasQueried ? `当前筛选 ${page.total} 条，第 ${page.page}/${page.pageCount} 页` : '请输入筛选条件后点击查询，列表会分页展示。'}</p></div><div class="header-actions"><button class="secondary" data-knowledge-page="${page.page - 1}" ${!state.knowledgeHasQueried || page.page <= 1 ? 'disabled' : ''}>上一页</button><button class="secondary" data-knowledge-page="${page.page + 1}" ${!state.knowledgeHasQueried || page.page >= page.pageCount ? 'disabled' : ''}>下一页</button></div></div><div class="knowledge-list">${state.knowledgeHasQueried ? page.items.map((item) => renderKnowledgeItem(state.knowledgeType, item)).join('') : '<div class="empty-state compact"><span class="emoji">⌕</span><h2>等待查询</h2><p>默认不加载全量知识库，避免 iPad/PWA 首屏变慢。</p></div>'}</div></section>
+    <section class="panel knowledge-list-panel"><div class="section-heading"><div><h2>${escapeHtml(KNOWLEDGE_LABELS[state.knowledgeType])}</h2><p>${state.knowledgeHasQueried ? pageSummary : '请输入筛选条件后点击查询，列表会分页展示。'}</p></div><div class="header-actions"><button class="secondary" data-knowledge-page="${page.page - 1}" ${!state.knowledgeHasQueried || page.page <= 1 ? 'disabled' : ''}>上一页</button><button class="secondary" data-knowledge-page="${page.page + 1}" ${!state.knowledgeHasQueried || !page.hasMore && page.page >= page.pageCount ? 'disabled' : ''}>下一页</button></div></div><div class="knowledge-list">${state.knowledgeHasQueried ? page.items.map((item) => renderKnowledgeItem(state.knowledgeType, item)).join('') : '<div class="empty-state compact"><span class="emoji">⌕</span><h2>等待查询</h2><p>默认不加载全量知识库，避免 iPad/PWA 首屏变慢。</p></div>'}</div></section>
     ${wrongPanel}`;
 }
 
@@ -2245,9 +2249,10 @@ async function submitKnowledgeSearch() {
   try {
     await renderKnowledge();
   } catch (error) {
-    showToast(error?.message || '???????');
+    showToast(error?.message || '知识库查询失败');
   } finally {
     state.knowledgeLoading = false;
+    await renderKnowledge();
   }
 }
 /**
@@ -2487,14 +2492,18 @@ async function handleGlobalClick(event) {
     return submitKnowledgeSearch();
   }
   if (event.target.closest('[data-learning-start]')) {
-    const queriedCandidates = state.knowledgeHasQueried ? await filterKnowledgeAsync(state.knowledgeType, currentKnowledgeFilters()) : [];
+    const learningFilters = state.knowledgeHasQueried ? currentKnowledgeFilters() : {};
+    // 已查询时让后端在完整筛选结果中随机抽样，避免只从当前第一页或前 200 条学习。
+    const queriedCandidates = state.knowledgeHasQueried
+      ? await buildPreferredRandomKnowledgePool(state.knowledgeType, 40, learningFilters)
+      : [];
     state.learningItems = queriedCandidates.length
       ? await sampleKnowledgeForUse(state.knowledgeType, queriedCandidates, 8, state.learningCompleted)
-      : await sampleKnowledgeForUse(state.knowledgeType, await randomKnowledgeAsync(state.knowledgeType, 40, state.learningCompleted), 8, state.learningCompleted);
+      : await sampleKnowledgeForUse(state.knowledgeType, await randomKnowledgeAsync(state.knowledgeType, 40, state.learningCompleted, learningFilters), 8, state.learningCompleted);
     state.learningIndex = 0;
     if (!state.learningItems.length) {
       state.learningCompleted.clear();
-      state.learningItems = await sampleKnowledgeForUse(state.knowledgeType, queriedCandidates.length ? queriedCandidates : await randomKnowledgeAsync(state.knowledgeType, 40), 8);
+      state.learningItems = await sampleKnowledgeForUse(state.knowledgeType, queriedCandidates.length ? queriedCandidates : await randomKnowledgeAsync(state.knowledgeType, 40, new Set(), learningFilters), 8);
     }
     return renderKnowledge();
   }
@@ -2910,7 +2919,7 @@ function notifyServiceWorkerUpdate(registration) {
 async function registerServiceWorker() {
   if (!('serviceWorker' in navigator) || !location.protocol.startsWith('http')) return;
   try {
-    const registration = await navigator.serviceWorker.register('./sw.js?v=20260813-1');
+    const registration = await navigator.serviceWorker.register('./sw.js?v=20260815-1');
     if (registration.waiting && navigator.serviceWorker.controller) notifyServiceWorkerUpdate(registration);
     registration.addEventListener('updatefound', () => {
       const worker = registration.installing;
@@ -2925,13 +2934,13 @@ async function registerServiceWorker() {
 }
 
 /**
- * 首屏完成后再启动非首页必需的后台任务，避免阅读清单和语言脚本阻塞导航点击。
+ * 首屏完成后再启动非首页必需的后台任务，避免阅读清单和知识库请求阻塞导航点击。
  * @returns {void}
  */
 function startPostBootTasks() {
   // 中文拼音工具只在生成语文试卷时需要，后台预热失败不影响首页可用。
   void preloadLanguageTools().catch((error) => console.warn('语言工具后台预热失败', error));
-  // 先完成 SW 注册，再预热轻量索引，确保资源进入知识库分层缓存。
+  // 先完成 SW 注册，再预热后端健康接口，让首次查询尽量避开冷启动。
   void registerServiceWorker()
     .then(() => warmKnowledgeShell())
     .catch((error) => console.warn('知识库索引后台预热失败', error));
@@ -2940,7 +2949,7 @@ function startPostBootTasks() {
 }
 
 /**
- * 在首页空闲时预热知识库的轻量索引资源。
+ * 在首页空闲时预热 CloudBase 知识库接口，不再请求本地大 JSON。
  * @returns {Promise<void>} 预热任务完成。
  */
 async function warmKnowledgeShell() {
@@ -2948,14 +2957,10 @@ async function warmKnowledgeShell() {
   if ('serviceWorker' in navigator) {
     await navigator.serviceWorker.ready.catch(() => undefined);
   }
-  const resources = [
-    './src/data/knowledge/xinhua/manifest.json',
-    './src/data/knowledge/poetry/manifest.json',
-    './src/data/knowledge/poetry/indexes/character-manifest.json',
-  ];
+  const resources = ['https://learn-d0g10smkjc24144a1-1468989884.ap-shanghai.app.tcloudbase.com/api/health'];
   const run = async () => {
     for (let index = 0; index < resources.length; index += 2) {
-      await Promise.all(resources.slice(index, index + 2).map((resource) => fetch(resource, { cache: 'force-cache' }).catch(() => undefined)));
+      await Promise.all(resources.slice(index, index + 2).map((resource) => fetch(resource, { cache: 'no-store' }).catch(() => undefined)));
     }
   };
   if (typeof requestIdleCallback === 'function') {

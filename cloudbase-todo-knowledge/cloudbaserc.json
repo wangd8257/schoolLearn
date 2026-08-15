@@ -1,0 +1,27 @@
+{
+  "$schema": "https://static.cloudbase.net/cli/cloudbaserc.schema.json",
+  "envId": "learn-d0g10smkjc24144a1",
+  "functionRoot": "functions",
+  "functions": [
+    {
+      "name": "knowledge-api",
+      "dir": "knowledge-api",
+      "handler": "index.main",
+      "runtime": "Nodejs20.19",
+      "type": "HTTP",
+      "timeout": 30,
+      "memorySize": 512,
+      "envVariables": {
+        "TCB_ENV": "learn-d0g10smkjc24144a1",
+        "KNOWLEDGE_API_ALLOWED_ORIGINS": "https://wangd8257.github.io,http://localhost:4177,http://127.0.0.1:4177",
+        "READING_STORAGE_BUCKET": "6c65-learn-d0g10smkjc24144a1-1468989884",
+        "READING_STORAGE_PREFIX": "reading/books"
+      },
+      "ignore": [
+        ".git/**",
+        "*.log",
+        "test/**"
+      ]
+    }
+  ]
+}

@@ -23108,16 +23108,20 @@
 
   // src/reading.js
   var speechRun = 0;
+  var READING_API_BASE = String(
+    globalThis.__SCHOOL_BUILD_READING_API__ || globalThis.__SCHOOL_BUILD_KNOWLEDGE_API__ || "https://learn-d0g10smkjc24144a1-1468989884.ap-shanghai.app.tcloudbase.com/api"
+  ).replace(/\/+$/u, "");
+  var REMOTE_READING_TIMEOUT_MS = 2500;
   async function ensureReadingSeeds() {
     const existing = await getAll("readings");
     const builtinItems = existing.filter((item) => item.builtin);
     if (builtinItems.length) await Promise.all(builtinItems.map((item) => remove("readings", item.id)));
     const keptItems = existing.filter((item) => !item.builtin);
     const knownHuibenFiles = new Set(keptItems.filter((item) => item.source === "huiben").map((item) => item.fileName));
-    const localBooks = await loadHuibenBooks();
-    const localBooksByFileName = new Map(localBooks.map((book) => [book.fileName, book]));
-    const migratedItems = keptItems.filter((item) => item.source === "huiben" && localBooksByFileName.has(item.fileName)).map((item) => {
-      const currentBook = localBooksByFileName.get(item.fileName);
+    const books = await loadReadingBooks();
+    const booksByFileName = new Map(books.map((book) => [book.fileName, book]));
+    const migratedItems = keptItems.filter((item) => item.source === "huiben" && booksByFileName.has(item.fileName)).map((item) => {
+      const currentBook = booksByFileName.get(item.fileName);
       return {
         ...item,
         ...currentBook,
@@ -23128,9 +23132,34 @@
     });
     if (migratedItems.length) await Promise.all(migratedItems.map((book) => put("readings", book)));
     const knownIds = new Set(keptItems.map((item) => item.id));
-    const newBooks = localBooks.filter((book) => !knownIds.has(book.id) && !knownHuibenFiles.has(book.fileName));
+    const newBooks = books.filter((book) => !knownIds.has(book.id) && !knownHuibenFiles.has(book.fileName));
     if (newBooks.length) await Promise.all(newBooks.map((book) => put("readings", book)));
     return getAll("readings");
+  }
+  async function loadReadingBooks() {
+    const remoteBooks = await loadCloudBaseBooks();
+    if (remoteBooks.length) return remoteBooks;
+    return loadHuibenBooks();
+  }
+  async function loadCloudBaseBooks() {
+    if (typeof fetch !== "function" || globalThis.location?.protocol === "file:") return [];
+    const controller = typeof AbortController === "function" ? new AbortController() : void 0;
+    const timer = setTimeout(() => controller?.abort(), REMOTE_READING_TIMEOUT_MS);
+    try {
+      const response = await fetch(`${READING_API_BASE}/reading/books`, {
+        cache: "force-cache",
+        signal: controller?.signal
+      });
+      if (!response.ok) return [];
+      const payload = await response.json();
+      const books = Array.isArray(payload.books) ? payload.books : [];
+      return books.map((entry) => createCloudBaseBookReading(entry));
+    } catch (error) {
+      console.warn("CloudBase \u9605\u8BFB\u8D44\u6599\u6E05\u5355\u8BFB\u53D6\u5931\u8D25\uFF0C\u5C06\u56DE\u9000\u672C\u5730\u6E05\u5355", error);
+      return [];
+    } finally {
+      clearTimeout(timer);
+    }
   }
   async function loadHuibenBooks() {
     const embeddedBooks = () => getEmbeddedHuibenBooks().map((entry) => createHuibenBookReading(entry));
@@ -23182,6 +23211,25 @@
       size: entry.size || 0,
       createdAt: entry.createdAt || now,
       updatedAt: entry.updatedAt || now
+    };
+  }
+  function createCloudBaseBookReading(entry, options = {}) {
+    const fileKind = String(entry.fileKind || bookFileKind(entry.fileName || "")).toLowerCase();
+    const now = options.now ?? Date.now();
+    return {
+      id: String(entry.id || `cloudbase-${stableBookId(String(entry.fileName || entry.title || now))}`),
+      type: "file-book",
+      category: entry.category || "\u7ED8\u672C",
+      title: String(entry.title || entry.fileName || "\u672A\u547D\u540D\u7ED8\u672C").trim(),
+      language: entry.language === "en" ? "en" : "zh",
+      builtin: false,
+      source: "cloudbase",
+      fileName: String(entry.fileName || entry.title || "\u672A\u547D\u540D\u7ED8\u672C"),
+      fileKind,
+      sourceUrl: `${READING_API_BASE}/reading/file?id=${encodeURIComponent(String(entry.id || ""))}`,
+      size: Number(entry.size || 0),
+      createdAt: Number(entry.createdAt || now),
+      updatedAt: Number(entry.updatedAt || now)
     };
   }
   function tokenizeForReading(text, language) {
@@ -24478,6 +24526,11 @@
   var xinhuaFilterCache = /* @__PURE__ */ new Map();
   var xinhuaCharacterIndexCache = /* @__PURE__ */ new Map();
   var staticRequestCache = /* @__PURE__ */ new Map();
+  var remoteKnowledgeCache = /* @__PURE__ */ new Map();
+  var KNOWLEDGE_API_BASE = String(
+    globalThis.__SCHOOL_BUILD_KNOWLEDGE_API__ || "https://learn-d0g10smkjc24144a1-1468989884.ap-shanghai.app.tcloudbase.com/api"
+  ).replace(/\/+$/u, "");
+  var REMOTE_REQUEST_TIMEOUT_MS = 2e3;
   var poetryManifestCache;
   var xinhuaManifestCache;
   var TRADITIONAL_SIMPLIFIED_MAP = Object.freeze({
@@ -25092,6 +25145,57 @@
       return void 0;
     }
   }
+  function canUseRemoteKnowledgeApi() {
+    return typeof fetch === "function" && globalThis.location?.protocol !== "file:" && Boolean(KNOWLEDGE_API_BASE);
+  }
+  async function fetchKnowledgeApi(path, params = {}) {
+    if (!canUseRemoteKnowledgeApi()) return void 0;
+    const query = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== void 0 && value !== null && String(value) !== "") query.set(key, String(value));
+    });
+    const requestKey = `${path}?${query.toString()}`;
+    const cached = remoteKnowledgeCache.get(requestKey);
+    if (cached && cached.expiresAt > Date.now()) return cached.value;
+    const controller = typeof AbortController === "function" ? new AbortController() : void 0;
+    const timer = setTimeout(() => controller?.abort(), REMOTE_REQUEST_TIMEOUT_MS);
+    const request = (async () => {
+      try {
+        const response = await fetch(`${KNOWLEDGE_API_BASE}${path}?${query.toString()}`, {
+          cache: "no-store",
+          signal: controller?.signal
+        });
+        if (!response.ok) return void 0;
+        const data = await response.json();
+        return data?.ok === false ? void 0 : data;
+      } catch (error) {
+        return void 0;
+      } finally {
+        clearTimeout(timer);
+      }
+    })();
+    remoteKnowledgeCache.set(requestKey, { value: request, expiresAt: Date.now() + 15e3 });
+    const result = await request;
+    remoteKnowledgeCache.set(requestKey, { value: result, expiresAt: Date.now() + 3e4 });
+    return result;
+  }
+  function normalizeRemoteKnowledgeItem(type, item) {
+    if (!item || typeof item !== "object") return {};
+    if (type === "poetry") {
+      return {
+        ...item,
+        id: item.id ?? item._id,
+        title: toSimplifiedChinese(item.title || ""),
+        author: toSimplifiedChinese(item.author || ""),
+        dynasty: toSimplifiedChinese(item.dynasty || ""),
+        collection: toSimplifiedChinese(item.collection || "\u53E4\u8BD7"),
+        lines: simplifyStringList(item.lines)
+      };
+    }
+    if (type === "char") return { ...item, char: item.char || item.title || "" };
+    if (type === "xiehouyu") return { ...item, riddle: item.riddle || item.title || "" };
+    return { ...item, word: item.word || item.title || "" };
+  }
   function toSimplifiedChinese(value) {
     return String(value || "").replace(/[\u3400-\u9fff]/gu, (character) => TRADITIONAL_SIMPLIFIED_MAP[character] || character);
   }
@@ -25542,6 +25646,17 @@
     return normalizeKnowledgeItem("poetry", shard[offset] || {});
   }
   async function getPoetryMeta(filters = {}) {
+    const remote = await fetchKnowledgeApi("/knowledge/meta", {
+      type: "poetry",
+      category: filters.collection
+    });
+    if (remote) {
+      return {
+        authors: simplifyStringList(remote.authors),
+        dynasties: simplifyStringList(remote.dynasties),
+        collections: simplifyStringList(remote.collections)
+      };
+    }
     const manifest = await loadPoetryManifest();
     const query = normalizePoetryFilterText(filters.query);
     const author = normalizePoetryAuthorKey(filters.author);
@@ -25646,6 +25761,18 @@
     }).map((item) => normalizeKnowledgeItem(type, item));
   }
   async function filterKnowledgeAsync(type, filters = {}) {
+    const remote = await fetchKnowledgeApi("/knowledge", {
+      type,
+      q: filters.query,
+      author: filters.author,
+      dynasty: filters.dynasty,
+      category: filters.collection,
+      page: 1,
+      pageSize: 200
+    });
+    if (remote?.items) {
+      return remote.items.map((item) => normalizeRemoteKnowledgeItem(type, item));
+    }
     if (type === "poetry") return filterPoetryCatalog(filters);
     const indexed = await filterXinhuaKnowledge(type, filters);
     if (indexed) return indexed;
@@ -25663,6 +25790,26 @@
     });
   }
   async function pageKnowledge(type, filters = {}, page = 1, pageSize = 20) {
+    const remote = await fetchKnowledgeApi("/knowledge", {
+      type,
+      q: filters.query,
+      author: filters.author,
+      dynasty: filters.dynasty,
+      category: filters.collection,
+      page,
+      pageSize
+    });
+    if (remote?.items) {
+      const items = remote.items.map((item) => normalizeRemoteKnowledgeItem(type, item));
+      return {
+        items,
+        total: Number.isFinite(Number(remote.total)) ? Number(remote.total) : null,
+        page: Number(remote.page) || Math.max(1, Number(page) || 1),
+        pageSize: Number(remote.pageSize) || Math.max(1, Number(pageSize) || 20),
+        pageCount: Number(remote.pageCount) || (remote.hasMore ? (Number(page) || 1) + 1 : Number(page) || 1),
+        hasMore: Boolean(remote.hasMore)
+      };
+    }
     if (type === "poetry") {
       const manifest = await loadPoetryManifest();
       if (manifest) {
@@ -25715,6 +25862,9 @@
     return { items: matched.slice(start, start + size), total: matched.length, page: currentPage, pageSize: size, pageCount };
   }
   async function getKnowledgeDetail(type, key) {
+    const remoteId = String(key || "").startsWith(`${type}:`) ? String(key).slice(type.length + 1) : String(key || "");
+    const remote = await fetchKnowledgeApi("/knowledge/detail", { type, id: remoteId });
+    if (remote?.item) return normalizeRemoteKnowledgeItem(type, remote.item);
     if (type === "poetry") {
       const match = /^poetry:(\d+)$/u.exec(String(key || ""));
       if (match) return getPoetryById(Number(match[1]));
@@ -25724,7 +25874,18 @@
     const source = await loadKnowledge(type);
     return source.find((item) => knowledgeKey(type, item) === key);
   }
-  async function randomKnowledgeAsync(type, count = 1, excluded = /* @__PURE__ */ new Set()) {
+  async function randomKnowledgeAsync(type, count = 1, excluded = /* @__PURE__ */ new Set(), filters = {}) {
+    const remote = await fetchKnowledgeApi("/knowledge/random", {
+      type,
+      count: Math.min(50, Math.max(1, Number(count) || 1) * 4),
+      q: filters.query,
+      author: filters.author,
+      dynasty: filters.dynasty,
+      category: filters.collection
+    });
+    if (remote?.items) {
+      return remote.items.map((item) => normalizeRemoteKnowledgeItem(type, item)).filter((item) => !excluded.has(knowledgeKey(type, item))).slice(0, Math.max(1, Number(count) || 1));
+    }
     if (type === "poetry") {
       const manifest = await loadPoetryManifest();
       if (manifest) {
@@ -25773,6 +25934,7 @@
     return prioritized.slice(0, targetCount);
   }
   function knowledgeKey(type, item) {
+    if (item?._id) return `${type}:${item._id}`;
     if (type === "poetry") {
       if (item.id !== void 0 && item.id !== null) return `${type}:${item.id}`;
       return `${type}:${item.dynasty || ""}:${item.author || ""}:${item.title || ""}`;
@@ -26327,13 +26489,13 @@
     }
     return weightedKnowledgeSample(type, candidates, count, excluded, state.knowledgePreferences);
   }
-  async function buildPreferredRandomKnowledgePool(type, count) {
+  async function buildPreferredRandomKnowledgePool(type, count, filters = {}) {
     if (!state.knowledgePreferences || !Object.keys(state.knowledgePreferences).length) {
       state.knowledgePreferences = await loadKnowledgePreferences();
     }
     const likedKeys = Object.entries(state.knowledgePreferences).filter(([key, value]) => value === "like" && key.startsWith(`${type}:`)).map(([key]) => key);
     const likedItems = (await Promise.all(likedKeys.map((key) => getKnowledgeDetail(type, key)))).filter(Boolean);
-    const randomItems = await randomKnowledgeAsync(type, Math.max(Number(count) * 8, 40));
+    const randomItems = await randomKnowledgeAsync(type, Math.max(Number(count) * 8, 40), /* @__PURE__ */ new Set(), filters);
     return [...likedItems, ...randomItems];
   }
   async function createIdiomFillProblems(values) {
@@ -26614,7 +26776,7 @@
       if (!selectableIds.has(id)) state.selectedBookIds.delete(id);
     });
     preloadReaderAssets(readings);
-    main.innerHTML = `${pageHeader("\u7ED8\u672C\u4E66\u67B6", "\u8BFB\u53D6 huiben \u6587\u4EF6\u5939\u548C\u5DF2\u5BFC\u5165\u4E66\u7C4D", '<button class="primary" data-new-picture-book>\uFF0B \u5BFC\u5165\u4E66\u7C4D</button><button class="secondary" data-new-text-reading>\uFF0B \u65B0\u5EFA\u6587\u5B57</button>')}
+    main.innerHTML = `${pageHeader("\u7ED8\u672C\u4E66\u67B6", "CloudBase \u4E91\u5B58\u50A8\u9ED8\u8BA4\u8D44\u6599\u4E0E\u672C\u673A\u5DF2\u5BFC\u5165\u4E66\u7C4D", '<button class="primary" data-new-picture-book>\uFF0B \u5BFC\u5165\u4E66\u7C4D</button><button class="secondary" data-new-text-reading>\uFF0B \u65B0\u5EFA\u6587\u5B57</button>')}
     <div class="book-cache-toolbar" data-book-cache-toolbar>
       <span data-book-cache-status>\u672C\u5730\u4E66\u5E93\uFF1A${cachedCount} \u672C\u5DF2\u4E0B\u8F7D</span>
       <button class="secondary" data-book-select-all>${fileBooks.length && state.selectedBookIds.size === fileBooks.length ? "\u53D6\u6D88\u5168\u9009" : "\u5168\u9009\u4E66\u7C4D"}</button>
@@ -26634,7 +26796,7 @@
       if (kind === "pdf") void mountPdfJsReader(readerItem, state.fileReaderToken);
       if (["epub", "equb"].includes(kind)) void mountEpubJsReader(readerItem, state.fileReaderToken);
     }
-    if (item.type === "file-book" && item.source !== "huiben") void cacheFileBook(item);
+    if (item.type === "file-book" && ["cloudbase", "imported"].includes(item.source)) void cacheFileBook(item);
   }
   function renderBookCard(item) {
     const badge = item.fileKind ? String(item.fileKind).toUpperCase() : item.type === "picture-book" ? "\u56FE\u7247" : "\u6587\u672C";
@@ -26661,7 +26823,7 @@
     const kind = String(item.fileKind || "file").toUpperCase();
     const isEpub = ["EPUB", "EQUB"].includes(kind);
     const localFileFallback = item.fileAccessMode === "local-file" ? `<div class="book-file-fallback local-file-notice"><span class="ultra-notice-mark" aria-hidden="true"></span><h2>${title}</h2><p>${isEpub ? "EPUB/EQUB" : "PDF"} \u4E0D\u80FD\u5728 file:// \u9875\u9762\u5185\u5D4C\u9605\u8BFB\uFF0C\u6D4F\u89C8\u5668\u4F1A\u963B\u6B62\u672C\u5730\u8D44\u6E90\u52A0\u8F7D\u3002</p><p class="book-file-hint">\u8BF7\u542F\u52A8\u672C\u5730\u670D\u52A1\u540E\u6253\u5F00\u672C\u5E94\u7528\uFF1B\u4E5F\u53EF\u4EE5\u76F4\u63A5\u6253\u5F00\u539F\u6587\u4EF6\uFF0C\u7531\u7CFB\u7EDF\u9605\u8BFB\u5668\u8D1F\u8D23\u663E\u793A\u3002</p><div class="local-file-actions"><a class="primary" href="http://127.0.0.1:4173/" target="_blank" rel="noopener">\u6253\u5F00\u672C\u5730\u9605\u8BFB\u670D\u52A1</a>${source ? `<a class="secondary" href="${sourceUrl}" target="_blank" rel="noopener">\u76F4\u63A5\u6253\u5F00\u539F\u6587\u4EF6</a>` : ""}</div></div>` : "";
-    const fallback = source ? `<div class="book-file-fallback"><h2>${title}</h2><p>${kind === "PDF" ? "PDF \u6587\u4EF6\u5DF2\u8F7D\u5165\u3002\u82E5\u5185\u7F6E\u67E5\u770B\u5668\u6CA1\u6709\u663E\u793A\uFF0C\u8BF7\u70B9\u51FB\u201C\u6253\u5F00\u539F\u6587\u4EF6\u201D\u3002" : `${kind} \u6587\u4EF6\u5DF2\u8F7D\u5165\u3002\u6D4F\u89C8\u5668\u4E0D\u4FDD\u8BC1\u76F4\u63A5\u6392\u7248\u663E\u793A\u6B64\u683C\u5F0F\uFF0C\u8BF7\u4F7F\u7528\u7CFB\u7EDF\u9605\u8BFB\u5668\u6253\u5F00\u3002`}</p><a class="primary" href="${sourceUrl}" target="_blank" rel="noopener">\u6253\u5F00\u539F\u6587\u4EF6</a></div>` : `<div class="book-file-fallback"><h2>${title}</h2><p>\u6CA1\u6709\u627E\u5230\u4E66\u7C4D\u6587\u4EF6\u5730\u5740\uFF0C\u8BF7\u91CD\u65B0\u5BFC\u5165\u6216\u68C0\u67E5 huiben/manifest.json\u3002</p></div>`;
+    const fallback = source ? `<div class="book-file-fallback"><h2>${title}</h2><p>${kind === "PDF" ? "PDF \u6587\u4EF6\u5DF2\u8F7D\u5165\u3002\u82E5\u5185\u7F6E\u67E5\u770B\u5668\u6CA1\u6709\u663E\u793A\uFF0C\u8BF7\u70B9\u51FB\u201C\u6253\u5F00\u539F\u6587\u4EF6\u201D\u3002" : `${kind} \u6587\u4EF6\u5DF2\u8F7D\u5165\u3002\u6D4F\u89C8\u5668\u4E0D\u4FDD\u8BC1\u76F4\u63A5\u6392\u7248\u663E\u793A\u6B64\u683C\u5F0F\uFF0C\u8BF7\u4F7F\u7528\u7CFB\u7EDF\u9605\u8BFB\u5668\u6253\u5F00\u3002`}</p><a class="primary" href="${sourceUrl}" target="_blank" rel="noopener">\u6253\u5F00\u539F\u6587\u4EF6</a></div>` : `<div class="book-file-fallback"><h2>${title}</h2><p>\u6CA1\u6709\u627E\u5230\u4E66\u7C4D\u6587\u4EF6\u5730\u5740\uFF0C\u8BF7\u91CD\u65B0\u5BFC\u5165\u6216\u68C0\u67E5 CloudBase \u9605\u8BFB\u8D44\u6599\u63A5\u53E3\u3002</p></div>`;
     const body = localFileFallback ? localFileFallback : isEpub ? `<div class="file-reader-surface epubjs-reader-surface" data-epubjs-reader><div class="epubjs-status" data-epub-status>\u6B63\u5728\u51C6\u5907 EPUB \u9605\u8BFB\u5668\u2026</div><div class="epubjs-viewport" data-epub-viewport></div></div>` : kind === "PDF" && source ? `<div class="file-reader-surface pdfjs-reader-surface" data-pdf-reader><div class="pdfjs-toolbar"><button class="secondary" data-pdf-page="-1" disabled>\u2190 \u4E0A\u4E00\u9875</button><span data-pdf-progress>\u6B63\u5728\u52A0\u8F7D PDF\u2026</span><button class="secondary" data-pdf-page="1" disabled>\u4E0B\u4E00\u9875 \u2192</button><button class="secondary" data-reader-zoom="-1" aria-label="\u7F29\u5C0F PDF">\u2212</button><button class="secondary" data-reader-zoom="1" aria-label="\u653E\u5927 PDF">\uFF0B</button></div><div class="pdfjs-viewport" data-pdf-viewport></div></div>` : fallback;
     return `<article class="reader fullscreen-reader file-book-reader"><div class="reader-floating-toolbar"><strong>${title}</strong><span>${kind}</span><button class="primary" data-exit-reader>\u9000\u51FA\u9605\u8BFB</button></div>${body}</article>`;
   }
@@ -27309,7 +27471,7 @@
   });
   async function renderKnowledge() {
     if (state.knowledgeLoading) {
-      main.innerHTML = `${pageHeader("\u77E5\u8BC6\u5E93", "\u6B63\u5728\u8BFB\u53D6\u672C\u5730\u7D22\u5F15\u4E0E\u7F13\u5B58", "")}<section class="panel knowledge-list-panel" aria-busy="true"><div class="empty-state compact"><span class="emoji">\u2315</span><h2>\u6B63\u5728\u67E5\u8BE2 ${escapeHtml2(KNOWLEDGE_LABELS[state.knowledgeType])}</h2><p>\u9996\u6B21\u8BFB\u53D6\u4F1A\u5EFA\u7ACB\u7F13\u5B58\uFF0C\u4E4B\u540E\u4F1A\u66F4\u5FEB\u3002</p></div></section>`;
+      main.innerHTML = `${pageHeader("\u77E5\u8BC6\u5E93", "\u6B63\u5728\u8BF7\u6C42 CloudBase \u67E5\u8BE2\u63A5\u53E3", "")}<section class="panel knowledge-list-panel" aria-busy="true"><div class="empty-state compact"><span class="emoji">\u2315</span><h2>\u6B63\u5728\u67E5\u8BE2 ${escapeHtml2(KNOWLEDGE_LABELS[state.knowledgeType])}</h2><p>\u53EA\u8BFB\u53D6\u5F53\u524D\u9875\uFF0C\u907F\u514D\u89E3\u6790\u672C\u5730\u5927 JSON\u3002</p></div></section>`;
       return;
     }
     if (!state.knowledgePreferences || !Object.keys(state.knowledgePreferences).length) {
@@ -27318,6 +27480,7 @@
     const poetryMeta = state.knowledgeType === "poetry" ? await getPoetryMeta({ collection: state.knowledgeCollection }) : { authors: [], dynasties: [] };
     const page = state.knowledgeHasQueried ? await pageKnowledge(state.knowledgeType, currentKnowledgeFilters(), state.knowledgePage, 20) : { items: [], total: 0, page: 1, pageSize: 20, pageCount: 1 };
     state.knowledgePage = page.page;
+    const pageSummary = page.total === null || page.total === void 0 ? `\u5F53\u524D\u7B2C ${page.page} \u9875${page.hasMore ? "\uFF0C\u8FD8\u6709\u4E0B\u4E00\u9875" : ""}` : `\u5F53\u524D\u7B5B\u9009 ${page.total} \u6761\uFF0C\u7B2C ${page.page}/${page.pageCount} \u9875`;
     const authors = (poetryMeta.authors || []).slice(0, 120);
     const dynasties = poetryMeta.dynasties || [];
     const collections = poetryMeta.collections || [];
@@ -27334,7 +27497,7 @@
       <div class="field-row knowledge-filters ${state.knowledgeType === "poetry" ? "knowledge-filters-poetry" : "knowledge-filters-basic"}"><input data-knowledge-filter="query" value="${escapeHtml2(state.knowledgeQuery)}" placeholder="${state.knowledgeType === "poetry" ? "\u6309\u4F5C\u8005\u3001\u5B57\u3001\u8BD7\u540D\u6216\u8BD7\u53E5\u7B5B\u9009" : "\u6309\u67D0\u4E2A\u6216\u67D0\u4E9B\u5B57\u7B5B\u9009"}">${poetryFiltersHtml}<button class="primary knowledge-search-button" data-knowledge-search>\u67E5\u8BE2</button></div>
     </section>
     ${learningPanel}
-    <section class="panel knowledge-list-panel"><div class="section-heading"><div><h2>${escapeHtml2(KNOWLEDGE_LABELS[state.knowledgeType])}</h2><p>${state.knowledgeHasQueried ? `\u5F53\u524D\u7B5B\u9009 ${page.total} \u6761\uFF0C\u7B2C ${page.page}/${page.pageCount} \u9875` : "\u8BF7\u8F93\u5165\u7B5B\u9009\u6761\u4EF6\u540E\u70B9\u51FB\u67E5\u8BE2\uFF0C\u5217\u8868\u4F1A\u5206\u9875\u5C55\u793A\u3002"}</p></div><div class="header-actions"><button class="secondary" data-knowledge-page="${page.page - 1}" ${!state.knowledgeHasQueried || page.page <= 1 ? "disabled" : ""}>\u4E0A\u4E00\u9875</button><button class="secondary" data-knowledge-page="${page.page + 1}" ${!state.knowledgeHasQueried || page.page >= page.pageCount ? "disabled" : ""}>\u4E0B\u4E00\u9875</button></div></div><div class="knowledge-list">${state.knowledgeHasQueried ? page.items.map((item) => renderKnowledgeItem(state.knowledgeType, item)).join("") : '<div class="empty-state compact"><span class="emoji">\u2315</span><h2>\u7B49\u5F85\u67E5\u8BE2</h2><p>\u9ED8\u8BA4\u4E0D\u52A0\u8F7D\u5168\u91CF\u77E5\u8BC6\u5E93\uFF0C\u907F\u514D iPad/PWA \u9996\u5C4F\u53D8\u6162\u3002</p></div>'}</div></section>
+    <section class="panel knowledge-list-panel"><div class="section-heading"><div><h2>${escapeHtml2(KNOWLEDGE_LABELS[state.knowledgeType])}</h2><p>${state.knowledgeHasQueried ? pageSummary : "\u8BF7\u8F93\u5165\u7B5B\u9009\u6761\u4EF6\u540E\u70B9\u51FB\u67E5\u8BE2\uFF0C\u5217\u8868\u4F1A\u5206\u9875\u5C55\u793A\u3002"}</p></div><div class="header-actions"><button class="secondary" data-knowledge-page="${page.page - 1}" ${!state.knowledgeHasQueried || page.page <= 1 ? "disabled" : ""}>\u4E0A\u4E00\u9875</button><button class="secondary" data-knowledge-page="${page.page + 1}" ${!state.knowledgeHasQueried || !page.hasMore && page.page >= page.pageCount ? "disabled" : ""}>\u4E0B\u4E00\u9875</button></div></div><div class="knowledge-list">${state.knowledgeHasQueried ? page.items.map((item) => renderKnowledgeItem(state.knowledgeType, item)).join("") : '<div class="empty-state compact"><span class="emoji">\u2315</span><h2>\u7B49\u5F85\u67E5\u8BE2</h2><p>\u9ED8\u8BA4\u4E0D\u52A0\u8F7D\u5168\u91CF\u77E5\u8BC6\u5E93\uFF0C\u907F\u514D iPad/PWA \u9996\u5C4F\u53D8\u6162\u3002</p></div>'}</div></section>
     ${wrongPanel}`;
   }
   function renderWrongTypeFilter(types) {
@@ -27375,9 +27538,10 @@
     try {
       await renderKnowledge();
     } catch (error) {
-      showToast(error?.message || "???????");
+      showToast(error?.message || "\u77E5\u8BC6\u5E93\u67E5\u8BE2\u5931\u8D25");
     } finally {
       state.knowledgeLoading = false;
+      await renderKnowledge();
     }
   }
   async function syncPaperWrongQuestion(paper, problemId, isWrong) {
@@ -27560,12 +27724,13 @@
       return submitKnowledgeSearch();
     }
     if (event.target.closest("[data-learning-start]")) {
-      const queriedCandidates = state.knowledgeHasQueried ? await filterKnowledgeAsync(state.knowledgeType, currentKnowledgeFilters()) : [];
-      state.learningItems = queriedCandidates.length ? await sampleKnowledgeForUse(state.knowledgeType, queriedCandidates, 8, state.learningCompleted) : await sampleKnowledgeForUse(state.knowledgeType, await randomKnowledgeAsync(state.knowledgeType, 40, state.learningCompleted), 8, state.learningCompleted);
+      const learningFilters = state.knowledgeHasQueried ? currentKnowledgeFilters() : {};
+      const queriedCandidates = state.knowledgeHasQueried ? await buildPreferredRandomKnowledgePool(state.knowledgeType, 40, learningFilters) : [];
+      state.learningItems = queriedCandidates.length ? await sampleKnowledgeForUse(state.knowledgeType, queriedCandidates, 8, state.learningCompleted) : await sampleKnowledgeForUse(state.knowledgeType, await randomKnowledgeAsync(state.knowledgeType, 40, state.learningCompleted, learningFilters), 8, state.learningCompleted);
       state.learningIndex = 0;
       if (!state.learningItems.length) {
         state.learningCompleted.clear();
-        state.learningItems = await sampleKnowledgeForUse(state.knowledgeType, queriedCandidates.length ? queriedCandidates : await randomKnowledgeAsync(state.knowledgeType, 40), 8);
+        state.learningItems = await sampleKnowledgeForUse(state.knowledgeType, queriedCandidates.length ? queriedCandidates : await randomKnowledgeAsync(state.knowledgeType, 40, /* @__PURE__ */ new Set(), learningFilters), 8);
       }
       return renderKnowledge();
     }
@@ -28147,7 +28312,7 @@
   async function registerServiceWorker() {
     if (!("serviceWorker" in navigator) || !location.protocol.startsWith("http")) return;
     try {
-      const registration = await navigator.serviceWorker.register("./sw.js?v=20260813-1");
+      const registration = await navigator.serviceWorker.register("./sw.js?v=20260815-1");
       if (registration.waiting && navigator.serviceWorker.controller) notifyServiceWorkerUpdate(registration);
       registration.addEventListener("updatefound", () => {
         const worker = registration.installing;
@@ -28170,14 +28335,10 @@
     if ("serviceWorker" in navigator) {
       await navigator.serviceWorker.ready.catch(() => void 0);
     }
-    const resources = [
-      "./src/data/knowledge/xinhua/manifest.json",
-      "./src/data/knowledge/poetry/manifest.json",
-      "./src/data/knowledge/poetry/indexes/character-manifest.json"
-    ];
+    const resources = ["https://learn-d0g10smkjc24144a1-1468989884.ap-shanghai.app.tcloudbase.com/api/health"];
     const run = async () => {
       for (let index = 0; index < resources.length; index += 2) {
-        await Promise.all(resources.slice(index, index + 2).map((resource) => fetch(resource, { cache: "force-cache" }).catch(() => void 0)));
+        await Promise.all(resources.slice(index, index + 2).map((resource) => fetch(resource, { cache: "no-store" }).catch(() => void 0)));
       }
     };
     if (typeof requestIdleCallback === "function") {

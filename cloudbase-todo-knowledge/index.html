@@ -1,0 +1,77 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CloudBase 待办与知识库</title>
+    <link rel="stylesheet" href="./src/styles.css" />
+    <script src="https://static.cloudbase.net/cloudbase-js-sdk/latest/cloudbase.full.js"></script>
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">CloudBase 文档数据库 Demo</p>
+          <h1>待办事项 + 中文知识库</h1>
+          <p class="summary">Todo 走浏览器 Web SDK CRUD；成语、汉字、歇后语、词语、古诗通过导入脚本进入 CloudBase 文档数据库。</p>
+        </div>
+        <button id="reloadAll" class="secondary" type="button">刷新数据</button>
+      </section>
+
+      <section class="panel config-panel">
+        <div>
+          <h2>环境配置</h2>
+          <p>填写 CloudBase EnvId 后保存。可选填写 Web SDK publishable accessKey。</p>
+        </div>
+        <label>
+          <span>EnvId</span>
+          <input id="envIdInput" autocomplete="off" placeholder="例如 your-env-id-123456" />
+        </label>
+        <label>
+          <span>AccessKey（可选）</span>
+          <input id="accessKeyInput" autocomplete="off" placeholder="CloudBase Web SDK publishable accessKey" />
+        </label>
+        <button id="saveConfig" class="primary" type="button">保存并连接</button>
+        <p id="connectionStatus" class="status">尚未连接 CloudBase。</p>
+      </section>
+
+      <section class="grid">
+        <article class="panel">
+          <div class="section-head">
+            <div>
+              <h2>待办事项</h2>
+              <p>集合：todos。每条记录绑定当前匿名用户。</p>
+            </div>
+          </div>
+          <form id="todoForm" class="todo-form">
+            <input id="todoInput" maxlength="80" placeholder="输入待办内容" />
+            <button class="primary" type="submit">添加</button>
+          </form>
+          <ul id="todoList" class="todo-list"></ul>
+        </article>
+
+        <article class="panel">
+          <div class="section-head">
+            <div>
+              <h2>知识库查询</h2>
+              <p>集合：kb_idioms / kb_chars / kb_xiehouyu / kb_words / kb_poems。</p>
+            </div>
+          </div>
+          <form id="knowledgeForm" class="knowledge-form">
+            <select id="knowledgeType">
+              <option value="kb_idioms">成语</option>
+              <option value="kb_chars">汉字</option>
+              <option value="kb_xiehouyu">歇后语</option>
+              <option value="kb_words">词语</option>
+              <option value="kb_poems">古诗</option>
+            </select>
+            <input id="knowledgeKeyword" placeholder="按标题/作者/朝代/正文查询" />
+            <button class="primary" type="submit">查询</button>
+          </form>
+          <div id="knowledgeList" class="knowledge-list"></div>
+        </article>
+      </section>
+    </main>
+    <script type="module" src="./src/app.js"></script>
+  </body>
+</html>

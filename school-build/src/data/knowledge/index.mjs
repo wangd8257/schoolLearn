@@ -61,6 +61,12 @@ const xinhuaShardCache = new Map();
 const xinhuaFilterCache = new Map();
 const xinhuaCharacterIndexCache = new Map();
 const staticRequestCache = new Map();
+const remoteKnowledgeCache = new Map();
+const KNOWLEDGE_API_BASE = String(
+  globalThis.__SCHOOL_BUILD_KNOWLEDGE_API__
+  || 'https://learn-d0g10smkjc24144a1-1468989884.ap-shanghai.app.tcloudbase.com/api'
+).replace(/\/+$/u, '');
+const REMOTE_REQUEST_TIMEOUT_MS = 2000;
 let poetryManifestCache;
 let xinhuaManifestCache;
 const TRADITIONAL_SIMPLIFIED_MAP = Object.freeze({
@@ -685,6 +691,76 @@ async function fetchJson(path) {
   } catch (error) {
     return undefined;
   }
+}
+
+/**
+ * 判断当前页面是否具备调用 CloudBase 知识库 API 的运行条件。
+ * @returns {boolean} 是否允许调用远程知识库服务。
+ */
+function canUseRemoteKnowledgeApi() {
+  return typeof fetch === 'function' && globalThis.location?.protocol !== 'file:' && Boolean(KNOWLEDGE_API_BASE);
+}
+
+/**
+ * 通过 CloudBase 后端读取知识库数据，并缓存相同请求以避免重复网络往返。
+ * @param {string} path API 路径。
+ * @param {Record<string, unknown>} params 查询参数。
+ * @returns {Promise<Record<string, unknown>|undefined>} 后端 JSON 响应。
+ */
+async function fetchKnowledgeApi(path, params = {}) {
+  if (!canUseRemoteKnowledgeApi()) return undefined;
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && String(value) !== '') query.set(key, String(value));
+  });
+  const requestKey = `${path}?${query.toString()}`;
+  const cached = remoteKnowledgeCache.get(requestKey);
+  if (cached && cached.expiresAt > Date.now()) return cached.value;
+  const controller = typeof AbortController === 'function' ? new AbortController() : undefined;
+  const timer = setTimeout(() => controller?.abort(), REMOTE_REQUEST_TIMEOUT_MS);
+  const request = (async () => {
+    try {
+      const response = await fetch(`${KNOWLEDGE_API_BASE}${path}?${query.toString()}`, {
+        cache: 'no-store',
+        signal: controller?.signal,
+      });
+      if (!response.ok) return undefined;
+      const data = await response.json();
+      return data?.ok === false ? undefined : data;
+    } catch (error) {
+      return undefined;
+    } finally {
+      clearTimeout(timer);
+    }
+  })();
+  remoteKnowledgeCache.set(requestKey, { value: request, expiresAt: Date.now() + 15000 });
+  const result = await request;
+  remoteKnowledgeCache.set(requestKey, { value: result, expiresAt: Date.now() + 30000 });
+  return result;
+}
+
+/**
+ * 将后端统一条目转换成当前页面使用的字段，兼容旧版本地分片字段。
+ * @param {string} type 知识库类型。
+ * @param {Record<string, unknown>} item 后端条目。
+ * @returns {Record<string, unknown>} 页面统一条目。
+ */
+function normalizeRemoteKnowledgeItem(type, item) {
+  if (!item || typeof item !== 'object') return {};
+  if (type === 'poetry') {
+    return {
+      ...item,
+      id: item.id ?? item._id,
+      title: toSimplifiedChinese(item.title || ''),
+      author: toSimplifiedChinese(item.author || ''),
+      dynasty: toSimplifiedChinese(item.dynasty || ''),
+      collection: toSimplifiedChinese(item.collection || '古诗'),
+      lines: simplifyStringList(item.lines),
+    };
+  }
+  if (type === 'char') return { ...item, char: item.char || item.title || '' };
+  if (type === 'xiehouyu') return { ...item, riddle: item.riddle || item.title || '' };
+  return { ...item, word: item.word || item.title || '' };
 }
 
 /**
@@ -1407,6 +1483,17 @@ async function getPoetryById(id) {
  * @returns {Promise<{authors:string[],dynasties:string[],collections:string[]}>} 筛选枚举。
  */
 export async function getPoetryMeta(filters = {}) {
+  const remote = await fetchKnowledgeApi('/knowledge/meta', {
+    type: 'poetry',
+    category: filters.collection,
+  });
+  if (remote) {
+    return {
+      authors: simplifyStringList(remote.authors),
+      dynasties: simplifyStringList(remote.dynasties),
+      collections: simplifyStringList(remote.collections),
+    };
+  }
   const manifest = await loadPoetryManifest();
   const query = normalizePoetryFilterText(filters.query);
   const author = normalizePoetryAuthorKey(filters.author);
@@ -1556,6 +1643,18 @@ export function filterKnowledge(type, filters = {}) {
  * @returns {Promise<Record<string, unknown>[]>} 符合条件的完整条目列表。
  */
 export async function filterKnowledgeAsync(type, filters = {}) {
+  const remote = await fetchKnowledgeApi('/knowledge', {
+    type,
+    q: filters.query,
+    author: filters.author,
+    dynasty: filters.dynasty,
+    category: filters.collection,
+    page: 1,
+    pageSize: 200,
+  });
+  if (remote?.items) {
+    return remote.items.map((item) => normalizeRemoteKnowledgeItem(type, item));
+  }
   if (type === 'poetry') return filterPoetryCatalog(filters);
   const indexed = await filterXinhuaKnowledge(type, filters);
   if (indexed) return indexed;
@@ -1582,6 +1681,26 @@ export async function filterKnowledgeAsync(type, filters = {}) {
  * @returns {Promise<{items:Record<string, unknown>[],total:number,page:number,pageSize:number,pageCount:number}>} 分页结果。
  */
 export async function pageKnowledge(type, filters = {}, page = 1, pageSize = 20) {
+  const remote = await fetchKnowledgeApi('/knowledge', {
+    type,
+    q: filters.query,
+    author: filters.author,
+    dynasty: filters.dynasty,
+    category: filters.collection,
+    page,
+    pageSize,
+  });
+  if (remote?.items) {
+    const items = remote.items.map((item) => normalizeRemoteKnowledgeItem(type, item));
+    return {
+      items,
+      total: Number.isFinite(Number(remote.total)) ? Number(remote.total) : null,
+      page: Number(remote.page) || Math.max(1, Number(page) || 1),
+      pageSize: Number(remote.pageSize) || Math.max(1, Number(pageSize) || 20),
+      pageCount: Number(remote.pageCount) || (remote.hasMore ? (Number(page) || 1) + 1 : Number(page) || 1),
+      hasMore: Boolean(remote.hasMore),
+    };
+  }
   if (type === 'poetry') {
     const manifest = await loadPoetryManifest();
     if (manifest) {
@@ -1641,6 +1760,11 @@ export async function pageKnowledge(type, filters = {}, page = 1, pageSize = 20)
  * @returns {Promise<Record<string, unknown>|undefined>} 匹配的知识条目。
  */
 export async function getKnowledgeDetail(type, key) {
+  const remoteId = String(key || '').startsWith(`${type}:`)
+    ? String(key).slice(type.length + 1)
+    : String(key || '');
+  const remote = await fetchKnowledgeApi('/knowledge/detail', { type, id: remoteId });
+  if (remote?.item) return normalizeRemoteKnowledgeItem(type, remote.item);
   if (type === 'poetry') {
     const match = /^poetry:(\d+)$/u.exec(String(key || ''));
     if (match) return getPoetryById(Number(match[1]));
@@ -1669,9 +1793,24 @@ export function randomKnowledge(type, count = 1, excluded = new Set()) {
  * @param {string} type 知识库分类。
  * @param {number} count 抽取数量。
  * @param {Set<string>} excluded 已学习或已抽取的条目键集合。
+ * @param {{query?:string,author?:string,dynasty?:string,collection?:string}} filters 当前筛选条件。
  * @returns {Promise<Record<string, unknown>[]>} 不重复的随机条目。
  */
-export async function randomKnowledgeAsync(type, count = 1, excluded = new Set()) {
+export async function randomKnowledgeAsync(type, count = 1, excluded = new Set(), filters = {}) {
+  const remote = await fetchKnowledgeApi('/knowledge/random', {
+    type,
+    count: Math.min(50, Math.max(1, Number(count) || 1) * 4),
+    q: filters.query,
+    author: filters.author,
+    dynasty: filters.dynasty,
+    category: filters.collection,
+  });
+  if (remote?.items) {
+    return remote.items
+      .map((item) => normalizeRemoteKnowledgeItem(type, item))
+      .filter((item) => !excluded.has(knowledgeKey(type, item)))
+      .slice(0, Math.max(1, Number(count) || 1));
+  }
   if (type === 'poetry') {
     const manifest = await loadPoetryManifest();
     if (manifest) {
@@ -1738,6 +1877,7 @@ export function weightedKnowledgeSample(type, candidates, count = 1, excluded = 
  * @returns {string} 稳定键。
  */
 export function knowledgeKey(type, item) {
+  if (item?._id) return `${type}:${item._id}`;
   if (type === 'poetry') {
     if (item.id !== undefined && item.id !== null) return `${type}:${item.id}`;
     return `${type}:${item.dynasty || ''}:${item.author || ''}:${item.title || ''}`;

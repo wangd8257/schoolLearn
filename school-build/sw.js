@@ -1,4 +1,4 @@
-const APP_VERSION = '20260813-1';
+const APP_VERSION = '20260815-1';
 const CORE_CACHE_NAME = `growth-desk-core-${APP_VERSION}`;
 const DATA_CACHE_NAME = `growth-desk-data-${APP_VERSION}`;
 const RUNTIME_CACHE_NAME = `growth-desk-runtime-${APP_VERSION}`;

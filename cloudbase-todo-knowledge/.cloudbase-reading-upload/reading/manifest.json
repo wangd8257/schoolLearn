@@ -1,0 +1,160 @@
+{
+  "version": 1,
+  "generatedAt": "2026-08-15T05:03:51.916Z",
+  "storagePrefix": "reading/books",
+  "books": [
+    {
+      "id": "huiben-50f18e43",
+      "title": "不一样的卡梅拉动漫绘本 我下了个金鸡蛋 (（法）约里波瓦文, 据[法]克利斯提昂·约里波瓦同名绘本动画片改编 , 郑迪蔚 编译 etc.)",
+      "fileName": "不一样的卡梅拉动漫绘本 我下了个金鸡蛋 (（法）约里波瓦文, 据[法]克利斯提昂·约里波瓦同名绘本动画片改编 , 郑迪蔚 编译 etc.) (z-library.sk, 1lib.sk, z-lib.sk).pdf",
+      "fileKind": "pdf",
+      "category": "绘本",
+      "size": 6224462,
+      "storageName": "huiben-50f18e43.pdf"
+    },
+    {
+      "id": "huiben-70750f85",
+      "title": "不一样的卡梅拉动漫绘本 我是侠盗罗宾汉 (（法）克利斯提昂·约里波瓦改编；郑迪蔚编译 etc.)",
+      "fileName": "不一样的卡梅拉动漫绘本 我是侠盗罗宾汉 (（法）克利斯提昂·约里波瓦改编；郑迪蔚编译 etc.) (z-library.sk, 1lib.sk, z-lib.sk).pdf",
+      "fileKind": "pdf",
+      "category": "绘本",
+      "size": 6744584,
+      "storageName": "huiben-70750f85.pdf"
+    },
+    {
+      "id": "huiben-30026dd7",
+      "title": "不一样的卡梅拉动漫绘本 我是大明星 (（法）约里波瓦文；郑迪蔚编译, 据[法]克利斯提昂·约里波瓦同名绘本动画片改编 etc.)",
+      "fileName": "不一样的卡梅拉动漫绘本 我是大明星 (（法）约里波瓦文；郑迪蔚编译, 据[法]克利斯提昂·约里波瓦同名绘本动画片改编 etc.) (z-library.sk, 1lib.sk, z-lib.sk).pdf",
+      "fileKind": "pdf",
+      "category": "绘本",
+      "size": 7251034,
+      "storageName": "huiben-30026dd7.pdf"
+    },
+    {
+      "id": "huiben-6cad4cb4",
+      "title": "不一样的卡梅拉动漫绘本 我的胆子变大了 (（法）克利斯提昂·约里波瓦改编；郑迪蔚编译 etc.)",
+      "fileName": "不一样的卡梅拉动漫绘本 我的胆子变大了 (（法）克利斯提昂·约里波瓦改编；郑迪蔚编译 etc.) (z-library.sk, 1lib.sk, z-lib.sk).pdf",
+      "fileKind": "pdf",
+      "category": "绘本",
+      "size": 7582488,
+      "storageName": "huiben-6cad4cb4.pdf"
+    },
+    {
+      "id": "huiben-1b40c5ed",
+      "title": "不一样的卡梅拉动漫绘本 我许下三个愿望 (（法）约里波瓦文, 据[法]克利斯提昂·约里波瓦同名绘本动画片改编 , 郑迪蔚 编译 etc.)",
+      "fileName": "不一样的卡梅拉动漫绘本 我许下三个愿望 (（法）约里波瓦文, 据[法]克利斯提昂·约里波瓦同名绘本动画片改编 , 郑迪蔚 编译 etc.) (z-library.sk, 1lib.sk, z-lib.sk).pdf",
+      "fileKind": "pdf",
+      "category": "绘本",
+      "size": 6738000,
+      "storageName": "huiben-1b40c5ed.pdf"
+    },
+    {
+      "id": "huiben-58157c4f",
+      "title": "中国经典古诗文彩绘读本 低年级 (陈雪梅主编, 陈雪梅主编, 陈雪梅)",
+      "fileName": "中国经典古诗文彩绘读本 低年级 (陈雪梅主编, 陈雪梅主编, 陈雪梅) (z-library.sk, 1lib.sk, z-lib.sk).pdf",
+      "fileKind": "pdf",
+      "category": "绘本",
+      "size": 83406409,
+      "storageName": "huiben-58157c4f.pdf"
+    },
+    {
+      "id": "huiben-4ab12b36",
+      "title": "佩顿的理想宠物：《爱的五种语言》儿童绘本 (盖瑞·查普曼  瑞克·奥斯本)",
+      "fileName": "佩顿的理想宠物：《爱的五种语言》儿童绘本 (盖瑞·查普曼  瑞克·奥斯本) (z-library.sk, 1lib.sk, z-lib.sk).epub",
+      "fileKind": "epub",
+      "category": "绘本",
+      "size": 7204706,
+      "storageName": "huiben-4ab12b36.epub"
+    },
+    {
+      "id": "huiben-1ceb8d7e",
+      "title": "儿童行为习惯培养绘本：小兔子起床喽-孩子贪睡，怎么办？ (陈书韵、翁淑惠)",
+      "fileName": "儿童行为习惯培养绘本：小兔子起床喽-孩子贪睡，怎么办？ (陈书韵、翁淑惠) (z-library.sk, 1lib.sk, z-lib.sk).epub",
+      "fileKind": "epub",
+      "category": "绘本",
+      "size": 4096129,
+      "storageName": "huiben-1ceb8d7e.epub"
+    },
+    {
+      "id": "huiben-66fdef1a",
+      "title": "十二生肖的故事【儿童绘本】 (Si-Jia Gu)",
+      "fileName": "十二生肖的故事【儿童绘本】 (Si-Jia Gu) (z-library.sk, 1lib.sk, z-lib.sk).epub",
+      "fileKind": "epub",
+      "category": "绘本",
+      "size": 2603677,
+      "storageName": "huiben-66fdef1a.epub"
+    },
+    {
+      "id": "huiben-00602134",
+      "title": "发现与培养儿童职业启蒙绘本 第6辑 我要当汽车工程师 (刘香英著；幸福猫儿童文学工作室绘)",
+      "fileName": "发现与培养儿童职业启蒙绘本 第6辑 我要当汽车工程师 (刘香英著；幸福猫儿童文学工作室绘) (z-library.sk, 1lib.sk, z-lib.sk).pdf",
+      "fileKind": "pdf",
+      "category": "绘本",
+      "size": 7968973,
+      "storageName": "huiben-00602134.pdf"
+    },
+    {
+      "id": "huiben-4e90ab93",
+      "title": "奇怪的生物图鉴【风靡日韩，日文版上市仅1个月加印4次！销量突破100000册日本亚马逊高分评价，日韩话题性科普绘本，40种生物，上百个冷知识：没...",
+      "fileName": "奇怪的生物图鉴【风靡日韩，日文版上市仅1个月加印4次！销量突破100000册日本亚马逊高分评价，日韩话题性科普绘本，40种生物，上百个冷知识：没... (z-library.sk, 1lib.sk, z-lib.sk).epub",
+      "fileKind": "epub",
+      "category": "绘本",
+      "size": 10573611,
+      "storageName": "huiben-4e90ab93.epub"
+    },
+    {
+      "id": "huiben-211de70c",
+      "title": "小川未明童话绘本（5册套装） (（日）小川未明)",
+      "fileName": "小川未明童话绘本（5册套装） (（日）小川未明) (z-library.sk, 1lib.sk, z-lib.sk).pdf",
+      "fileKind": "pdf",
+      "category": "绘本",
+      "size": 18139122,
+      "storageName": "huiben-211de70c.pdf"
+    },
+    {
+      "id": "huiben-676cfbe8",
+      "title": "小王子三部曲(一直以来,我们只读了《小王子》的三分之一《小王子》只是三部曲的终篇,它的前传《风沙星辰》《夜间飞行》埋藏着《小王子》真正...",
+      "fileName": "小王子三部曲(一直以来,我们只读了《小王子》的三分之一《小王子》只是三部曲的终篇,它的前传《风沙星辰》《夜间飞行》埋藏着《小王子》真正... (z-library.sk, 1lib.sk, z-lib.sk).epub",
+      "fileKind": "epub",
+      "category": "绘本",
+      "size": 4717494,
+      "storageName": "huiben-676cfbe8.epub"
+    },
+    {
+      "id": "huiben-7d0e9c77",
+      "title": "成长文库 世界少年文学精选(拼音版美绘本)·洋葱头历险记 (成长文库•世界儿童文学经典拼音美绘本) (罗大里)",
+      "fileName": "成长文库 世界少年文学精选(拼音版美绘本)·洋葱头历险记 (成长文库•世界儿童文学经典拼音美绘本) (罗大里) (z-library.sk, 1lib.sk, z-lib.sk).epub",
+      "fileKind": "epub",
+      "category": "绘本",
+      "size": 5680742,
+      "storageName": "huiben-7d0e9c77.epub"
+    },
+    {
+      "id": "huiben-31fbaef4",
+      "title": "成长文库：世界儿童文学经典（拼音美绘本）假话国历险记 (成长文库.世界儿童文学经典拼音美绘本) (罗大里 [罗大里])",
+      "fileName": "成长文库：世界儿童文学经典（拼音美绘本）假话国历险记 (成长文库.世界儿童文学经典拼音美绘本) (罗大里 [罗大里]) (z-library.sk, 1lib.sk, z-lib.sk).epub",
+      "fileKind": "epub",
+      "category": "绘本",
+      "size": 3670952,
+      "storageName": "huiben-31fbaef4.epub"
+    },
+    {
+      "id": "huiben-14766226",
+      "title": "汤汤奇幻童年故事本（套装6册）（第十届全国优秀儿童文学奖获奖作品，一段瑰丽丰富的童年往事，一阙悠扬漫长的田园牧歌；作家汤汤携全新奇幻...",
+      "fileName": "汤汤奇幻童年故事本（套装6册）（第十届全国优秀儿童文学奖获奖作品，一段瑰丽丰富的童年往事，一阙悠扬漫长的田园牧歌；作家汤汤携全新奇幻... (z-library.sk, 1lib.sk, z-lib.sk).epub",
+      "fileKind": "epub",
+      "category": "绘本",
+      "size": 21069778,
+      "storageName": "huiben-14766226.epub"
+    },
+    {
+      "id": "huiben-4d5190e1",
+      "title": "绘本里的世界（套装共九册）【国际儿童读物联盟（IBBY）主席张明舟、前主席邓肯、北京作协副主席曹文轩、儿童文学作家高洪波等联袂推荐！凝集...",
+      "fileName": "绘本里的世界（套装共九册）【国际儿童读物联盟（IBBY）主席张明舟、前主席邓肯、北京作协副主席曹文轩、儿童文学作家高洪波等联袂推荐！凝集... (z-library.sk, 1lib.sk, z-lib.sk).epub",
+      "fileKind": "epub",
+      "category": "绘本",
+      "size": 21859822,
+      "storageName": "huiben-4d5190e1.epub"
+    }
+  ]
+}

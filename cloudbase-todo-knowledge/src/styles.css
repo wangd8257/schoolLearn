@@ -1,0 +1,259 @@
+﻿:root {
+  color-scheme: light;
+  --bg: #f5f7fa;
+  --card: #ffffff;
+  --text: #182033;
+  --muted: #667085;
+  --red: #e84d39;
+  --blue: #0066ff;
+  --line: #e5e7eb;
+  --shadow: 0 14px 38px rgba(24, 32, 51, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button {
+  border: 0;
+  cursor: pointer;
+}
+
+.shell {
+  width: min(1180px, calc(100vw - 32px));
+  margin: 0 auto;
+  padding: 32px 0 48px;
+}
+
+.hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  min-height: 220px;
+  padding: 32px;
+  border-radius: 16px;
+  background:
+    linear-gradient(120deg, rgba(0, 102, 255, 0.18), transparent 30%),
+    linear-gradient(300deg, rgba(232, 77, 57, 0.18), transparent 28%),
+    #fff;
+  box-shadow: var(--shadow);
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: var(--blue);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+h1,
+h2,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  margin-bottom: 12px;
+  font-size: clamp(32px, 5vw, 56px);
+  line-height: 1.05;
+}
+
+h2 {
+  margin-bottom: 8px;
+  font-size: 22px;
+}
+
+.summary,
+.panel p {
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.panel {
+  margin-top: 24px;
+  padding: 24px;
+  border-radius: 16px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+}
+
+.config-panel {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(180px, 260px) minmax(180px, 260px) auto;
+  align-items: end;
+  gap: 16px;
+}
+
+label,
+.todo-form,
+.knowledge-form {
+  display: grid;
+  gap: 8px;
+}
+
+label span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+input,
+select {
+  width: 100%;
+  height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--text);
+  padding: 0 14px;
+  outline: none;
+}
+
+input:focus,
+select:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.12);
+}
+
+.primary,
+.secondary {
+  min-height: 44px;
+  border-radius: 12px;
+  padding: 0 18px;
+  font-weight: 800;
+}
+
+.primary {
+  background: var(--red);
+  color: #fff;
+}
+
+.secondary {
+  background: #eef4ff;
+  color: var(--blue);
+}
+
+.status {
+  grid-column: 1 / -1;
+  margin: 0;
+  min-height: 24px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 24px;
+}
+
+.section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.todo-form,
+.knowledge-form {
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin-top: 18px;
+}
+
+.knowledge-form {
+  grid-template-columns: 140px minmax(0, 1fr) auto;
+}
+
+.todo-list,
+.knowledge-list {
+  display: grid;
+  gap: 12px;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.todo-item,
+.knowledge-card {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 16px;
+  background: #f8fafc;
+}
+
+.todo-item {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.todo-item.done .todo-title {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.todo-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.icon-button {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--blue);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.knowledge-title {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.knowledge-meta {
+  color: var(--blue);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.knowledge-body {
+  color: var(--muted);
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 860px) {
+  .hero,
+  .config-panel,
+  .grid,
+  .knowledge-form {
+    grid-template-columns: 1fr;
+  }
+
+  .hero {
+    align-items: stretch;
+  }
+
+  .todo-form {
+    grid-template-columns: 1fr;
+  }
+}
