@@ -1,0 +1,200 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e8]:
+        - strong [ref=e9]: 光之进化
+        - text: 学习能量控制台
+      - navigation "主导航" [ref=e10]:
+        - button "⌂ 首页" [ref=e11] [cursor=pointer]:
+          - generic [ref=e12]: ⌂
+          - text: 首页
+        - button "▤ 试卷目录" [ref=e13] [cursor=pointer]:
+          - generic [ref=e14]: ▤
+          - text: 试卷目录
+        - button "✦ 生成试卷" [ref=e15] [cursor=pointer]:
+          - generic [ref=e16]: ✦
+          - text: 生成试卷
+        - button "▥ 阅读资料" [ref=e17] [cursor=pointer]:
+          - generic [ref=e18]: ▥
+          - text: 阅读资料
+        - button "字 知识库" [ref=e19] [cursor=pointer]:
+          - generic [ref=e20]: 字
+          - text: 知识库
+        - button "◇ 学习游戏" [ref=e21] [cursor=pointer]:
+          - generic [ref=e22]: ◇
+          - text: 学习游戏
+        - button "⌘ 配置模板" [ref=e23] [cursor=pointer]:
+          - generic [ref=e24]: ⌘
+          - text: 配置模板
+      - paragraph [ref=e27]:
+        - strong [ref=e28]: 本机离线保存
+        - text: 请勿清除 Safari 网站数据
+    - main [active] [ref=e29]:
+      - generic [ref=e115]:
+        - generic [ref=e116]:
+          - generic [ref=e117]: 光之进化 / COMMAND DECK
+          - heading "绘本书架" [level=1] [ref=e118]
+          - paragraph [ref=e119]: CloudBase 云存储默认资料与本机已导入书籍
+        - generic [ref=e125]:
+          - button "＋ 导入书籍" [ref=e126] [cursor=pointer]
+          - button "＋ 新建文字" [ref=e127] [cursor=pointer]
+      - generic [ref=e128]:
+        - generic [ref=e129]: 本地书库：0 本已下载
+        - button "全选书籍" [ref=e130] [cursor=pointer]
+        - button "下载选中" [ref=e131] [cursor=pointer]
+        - button "清除本地缓存" [disabled] [ref=e132] [cursor=pointer]
+      - generic [ref=e133]:
+        - article [ref=e134]:
+          - generic [ref=e135]:
+            - checkbox "缓存到本地" [ref=e136]
+            - generic [ref=e137]: 缓存到本地
+          - button "打开发现与培养儿童职业启蒙绘本 第6辑 我要当汽车工程师 (刘香英著；幸福猫儿童文学工作室绘)" [ref=e138] [cursor=pointer]:
+            - text: BOOK
+            - generic [ref=e139]: PDF
+            - strong [ref=e140]: 发现与培养儿童职业启蒙绘本 第6辑 我要当汽车工程师 (刘香英著；幸福猫儿童文学工作室绘)
+            - generic [ref=e141]: 绘本
+        - article [ref=e142]:
+          - generic [ref=e143]:
+            - checkbox "缓存到本地" [ref=e144]
+            - generic [ref=e145]: 缓存到本地
+          - button "打开汤汤奇幻童年故事本（套装6册）（第十届全国优秀儿童文学奖获奖作品，一段瑰丽丰富的童年往事，一阙悠扬漫长的田园牧歌；作家汤汤携全新奇幻..." [ref=e146] [cursor=pointer]:
+            - text: BOOK
+            - generic [ref=e147]: EPUB
+            - strong [ref=e148]: 汤汤奇幻童年故事本（套装6册）（第十届全国优秀儿童文学奖获奖作品，一段瑰丽丰富的童年往事，一阙悠扬漫长的田园牧歌；作家汤汤携全新奇幻...
+            - generic [ref=e149]: 绘本
+        - article [ref=e150]:
+          - generic [ref=e151]:
+            - checkbox "缓存到本地" [ref=e152]
+            - generic [ref=e153]: 缓存到本地
+          - button "打开不一样的卡梅拉动漫绘本 我许下三个愿望 (（法）约里波瓦文, 据[法]克利斯提昂·约里波瓦同名绘本动画片改编 , 郑迪蔚 编译 etc.)" [ref=e154] [cursor=pointer]:
+            - text: BOOK
+            - generic [ref=e155]: PDF
+            - strong [ref=e156]: 不一样的卡梅拉动漫绘本 我许下三个愿望 (（法）约里波瓦文, 据[法]克利斯提昂·约里波瓦同名绘本动画片改编 , 郑迪蔚 编译 etc.)
+            - generic [ref=e157]: 绘本
+        - article [ref=e158]:
+          - generic [ref=e159]:
+            - checkbox "缓存到本地" [ref=e160]
+            - generic [ref=e161]: 缓存到本地
+          - button "打开儿童行为习惯培养绘本：小兔子起床喽-孩子贪睡，怎么办？ (陈书韵、翁淑惠)" [ref=e162] [cursor=pointer]:
+            - text: BOOK
+            - generic [ref=e163]: EPUB
+            - strong [ref=e164]: 儿童行为习惯培养绘本：小兔子起床喽-孩子贪睡，怎么办？ (陈书韵、翁淑惠)
+            - generic [ref=e165]: 绘本
+        - article [ref=e166]:
+          - generic [ref=e167]:
+            - checkbox "缓存到本地" [ref=e168]
+            - generic [ref=e169]: 缓存到本地
+          - button "打开小川未明童话绘本（5册套装） (（日）小川未明)" [ref=e170] [cursor=pointer]:
+            - text: BOOK
+            - generic [ref=e171]: PDF
+            - strong [ref=e172]: 小川未明童话绘本（5册套装） (（日）小川未明)
+            - generic [ref=e173]: 绘本
+        - article [ref=e174]:
+          - generic [ref=e175]:
+            - checkbox "缓存到本地" [ref=e176]
+            - generic [ref=e177]: 缓存到本地
+          - button "打开不一样的卡梅拉动漫绘本 我是大明星 (（法）约里波瓦文；郑迪蔚编译, 据[法]克利斯提昂·约里波瓦同名绘本动画片改编 etc.)" [ref=e178] [cursor=pointer]:
+            - text: BOOK
+            - generic [ref=e179]: PDF
+            - strong [ref=e180]: 不一样的卡梅拉动漫绘本 我是大明星 (（法）约里波瓦文；郑迪蔚编译, 据[法]克利斯提昂·约里波瓦同名绘本动画片改编 etc.)
+            - generic [ref=e181]: 绘本
+        - article [ref=e182]:
+          - generic [ref=e183]:
+            - checkbox "缓存到本地" [ref=e184]
+            - generic [ref=e185]: 缓存到本地
+          - button "打开成长文库：世界儿童文学经典（拼音美绘本）假话国历险记 (成长文库.世界儿童文学经典拼音美绘本) (罗大里 [罗大里])" [ref=e186] [cursor=pointer]:
+            - text: BOOK
+            - generic [ref=e187]: EPUB
+            - strong [ref=e188]: 成长文库：世界儿童文学经典（拼音美绘本）假话国历险记 (成长文库.世界儿童文学经典拼音美绘本) (罗大里 [罗大里])
+            - generic [ref=e189]: 绘本
+        - article [ref=e190]:
+          - generic [ref=e191]:
+            - checkbox "缓存到本地" [ref=e192]
+            - generic [ref=e193]: 缓存到本地
+          - button "打开佩顿的理想宠物：《爱的五种语言》儿童绘本 (盖瑞·查普曼 瑞克·奥斯本)" [ref=e194] [cursor=pointer]:
+            - text: BOOK
+            - generic [ref=e195]: EPUB
+            - strong [ref=e196]: 佩顿的理想宠物：《爱的五种语言》儿童绘本 (盖瑞·查普曼 瑞克·奥斯本)
+            - generic [ref=e197]: 绘本
+        - article [ref=e198]:
+          - generic [ref=e199]:
+            - checkbox "缓存到本地" [ref=e200]
+            - generic [ref=e201]: 缓存到本地
+          - button "打开绘本里的世界（套装共九册）【国际儿童读物联盟（IBBY）主席张明舟、前主席邓肯、北京作协副主席曹文轩、儿童文学作家高洪波等联袂推荐！凝集..." [ref=e202] [cursor=pointer]:
+            - text: BOOK
+            - generic [ref=e203]: EPUB
+            - strong [ref=e204]: 绘本里的世界（套装共九册）【国际儿童读物联盟（IBBY）主席张明舟、前主席邓肯、北京作协副主席曹文轩、儿童文学作家高洪波等联袂推荐！凝集...
+            - generic [ref=e205]: 绘本
+        - article [ref=e206]:
+          - generic [ref=e207]:
+            - checkbox "缓存到本地" [ref=e208]
+            - generic [ref=e209]: 缓存到本地
+          - button "打开奇怪的生物图鉴【风靡日韩，日文版上市仅1个月加印4次！销量突破100000册日本亚马逊高分评价，日韩话题性科普绘本，40种生物，上百个冷知识：没..." [ref=e210] [cursor=pointer]:
+            - text: BOOK
+            - generic [ref=e211]: EPUB
+            - strong [ref=e212]: 奇怪的生物图鉴【风靡日韩，日文版上市仅1个月加印4次！销量突破100000册日本亚马逊高分评价，日韩话题性科普绘本，40种生物，上百个冷知识：没...
+            - generic [ref=e213]: 绘本
+        - article [ref=e214]:
+          - generic [ref=e215]:
+            - checkbox "缓存到本地" [ref=e216]
+            - generic [ref=e217]: 缓存到本地
+          - button "打开不一样的卡梅拉动漫绘本 我下了个金鸡蛋 (（法）约里波瓦文, 据[法]克利斯提昂·约里波瓦同名绘本动画片改编 , 郑迪蔚 编译 etc.)" [ref=e218] [cursor=pointer]:
+            - text: BOOK
+            - generic [ref=e219]: PDF
+            - strong [ref=e220]: 不一样的卡梅拉动漫绘本 我下了个金鸡蛋 (（法）约里波瓦文, 据[法]克利斯提昂·约里波瓦同名绘本动画片改编 , 郑迪蔚 编译 etc.)
+            - generic [ref=e221]: 绘本
+        - article [ref=e222]:
+          - generic [ref=e223]:
+            - checkbox "缓存到本地" [ref=e224]
+            - generic [ref=e225]: 缓存到本地
+          - button "打开中国经典古诗文彩绘读本 低年级 (陈雪梅主编, 陈雪梅主编, 陈雪梅)" [ref=e226] [cursor=pointer]:
+            - text: BOOK
+            - generic [ref=e227]: PDF
+            - strong [ref=e228]: 中国经典古诗文彩绘读本 低年级 (陈雪梅主编, 陈雪梅主编, 陈雪梅)
+            - generic [ref=e229]: 绘本
+        - article [ref=e230]:
+          - generic [ref=e231]:
+            - checkbox "缓存到本地" [ref=e232]
+            - generic [ref=e233]: 缓存到本地
+          - button "打开十二生肖的故事【儿童绘本】 (Si-Jia Gu)" [ref=e234] [cursor=pointer]:
+            - text: BOOK
+            - generic [ref=e235]: EPUB
+            - strong [ref=e236]: 十二生肖的故事【儿童绘本】 (Si-Jia Gu)
+            - generic [ref=e237]: 绘本
+        - article [ref=e238]:
+          - generic [ref=e239]:
+            - checkbox "缓存到本地" [ref=e240]
+            - generic [ref=e241]: 缓存到本地
+          - button "打开小王子三部曲(一直以来,我们只读了《小王子》的三分之一《小王子》只是三部曲的终篇,它的前传《风沙星辰》《夜间飞行》埋藏着《小王子》真正..." [ref=e242] [cursor=pointer]:
+            - text: BOOK
+            - generic [ref=e243]: EPUB
+            - strong [ref=e244]: 小王子三部曲(一直以来,我们只读了《小王子》的三分之一《小王子》只是三部曲的终篇,它的前传《风沙星辰》《夜间飞行》埋藏着《小王子》真正...
+            - generic [ref=e245]: 绘本
+        - article [ref=e246]:
+          - generic [ref=e247]:
+            - checkbox "缓存到本地" [ref=e248]
+            - generic [ref=e249]: 缓存到本地
+          - button "打开不一样的卡梅拉动漫绘本 我的胆子变大了 (（法）克利斯提昂·约里波瓦改编；郑迪蔚编译 etc.)" [ref=e250] [cursor=pointer]:
+            - text: BOOK
+            - generic [ref=e251]: PDF
+            - strong [ref=e252]: 不一样的卡梅拉动漫绘本 我的胆子变大了 (（法）克利斯提昂·约里波瓦改编；郑迪蔚编译 etc.)
+            - generic [ref=e253]: 绘本
+        - article [ref=e254]:
+          - generic [ref=e255]:
+            - checkbox "缓存到本地" [ref=e256]
+            - generic [ref=e257]: 缓存到本地
+          - button "打开不一样的卡梅拉动漫绘本 我是侠盗罗宾汉 (（法）克利斯提昂·约里波瓦改编；郑迪蔚编译 etc.)" [ref=e258] [cursor=pointer]:
+            - text: BOOK
+            - generic [ref=e259]: PDF
+            - strong [ref=e260]: 不一样的卡梅拉动漫绘本 我是侠盗罗宾汉 (（法）克利斯提昂·约里波瓦改编；郑迪蔚编译 etc.)
+            - generic [ref=e261]: 绘本
+        - article [ref=e262]:
+          - generic [ref=e263]:
+            - checkbox "缓存到本地" [ref=e264]
+            - generic [ref=e265]: 缓存到本地
+          - button "打开成长文库 世界少年文学精选(拼音版美绘本)·洋葱头历险记 (成长文库•世界儿童文学经典拼音美绘本) (罗大里)" [ref=e266] [cursor=pointer]:
+            - text: BOOK
+            - generic [ref=e267]: EPUB
+            - strong [ref=e268]: 成长文库 世界少年文学精选(拼音版美绘本)·洋葱头历险记 (成长文库•世界儿童文学经典拼音美绘本) (罗大里)
+            - generic [ref=e269]: 绘本
+  - status

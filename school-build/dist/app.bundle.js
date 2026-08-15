@@ -25955,6 +25955,8 @@
   });
   var READER_LOAD_TIMEOUT_MS = 6e4;
   var BOOK_DEVICE_CACHE_NAME = "growth-desk-books-v1";
+  var CLOUD_BOOK_CHUNK_SIZE = 4 * 1024 * 1024;
+  var CLOUD_BOOK_CHUNK_TIMEOUT_MS = 2e4;
   var pdfjsLibPromise;
   async function loadPdfJsLib() {
     if (!pdfjsLibPromise) {
@@ -26876,13 +26878,74 @@
   function isBookCacheStorageRecord(item) {
     return item?.type === "file-book" && item?.cacheMode === "cache-storage" && Boolean(item.sourceUrl);
   }
+  function isCloudBaseBook(item) {
+    const sourceUrl = String(item?.sourceUrl || "").trim();
+    return String(item?.source || "").toLowerCase() === "cloudbase" || /\/reading\/file(?:\?|$)/u.test(sourceUrl);
+  }
+  function getBookMimeType(item) {
+    const fileKind = String(item?.fileKind || "").toLowerCase();
+    return fileKind === "pdf" ? "application/pdf" : "application/epub+zip";
+  }
+  async function fetchCloudBookChunk(sourceUrl, start, end) {
+    const controller = typeof AbortController === "function" ? new AbortController() : void 0;
+    const timer = setTimeout(() => controller?.abort(), CLOUD_BOOK_CHUNK_TIMEOUT_MS);
+    let response;
+    try {
+      response = await fetch(sourceUrl, {
+        cache: "force-cache",
+        headers: { Range: `bytes=${start}-${end}` },
+        signal: controller?.signal
+      });
+    } finally {
+      clearTimeout(timer);
+    }
+    if (!response.ok) throw new Error(`\u7ED8\u672C\u5206\u5757\u8BFB\u53D6\u5931\u8D25\uFF1A${response.status}`);
+    const contentType = response.headers.get("content-type") || "";
+    const contentRange = response.headers.get("content-range") || "";
+    const rangeMatch = contentRange.match(/^bytes\s+(\d+)-(\d+)\/(\d+|\*)$/iu);
+    const buffer = await response.arrayBuffer();
+    if (response.status === 200) {
+      if (start !== 0) throw new Error("\u4E91\u7AEF\u9605\u8BFB\u8D44\u6599\u4E0D\u652F\u6301\u8FDE\u7EED Range \u8BF7\u6C42");
+      return { buffer, start: 0, end: buffer.byteLength - 1, total: buffer.byteLength, status: 200, contentType };
+    }
+    if (response.status !== 206 || !rangeMatch) throw new Error("\u4E91\u7AEF\u9605\u8BFB\u8D44\u6599\u8FD4\u56DE\u7684 Range \u54CD\u5E94\u65E0\u6548");
+    const receivedStart = Number(rangeMatch[1]);
+    const receivedEnd = Number(rangeMatch[2]);
+    const total = rangeMatch[3] === "*" ? null : Number(rangeMatch[3]);
+    if (receivedStart !== start || receivedEnd < receivedStart || total !== null && receivedEnd >= total) {
+      throw new Error("\u4E91\u7AEF\u9605\u8BFB\u8D44\u6599\u8FD4\u56DE\u4E86\u9519\u8BEF\u7684\u5B57\u8282\u8303\u56F4");
+    }
+    return { buffer, start: receivedStart, end: receivedEnd, total, status: 206, contentType };
+  }
+  async function readCloudBaseBookArrayBuffer(sourceUrl) {
+    const chunks = [];
+    let nextStart = 0;
+    let total = null;
+    do {
+      const requestedEnd = total === null ? nextStart + CLOUD_BOOK_CHUNK_SIZE - 1 : Math.min(total - 1, nextStart + CLOUD_BOOK_CHUNK_SIZE - 1);
+      const part = await fetchCloudBookChunk(sourceUrl, nextStart, requestedEnd);
+      chunks.push(part.buffer);
+      total = part.total;
+      nextStart = part.end + 1;
+      if (part.buffer.byteLength === 0 || nextStart <= part.start) throw new Error("\u4E91\u7AEF\u9605\u8BFB\u8D44\u6599\u5206\u5757\u8BFB\u53D6\u6CA1\u6709\u8FDB\u5C55");
+      if (total !== null && nextStart >= total) break;
+    } while (total === null || nextStart < total);
+    return new Blob(chunks).arrayBuffer();
+  }
   async function cacheFileBookWithOptions(item, options = {}) {
     const sourceUrl = String(item.sourceUrl || "");
     const isLocalFileUrl = globalThis.location?.protocol === "file:" || sourceUrl.startsWith("file:");
     const isInlineSource = /^(blob:|data:)/u.test(sourceUrl);
     if (isLocalFileUrl || isInlineSource || !options.force && isBookCached(item) || !sourceUrl) return { ok: false, skipped: true };
     try {
-      const response = await fetch(sourceUrl, { cache: "force-cache" });
+      const response = isCloudBaseBook(item) ? new Response(new Blob([await readCloudBaseBookArrayBuffer(sourceUrl)], { type: getBookMimeType(item) }), {
+        status: 200,
+        headers: {
+          "Accept-Ranges": "bytes",
+          "Content-Length": String(item.size || 0),
+          "Content-Type": getBookMimeType(item)
+        }
+      }) : await fetch(sourceUrl, { cache: "force-cache" });
       if (!response.ok) throw new Error(`\u7ED8\u672C\u6587\u4EF6\u8BFB\u53D6\u5931\u8D25\uFF1A${response.status}`);
       if (canReaderRequestUrl(item)) {
         const cachedInStorage = await putBookResponseCache(sourceUrl, response);
@@ -26981,6 +27044,7 @@
     if (!sourceUrl) throw new Error("\u6CA1\u6709\u627E\u5230\u7ED8\u672C\u6587\u4EF6\u5730\u5740");
     const cachedResponse = await matchBookResponseCache(sourceUrl);
     if (cachedResponse) return cachedResponse.arrayBuffer();
+    if (isCloudBaseBook(item)) return readCloudBaseBookArrayBuffer(sourceUrl);
     const controller = typeof AbortController === "function" ? new AbortController() : void 0;
     const timer = setTimeout(() => controller?.abort(), READER_LOAD_TIMEOUT_MS);
     let response;

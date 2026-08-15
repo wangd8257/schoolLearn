@@ -48,6 +48,8 @@ const PDF_JS_OPTIONS = Object.freeze({
 });
 const READER_LOAD_TIMEOUT_MS = 60000;
 const BOOK_DEVICE_CACHE_NAME = 'growth-desk-books-v1';
+const CLOUD_BOOK_CHUNK_SIZE = 4 * 1024 * 1024;
+const CLOUD_BOOK_CHUNK_TIMEOUT_MS = 20000;
 let pdfjsLibPromise;
 
 /**
@@ -1291,13 +1293,104 @@ function isBookCacheStorageRecord(item) {
   return item?.type === 'file-book' && item?.cacheMode === 'cache-storage' && Boolean(item.sourceUrl);
 }
 
+/**
+ * 判断绘本是否来自 CloudBase 阅读资料接口。
+ * @param {Record<string, unknown>} item 书架中的绘本记录。
+ * @returns {boolean} 是否需要使用 Range 分块读取。
+ */
+function isCloudBaseBook(item) {
+  const sourceUrl = String(item?.sourceUrl || '').trim();
+  return String(item?.source || '').toLowerCase() === 'cloudbase' || /\/reading\/file(?:\?|$)/u.test(sourceUrl);
+}
+
+/**
+ * 获取适合当前绘本的 MIME 类型，供本地 Blob 和 Cache Storage 使用。
+ * @param {Record<string, unknown>} item 书架中的绘本记录。
+ * @returns {string} 绘本 MIME 类型。
+ */
+function getBookMimeType(item) {
+  const fileKind = String(item?.fileKind || '').toLowerCase();
+  return fileKind === 'pdf' ? 'application/pdf' : 'application/epub+zip';
+}
+
+/**
+ * 请求 CloudBase 阅读资料的一段字节，并校验服务器返回的范围。
+ * @param {string} sourceUrl CloudBase 阅读资料接口地址。
+ * @param {number} start 请求起始字节位置。
+ * @param {number} end 请求结束字节位置。
+ * @returns {Promise<{buffer:ArrayBuffer,start:number,end:number,total:number|null,status:number,contentType:string}>} 分块数据和范围信息。
+ */
+async function fetchCloudBookChunk(sourceUrl, start, end) {
+  const controller = typeof AbortController === 'function' ? new AbortController() : undefined;
+  const timer = setTimeout(() => controller?.abort(), CLOUD_BOOK_CHUNK_TIMEOUT_MS);
+  let response;
+  try {
+    response = await fetch(sourceUrl, {
+      cache: 'force-cache',
+      headers: { Range: `bytes=${start}-${end}` },
+      signal: controller?.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+  if (!response.ok) throw new Error(`绘本分块读取失败：${response.status}`);
+  const contentType = response.headers.get('content-type') || '';
+  const contentRange = response.headers.get('content-range') || '';
+  const rangeMatch = contentRange.match(/^bytes\s+(\d+)-(\d+)\/(\d+|\*)$/iu);
+  const buffer = await response.arrayBuffer();
+
+  // 兼容少数会忽略 Range 的服务器，但只允许在第一块直接返回完整文件。
+  if (response.status === 200) {
+    if (start !== 0) throw new Error('云端阅读资料不支持连续 Range 请求');
+    return { buffer, start: 0, end: buffer.byteLength - 1, total: buffer.byteLength, status: 200, contentType };
+  }
+  if (response.status !== 206 || !rangeMatch) throw new Error('云端阅读资料返回的 Range 响应无效');
+  const receivedStart = Number(rangeMatch[1]);
+  const receivedEnd = Number(rangeMatch[2]);
+  const total = rangeMatch[3] === '*' ? null : Number(rangeMatch[3]);
+  if (receivedStart !== start || receivedEnd < receivedStart || (total !== null && receivedEnd >= total)) {
+    throw new Error('云端阅读资料返回了错误的字节范围');
+  }
+  return { buffer, start: receivedStart, end: receivedEnd, total, status: 206, contentType };
+}
+
+/**
+ * 使用不超过网关限制的 Range 请求读取 CloudBase 绘本完整字节。
+ * @param {string} sourceUrl CloudBase 阅读资料接口地址。
+ * @returns {Promise<ArrayBuffer>} 合并后的完整绘本字节。
+ */
+async function readCloudBaseBookArrayBuffer(sourceUrl) {
+  const chunks = [];
+  let nextStart = 0;
+  let total = null;
+  do {
+    const requestedEnd = total === null ? nextStart + CLOUD_BOOK_CHUNK_SIZE - 1 : Math.min(total - 1, nextStart + CLOUD_BOOK_CHUNK_SIZE - 1);
+    const part = await fetchCloudBookChunk(sourceUrl, nextStart, requestedEnd);
+    chunks.push(part.buffer);
+    total = part.total;
+    nextStart = part.end + 1;
+    if (part.buffer.byteLength === 0 || nextStart <= part.start) throw new Error('云端阅读资料分块读取没有进展');
+    if (total !== null && nextStart >= total) break;
+  } while (total === null || nextStart < total);
+  return new Blob(chunks).arrayBuffer();
+}
+
 async function cacheFileBookWithOptions(item, options = {}) {
   const sourceUrl = String(item.sourceUrl || '');
   const isLocalFileUrl = globalThis.location?.protocol === 'file:' || sourceUrl.startsWith('file:');
   const isInlineSource = /^(blob:|data:)/u.test(sourceUrl);
   if (isLocalFileUrl || isInlineSource || (!options.force && isBookCached(item)) || !sourceUrl) return { ok: false, skipped: true };
   try {
-    const response = await fetch(sourceUrl, { cache: 'force-cache' });
+    const response = isCloudBaseBook(item)
+      ? new Response(new Blob([await readCloudBaseBookArrayBuffer(sourceUrl)], { type: getBookMimeType(item) }), {
+        status: 200,
+        headers: {
+          'Accept-Ranges': 'bytes',
+          'Content-Length': String(item.size || 0),
+          'Content-Type': getBookMimeType(item),
+        },
+      })
+      : await fetch(sourceUrl, { cache: 'force-cache' });
     if (!response.ok) throw new Error(`绘本文件读取失败：${response.status}`);
     if (canReaderRequestUrl(item)) {
       const cachedInStorage = await putBookResponseCache(sourceUrl, response);
@@ -1441,6 +1534,7 @@ async function readBookArrayBuffer(item) {
   if (!sourceUrl) throw new Error('没有找到绘本文件地址');
   const cachedResponse = await matchBookResponseCache(sourceUrl);
   if (cachedResponse) return cachedResponse.arrayBuffer();
+  if (isCloudBaseBook(item)) return readCloudBaseBookArrayBuffer(sourceUrl);
   const controller = typeof AbortController === 'function' ? new AbortController() : undefined;
   const timer = setTimeout(() => controller?.abort(), READER_LOAD_TIMEOUT_MS);
   let response;
