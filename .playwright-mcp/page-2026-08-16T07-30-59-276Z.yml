@@ -1,0 +1,61 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e8]:
+        - strong [ref=e9]: 光之进化
+        - text: 学习能量控制台
+      - navigation "主导航" [ref=e10]:
+        - button "⌂ 首页" [ref=e11] [cursor=pointer]:
+          - generic [ref=e12]: ⌂
+          - text: 首页
+        - button "▤ 试卷目录" [ref=e13] [cursor=pointer]:
+          - generic [ref=e14]: ▤
+          - text: 试卷目录
+        - button "✦ 生成试卷" [ref=e15] [cursor=pointer]:
+          - generic [ref=e16]: ✦
+          - text: 生成试卷
+        - button "▥ 阅读资料" [ref=e17] [cursor=pointer]:
+          - generic [ref=e18]: ▥
+          - text: 阅读资料
+        - button "字 知识库" [ref=e19] [cursor=pointer]:
+          - generic [ref=e20]: 字
+          - text: 知识库
+        - button "◇ 学习游戏" [ref=e21] [cursor=pointer]:
+          - generic [ref=e22]: ◇
+          - text: 学习游戏
+        - button "⌘ 配置模板" [ref=e23] [cursor=pointer]:
+          - generic [ref=e24]: ⌘
+          - text: 配置模板
+      - paragraph [ref=e27]:
+        - strong [ref=e28]: 本机离线保存
+        - text: 请勿清除 Safari 网站数据
+    - main [active] [ref=e29]:
+      - generic [ref=e272]:
+        - generic [ref=e273]:
+          - generic [ref=e274]: 光之进化 / COMMAND DECK
+          - heading "试卷目录" [level=1] [ref=e275]
+          - paragraph [ref=e276]: 默认按生成时间倒序排列
+        - generic [ref=e282]:
+          - button "批量删除" [ref=e283] [cursor=pointer]
+          - button "＋ 生成新试卷" [ref=e284] [cursor=pointer]
+      - generic [ref=e285]:
+        - button "全部 (1)" [ref=e286] [cursor=pointer]
+        - button "未作答" [ref=e287] [cursor=pointer]
+        - button "作答中" [ref=e288] [cursor=pointer]
+        - button "待批改" [ref=e289] [cursor=pointer]
+        - button "已批改" [ref=e290] [cursor=pointer]
+      - article [ref=e292]:
+        - generic [ref=e293]:
+          - checkbox "选择" [ref=e294]
+          - text: 选择
+        - button "打开语文·成语填空（飞花令）·10题" [ref=e295] [cursor=pointer]
+        - generic [ref=e297]:
+          - heading "语文·成语填空（飞花令）·10题" [level=3] [ref=e298]
+          - generic [ref=e299]:
+            - generic [ref=e300]: 未作答
+            - time [ref=e301]: 2026/8/16 15:29:47
+          - generic [ref=e302]:
+            - button "复制" [ref=e303] [cursor=pointer]
+            - button "改名" [ref=e304] [cursor=pointer]
+            - button "删除" [ref=e305] [cursor=pointer]
+  - status: 试卷已生成并保存

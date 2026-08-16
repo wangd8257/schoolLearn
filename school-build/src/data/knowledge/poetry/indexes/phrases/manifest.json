@@ -1,0 +1,2057 @@
+{
+  "version": "20260816-1",
+  "bucketCount": 512,
+  "buckets": {
+    "100": {
+      "file": "indexes/phrases/phrase-100.json",
+      "terms": 3348
+    },
+    "101": {
+      "file": "indexes/phrases/phrase-101.json",
+      "terms": 3247
+    },
+    "102": {
+      "file": "indexes/phrases/phrase-102.json",
+      "terms": 3266
+    },
+    "103": {
+      "file": "indexes/phrases/phrase-103.json",
+      "terms": 3247
+    },
+    "104": {
+      "file": "indexes/phrases/phrase-104.json",
+      "terms": 3222
+    },
+    "105": {
+      "file": "indexes/phrases/phrase-105.json",
+      "terms": 3265
+    },
+    "106": {
+      "file": "indexes/phrases/phrase-106.json",
+      "terms": 3235
+    },
+    "107": {
+      "file": "indexes/phrases/phrase-107.json",
+      "terms": 3250
+    },
+    "108": {
+      "file": "indexes/phrases/phrase-108.json",
+      "terms": 3241
+    },
+    "109": {
+      "file": "indexes/phrases/phrase-109.json",
+      "terms": 3281
+    },
+    "110": {
+      "file": "indexes/phrases/phrase-110.json",
+      "terms": 3369
+    },
+    "111": {
+      "file": "indexes/phrases/phrase-111.json",
+      "terms": 3299
+    },
+    "112": {
+      "file": "indexes/phrases/phrase-112.json",
+      "terms": 3319
+    },
+    "113": {
+      "file": "indexes/phrases/phrase-113.json",
+      "terms": 3232
+    },
+    "114": {
+      "file": "indexes/phrases/phrase-114.json",
+      "terms": 3320
+    },
+    "115": {
+      "file": "indexes/phrases/phrase-115.json",
+      "terms": 3141
+    },
+    "116": {
+      "file": "indexes/phrases/phrase-116.json",
+      "terms": 3318
+    },
+    "117": {
+      "file": "indexes/phrases/phrase-117.json",
+      "terms": 3230
+    },
+    "118": {
+      "file": "indexes/phrases/phrase-118.json",
+      "terms": 3246
+    },
+    "119": {
+      "file": "indexes/phrases/phrase-119.json",
+      "terms": 3204
+    },
+    "120": {
+      "file": "indexes/phrases/phrase-120.json",
+      "terms": 3293
+    },
+    "121": {
+      "file": "indexes/phrases/phrase-121.json",
+      "terms": 3305
+    },
+    "122": {
+      "file": "indexes/phrases/phrase-122.json",
+      "terms": 3295
+    },
+    "123": {
+      "file": "indexes/phrases/phrase-123.json",
+      "terms": 3209
+    },
+    "124": {
+      "file": "indexes/phrases/phrase-124.json",
+      "terms": 3328
+    },
+    "125": {
+      "file": "indexes/phrases/phrase-125.json",
+      "terms": 3256
+    },
+    "126": {
+      "file": "indexes/phrases/phrase-126.json",
+      "terms": 3302
+    },
+    "127": {
+      "file": "indexes/phrases/phrase-127.json",
+      "terms": 3348
+    },
+    "128": {
+      "file": "indexes/phrases/phrase-128.json",
+      "terms": 3154
+    },
+    "129": {
+      "file": "indexes/phrases/phrase-129.json",
+      "terms": 3222
+    },
+    "130": {
+      "file": "indexes/phrases/phrase-130.json",
+      "terms": 3315
+    },
+    "131": {
+      "file": "indexes/phrases/phrase-131.json",
+      "terms": 3363
+    },
+    "132": {
+      "file": "indexes/phrases/phrase-132.json",
+      "terms": 3281
+    },
+    "133": {
+      "file": "indexes/phrases/phrase-133.json",
+      "terms": 3237
+    },
+    "134": {
+      "file": "indexes/phrases/phrase-134.json",
+      "terms": 3307
+    },
+    "135": {
+      "file": "indexes/phrases/phrase-135.json",
+      "terms": 3205
+    },
+    "136": {
+      "file": "indexes/phrases/phrase-136.json",
+      "terms": 3341
+    },
+    "137": {
+      "file": "indexes/phrases/phrase-137.json",
+      "terms": 3220
+    },
+    "138": {
+      "file": "indexes/phrases/phrase-138.json",
+      "terms": 3266
+    },
+    "139": {
+      "file": "indexes/phrases/phrase-139.json",
+      "terms": 3254
+    },
+    "140": {
+      "file": "indexes/phrases/phrase-140.json",
+      "terms": 3328
+    },
+    "141": {
+      "file": "indexes/phrases/phrase-141.json",
+      "terms": 3337
+    },
+    "142": {
+      "file": "indexes/phrases/phrase-142.json",
+      "terms": 3300
+    },
+    "143": {
+      "file": "indexes/phrases/phrase-143.json",
+      "terms": 3243
+    },
+    "144": {
+      "file": "indexes/phrases/phrase-144.json",
+      "terms": 3244
+    },
+    "145": {
+      "file": "indexes/phrases/phrase-145.json",
+      "terms": 3260
+    },
+    "146": {
+      "file": "indexes/phrases/phrase-146.json",
+      "terms": 3236
+    },
+    "147": {
+      "file": "indexes/phrases/phrase-147.json",
+      "terms": 3347
+    },
+    "148": {
+      "file": "indexes/phrases/phrase-148.json",
+      "terms": 3167
+    },
+    "149": {
+      "file": "indexes/phrases/phrase-149.json",
+      "terms": 3287
+    },
+    "150": {
+      "file": "indexes/phrases/phrase-150.json",
+      "terms": 3182
+    },
+    "151": {
+      "file": "indexes/phrases/phrase-151.json",
+      "terms": 3324
+    },
+    "152": {
+      "file": "indexes/phrases/phrase-152.json",
+      "terms": 3311
+    },
+    "153": {
+      "file": "indexes/phrases/phrase-153.json",
+      "terms": 3277
+    },
+    "154": {
+      "file": "indexes/phrases/phrase-154.json",
+      "terms": 3261
+    },
+    "155": {
+      "file": "indexes/phrases/phrase-155.json",
+      "terms": 3289
+    },
+    "156": {
+      "file": "indexes/phrases/phrase-156.json",
+      "terms": 3224
+    },
+    "157": {
+      "file": "indexes/phrases/phrase-157.json",
+      "terms": 3431
+    },
+    "158": {
+      "file": "indexes/phrases/phrase-158.json",
+      "terms": 3320
+    },
+    "159": {
+      "file": "indexes/phrases/phrase-159.json",
+      "terms": 3258
+    },
+    "160": {
+      "file": "indexes/phrases/phrase-160.json",
+      "terms": 3284
+    },
+    "161": {
+      "file": "indexes/phrases/phrase-161.json",
+      "terms": 3329
+    },
+    "162": {
+      "file": "indexes/phrases/phrase-162.json",
+      "terms": 3340
+    },
+    "163": {
+      "file": "indexes/phrases/phrase-163.json",
+      "terms": 3209
+    },
+    "164": {
+      "file": "indexes/phrases/phrase-164.json",
+      "terms": 3261
+    },
+    "165": {
+      "file": "indexes/phrases/phrase-165.json",
+      "terms": 3314
+    },
+    "166": {
+      "file": "indexes/phrases/phrase-166.json",
+      "terms": 3278
+    },
+    "167": {
+      "file": "indexes/phrases/phrase-167.json",
+      "terms": 3242
+    },
+    "168": {
+      "file": "indexes/phrases/phrase-168.json",
+      "terms": 3233
+    },
+    "169": {
+      "file": "indexes/phrases/phrase-169.json",
+      "terms": 3315
+    },
+    "170": {
+      "file": "indexes/phrases/phrase-170.json",
+      "terms": 3236
+    },
+    "171": {
+      "file": "indexes/phrases/phrase-171.json",
+      "terms": 3267
+    },
+    "172": {
+      "file": "indexes/phrases/phrase-172.json",
+      "terms": 3270
+    },
+    "173": {
+      "file": "indexes/phrases/phrase-173.json",
+      "terms": 3307
+    },
+    "174": {
+      "file": "indexes/phrases/phrase-174.json",
+      "terms": 3401
+    },
+    "175": {
+      "file": "indexes/phrases/phrase-175.json",
+      "terms": 3307
+    },
+    "176": {
+      "file": "indexes/phrases/phrase-176.json",
+      "terms": 3329
+    },
+    "177": {
+      "file": "indexes/phrases/phrase-177.json",
+      "terms": 3306
+    },
+    "178": {
+      "file": "indexes/phrases/phrase-178.json",
+      "terms": 3198
+    },
+    "179": {
+      "file": "indexes/phrases/phrase-179.json",
+      "terms": 3293
+    },
+    "180": {
+      "file": "indexes/phrases/phrase-180.json",
+      "terms": 3243
+    },
+    "181": {
+      "file": "indexes/phrases/phrase-181.json",
+      "terms": 3232
+    },
+    "182": {
+      "file": "indexes/phrases/phrase-182.json",
+      "terms": 3248
+    },
+    "183": {
+      "file": "indexes/phrases/phrase-183.json",
+      "terms": 3224
+    },
+    "184": {
+      "file": "indexes/phrases/phrase-184.json",
+      "terms": 3286
+    },
+    "185": {
+      "file": "indexes/phrases/phrase-185.json",
+      "terms": 3164
+    },
+    "186": {
+      "file": "indexes/phrases/phrase-186.json",
+      "terms": 3255
+    },
+    "187": {
+      "file": "indexes/phrases/phrase-187.json",
+      "terms": 3352
+    },
+    "188": {
+      "file": "indexes/phrases/phrase-188.json",
+      "terms": 3372
+    },
+    "189": {
+      "file": "indexes/phrases/phrase-189.json",
+      "terms": 3247
+    },
+    "190": {
+      "file": "indexes/phrases/phrase-190.json",
+      "terms": 3320
+    },
+    "191": {
+      "file": "indexes/phrases/phrase-191.json",
+      "terms": 3278
+    },
+    "192": {
+      "file": "indexes/phrases/phrase-192.json",
+      "terms": 3134
+    },
+    "193": {
+      "file": "indexes/phrases/phrase-193.json",
+      "terms": 3295
+    },
+    "194": {
+      "file": "indexes/phrases/phrase-194.json",
+      "terms": 3209
+    },
+    "195": {
+      "file": "indexes/phrases/phrase-195.json",
+      "terms": 3273
+    },
+    "196": {
+      "file": "indexes/phrases/phrase-196.json",
+      "terms": 3259
+    },
+    "197": {
+      "file": "indexes/phrases/phrase-197.json",
+      "terms": 3330
+    },
+    "198": {
+      "file": "indexes/phrases/phrase-198.json",
+      "terms": 3315
+    },
+    "199": {
+      "file": "indexes/phrases/phrase-199.json",
+      "terms": 3144
+    },
+    "200": {
+      "file": "indexes/phrases/phrase-200.json",
+      "terms": 3220
+    },
+    "201": {
+      "file": "indexes/phrases/phrase-201.json",
+      "terms": 3316
+    },
+    "202": {
+      "file": "indexes/phrases/phrase-202.json",
+      "terms": 3254
+    },
+    "203": {
+      "file": "indexes/phrases/phrase-203.json",
+      "terms": 3305
+    },
+    "204": {
+      "file": "indexes/phrases/phrase-204.json",
+      "terms": 3312
+    },
+    "205": {
+      "file": "indexes/phrases/phrase-205.json",
+      "terms": 3303
+    },
+    "206": {
+      "file": "indexes/phrases/phrase-206.json",
+      "terms": 3233
+    },
+    "207": {
+      "file": "indexes/phrases/phrase-207.json",
+      "terms": 3194
+    },
+    "208": {
+      "file": "indexes/phrases/phrase-208.json",
+      "terms": 3291
+    },
+    "209": {
+      "file": "indexes/phrases/phrase-209.json",
+      "terms": 3232
+    },
+    "210": {
+      "file": "indexes/phrases/phrase-210.json",
+      "terms": 3294
+    },
+    "211": {
+      "file": "indexes/phrases/phrase-211.json",
+      "terms": 3291
+    },
+    "212": {
+      "file": "indexes/phrases/phrase-212.json",
+      "terms": 3261
+    },
+    "213": {
+      "file": "indexes/phrases/phrase-213.json",
+      "terms": 3307
+    },
+    "214": {
+      "file": "indexes/phrases/phrase-214.json",
+      "terms": 3218
+    },
+    "215": {
+      "file": "indexes/phrases/phrase-215.json",
+      "terms": 3307
+    },
+    "216": {
+      "file": "indexes/phrases/phrase-216.json",
+      "terms": 3165
+    },
+    "217": {
+      "file": "indexes/phrases/phrase-217.json",
+      "terms": 3290
+    },
+    "218": {
+      "file": "indexes/phrases/phrase-218.json",
+      "terms": 3288
+    },
+    "219": {
+      "file": "indexes/phrases/phrase-219.json",
+      "terms": 3366
+    },
+    "220": {
+      "file": "indexes/phrases/phrase-220.json",
+      "terms": 3344
+    },
+    "221": {
+      "file": "indexes/phrases/phrase-221.json",
+      "terms": 3390
+    },
+    "222": {
+      "file": "indexes/phrases/phrase-222.json",
+      "terms": 3250
+    },
+    "223": {
+      "file": "indexes/phrases/phrase-223.json",
+      "terms": 3253
+    },
+    "224": {
+      "file": "indexes/phrases/phrase-224.json",
+      "terms": 3300
+    },
+    "225": {
+      "file": "indexes/phrases/phrase-225.json",
+      "terms": 3390
+    },
+    "226": {
+      "file": "indexes/phrases/phrase-226.json",
+      "terms": 3270
+    },
+    "227": {
+      "file": "indexes/phrases/phrase-227.json",
+      "terms": 3271
+    },
+    "228": {
+      "file": "indexes/phrases/phrase-228.json",
+      "terms": 3314
+    },
+    "229": {
+      "file": "indexes/phrases/phrase-229.json",
+      "terms": 3273
+    },
+    "230": {
+      "file": "indexes/phrases/phrase-230.json",
+      "terms": 3290
+    },
+    "231": {
+      "file": "indexes/phrases/phrase-231.json",
+      "terms": 3214
+    },
+    "232": {
+      "file": "indexes/phrases/phrase-232.json",
+      "terms": 3183
+    },
+    "233": {
+      "file": "indexes/phrases/phrase-233.json",
+      "terms": 3319
+    },
+    "234": {
+      "file": "indexes/phrases/phrase-234.json",
+      "terms": 3227
+    },
+    "235": {
+      "file": "indexes/phrases/phrase-235.json",
+      "terms": 3250
+    },
+    "236": {
+      "file": "indexes/phrases/phrase-236.json",
+      "terms": 3296
+    },
+    "237": {
+      "file": "indexes/phrases/phrase-237.json",
+      "terms": 3288
+    },
+    "238": {
+      "file": "indexes/phrases/phrase-238.json",
+      "terms": 3298
+    },
+    "239": {
+      "file": "indexes/phrases/phrase-239.json",
+      "terms": 3308
+    },
+    "240": {
+      "file": "indexes/phrases/phrase-240.json",
+      "terms": 3387
+    },
+    "241": {
+      "file": "indexes/phrases/phrase-241.json",
+      "terms": 3235
+    },
+    "242": {
+      "file": "indexes/phrases/phrase-242.json",
+      "terms": 3280
+    },
+    "243": {
+      "file": "indexes/phrases/phrase-243.json",
+      "terms": 3292
+    },
+    "244": {
+      "file": "indexes/phrases/phrase-244.json",
+      "terms": 3290
+    },
+    "245": {
+      "file": "indexes/phrases/phrase-245.json",
+      "terms": 3275
+    },
+    "246": {
+      "file": "indexes/phrases/phrase-246.json",
+      "terms": 3174
+    },
+    "247": {
+      "file": "indexes/phrases/phrase-247.json",
+      "terms": 3393
+    },
+    "248": {
+      "file": "indexes/phrases/phrase-248.json",
+      "terms": 3261
+    },
+    "249": {
+      "file": "indexes/phrases/phrase-249.json",
+      "terms": 3186
+    },
+    "250": {
+      "file": "indexes/phrases/phrase-250.json",
+      "terms": 3312
+    },
+    "251": {
+      "file": "indexes/phrases/phrase-251.json",
+      "terms": 3332
+    },
+    "252": {
+      "file": "indexes/phrases/phrase-252.json",
+      "terms": 3277
+    },
+    "253": {
+      "file": "indexes/phrases/phrase-253.json",
+      "terms": 3181
+    },
+    "254": {
+      "file": "indexes/phrases/phrase-254.json",
+      "terms": 3219
+    },
+    "255": {
+      "file": "indexes/phrases/phrase-255.json",
+      "terms": 3343
+    },
+    "256": {
+      "file": "indexes/phrases/phrase-256.json",
+      "terms": 3280
+    },
+    "257": {
+      "file": "indexes/phrases/phrase-257.json",
+      "terms": 3254
+    },
+    "258": {
+      "file": "indexes/phrases/phrase-258.json",
+      "terms": 3281
+    },
+    "259": {
+      "file": "indexes/phrases/phrase-259.json",
+      "terms": 3303
+    },
+    "260": {
+      "file": "indexes/phrases/phrase-260.json",
+      "terms": 3289
+    },
+    "261": {
+      "file": "indexes/phrases/phrase-261.json",
+      "terms": 3356
+    },
+    "262": {
+      "file": "indexes/phrases/phrase-262.json",
+      "terms": 3323
+    },
+    "263": {
+      "file": "indexes/phrases/phrase-263.json",
+      "terms": 3386
+    },
+    "264": {
+      "file": "indexes/phrases/phrase-264.json",
+      "terms": 3340
+    },
+    "265": {
+      "file": "indexes/phrases/phrase-265.json",
+      "terms": 3126
+    },
+    "266": {
+      "file": "indexes/phrases/phrase-266.json",
+      "terms": 3280
+    },
+    "267": {
+      "file": "indexes/phrases/phrase-267.json",
+      "terms": 3301
+    },
+    "268": {
+      "file": "indexes/phrases/phrase-268.json",
+      "terms": 3199
+    },
+    "269": {
+      "file": "indexes/phrases/phrase-269.json",
+      "terms": 3332
+    },
+    "270": {
+      "file": "indexes/phrases/phrase-270.json",
+      "terms": 3194
+    },
+    "271": {
+      "file": "indexes/phrases/phrase-271.json",
+      "terms": 3183
+    },
+    "272": {
+      "file": "indexes/phrases/phrase-272.json",
+      "terms": 3196
+    },
+    "273": {
+      "file": "indexes/phrases/phrase-273.json",
+      "terms": 3275
+    },
+    "274": {
+      "file": "indexes/phrases/phrase-274.json",
+      "terms": 3431
+    },
+    "275": {
+      "file": "indexes/phrases/phrase-275.json",
+      "terms": 3199
+    },
+    "276": {
+      "file": "indexes/phrases/phrase-276.json",
+      "terms": 3314
+    },
+    "277": {
+      "file": "indexes/phrases/phrase-277.json",
+      "terms": 3234
+    },
+    "278": {
+      "file": "indexes/phrases/phrase-278.json",
+      "terms": 3336
+    },
+    "279": {
+      "file": "indexes/phrases/phrase-279.json",
+      "terms": 3251
+    },
+    "280": {
+      "file": "indexes/phrases/phrase-280.json",
+      "terms": 3253
+    },
+    "281": {
+      "file": "indexes/phrases/phrase-281.json",
+      "terms": 3343
+    },
+    "282": {
+      "file": "indexes/phrases/phrase-282.json",
+      "terms": 3219
+    },
+    "283": {
+      "file": "indexes/phrases/phrase-283.json",
+      "terms": 3332
+    },
+    "284": {
+      "file": "indexes/phrases/phrase-284.json",
+      "terms": 3260
+    },
+    "285": {
+      "file": "indexes/phrases/phrase-285.json",
+      "terms": 3355
+    },
+    "286": {
+      "file": "indexes/phrases/phrase-286.json",
+      "terms": 3267
+    },
+    "287": {
+      "file": "indexes/phrases/phrase-287.json",
+      "terms": 3286
+    },
+    "288": {
+      "file": "indexes/phrases/phrase-288.json",
+      "terms": 3282
+    },
+    "289": {
+      "file": "indexes/phrases/phrase-289.json",
+      "terms": 3237
+    },
+    "290": {
+      "file": "indexes/phrases/phrase-290.json",
+      "terms": 3189
+    },
+    "291": {
+      "file": "indexes/phrases/phrase-291.json",
+      "terms": 3196
+    },
+    "292": {
+      "file": "indexes/phrases/phrase-292.json",
+      "terms": 3239
+    },
+    "293": {
+      "file": "indexes/phrases/phrase-293.json",
+      "terms": 3244
+    },
+    "294": {
+      "file": "indexes/phrases/phrase-294.json",
+      "terms": 3279
+    },
+    "295": {
+      "file": "indexes/phrases/phrase-295.json",
+      "terms": 3333
+    },
+    "296": {
+      "file": "indexes/phrases/phrase-296.json",
+      "terms": 3246
+    },
+    "297": {
+      "file": "indexes/phrases/phrase-297.json",
+      "terms": 3281
+    },
+    "298": {
+      "file": "indexes/phrases/phrase-298.json",
+      "terms": 3149
+    },
+    "299": {
+      "file": "indexes/phrases/phrase-299.json",
+      "terms": 3372
+    },
+    "300": {
+      "file": "indexes/phrases/phrase-300.json",
+      "terms": 3181
+    },
+    "301": {
+      "file": "indexes/phrases/phrase-301.json",
+      "terms": 3305
+    },
+    "302": {
+      "file": "indexes/phrases/phrase-302.json",
+      "terms": 3228
+    },
+    "303": {
+      "file": "indexes/phrases/phrase-303.json",
+      "terms": 3285
+    },
+    "304": {
+      "file": "indexes/phrases/phrase-304.json",
+      "terms": 3303
+    },
+    "305": {
+      "file": "indexes/phrases/phrase-305.json",
+      "terms": 3356
+    },
+    "306": {
+      "file": "indexes/phrases/phrase-306.json",
+      "terms": 3235
+    },
+    "307": {
+      "file": "indexes/phrases/phrase-307.json",
+      "terms": 3287
+    },
+    "308": {
+      "file": "indexes/phrases/phrase-308.json",
+      "terms": 3188
+    },
+    "309": {
+      "file": "indexes/phrases/phrase-309.json",
+      "terms": 3244
+    },
+    "310": {
+      "file": "indexes/phrases/phrase-310.json",
+      "terms": 3351
+    },
+    "311": {
+      "file": "indexes/phrases/phrase-311.json",
+      "terms": 3214
+    },
+    "312": {
+      "file": "indexes/phrases/phrase-312.json",
+      "terms": 3257
+    },
+    "313": {
+      "file": "indexes/phrases/phrase-313.json",
+      "terms": 3277
+    },
+    "314": {
+      "file": "indexes/phrases/phrase-314.json",
+      "terms": 3307
+    },
+    "315": {
+      "file": "indexes/phrases/phrase-315.json",
+      "terms": 3424
+    },
+    "316": {
+      "file": "indexes/phrases/phrase-316.json",
+      "terms": 3189
+    },
+    "317": {
+      "file": "indexes/phrases/phrase-317.json",
+      "terms": 3183
+    },
+    "318": {
+      "file": "indexes/phrases/phrase-318.json",
+      "terms": 3257
+    },
+    "319": {
+      "file": "indexes/phrases/phrase-319.json",
+      "terms": 3279
+    },
+    "320": {
+      "file": "indexes/phrases/phrase-320.json",
+      "terms": 3199
+    },
+    "321": {
+      "file": "indexes/phrases/phrase-321.json",
+      "terms": 3289
+    },
+    "322": {
+      "file": "indexes/phrases/phrase-322.json",
+      "terms": 3283
+    },
+    "323": {
+      "file": "indexes/phrases/phrase-323.json",
+      "terms": 3205
+    },
+    "324": {
+      "file": "indexes/phrases/phrase-324.json",
+      "terms": 3259
+    },
+    "325": {
+      "file": "indexes/phrases/phrase-325.json",
+      "terms": 3352
+    },
+    "326": {
+      "file": "indexes/phrases/phrase-326.json",
+      "terms": 3294
+    },
+    "327": {
+      "file": "indexes/phrases/phrase-327.json",
+      "terms": 3289
+    },
+    "328": {
+      "file": "indexes/phrases/phrase-328.json",
+      "terms": 3379
+    },
+    "329": {
+      "file": "indexes/phrases/phrase-329.json",
+      "terms": 3226
+    },
+    "330": {
+      "file": "indexes/phrases/phrase-330.json",
+      "terms": 3264
+    },
+    "331": {
+      "file": "indexes/phrases/phrase-331.json",
+      "terms": 3304
+    },
+    "332": {
+      "file": "indexes/phrases/phrase-332.json",
+      "terms": 3348
+    },
+    "333": {
+      "file": "indexes/phrases/phrase-333.json",
+      "terms": 3227
+    },
+    "334": {
+      "file": "indexes/phrases/phrase-334.json",
+      "terms": 3256
+    },
+    "335": {
+      "file": "indexes/phrases/phrase-335.json",
+      "terms": 3213
+    },
+    "336": {
+      "file": "indexes/phrases/phrase-336.json",
+      "terms": 3401
+    },
+    "337": {
+      "file": "indexes/phrases/phrase-337.json",
+      "terms": 3255
+    },
+    "338": {
+      "file": "indexes/phrases/phrase-338.json",
+      "terms": 3305
+    },
+    "339": {
+      "file": "indexes/phrases/phrase-339.json",
+      "terms": 3233
+    },
+    "340": {
+      "file": "indexes/phrases/phrase-340.json",
+      "terms": 3268
+    },
+    "341": {
+      "file": "indexes/phrases/phrase-341.json",
+      "terms": 3245
+    },
+    "342": {
+      "file": "indexes/phrases/phrase-342.json",
+      "terms": 3257
+    },
+    "343": {
+      "file": "indexes/phrases/phrase-343.json",
+      "terms": 3308
+    },
+    "344": {
+      "file": "indexes/phrases/phrase-344.json",
+      "terms": 3293
+    },
+    "345": {
+      "file": "indexes/phrases/phrase-345.json",
+      "terms": 3326
+    },
+    "346": {
+      "file": "indexes/phrases/phrase-346.json",
+      "terms": 3270
+    },
+    "347": {
+      "file": "indexes/phrases/phrase-347.json",
+      "terms": 3289
+    },
+    "348": {
+      "file": "indexes/phrases/phrase-348.json",
+      "terms": 3264
+    },
+    "349": {
+      "file": "indexes/phrases/phrase-349.json",
+      "terms": 3248
+    },
+    "350": {
+      "file": "indexes/phrases/phrase-350.json",
+      "terms": 3288
+    },
+    "351": {
+      "file": "indexes/phrases/phrase-351.json",
+      "terms": 3180
+    },
+    "352": {
+      "file": "indexes/phrases/phrase-352.json",
+      "terms": 3271
+    },
+    "353": {
+      "file": "indexes/phrases/phrase-353.json",
+      "terms": 3250
+    },
+    "354": {
+      "file": "indexes/phrases/phrase-354.json",
+      "terms": 3310
+    },
+    "355": {
+      "file": "indexes/phrases/phrase-355.json",
+      "terms": 3240
+    },
+    "356": {
+      "file": "indexes/phrases/phrase-356.json",
+      "terms": 3250
+    },
+    "357": {
+      "file": "indexes/phrases/phrase-357.json",
+      "terms": 3269
+    },
+    "358": {
+      "file": "indexes/phrases/phrase-358.json",
+      "terms": 3278
+    },
+    "359": {
+      "file": "indexes/phrases/phrase-359.json",
+      "terms": 3218
+    },
+    "360": {
+      "file": "indexes/phrases/phrase-360.json",
+      "terms": 3330
+    },
+    "361": {
+      "file": "indexes/phrases/phrase-361.json",
+      "terms": 3199
+    },
+    "362": {
+      "file": "indexes/phrases/phrase-362.json",
+      "terms": 3321
+    },
+    "363": {
+      "file": "indexes/phrases/phrase-363.json",
+      "terms": 3254
+    },
+    "364": {
+      "file": "indexes/phrases/phrase-364.json",
+      "terms": 3361
+    },
+    "365": {
+      "file": "indexes/phrases/phrase-365.json",
+      "terms": 3195
+    },
+    "366": {
+      "file": "indexes/phrases/phrase-366.json",
+      "terms": 3238
+    },
+    "367": {
+      "file": "indexes/phrases/phrase-367.json",
+      "terms": 3354
+    },
+    "368": {
+      "file": "indexes/phrases/phrase-368.json",
+      "terms": 3338
+    },
+    "369": {
+      "file": "indexes/phrases/phrase-369.json",
+      "terms": 3246
+    },
+    "370": {
+      "file": "indexes/phrases/phrase-370.json",
+      "terms": 3375
+    },
+    "371": {
+      "file": "indexes/phrases/phrase-371.json",
+      "terms": 3260
+    },
+    "372": {
+      "file": "indexes/phrases/phrase-372.json",
+      "terms": 3245
+    },
+    "373": {
+      "file": "indexes/phrases/phrase-373.json",
+      "terms": 3153
+    },
+    "374": {
+      "file": "indexes/phrases/phrase-374.json",
+      "terms": 3273
+    },
+    "375": {
+      "file": "indexes/phrases/phrase-375.json",
+      "terms": 3287
+    },
+    "376": {
+      "file": "indexes/phrases/phrase-376.json",
+      "terms": 3346
+    },
+    "377": {
+      "file": "indexes/phrases/phrase-377.json",
+      "terms": 3365
+    },
+    "378": {
+      "file": "indexes/phrases/phrase-378.json",
+      "terms": 3311
+    },
+    "379": {
+      "file": "indexes/phrases/phrase-379.json",
+      "terms": 3246
+    },
+    "380": {
+      "file": "indexes/phrases/phrase-380.json",
+      "terms": 3335
+    },
+    "381": {
+      "file": "indexes/phrases/phrase-381.json",
+      "terms": 3203
+    },
+    "382": {
+      "file": "indexes/phrases/phrase-382.json",
+      "terms": 3152
+    },
+    "383": {
+      "file": "indexes/phrases/phrase-383.json",
+      "terms": 3241
+    },
+    "384": {
+      "file": "indexes/phrases/phrase-384.json",
+      "terms": 3298
+    },
+    "385": {
+      "file": "indexes/phrases/phrase-385.json",
+      "terms": 3295
+    },
+    "386": {
+      "file": "indexes/phrases/phrase-386.json",
+      "terms": 3296
+    },
+    "387": {
+      "file": "indexes/phrases/phrase-387.json",
+      "terms": 3377
+    },
+    "388": {
+      "file": "indexes/phrases/phrase-388.json",
+      "terms": 3251
+    },
+    "389": {
+      "file": "indexes/phrases/phrase-389.json",
+      "terms": 3386
+    },
+    "390": {
+      "file": "indexes/phrases/phrase-390.json",
+      "terms": 3400
+    },
+    "391": {
+      "file": "indexes/phrases/phrase-391.json",
+      "terms": 3257
+    },
+    "392": {
+      "file": "indexes/phrases/phrase-392.json",
+      "terms": 3288
+    },
+    "393": {
+      "file": "indexes/phrases/phrase-393.json",
+      "terms": 3344
+    },
+    "394": {
+      "file": "indexes/phrases/phrase-394.json",
+      "terms": 3322
+    },
+    "395": {
+      "file": "indexes/phrases/phrase-395.json",
+      "terms": 3291
+    },
+    "396": {
+      "file": "indexes/phrases/phrase-396.json",
+      "terms": 3291
+    },
+    "397": {
+      "file": "indexes/phrases/phrase-397.json",
+      "terms": 3362
+    },
+    "398": {
+      "file": "indexes/phrases/phrase-398.json",
+      "terms": 3371
+    },
+    "399": {
+      "file": "indexes/phrases/phrase-399.json",
+      "terms": 3249
+    },
+    "400": {
+      "file": "indexes/phrases/phrase-400.json",
+      "terms": 3251
+    },
+    "401": {
+      "file": "indexes/phrases/phrase-401.json",
+      "terms": 3343
+    },
+    "402": {
+      "file": "indexes/phrases/phrase-402.json",
+      "terms": 3309
+    },
+    "403": {
+      "file": "indexes/phrases/phrase-403.json",
+      "terms": 3223
+    },
+    "404": {
+      "file": "indexes/phrases/phrase-404.json",
+      "terms": 3259
+    },
+    "405": {
+      "file": "indexes/phrases/phrase-405.json",
+      "terms": 3246
+    },
+    "406": {
+      "file": "indexes/phrases/phrase-406.json",
+      "terms": 3215
+    },
+    "407": {
+      "file": "indexes/phrases/phrase-407.json",
+      "terms": 3295
+    },
+    "408": {
+      "file": "indexes/phrases/phrase-408.json",
+      "terms": 3335
+    },
+    "409": {
+      "file": "indexes/phrases/phrase-409.json",
+      "terms": 3260
+    },
+    "410": {
+      "file": "indexes/phrases/phrase-410.json",
+      "terms": 3368
+    },
+    "411": {
+      "file": "indexes/phrases/phrase-411.json",
+      "terms": 3229
+    },
+    "412": {
+      "file": "indexes/phrases/phrase-412.json",
+      "terms": 3300
+    },
+    "413": {
+      "file": "indexes/phrases/phrase-413.json",
+      "terms": 3178
+    },
+    "414": {
+      "file": "indexes/phrases/phrase-414.json",
+      "terms": 3229
+    },
+    "415": {
+      "file": "indexes/phrases/phrase-415.json",
+      "terms": 3283
+    },
+    "416": {
+      "file": "indexes/phrases/phrase-416.json",
+      "terms": 3324
+    },
+    "417": {
+      "file": "indexes/phrases/phrase-417.json",
+      "terms": 3276
+    },
+    "418": {
+      "file": "indexes/phrases/phrase-418.json",
+      "terms": 3314
+    },
+    "419": {
+      "file": "indexes/phrases/phrase-419.json",
+      "terms": 3358
+    },
+    "420": {
+      "file": "indexes/phrases/phrase-420.json",
+      "terms": 3262
+    },
+    "421": {
+      "file": "indexes/phrases/phrase-421.json",
+      "terms": 3258
+    },
+    "422": {
+      "file": "indexes/phrases/phrase-422.json",
+      "terms": 3226
+    },
+    "423": {
+      "file": "indexes/phrases/phrase-423.json",
+      "terms": 3351
+    },
+    "424": {
+      "file": "indexes/phrases/phrase-424.json",
+      "terms": 3238
+    },
+    "425": {
+      "file": "indexes/phrases/phrase-425.json",
+      "terms": 3233
+    },
+    "426": {
+      "file": "indexes/phrases/phrase-426.json",
+      "terms": 3266
+    },
+    "427": {
+      "file": "indexes/phrases/phrase-427.json",
+      "terms": 3285
+    },
+    "428": {
+      "file": "indexes/phrases/phrase-428.json",
+      "terms": 3332
+    },
+    "429": {
+      "file": "indexes/phrases/phrase-429.json",
+      "terms": 3209
+    },
+    "430": {
+      "file": "indexes/phrases/phrase-430.json",
+      "terms": 3248
+    },
+    "431": {
+      "file": "indexes/phrases/phrase-431.json",
+      "terms": 3307
+    },
+    "432": {
+      "file": "indexes/phrases/phrase-432.json",
+      "terms": 3347
+    },
+    "433": {
+      "file": "indexes/phrases/phrase-433.json",
+      "terms": 3319
+    },
+    "434": {
+      "file": "indexes/phrases/phrase-434.json",
+      "terms": 3228
+    },
+    "435": {
+      "file": "indexes/phrases/phrase-435.json",
+      "terms": 3335
+    },
+    "436": {
+      "file": "indexes/phrases/phrase-436.json",
+      "terms": 3152
+    },
+    "437": {
+      "file": "indexes/phrases/phrase-437.json",
+      "terms": 3242
+    },
+    "438": {
+      "file": "indexes/phrases/phrase-438.json",
+      "terms": 3254
+    },
+    "439": {
+      "file": "indexes/phrases/phrase-439.json",
+      "terms": 3306
+    },
+    "440": {
+      "file": "indexes/phrases/phrase-440.json",
+      "terms": 3246
+    },
+    "441": {
+      "file": "indexes/phrases/phrase-441.json",
+      "terms": 3232
+    },
+    "442": {
+      "file": "indexes/phrases/phrase-442.json",
+      "terms": 3245
+    },
+    "443": {
+      "file": "indexes/phrases/phrase-443.json",
+      "terms": 3348
+    },
+    "444": {
+      "file": "indexes/phrases/phrase-444.json",
+      "terms": 3243
+    },
+    "445": {
+      "file": "indexes/phrases/phrase-445.json",
+      "terms": 3370
+    },
+    "446": {
+      "file": "indexes/phrases/phrase-446.json",
+      "terms": 3335
+    },
+    "447": {
+      "file": "indexes/phrases/phrase-447.json",
+      "terms": 3249
+    },
+    "448": {
+      "file": "indexes/phrases/phrase-448.json",
+      "terms": 3264
+    },
+    "449": {
+      "file": "indexes/phrases/phrase-449.json",
+      "terms": 3171
+    },
+    "450": {
+      "file": "indexes/phrases/phrase-450.json",
+      "terms": 3265
+    },
+    "451": {
+      "file": "indexes/phrases/phrase-451.json",
+      "terms": 3291
+    },
+    "452": {
+      "file": "indexes/phrases/phrase-452.json",
+      "terms": 3247
+    },
+    "453": {
+      "file": "indexes/phrases/phrase-453.json",
+      "terms": 3262
+    },
+    "454": {
+      "file": "indexes/phrases/phrase-454.json",
+      "terms": 3327
+    },
+    "455": {
+      "file": "indexes/phrases/phrase-455.json",
+      "terms": 3256
+    },
+    "456": {
+      "file": "indexes/phrases/phrase-456.json",
+      "terms": 3383
+    },
+    "457": {
+      "file": "indexes/phrases/phrase-457.json",
+      "terms": 3208
+    },
+    "458": {
+      "file": "indexes/phrases/phrase-458.json",
+      "terms": 3251
+    },
+    "459": {
+      "file": "indexes/phrases/phrase-459.json",
+      "terms": 3288
+    },
+    "460": {
+      "file": "indexes/phrases/phrase-460.json",
+      "terms": 3305
+    },
+    "461": {
+      "file": "indexes/phrases/phrase-461.json",
+      "terms": 3363
+    },
+    "462": {
+      "file": "indexes/phrases/phrase-462.json",
+      "terms": 3240
+    },
+    "463": {
+      "file": "indexes/phrases/phrase-463.json",
+      "terms": 3370
+    },
+    "464": {
+      "file": "indexes/phrases/phrase-464.json",
+      "terms": 3292
+    },
+    "465": {
+      "file": "indexes/phrases/phrase-465.json",
+      "terms": 3286
+    },
+    "466": {
+      "file": "indexes/phrases/phrase-466.json",
+      "terms": 3271
+    },
+    "467": {
+      "file": "indexes/phrases/phrase-467.json",
+      "terms": 3212
+    },
+    "468": {
+      "file": "indexes/phrases/phrase-468.json",
+      "terms": 3304
+    },
+    "469": {
+      "file": "indexes/phrases/phrase-469.json",
+      "terms": 3372
+    },
+    "470": {
+      "file": "indexes/phrases/phrase-470.json",
+      "terms": 3332
+    },
+    "471": {
+      "file": "indexes/phrases/phrase-471.json",
+      "terms": 3324
+    },
+    "472": {
+      "file": "indexes/phrases/phrase-472.json",
+      "terms": 3299
+    },
+    "473": {
+      "file": "indexes/phrases/phrase-473.json",
+      "terms": 3227
+    },
+    "474": {
+      "file": "indexes/phrases/phrase-474.json",
+      "terms": 3382
+    },
+    "475": {
+      "file": "indexes/phrases/phrase-475.json",
+      "terms": 3163
+    },
+    "476": {
+      "file": "indexes/phrases/phrase-476.json",
+      "terms": 3263
+    },
+    "477": {
+      "file": "indexes/phrases/phrase-477.json",
+      "terms": 3321
+    },
+    "478": {
+      "file": "indexes/phrases/phrase-478.json",
+      "terms": 3216
+    },
+    "479": {
+      "file": "indexes/phrases/phrase-479.json",
+      "terms": 3203
+    },
+    "480": {
+      "file": "indexes/phrases/phrase-480.json",
+      "terms": 3300
+    },
+    "481": {
+      "file": "indexes/phrases/phrase-481.json",
+      "terms": 3249
+    },
+    "482": {
+      "file": "indexes/phrases/phrase-482.json",
+      "terms": 3217
+    },
+    "483": {
+      "file": "indexes/phrases/phrase-483.json",
+      "terms": 3302
+    },
+    "484": {
+      "file": "indexes/phrases/phrase-484.json",
+      "terms": 3218
+    },
+    "485": {
+      "file": "indexes/phrases/phrase-485.json",
+      "terms": 3250
+    },
+    "486": {
+      "file": "indexes/phrases/phrase-486.json",
+      "terms": 3255
+    },
+    "487": {
+      "file": "indexes/phrases/phrase-487.json",
+      "terms": 3401
+    },
+    "488": {
+      "file": "indexes/phrases/phrase-488.json",
+      "terms": 3224
+    },
+    "489": {
+      "file": "indexes/phrases/phrase-489.json",
+      "terms": 3390
+    },
+    "490": {
+      "file": "indexes/phrases/phrase-490.json",
+      "terms": 3320
+    },
+    "491": {
+      "file": "indexes/phrases/phrase-491.json",
+      "terms": 3267
+    },
+    "492": {
+      "file": "indexes/phrases/phrase-492.json",
+      "terms": 3344
+    },
+    "493": {
+      "file": "indexes/phrases/phrase-493.json",
+      "terms": 3342
+    },
+    "494": {
+      "file": "indexes/phrases/phrase-494.json",
+      "terms": 3309
+    },
+    "495": {
+      "file": "indexes/phrases/phrase-495.json",
+      "terms": 3229
+    },
+    "496": {
+      "file": "indexes/phrases/phrase-496.json",
+      "terms": 3356
+    },
+    "497": {
+      "file": "indexes/phrases/phrase-497.json",
+      "terms": 3277
+    },
+    "498": {
+      "file": "indexes/phrases/phrase-498.json",
+      "terms": 3294
+    },
+    "499": {
+      "file": "indexes/phrases/phrase-499.json",
+      "terms": 3276
+    },
+    "500": {
+      "file": "indexes/phrases/phrase-500.json",
+      "terms": 3271
+    },
+    "501": {
+      "file": "indexes/phrases/phrase-501.json",
+      "terms": 3383
+    },
+    "502": {
+      "file": "indexes/phrases/phrase-502.json",
+      "terms": 3210
+    },
+    "503": {
+      "file": "indexes/phrases/phrase-503.json",
+      "terms": 3329
+    },
+    "504": {
+      "file": "indexes/phrases/phrase-504.json",
+      "terms": 3316
+    },
+    "505": {
+      "file": "indexes/phrases/phrase-505.json",
+      "terms": 3268
+    },
+    "506": {
+      "file": "indexes/phrases/phrase-506.json",
+      "terms": 3243
+    },
+    "507": {
+      "file": "indexes/phrases/phrase-507.json",
+      "terms": 3273
+    },
+    "508": {
+      "file": "indexes/phrases/phrase-508.json",
+      "terms": 3291
+    },
+    "509": {
+      "file": "indexes/phrases/phrase-509.json",
+      "terms": 3332
+    },
+    "510": {
+      "file": "indexes/phrases/phrase-510.json",
+      "terms": 3229
+    },
+    "511": {
+      "file": "indexes/phrases/phrase-511.json",
+      "terms": 3285
+    },
+    "000": {
+      "file": "indexes/phrases/phrase-000.json",
+      "terms": 3313
+    },
+    "001": {
+      "file": "indexes/phrases/phrase-001.json",
+      "terms": 3357
+    },
+    "002": {
+      "file": "indexes/phrases/phrase-002.json",
+      "terms": 3279
+    },
+    "003": {
+      "file": "indexes/phrases/phrase-003.json",
+      "terms": 3347
+    },
+    "004": {
+      "file": "indexes/phrases/phrase-004.json",
+      "terms": 3230
+    },
+    "005": {
+      "file": "indexes/phrases/phrase-005.json",
+      "terms": 3283
+    },
+    "006": {
+      "file": "indexes/phrases/phrase-006.json",
+      "terms": 3293
+    },
+    "007": {
+      "file": "indexes/phrases/phrase-007.json",
+      "terms": 3272
+    },
+    "008": {
+      "file": "indexes/phrases/phrase-008.json",
+      "terms": 3361
+    },
+    "009": {
+      "file": "indexes/phrases/phrase-009.json",
+      "terms": 3273
+    },
+    "010": {
+      "file": "indexes/phrases/phrase-010.json",
+      "terms": 3246
+    },
+    "011": {
+      "file": "indexes/phrases/phrase-011.json",
+      "terms": 3324
+    },
+    "012": {
+      "file": "indexes/phrases/phrase-012.json",
+      "terms": 3275
+    },
+    "013": {
+      "file": "indexes/phrases/phrase-013.json",
+      "terms": 3377
+    },
+    "014": {
+      "file": "indexes/phrases/phrase-014.json",
+      "terms": 3180
+    },
+    "015": {
+      "file": "indexes/phrases/phrase-015.json",
+      "terms": 3262
+    },
+    "016": {
+      "file": "indexes/phrases/phrase-016.json",
+      "terms": 3307
+    },
+    "017": {
+      "file": "indexes/phrases/phrase-017.json",
+      "terms": 3205
+    },
+    "018": {
+      "file": "indexes/phrases/phrase-018.json",
+      "terms": 3210
+    },
+    "019": {
+      "file": "indexes/phrases/phrase-019.json",
+      "terms": 3294
+    },
+    "020": {
+      "file": "indexes/phrases/phrase-020.json",
+      "terms": 3260
+    },
+    "021": {
+      "file": "indexes/phrases/phrase-021.json",
+      "terms": 3277
+    },
+    "022": {
+      "file": "indexes/phrases/phrase-022.json",
+      "terms": 3210
+    },
+    "023": {
+      "file": "indexes/phrases/phrase-023.json",
+      "terms": 3287
+    },
+    "024": {
+      "file": "indexes/phrases/phrase-024.json",
+      "terms": 3289
+    },
+    "025": {
+      "file": "indexes/phrases/phrase-025.json",
+      "terms": 3265
+    },
+    "026": {
+      "file": "indexes/phrases/phrase-026.json",
+      "terms": 3204
+    },
+    "027": {
+      "file": "indexes/phrases/phrase-027.json",
+      "terms": 3247
+    },
+    "028": {
+      "file": "indexes/phrases/phrase-028.json",
+      "terms": 3195
+    },
+    "029": {
+      "file": "indexes/phrases/phrase-029.json",
+      "terms": 3192
+    },
+    "030": {
+      "file": "indexes/phrases/phrase-030.json",
+      "terms": 3210
+    },
+    "031": {
+      "file": "indexes/phrases/phrase-031.json",
+      "terms": 3226
+    },
+    "032": {
+      "file": "indexes/phrases/phrase-032.json",
+      "terms": 3299
+    },
+    "033": {
+      "file": "indexes/phrases/phrase-033.json",
+      "terms": 3262
+    },
+    "034": {
+      "file": "indexes/phrases/phrase-034.json",
+      "terms": 3323
+    },
+    "035": {
+      "file": "indexes/phrases/phrase-035.json",
+      "terms": 3116
+    },
+    "036": {
+      "file": "indexes/phrases/phrase-036.json",
+      "terms": 3233
+    },
+    "037": {
+      "file": "indexes/phrases/phrase-037.json",
+      "terms": 3287
+    },
+    "038": {
+      "file": "indexes/phrases/phrase-038.json",
+      "terms": 3228
+    },
+    "039": {
+      "file": "indexes/phrases/phrase-039.json",
+      "terms": 3279
+    },
+    "040": {
+      "file": "indexes/phrases/phrase-040.json",
+      "terms": 3249
+    },
+    "041": {
+      "file": "indexes/phrases/phrase-041.json",
+      "terms": 3356
+    },
+    "042": {
+      "file": "indexes/phrases/phrase-042.json",
+      "terms": 3399
+    },
+    "043": {
+      "file": "indexes/phrases/phrase-043.json",
+      "terms": 3324
+    },
+    "044": {
+      "file": "indexes/phrases/phrase-044.json",
+      "terms": 3288
+    },
+    "045": {
+      "file": "indexes/phrases/phrase-045.json",
+      "terms": 3257
+    },
+    "046": {
+      "file": "indexes/phrases/phrase-046.json",
+      "terms": 3213
+    },
+    "047": {
+      "file": "indexes/phrases/phrase-047.json",
+      "terms": 3320
+    },
+    "048": {
+      "file": "indexes/phrases/phrase-048.json",
+      "terms": 3333
+    },
+    "049": {
+      "file": "indexes/phrases/phrase-049.json",
+      "terms": 3262
+    },
+    "050": {
+      "file": "indexes/phrases/phrase-050.json",
+      "terms": 3147
+    },
+    "051": {
+      "file": "indexes/phrases/phrase-051.json",
+      "terms": 3234
+    },
+    "052": {
+      "file": "indexes/phrases/phrase-052.json",
+      "terms": 3241
+    },
+    "053": {
+      "file": "indexes/phrases/phrase-053.json",
+      "terms": 3339
+    },
+    "054": {
+      "file": "indexes/phrases/phrase-054.json",
+      "terms": 3291
+    },
+    "055": {
+      "file": "indexes/phrases/phrase-055.json",
+      "terms": 3307
+    },
+    "056": {
+      "file": "indexes/phrases/phrase-056.json",
+      "terms": 3276
+    },
+    "057": {
+      "file": "indexes/phrases/phrase-057.json",
+      "terms": 3292
+    },
+    "058": {
+      "file": "indexes/phrases/phrase-058.json",
+      "terms": 3244
+    },
+    "059": {
+      "file": "indexes/phrases/phrase-059.json",
+      "terms": 3251
+    },
+    "060": {
+      "file": "indexes/phrases/phrase-060.json",
+      "terms": 3248
+    },
+    "061": {
+      "file": "indexes/phrases/phrase-061.json",
+      "terms": 3327
+    },
+    "062": {
+      "file": "indexes/phrases/phrase-062.json",
+      "terms": 3420
+    },
+    "063": {
+      "file": "indexes/phrases/phrase-063.json",
+      "terms": 3238
+    },
+    "064": {
+      "file": "indexes/phrases/phrase-064.json",
+      "terms": 3343
+    },
+    "065": {
+      "file": "indexes/phrases/phrase-065.json",
+      "terms": 3300
+    },
+    "066": {
+      "file": "indexes/phrases/phrase-066.json",
+      "terms": 3359
+    },
+    "067": {
+      "file": "indexes/phrases/phrase-067.json",
+      "terms": 3285
+    },
+    "068": {
+      "file": "indexes/phrases/phrase-068.json",
+      "terms": 3327
+    },
+    "069": {
+      "file": "indexes/phrases/phrase-069.json",
+      "terms": 3160
+    },
+    "070": {
+      "file": "indexes/phrases/phrase-070.json",
+      "terms": 3252
+    },
+    "071": {
+      "file": "indexes/phrases/phrase-071.json",
+      "terms": 3298
+    },
+    "072": {
+      "file": "indexes/phrases/phrase-072.json",
+      "terms": 3239
+    },
+    "073": {
+      "file": "indexes/phrases/phrase-073.json",
+      "terms": 3244
+    },
+    "074": {
+      "file": "indexes/phrases/phrase-074.json",
+      "terms": 3285
+    },
+    "075": {
+      "file": "indexes/phrases/phrase-075.json",
+      "terms": 3274
+    },
+    "076": {
+      "file": "indexes/phrases/phrase-076.json",
+      "terms": 3386
+    },
+    "077": {
+      "file": "indexes/phrases/phrase-077.json",
+      "terms": 3311
+    },
+    "078": {
+      "file": "indexes/phrases/phrase-078.json",
+      "terms": 3271
+    },
+    "079": {
+      "file": "indexes/phrases/phrase-079.json",
+      "terms": 3275
+    },
+    "080": {
+      "file": "indexes/phrases/phrase-080.json",
+      "terms": 3316
+    },
+    "081": {
+      "file": "indexes/phrases/phrase-081.json",
+      "terms": 3271
+    },
+    "082": {
+      "file": "indexes/phrases/phrase-082.json",
+      "terms": 3225
+    },
+    "083": {
+      "file": "indexes/phrases/phrase-083.json",
+      "terms": 3318
+    },
+    "084": {
+      "file": "indexes/phrases/phrase-084.json",
+      "terms": 3253
+    },
+    "085": {
+      "file": "indexes/phrases/phrase-085.json",
+      "terms": 3218
+    },
+    "086": {
+      "file": "indexes/phrases/phrase-086.json",
+      "terms": 3242
+    },
+    "087": {
+      "file": "indexes/phrases/phrase-087.json",
+      "terms": 3218
+    },
+    "088": {
+      "file": "indexes/phrases/phrase-088.json",
+      "terms": 3180
+    },
+    "089": {
+      "file": "indexes/phrases/phrase-089.json",
+      "terms": 3348
+    },
+    "090": {
+      "file": "indexes/phrases/phrase-090.json",
+      "terms": 3423
+    },
+    "091": {
+      "file": "indexes/phrases/phrase-091.json",
+      "terms": 3213
+    },
+    "092": {
+      "file": "indexes/phrases/phrase-092.json",
+      "terms": 3207
+    },
+    "093": {
+      "file": "indexes/phrases/phrase-093.json",
+      "terms": 3219
+    },
+    "094": {
+      "file": "indexes/phrases/phrase-094.json",
+      "terms": 3301
+    },
+    "095": {
+      "file": "indexes/phrases/phrase-095.json",
+      "terms": 3364
+    },
+    "096": {
+      "file": "indexes/phrases/phrase-096.json",
+      "terms": 3284
+    },
+    "097": {
+      "file": "indexes/phrases/phrase-097.json",
+      "terms": 3302
+    },
+    "098": {
+      "file": "indexes/phrases/phrase-098.json",
+      "terms": 3214
+    },
+    "099": {
+      "file": "indexes/phrases/phrase-099.json",
+      "terms": 3240
+    }
+  },
+  "minLineLength": 4,
+  "maxLineLength": 12,
+  "maxTitleLength": 16
+}

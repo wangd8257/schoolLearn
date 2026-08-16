@@ -795,6 +795,30 @@ function normalizePoetryFilterText(value) {
 }
 
 /**
+ * 归一化古诗精确短句索引键，去掉标点和空白以兼容用户直接输入诗句。
+ * @param {unknown} value 用户输入、诗题或诗句文本。
+ * @returns {string} 可用于短句索引的键。
+ */
+function normalizePoetryPhraseKey(value) {
+  return toSimplifiedChinese(value).replace(/[\s\p{P}\p{S}]+/gu, '').trim();
+}
+
+/**
+ * 计算古诗短句索引的稳定哈希值，需与生成索引脚本保持一致。
+ * @param {string} text 已归一化的短句索引键。
+ * @returns {number} 32 位无符号哈希。
+ */
+function hashPoetryPhraseKey(text) {
+  let hash = 2166136261;
+  for (const character of text) {
+    // 使用 FNV-1a，让短句平均分散到多个小桶，避免高频首字形成大文件。
+    hash ^= character.codePointAt(0) || 0;
+    hash = Math.imul(hash, 16777619) >>> 0;
+  }
+  return hash;
+}
+
+/**
  * 归一化古诗作者名，去掉“（朝代）作者”和“朝代：作者”等前缀差异。
  * @param {unknown} value 作者筛选值。
  * @returns {string} 作者索引键。
@@ -1284,6 +1308,29 @@ async function loadPoetryCharacterPostings(character) {
 }
 
 /**
+ * 通过短句/标题精确索引读取古诗绝对编号，避免常用字查询下载多个大字符索引。
+ * @param {string} query 用户输入的诗题或完整诗句。
+ * @returns {Promise<number[]|undefined>} 命中的古诗编号；未命中时返回 undefined 以便退回字符索引。
+ */
+async function getPoetryPhrasePositions(query) {
+  const key = normalizePoetryPhraseKey(query);
+  if (key.length < 2 || key.length > 32) return undefined;
+  const manifest = await fetchJson(`${POETRY_BASE}/indexes/phrases/manifest.json`);
+  const bucketCount = Number(manifest?.bucketCount || 0);
+  if (!bucketCount || !manifest?.buckets) return undefined;
+  const bucket = String(hashPoetryPhraseKey(key) % bucketCount).padStart(3, '0');
+  const file = manifest.buckets?.[bucket]?.file;
+  if (!file) return undefined;
+  const cacheKey = `phrase:${bucket}`;
+  if (!poetryIndexCache.has(cacheKey)) {
+    const data = await fetchJson(`${POETRY_BASE}/${file}`);
+    poetryIndexCache.set(cacheKey, data && typeof data === 'object' ? data : {});
+  }
+  const positions = poetryIndexCache.get(cacheKey)?.[key];
+  return Array.isArray(positions) && positions.length ? positions : undefined;
+}
+
+/**
  * 计算古诗字符查询的绝对编号交集。
  * @param {string} query 古诗查询文本。
  * @returns {Promise<number[]|undefined>} 命中的古诗编号。
@@ -1652,7 +1699,7 @@ export async function filterKnowledgeAsync(type, filters = {}) {
     page: 1,
     pageSize: 200,
   });
-  if (remote?.items) {
+  if (Array.isArray(remote?.items) && remote.items.length) {
     return remote.items.map((item) => normalizeRemoteKnowledgeItem(type, item));
   }
   if (type === 'poetry') return filterPoetryCatalog(filters);
@@ -1690,7 +1737,7 @@ export async function pageKnowledge(type, filters = {}, page = 1, pageSize = 20)
     page,
     pageSize,
   });
-  if (remote?.items) {
+  if (Array.isArray(remote?.items) && remote.items.length) {
     const items = remote.items.map((item) => normalizeRemoteKnowledgeItem(type, item));
     return {
       items,
@@ -1719,7 +1766,7 @@ export async function pageKnowledge(type, filters = {}, page = 1, pageSize = 20)
       const dynasty = normalizePoetryFilterText(filters.dynasty);
       const collection = normalizePoetryFilterText(filters.collection);
       if (hasQuery && !author && !dynasty && !collection) {
-        const positions = await getPoetryPostingPositions(filters.query);
+        const positions = await getPoetryPhrasePositions(filters.query) || await getPoetryPostingPositions(filters.query);
         if (positions) {
           const pageCount = Math.max(1, Math.ceil(positions.length / size));
           const currentPage = Math.max(1, Math.min(pageCount, Number(page) || 1));
@@ -1805,7 +1852,7 @@ export async function randomKnowledgeAsync(type, count = 1, excluded = new Set()
     dynasty: filters.dynasty,
     category: filters.collection,
   });
-  if (remote?.items) {
+  if (Array.isArray(remote?.items) && remote.items.length) {
     return remote.items
       .map((item) => normalizeRemoteKnowledgeItem(type, item))
       .filter((item) => !excluded.has(knowledgeKey(type, item)))

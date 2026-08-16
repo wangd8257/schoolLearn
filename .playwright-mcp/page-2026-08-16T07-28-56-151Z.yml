@@ -1,0 +1,102 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e8]:
+        - strong [ref=e9]: 光之进化
+        - text: 学习能量控制台
+      - navigation "主导航" [ref=e10]:
+        - button "⌂ 首页" [ref=e11] [cursor=pointer]:
+          - generic [ref=e12]: ⌂
+          - text: 首页
+        - button "▤ 试卷目录" [ref=e13] [cursor=pointer]:
+          - generic [ref=e14]: ▤
+          - text: 试卷目录
+        - button "✦ 生成试卷" [ref=e15] [cursor=pointer]:
+          - generic [ref=e16]: ✦
+          - text: 生成试卷
+        - button "▥ 阅读资料" [ref=e17] [cursor=pointer]:
+          - generic [ref=e18]: ▥
+          - text: 阅读资料
+        - button "字 知识库" [ref=e19] [cursor=pointer]:
+          - generic [ref=e20]: 字
+          - text: 知识库
+        - button "◇ 学习游戏" [ref=e21] [cursor=pointer]:
+          - generic [ref=e22]: ◇
+          - text: 学习游戏
+        - button "⌘ 配置模板" [ref=e23] [cursor=pointer]:
+          - generic [ref=e24]: ⌘
+          - text: 配置模板
+      - paragraph [ref=e27]:
+        - strong [ref=e28]: 本机离线保存
+        - text: 请勿清除 Safari 网站数据
+    - main [active] [ref=e29]:
+      - generic [ref=e173]:
+        - generic [ref=e174]: 光之进化 / COMMAND DECK
+        - heading "生成试卷" [level=1] [ref=e175]
+        - paragraph [ref=e176]: 选择模板和参数，生成后作为独立快照保存
+      - generic [ref=e182]:
+        - generic [ref=e183]:
+          - generic [ref=e184]:
+            - generic [ref=e185]: 学科
+            - combobox [ref=e186]:
+              - option "数学" [selected]
+              - option "语文"
+              - option "英语"
+          - generic [ref=e187]:
+            - generic [ref=e188]: 模板
+            - combobox [ref=e189]:
+              - option "横式计算" [selected]
+              - option "缺项填数"
+              - option "竖式计算"
+              - option "比较大小"
+              - option "列式计算"
+              - option "应用题"
+              - option "连加"
+              - option "连减"
+              - option "连续加减"
+              - option "凑十法"
+              - option "破十法"
+              - option "进位加法"
+              - option "退位减法"
+              - option "乘法"
+              - option "除法"
+              - option "人民币换算"
+              - option "单位换算"
+              - option "钟表认知"
+          - generic [ref=e190]:
+            - generic [ref=e191]: 试卷名称
+            - textbox "留空则自动命名" [ref=e192]
+          - generic [ref=e193]:
+            - generic [ref=e194]: A4 方向
+            - generic [ref=e195]:
+              - generic [ref=e196]:
+                - radio "纵向" [checked] [ref=e197]
+                - generic [ref=e198]: 纵向
+              - generic [ref=e199]:
+                - radio "横向" [ref=e200]
+                - generic [ref=e201]: 横向
+          - generic [ref=e202]:
+            - generic [ref=e203]:
+              - generic [ref=e204]:
+                - generic [ref=e205]: 题目数量
+                - spinbutton [ref=e206]: "30"
+              - generic [ref=e207]:
+                - generic [ref=e208]: 数值上限
+                - spinbutton [ref=e209]: "20"
+            - generic [ref=e210]:
+              - generic [ref=e211]: 运算类型
+              - combobox [ref=e212]:
+                - option "纯加" [selected]
+                - option "纯减"
+                - option "混合加减"
+          - button "生成并保存试卷" [ref=e213] [cursor=pointer]
+          - button "生成预览" [ref=e214] [cursor=pointer]
+          - button "保存为配置模板" [ref=e215] [cursor=pointer]
+        - generic [ref=e216]:
+          - heading "配置生成预览" [level=2] [ref=e217]
+          - paragraph [ref=e218]: 调整左侧配置后点击生成预览，预览不会保存试卷。
+          - generic [ref=e220]:
+            - generic [ref=e221]: 📄
+            - heading "数学·horizontal" [level=2] [ref=e222]
+            - paragraph [ref=e223]: 点击“生成预览”查看当前配置会生成的试卷样式。
+  - status

@@ -1,0 +1,178 @@
+- generic [ref=f2e1]:
+  - generic [ref=f2e2]:
+    - complementary [ref=f2e3]:
+      - generic [ref=f2e8]:
+        - strong [ref=f2e9]: 光之进化
+        - text: 学习能量控制台
+      - navigation "主导航" [ref=f2e10]:
+        - button "⌂ 首页" [ref=f2e11] [cursor=pointer]:
+          - generic [ref=f2e12]: ⌂
+          - text: 首页
+        - button "▤ 试卷目录" [ref=f2e13] [cursor=pointer]:
+          - generic [ref=f2e14]: ▤
+          - text: 试卷目录
+        - button "✦ 生成试卷" [ref=f2e15] [cursor=pointer]:
+          - generic [ref=f2e16]: ✦
+          - text: 生成试卷
+        - button "▥ 阅读资料" [ref=f2e17] [cursor=pointer]:
+          - generic [ref=f2e18]: ▥
+          - text: 阅读资料
+        - button "字 知识库" [ref=f2e19] [cursor=pointer]:
+          - generic [ref=f2e20]: 字
+          - text: 知识库
+        - button "◇ 学习游戏" [ref=f2e21] [cursor=pointer]:
+          - generic [ref=f2e22]: ◇
+          - text: 学习游戏
+        - button "⌘ 配置模板" [ref=f2e23] [cursor=pointer]:
+          - generic [ref=f2e24]: ⌘
+          - text: 配置模板
+      - paragraph [ref=f2e27]:
+        - strong [ref=f2e28]: 本机离线保存
+        - text: 请勿清除 Safari 网站数据
+    - main [ref=f2e29]:
+      - generic [ref=f2e216]:
+        - generic [ref=f2e217]: 光之进化 / COMMAND DECK
+        - heading "生成试卷" [level=1] [ref=f2e218]
+        - paragraph [ref=f2e219]: 选择模板和参数，生成后作为独立快照保存
+      - generic [ref=f2e225]:
+        - generic [ref=f2e226]:
+          - generic [ref=f2e227]:
+            - generic [ref=f2e228]: 学科
+            - combobox [ref=f2e229]:
+              - option "数学"
+              - option "语文" [selected]
+              - option "英语"
+          - generic [ref=f2e230]:
+            - generic [ref=f2e231]: 模板
+            - combobox [ref=f2e232]:
+              - option "汉字描红"
+              - option "按笔画练字"
+              - option "控笔训练"
+              - option "田字格/作业纸"
+              - option "成语填空（飞花令）" [selected]
+              - option "诗句上下文配对"
+              - option "看拼音写汉字"
+          - generic [ref=f2e233]:
+            - generic [ref=f2e234]: 试卷名称
+            - textbox "留空则自动命名" [ref=f2e235]
+          - generic [ref=f2e236]:
+            - generic [ref=f2e237]: A4 方向
+            - generic [ref=f2e238]:
+              - generic [ref=f2e239]:
+                - radio "纵向" [checked] [ref=f2e240]
+                - generic [ref=f2e241]: 纵向
+              - generic [ref=f2e242]:
+                - radio "横向" [ref=f2e243]
+                - generic [ref=f2e244]: 横向
+          - generic [ref=f2e245]:
+            - generic [ref=f2e246]:
+              - generic [ref=f2e247]: 练习内容（每行一项）
+              - textbox "一行可输入多个字，例如：你好" [ref=f2e248]
+            - generic [ref=f2e249]:
+              - generic [ref=f2e250]: 成语筛选字（可留空）
+              - textbox "例如：目" [ref=f2e251]
+            - generic [ref=f2e252]:
+              - generic [ref=f2e253]: 题目数量
+              - spinbutton [ref=f2e254]: "10"
+          - button "生成并保存试卷" [ref=f2e255] [cursor=pointer]
+          - button "生成预览" [active] [ref=f2e256] [cursor=pointer]
+          - button "保存为配置模板" [ref=f2e257] [cursor=pointer]
+        - generic [ref=f2e258]:
+          - heading "配置生成预览" [level=2] [ref=f2e259]
+          - paragraph [ref=f2e260]: 调整左侧配置后点击生成预览，预览不会保存试卷。
+          - generic "试卷预览" [ref=f2e266]:
+            - article [ref=f2e267]:
+              - generic [ref=f2e268]:
+                - heading "语文·成语填空（飞花令）·预览" [level=2] [ref=f2e269]
+                - generic [ref=f2e270]:
+                  - generic [ref=f2e271]:
+                    - generic [ref=f2e272]:
+                      - generic [ref=f2e273]: "1."
+                      - text: 偷___换日
+                    - generic [ref=f2e274]:
+                      - generic [ref=f2e275]: A. 铓
+                      - generic [ref=f2e276]: B. 胆
+                      - generic [ref=f2e277]: C. 天
+                      - generic [ref=f2e278]: D. 引
+                  - generic [ref=f2e279]:
+                    - generic [ref=f2e280]:
+                      - generic [ref=f2e281]: "2."
+                      - text: 一献___酬
+                    - generic [ref=f2e282]:
+                      - generic [ref=f2e283]: A. 三
+                      - generic [ref=f2e284]: B. 嫌
+                      - generic [ref=f2e285]: C. 字
+                      - generic [ref=f2e286]: D. 所
+                  - generic [ref=f2e287]:
+                    - generic [ref=f2e288]:
+                      - generic [ref=f2e289]: "3."
+                      - text: 心___俱碎
+                    - generic [ref=f2e290]:
+                      - generic [ref=f2e291]: A. 承
+                      - generic [ref=f2e292]: B. 胆
+                      - generic [ref=f2e293]: C. 兼
+                      - generic [ref=f2e294]: D. 行
+                  - generic [ref=f2e295]:
+                    - generic [ref=f2e296]:
+                      - generic [ref=f2e297]: "4."
+                      - text: 心如刀___
+                    - generic [ref=f2e298]:
+                      - generic [ref=f2e299]: A. 先
+                      - generic [ref=f2e300]: B. 搅
+                      - generic [ref=f2e301]: C. 目
+                      - generic [ref=f2e302]: D. 避
+                  - generic [ref=f2e303]:
+                    - generic [ref=f2e304]:
+                      - generic [ref=f2e305]: "5."
+                      - text: 呆里___奸
+                    - generic [ref=f2e306]:
+                      - generic [ref=f2e307]: A. 刃
+                      - generic [ref=f2e308]: B. 籍
+                      - generic [ref=f2e309]: C. 撒
+                      - generic [ref=f2e310]: D. 团
+                  - generic [ref=f2e311]:
+                    - generic [ref=f2e312]:
+                      - generic [ref=f2e313]: "6."
+                      - text: 避李嫌___
+                    - generic [ref=f2e314]:
+                      - generic [ref=f2e315]: A. 瓜
+                      - generic [ref=f2e316]: B. 窗
+                      - generic [ref=f2e317]: C. 盈
+                      - generic [ref=f2e318]: D. 璞
+                  - generic [ref=f2e319]:
+                    - generic [ref=f2e320]:
+                      - generic [ref=f2e321]: "7."
+                      - text: ___铅甲乙
+                    - generic [ref=f2e322]:
+                      - generic [ref=f2e323]: A. 瓜
+                      - generic [ref=f2e324]: B. 丹
+                      - generic [ref=f2e325]: C. 深
+                      - generic [ref=f2e326]: D. 扬
+                  - generic [ref=f2e327]:
+                    - generic [ref=f2e328]:
+                      - generic [ref=f2e329]: "8."
+                      - text: 浑___璞玉
+                    - generic [ref=f2e330]:
+                      - generic [ref=f2e331]: A. 金
+                      - generic [ref=f2e332]: B. 容
+                      - generic [ref=f2e333]: C. 亡
+                      - generic [ref=f2e334]: D. 行
+                  - generic [ref=f2e335]:
+                    - generic [ref=f2e336]:
+                      - generic [ref=f2e337]: "9."
+                      - text: 尝___卧薪
+                    - generic [ref=f2e338]:
+                      - generic [ref=f2e339]: A. 胆
+                      - generic [ref=f2e340]: B. 道
+                      - generic [ref=f2e341]: C. 茂
+                      - generic [ref=f2e342]: D. 踏
+                  - generic [ref=f2e343]:
+                    - generic [ref=f2e344]:
+                      - generic [ref=f2e345]: "10."
+                      - text: 愁眉蹙___
+                    - generic [ref=f2e346]:
+                      - generic [ref=f2e347]: A. 倦
+                      - generic [ref=f2e348]: B. 兼
+                      - generic [ref=f2e349]: C. 额
+                      - generic [ref=f2e350]: D. 先
+  - status

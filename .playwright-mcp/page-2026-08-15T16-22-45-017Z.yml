@@ -1,0 +1,238 @@
+- generic [active] [ref=f1e1]:
+  - generic [ref=f1e2]:
+    - complementary [ref=f1e3]:
+      - generic [ref=f1e8]:
+        - strong [ref=f1e9]: 光之进化
+        - text: 学习能量控制台
+      - navigation "主导航" [ref=f1e10]:
+        - button "⌂ 首页" [ref=f1e11] [cursor=pointer]:
+          - generic [ref=f1e12]: ⌂
+          - text: 首页
+        - button "▤ 试卷目录" [ref=f1e13] [cursor=pointer]:
+          - generic [ref=f1e14]: ▤
+          - text: 试卷目录
+        - button "✦ 生成试卷" [ref=f1e15] [cursor=pointer]:
+          - generic [ref=f1e16]: ✦
+          - text: 生成试卷
+        - button "▥ 阅读资料" [ref=f1e17] [cursor=pointer]:
+          - generic [ref=f1e18]: ▥
+          - text: 阅读资料
+        - button "字 知识库" [ref=f1e19] [cursor=pointer]:
+          - generic [ref=f1e20]: 字
+          - text: 知识库
+        - button "◇ 学习游戏" [ref=f1e21] [cursor=pointer]:
+          - generic [ref=f1e22]: ◇
+          - text: 学习游戏
+        - button "⌘ 配置模板" [ref=f1e23] [cursor=pointer]:
+          - generic [ref=f1e24]: ⌘
+          - text: 配置模板
+      - paragraph [ref=f1e27]:
+        - strong [ref=f1e28]: 本机离线保存
+        - text: 请勿清除 Safari 网站数据
+    - main [ref=f1e29]:
+      - generic [ref=f1e908]:
+        - generic [ref=f1e909]: 光之进化 / COMMAND DECK
+        - heading "知识库" [level=1] [ref=f1e910]
+        - paragraph [ref=f1e911]: 离线学习成语、汉字、歇后语、词语与古诗
+      - generic [ref=f1e917]:
+        - generic [ref=f1e918]:
+          - generic [ref=f1e919]:
+            - radio "成语库" [checked] [ref=f1e920]
+            - generic [ref=f1e921]: 成语库
+          - generic [ref=f1e922]:
+            - radio "汉字库" [ref=f1e923]
+            - generic [ref=f1e924]: 汉字库
+          - generic [ref=f1e925]:
+            - radio "歇后语" [ref=f1e926]
+            - generic [ref=f1e927]: 歇后语
+          - generic [ref=f1e928]:
+            - radio "词语库" [ref=f1e929]
+            - generic [ref=f1e930]: 词语库
+          - generic [ref=f1e931]:
+            - radio "古诗库" [ref=f1e932]
+            - generic [ref=f1e933]: 古诗库
+        - generic [ref=f1e934]:
+          - textbox "按某个或某些字筛选" [ref=f1e935]: 目
+          - button "查询" [ref=f1e936] [cursor=pointer]
+      - generic [ref=f1e937]:
+        - generic [ref=f1e938]: 随机学习
+        - heading "从成语库开始" [level=2] [ref=f1e939]
+        - paragraph [ref=f1e940]: 已学会的内容不会在本轮重复出现，未掌握内容会进入错题库。
+        - button "开始随机学习" [ref=f1e941] [cursor=pointer]
+      - generic [ref=f1e942]:
+        - generic [ref=f1e943]:
+          - generic [ref=f1e944]:
+            - heading "成语库" [level=2] [ref=f1e945]
+            - paragraph [ref=f1e946]: 当前筛选 330 条，第 1/17 页
+          - generic [ref=f1e947]:
+            - button "上一页" [disabled] [ref=f1e948] [cursor=pointer]
+            - button "下一页" [ref=f1e949] [cursor=pointer]
+        - generic [ref=f1e950]:
+          - article [ref=f1e951]:
+            - button [ref=f1e952] [cursor=pointer]:
+              - heading "案剑瞋目" [level=3] [ref=f1e953]
+              - paragraph [ref=f1e954]: àn jiàn chēn mù
+              - paragraph [ref=f1e955]: 案同按”，握住；瞋瞪眼。握住宝剑，瞪大双眼。
+            - generic [ref=f1e956]:
+              - button "喜欢" [ref=f1e957] [cursor=pointer]
+              - button "不喜欢" [ref=f1e958] [cursor=pointer]
+          - article [ref=f1e959]:
+            - button [ref=f1e960] [cursor=pointer]:
+              - heading "本来面目" [level=3] [ref=f1e961]
+              - paragraph [ref=f1e962]: běn lái miàn mù
+              - paragraph [ref=f1e963]: 原为佛家语，指人的本性◇多比喻事物原来的模样。
+            - generic [ref=f1e964]:
+              - button "喜欢" [ref=f1e965] [cursor=pointer]
+              - button "不喜欢" [ref=f1e966] [cursor=pointer]
+          - article [ref=f1e967]:
+            - button [ref=f1e968] [cursor=pointer]:
+              - heading "比目连枝" [level=3] [ref=f1e969]
+              - paragraph [ref=f1e970]: bǐ mù lián zhī
+              - paragraph [ref=f1e971]: 比目比目鱼，传说仅一眼，须两鱼并游；连枝连在一起的树枝。比喻形影不离的情侣和朋友。
+            - generic [ref=f1e972]:
+              - button "喜欢" [ref=f1e973] [cursor=pointer]
+              - button "不喜欢" [ref=f1e974] [cursor=pointer]
+          - article [ref=f1e975]:
+            - button [ref=f1e976] [cursor=pointer]:
+              - heading "闭目塞聪" [level=3] [ref=f1e977]
+              - paragraph [ref=f1e978]: bì mù sāi cōng
+              - paragraph [ref=f1e979]: 聪听觉敏锐，这里指听觉。闭着眼睛，堵住耳朵。形容对外界事物全不了解。
+            - generic [ref=f1e980]:
+              - button "喜欢" [ref=f1e981] [cursor=pointer]
+              - button "不喜欢" [ref=f1e982] [cursor=pointer]
+          - article [ref=f1e983]:
+            - button [ref=f1e984] [cursor=pointer]:
+              - heading "闭目塞耳" [level=3] [ref=f1e985]
+              - paragraph [ref=f1e986]: bì mù sè ěr
+              - paragraph [ref=f1e987]: 堵塞视听。指对外界事物不闻不问或不了解。
+            - generic [ref=f1e988]:
+              - button "喜欢" [ref=f1e989] [cursor=pointer]
+              - button "不喜欢" [ref=f1e990] [cursor=pointer]
+          - article [ref=f1e991]:
+            - button [ref=f1e992] [cursor=pointer]:
+              - heading "闭目塞听" [level=3] [ref=f1e993]
+              - paragraph [ref=f1e994]: bì mù sè tīng
+              - paragraph [ref=f1e995]: 闭上眼睛不看，堵住耳朵不听。形容对外界事物不闻不问。
+            - generic [ref=f1e996]:
+              - button "喜欢" [ref=f1e997] [cursor=pointer]
+              - button "不喜欢" [ref=f1e998] [cursor=pointer]
+          - article [ref=f1e999]:
+            - button [ref=f1e1000] [cursor=pointer]:
+              - heading "避人耳目" [level=3] [ref=f1e1001]
+              - paragraph [ref=f1e1002]: bì rén ěr mù
+              - paragraph [ref=f1e1003]: 指避免走漏消息。
+            - generic [ref=f1e1004]:
+              - button "喜欢" [ref=f1e1005] [cursor=pointer]
+              - button "不喜欢" [ref=f1e1006] [cursor=pointer]
+          - article [ref=f1e1007]:
+            - button [ref=f1e1008] [cursor=pointer]:
+              - heading "避人眼目" [level=3] [ref=f1e1009]
+              - paragraph [ref=f1e1010]: bì rén yǎn mù
+              - paragraph [ref=f1e1011]: 指避免走漏消息。同避人耳目”。
+            - generic [ref=f1e1012]:
+              - button "喜欢" [ref=f1e1013] [cursor=pointer]
+              - button "不喜欢" [ref=f1e1014] [cursor=pointer]
+          - article [ref=f1e1015]:
+            - button [ref=f1e1016] [cursor=pointer]:
+              - heading "播穅眯目" [level=3] [ref=f1e1017]
+              - paragraph [ref=f1e1018]: bō kāng mǐ mù
+              - paragraph [ref=f1e1019]: 散布糠屑以迷人目。比喻被外物蒙蔽而迷失方向。
+            - generic [ref=f1e1020]:
+              - button "喜欢" [ref=f1e1021] [cursor=pointer]
+              - button "不喜欢" [ref=f1e1022] [cursor=pointer]
+          - article [ref=f1e1023]:
+            - button [ref=f1e1024] [cursor=pointer]:
+              - heading "播糠眯目" [level=3] [ref=f1e1025]
+              - paragraph [ref=f1e1026]: bō kāng mǐ mù
+              - paragraph [ref=f1e1027]: 撒播糠秕眯住别人的眼睛。比喻外物虽小，但造成的桅却很大。
+            - generic [ref=f1e1028]:
+              - button "喜欢" [ref=f1e1029] [cursor=pointer]
+              - button "不喜欢" [ref=f1e1030] [cursor=pointer]
+          - article [ref=f1e1031]:
+            - button [ref=f1e1032] [cursor=pointer]:
+              - heading "不堪入目" [level=3] [ref=f1e1033]
+              - paragraph [ref=f1e1034]: bù kān rù mù
+              - paragraph [ref=f1e1035]: 指形象丑恶，使人看不下去。
+            - generic [ref=f1e1036]:
+              - button "喜欢" [ref=f1e1037] [cursor=pointer]
+              - button "不喜欢" [ref=f1e1038] [cursor=pointer]
+          - article [ref=f1e1039]:
+            - button [ref=f1e1040] [cursor=pointer]:
+              - heading "不识庐山真面目" [level=3] [ref=f1e1041]
+              - paragraph [ref=f1e1042]: bù shí lú shān zhēn miàn mù
+              - paragraph [ref=f1e1043]: 比喻认不清事物的真相和本质。
+            - generic [ref=f1e1044]:
+              - button "喜欢" [ref=f1e1045] [cursor=pointer]
+              - button "不喜欢" [ref=f1e1046] [cursor=pointer]
+          - article [ref=f1e1047]:
+            - button [ref=f1e1048] [cursor=pointer]:
+              - heading "侧目而视" [level=3] [ref=f1e1049]
+              - paragraph [ref=f1e1050]: cè mù ér shì
+              - paragraph [ref=f1e1051]: 侧斜着。斜着眼睛看人。形容憎恨或又怕又愤恨。
+            - generic [ref=f1e1052]:
+              - button "喜欢" [ref=f1e1053] [cursor=pointer]
+              - button "不喜欢" [ref=f1e1054] [cursor=pointer]
+          - article [ref=f1e1055]:
+            - button [ref=f1e1056] [cursor=pointer]:
+              - heading "长目飞耳" [level=3] [ref=f1e1057]
+              - paragraph [ref=f1e1058]: cháng mù fēi ěr
+              - paragraph [ref=f1e1059]: 看得远，听得远。比喻消息灵通，知道的事情多。
+            - generic [ref=f1e1060]:
+              - button "喜欢" [ref=f1e1061] [cursor=pointer]
+              - button "不喜欢" [ref=f1e1062] [cursor=pointer]
+          - article [ref=f1e1063]:
+            - button [ref=f1e1064] [cursor=pointer]:
+              - heading "嗔目切齿" [level=3] [ref=f1e1065]
+              - paragraph [ref=f1e1066]: chēn mù qiē chǐ
+              - paragraph [ref=f1e1067]: 嗔目发怒时睁大眼睛。瞪大眼睛，咬紧牙齿。形容极端愤怒的样子。
+            - generic [ref=f1e1068]:
+              - button "喜欢" [ref=f1e1069] [cursor=pointer]
+              - button "不喜欢" [ref=f1e1070] [cursor=pointer]
+          - article [ref=f1e1071]:
+            - button [ref=f1e1072] [cursor=pointer]:
+              - heading "瞋目扼腕" [level=3] [ref=f1e1073]
+              - paragraph [ref=f1e1074]: chēn mù è wàn
+              - paragraph [ref=f1e1075]: 形容愤怒、勇敢的样子。
+            - generic [ref=f1e1076]:
+              - button "喜欢" [ref=f1e1077] [cursor=pointer]
+              - button "不喜欢" [ref=f1e1078] [cursor=pointer]
+          - article [ref=f1e1079]:
+            - button [ref=f1e1080] [cursor=pointer]:
+              - heading "瞋目切齿" [level=3] [ref=f1e1081]
+              - paragraph [ref=f1e1082]: chēn mù qiè chǐ
+              - paragraph [ref=f1e1083]: 瞋目发怒时睁大眼睛。瞪大眼睛，咬紧牙齿。形容极端愤怒的样子。
+            - generic [ref=f1e1084]:
+              - button "喜欢" [ref=f1e1085] [cursor=pointer]
+              - button "不喜欢" [ref=f1e1086] [cursor=pointer]
+          - article [ref=f1e1087]:
+            - button [ref=f1e1088] [cursor=pointer]:
+              - heading "瞠目而视" [level=3] [ref=f1e1089]
+              - paragraph [ref=f1e1090]: chēng mù ér shì
+              - paragraph [ref=f1e1091]: 瞪大眼睛看着。
+            - generic [ref=f1e1092]:
+              - button "喜欢" [ref=f1e1093] [cursor=pointer]
+              - button "不喜欢" [ref=f1e1094] [cursor=pointer]
+          - article [ref=f1e1095]:
+            - button [ref=f1e1096] [cursor=pointer]:
+              - heading "瞠目结舌" [level=3] [ref=f1e1097]
+              - paragraph [ref=f1e1098]: chēng mù jié shé
+              - paragraph [ref=f1e1099]: 瞪瞪着眼；结舌说不出话来。瞪着眼睛说不出话来。形容窘困或惊呆的样子。
+            - generic [ref=f1e1100]:
+              - button "喜欢" [ref=f1e1101] [cursor=pointer]
+              - button "不喜欢" [ref=f1e1102] [cursor=pointer]
+          - article [ref=f1e1103]:
+            - button [ref=f1e1104] [cursor=pointer]:
+              - heading "骋怀游目" [level=3] [ref=f1e1105]
+              - paragraph [ref=f1e1106]: chěng huái yóu mù
+              - paragraph [ref=f1e1107]: 骋怀放开胸怀，往远处想；游目远眺。纵目四望，开阔心胸。
+            - generic [ref=f1e1108]:
+              - button "喜欢" [ref=f1e1109] [cursor=pointer]
+              - button "不喜欢" [ref=f1e1110] [cursor=pointer]
+      - generic [ref=f1e1112]:
+        - generic [ref=f1e1113]:
+          - heading "错题库" [level=2] [ref=f1e1114]
+          - paragraph [ref=f1e1115]: 暂时没有错题。
+        - generic [ref=f1e1117]:
+          - radio "全部" [checked] [ref=f1e1118]
+          - generic [ref=f1e1119]: 全部
+  - status

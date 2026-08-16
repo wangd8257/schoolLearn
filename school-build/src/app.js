@@ -1,4 +1,4 @@
-﻿import { openDatabase, getAll, put, get, remove } from './db.js';
+import { openDatabase, getAll, put, get, remove } from './db.js';
 import { createDrawingLayer } from './drawing.js';
 import {
   PAPER_STATUS,
@@ -2940,8 +2940,22 @@ document.addEventListener('change', async (event) => {
     }
     return;
   }
-  if (event.target.id === 'subjectSelect') { state.generatorConfig=null; state.generatorSubject=event.target.value; state.generatorTemplate=TEMPLATE_GROUPS[event.target.value][0][0]; return renderGenerator(); }
-  if (event.target.id === 'templateSelect') { state.generatorConfig=null; state.generatorTemplate=event.target.value; return renderGenerator(); }
+  if (event.target.id === 'subjectSelect') {
+    state.generatorConfig = null;
+    state.generatorSubject = event.target.value;
+    state.generatorTemplate = TEMPLATE_GROUPS[event.target.value][0][0];
+    if (state.generatorSubject === '语文') void preloadLanguageTools().catch((error) => console.warn('语言工具预热失败', error));
+    return renderGenerator();
+  }
+  if (event.target.id === 'templateSelect') {
+    state.generatorConfig = null;
+    state.generatorTemplate = event.target.value;
+    // 拼音和语文知识类试卷会依赖本地中文工具，切换模板时预热，避免首次生成按钮等待脚本加载。
+    if (['pinyin-write', 'hanzi-trace', 'idiom-fill', 'poetry-match'].includes(state.generatorTemplate)) {
+      void preloadLanguageTools().catch((error) => console.warn('语言工具预热失败', error));
+    }
+    return renderGenerator();
+  }
   if (event.target.id === 'traceMode') { const mode=event.target.value; document.querySelectorAll('.paragraph-wrap').forEach((wrap)=>{ const p=wrap.querySelector('.reading-paragraph'); p.classList.toggle('trace-text',mode==='overlay'); wrap.querySelector('.trace-extra').innerHTML=mode==='practice'?`<div class="trace-row">${p.innerHTML}</div><div class="practice-row"></div>`:''; }); }
   if (event.target.matches('[data-add-book-pages]')) {
     try {
@@ -3013,7 +3027,7 @@ function notifyServiceWorkerUpdate(registration) {
 async function registerServiceWorker() {
   if (!('serviceWorker' in navigator) || !location.protocol.startsWith('http')) return;
   try {
-    const registration = await navigator.serviceWorker.register('./sw.js?v=20260815-1');
+    const registration = await navigator.serviceWorker.register('./sw.js?v=20260816-1');
     if (registration.waiting && navigator.serviceWorker.controller) notifyServiceWorkerUpdate(registration);
     registration.addEventListener('updatefound', () => {
       const worker = registration.installing;
@@ -3079,4 +3093,5 @@ async function init() {
   }
 }
 init();
+
 

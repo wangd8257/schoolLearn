@@ -25205,6 +25205,17 @@
   function normalizePoetryFilterText(value) {
     return toSimplifiedChinese(value).replace(/[（]/gu, "(").replace(/[）]/gu, ")").replace(/\s+/gu, "").trim();
   }
+  function normalizePoetryPhraseKey(value) {
+    return toSimplifiedChinese(value).replace(/[\s\p{P}\p{S}]+/gu, "").trim();
+  }
+  function hashPoetryPhraseKey(text) {
+    let hash = 2166136261;
+    for (const character of text) {
+      hash ^= character.codePointAt(0) || 0;
+      hash = Math.imul(hash, 16777619) >>> 0;
+    }
+    return hash;
+  }
   function normalizePoetryAuthorKey(value) {
     return normalizePoetryFilterText(value).replace(/^\([^)]{1,8}\)/u, "").replace(/^[\u3400-\u9fff]{1,8}[:：]/u, "");
   }
@@ -25509,6 +25520,23 @@
     poetryIndexCache.set(cacheKey, value);
     return value;
   }
+  async function getPoetryPhrasePositions(query) {
+    const key = normalizePoetryPhraseKey(query);
+    if (key.length < 2 || key.length > 32) return void 0;
+    const manifest = await fetchJson(`${POETRY_BASE}/indexes/phrases/manifest.json`);
+    const bucketCount = Number(manifest?.bucketCount || 0);
+    if (!bucketCount || !manifest?.buckets) return void 0;
+    const bucket = String(hashPoetryPhraseKey(key) % bucketCount).padStart(3, "0");
+    const file = manifest.buckets?.[bucket]?.file;
+    if (!file) return void 0;
+    const cacheKey = `phrase:${bucket}`;
+    if (!poetryIndexCache.has(cacheKey)) {
+      const data = await fetchJson(`${POETRY_BASE}/${file}`);
+      poetryIndexCache.set(cacheKey, data && typeof data === "object" ? data : {});
+    }
+    const positions = poetryIndexCache.get(cacheKey)?.[key];
+    return Array.isArray(positions) && positions.length ? positions : void 0;
+  }
   async function getPoetryPostingPositions(query) {
     const characters = [...new Set(Array.from(normalizePoetryFilterText(query)).filter(Boolean))];
     if (!characters.length) return void 0;
@@ -25770,7 +25798,7 @@
       page: 1,
       pageSize: 200
     });
-    if (remote?.items) {
+    if (Array.isArray(remote?.items) && remote.items.length) {
       return remote.items.map((item) => normalizeRemoteKnowledgeItem(type, item));
     }
     if (type === "poetry") return filterPoetryCatalog(filters);
@@ -25799,7 +25827,7 @@
       page,
       pageSize
     });
-    if (remote?.items) {
+    if (Array.isArray(remote?.items) && remote.items.length) {
       const items = remote.items.map((item) => normalizeRemoteKnowledgeItem(type, item));
       return {
         items,
@@ -25828,7 +25856,7 @@
         const dynasty = normalizePoetryFilterText(filters.dynasty);
         const collection = normalizePoetryFilterText(filters.collection);
         if (hasQuery && !author && !dynasty && !collection) {
-          const positions = await getPoetryPostingPositions(filters.query);
+          const positions = await getPoetryPhrasePositions(filters.query) || await getPoetryPostingPositions(filters.query);
           if (positions) {
             const pageCount3 = Math.max(1, Math.ceil(positions.length / size2));
             const currentPage3 = Math.max(1, Math.min(pageCount3, Number(page) || 1));
@@ -25883,7 +25911,7 @@
       dynasty: filters.dynasty,
       category: filters.collection
     });
-    if (remote?.items) {
+    if (Array.isArray(remote?.items) && remote.items.length) {
       return remote.items.map((item) => normalizeRemoteKnowledgeItem(type, item)).filter((item) => !excluded.has(knowledgeKey(type, item))).slice(0, Math.max(1, Number(count) || 1));
     }
     if (type === "poetry") {
@@ -28306,11 +28334,15 @@
       state.generatorConfig = null;
       state.generatorSubject = event.target.value;
       state.generatorTemplate = TEMPLATE_GROUPS[event.target.value][0][0];
+      if (state.generatorSubject === "\u8BED\u6587") void preloadLanguageTools().catch((error) => console.warn("\u8BED\u8A00\u5DE5\u5177\u9884\u70ED\u5931\u8D25", error));
       return renderGenerator();
     }
     if (event.target.id === "templateSelect") {
       state.generatorConfig = null;
       state.generatorTemplate = event.target.value;
+      if (["pinyin-write", "hanzi-trace", "idiom-fill", "poetry-match"].includes(state.generatorTemplate)) {
+        void preloadLanguageTools().catch((error) => console.warn("\u8BED\u8A00\u5DE5\u5177\u9884\u70ED\u5931\u8D25", error));
+      }
       return renderGenerator();
     }
     if (event.target.id === "traceMode") {
@@ -28376,7 +28408,7 @@
   async function registerServiceWorker() {
     if (!("serviceWorker" in navigator) || !location.protocol.startsWith("http")) return;
     try {
-      const registration = await navigator.serviceWorker.register("./sw.js?v=20260815-1");
+      const registration = await navigator.serviceWorker.register("./sw.js?v=20260816-1");
       if (registration.waiting && navigator.serviceWorker.controller) notifyServiceWorkerUpdate(registration);
       registration.addEventListener("updatefound", () => {
         const worker = registration.installing;

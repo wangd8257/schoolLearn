@@ -1,0 +1,87 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e8]:
+        - strong [ref=e9]: 光之进化
+        - text: 学习能量控制台
+      - navigation "主导航" [ref=e10]:
+        - button "⌂ 首页" [ref=e11] [cursor=pointer]:
+          - generic [ref=e12]: ⌂
+          - text: 首页
+        - button "▤ 试卷目录" [ref=e13] [cursor=pointer]:
+          - generic [ref=e14]: ▤
+          - text: 试卷目录
+        - button "✦ 生成试卷" [ref=e15] [cursor=pointer]:
+          - generic [ref=e16]: ✦
+          - text: 生成试卷
+        - button "▥ 阅读资料" [ref=e17] [cursor=pointer]:
+          - generic [ref=e18]: ▥
+          - text: 阅读资料
+        - button "字 知识库" [ref=e19] [cursor=pointer]:
+          - generic [ref=e20]: 字
+          - text: 知识库
+        - button "◇ 学习游戏" [ref=e21] [cursor=pointer]:
+          - generic [ref=e22]: ◇
+          - text: 学习游戏
+        - button "⌘ 配置模板" [ref=e23] [cursor=pointer]:
+          - generic [ref=e24]: ⌘
+          - text: 配置模板
+      - paragraph [ref=e27]:
+        - strong [ref=e28]: 本机离线保存
+        - text: 请勿清除 Safari 网站数据
+    - main [active] [ref=e29]:
+      - generic [ref=e307]:
+        - generic [ref=e308]: 光之进化 / COMMAND DECK
+        - heading "生成试卷" [level=1] [ref=e309]
+        - paragraph [ref=e310]: 选择模板和参数，生成后作为独立快照保存
+      - generic [ref=e316]:
+        - generic [ref=e317]:
+          - generic [ref=e318]:
+            - generic [ref=e319]: 学科
+            - combobox [ref=e320]:
+              - option "数学"
+              - option "语文" [selected]
+              - option "英语"
+          - generic [ref=e321]:
+            - generic [ref=e322]: 模板
+            - combobox [ref=e323]:
+              - option "汉字描红"
+              - option "按笔画练字"
+              - option "控笔训练"
+              - option "田字格/作业纸"
+              - option "成语填空（飞花令）" [selected]
+              - option "诗句上下文配对"
+              - option "看拼音写汉字"
+          - generic [ref=e324]:
+            - generic [ref=e325]: 试卷名称
+            - textbox "留空则自动命名" [ref=e326]
+          - generic [ref=e327]:
+            - generic [ref=e328]: A4 方向
+            - generic [ref=e329]:
+              - generic [ref=e330]:
+                - radio "纵向" [checked] [ref=e331]
+                - generic [ref=e332]: 纵向
+              - generic [ref=e333]:
+                - radio "横向" [ref=e334]
+                - generic [ref=e335]: 横向
+          - generic [ref=e336]:
+            - generic [ref=e337]:
+              - generic [ref=e338]: 练习内容（每行一项）
+              - textbox "一行可输入多个字，例如：你好" [ref=e339]
+            - generic [ref=e340]:
+              - generic [ref=e341]: 成语筛选字（可留空）
+              - textbox "例如：目" [ref=e342]
+            - generic [ref=e343]:
+              - generic [ref=e344]: 题目数量
+              - spinbutton [ref=e345]: "10"
+          - button "生成并保存试卷" [ref=e346] [cursor=pointer]
+          - button "生成预览" [ref=e347] [cursor=pointer]
+          - button "保存为配置模板" [ref=e348] [cursor=pointer]
+        - generic [ref=e349]:
+          - heading "配置生成预览" [level=2] [ref=e350]
+          - paragraph [ref=e351]: 调整左侧配置后点击生成预览，预览不会保存试卷。
+          - generic [ref=e353]:
+            - generic [ref=e354]: 📄
+            - heading "语文·idiom-fill" [level=2] [ref=e355]
+            - paragraph [ref=e356]: 点击“生成预览”查看当前配置会生成的试卷样式。
+  - status: 试卷已生成并保存

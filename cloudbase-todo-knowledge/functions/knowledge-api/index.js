@@ -334,37 +334,46 @@ async function queryKnowledge(type, params) {
   const { page, pageSize, skip } = parsePagination(params);
   const { where, filters } = buildQuery(type, params);
   const collection = getDatabase().collection(collectionName);
-  let query = collection
-    .where(where)
-    .field(getFieldProjection(type));
-  // 字符倒排查询优先走数组索引，避免与标题排序组成高成本的复合扫描。
-  if (!filters.query) query = query.orderBy("title", "asc");
-  const documents = await query
-    .skip(skip)
-    .limit(pageSize + 1)
-    .get();
-  const rows = Array.isArray(documents.data) ? documents.data : [];
-  const hasMore = rows.length > pageSize;
-  const items = rows.slice(0, pageSize).map((doc) => normalizeDocument(type, doc));
-  let total = null;
-  if (params.get("includeTotal") === "1") {
-    const countResult = await collection.count();
-    total = Number(countResult.total || 0);
-  }
-  const pageCount = total === null ? (hasMore ? page + 1 : page) : Math.max(1, Math.ceil(total / pageSize));
-  return {
-    status: 200,
-    body: {
-      ok: true,
+  try {
+    let query = collection
+      .where(where)
+      .field(getFieldProjection(type));
+    // 字符倒排查询优先走数组索引，避免与标题排序组成高成本的复合扫描。
+    if (!filters.query) query = query.orderBy("title", "asc");
+    const documents = await query
+      .skip(skip)
+      .limit(pageSize + 1)
+      .get();
+    const rows = Array.isArray(documents.data) ? documents.data : [];
+    const hasMore = rows.length > pageSize;
+    const items = rows.slice(0, pageSize).map((doc) => normalizeDocument(type, doc));
+    let total = null;
+    if (params.get("includeTotal") === "1") {
+      const countResult = await collection.count();
+      total = Number(countResult.total || 0);
+    }
+    const pageCount = total === null ? (hasMore ? page + 1 : page) : Math.max(1, Math.ceil(total / pageSize));
+    return {
+      status: 200,
+      body: {
+        ok: true,
+        type,
+        items,
+        total,
+        hasMore,
+        page,
+        pageSize,
+        pageCount,
+      },
+    };
+  } catch (error) {
+    // 数据库未完成导入或索引暂不可用时返回空页，前端会继续走本地分片兜底，避免知识库页面被 500 卡死。
+    console.warn("knowledge-api query fallback empty", {
       type,
-      items,
-      total,
-      hasMore,
-      page,
-      pageSize,
-      pageCount,
-    },
-  };
+      message: error instanceof Error ? error.message : String(error),
+    });
+    return { status: 200, body: { ok: true, type, items: [], total: 0, hasMore: false, page, pageSize, pageCount: 1 } };
+  }
 }
 
 /**
@@ -439,8 +448,18 @@ async function randomKnowledge(type, params) {
  */
 async function getPoetryMeta(params) {
   const requestedCategory = readText(params, "category", 80);
-  const record = await getDatabase().collection("kb_meta").doc("poetry").get();
-  const data = Array.isArray(record.data) ? record.data[0] : record.data;
+  let data;
+  try {
+    const record = await getDatabase().collection("kb_meta").doc("poetry").get();
+    data = Array.isArray(record.data) ? record.data[0] : record.data;
+  } catch (error) {
+    // 元数据未导入或数据库短暂异常时返回空联动项，前端会使用本地 manifest 继续渲染筛选器。
+    console.warn("knowledge-api poetry meta fallback empty", {
+      category: requestedCategory,
+      message: error instanceof Error ? error.message : String(error),
+    });
+    return { status: 200, body: { ok: true, authors: [], dynasties: [], collections: [] } };
+  }
   if (!data) return { status: 200, body: { ok: true, authors: [], dynasties: [], collections: [] } };
   const categories = Array.isArray(data.collections) ? data.collections : [];
   const collectionMeta = data.collectionMeta && typeof data.collectionMeta === "object"

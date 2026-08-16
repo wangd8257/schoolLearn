@@ -1,0 +1,123 @@
+- generic [ref=f2e1]:
+  - generic [ref=f2e2]:
+    - complementary [ref=f2e3]:
+      - generic [ref=f2e8]:
+        - strong [ref=f2e9]: 光之进化
+        - text: 学习能量控制台
+      - navigation "主导航" [ref=f2e10]:
+        - button "⌂ 首页" [ref=f2e11] [cursor=pointer]:
+          - generic [ref=f2e12]: ⌂
+          - text: 首页
+        - button "▤ 试卷目录" [ref=f2e13] [cursor=pointer]:
+          - generic [ref=f2e14]: ▤
+          - text: 试卷目录
+        - button "✦ 生成试卷" [ref=f2e15] [cursor=pointer]:
+          - generic [ref=f2e16]: ✦
+          - text: 生成试卷
+        - button "▥ 阅读资料" [ref=f2e17] [cursor=pointer]:
+          - generic [ref=f2e18]: ▥
+          - text: 阅读资料
+        - button "字 知识库" [ref=f2e19] [cursor=pointer]:
+          - generic [ref=f2e20]: 字
+          - text: 知识库
+        - button "◇ 学习游戏" [ref=f2e21] [cursor=pointer]:
+          - generic [ref=f2e22]: ◇
+          - text: 学习游戏
+        - button "⌘ 配置模板" [ref=f2e23] [cursor=pointer]:
+          - generic [ref=f2e24]: ⌘
+          - text: 配置模板
+      - paragraph [ref=f2e27]:
+        - strong [ref=f2e28]: 本机离线保存
+        - text: 请勿清除 Safari 网站数据
+    - main [ref=f2e29]:
+      - generic [ref=f2e410]:
+        - generic [ref=f2e411]: 光之进化 / COMMAND DECK
+        - heading "生成试卷" [level=1] [ref=f2e412]
+        - paragraph [ref=f2e413]: 选择模板和参数，生成后作为独立快照保存
+      - generic [ref=f2e419]:
+        - generic [ref=f2e420]:
+          - generic [ref=f2e421]:
+            - generic [ref=f2e422]: 学科
+            - combobox [ref=f2e423]:
+              - option "数学"
+              - option "语文" [selected]
+              - option "英语"
+          - generic [ref=f2e424]:
+            - generic [ref=f2e425]: 模板
+            - combobox [ref=f2e426]:
+              - option "汉字描红"
+              - option "按笔画练字"
+              - option "控笔训练"
+              - option "田字格/作业纸"
+              - option "成语填空（飞花令）"
+              - option "诗句上下文配对"
+              - option "看拼音写汉字" [selected]
+          - generic [ref=f2e427]:
+            - generic [ref=f2e428]: 试卷名称
+            - textbox "留空则自动命名" [ref=f2e429]
+          - generic [ref=f2e430]:
+            - generic [ref=f2e431]: A4 方向
+            - generic [ref=f2e432]:
+              - generic [ref=f2e433]:
+                - radio "纵向" [checked] [ref=f2e434]
+                - generic [ref=f2e435]: 纵向
+              - generic [ref=f2e436]:
+                - radio "横向" [ref=f2e437]
+                - generic [ref=f2e438]: 横向
+          - generic [ref=f2e439]:
+            - generic [ref=f2e440]:
+              - generic [ref=f2e441]: 练习内容（每行一项）
+              - textbox "一行可输入多个字，例如：你好" [ref=f2e442]
+            - generic [ref=f2e443]:
+              - generic [ref=f2e444]: 词语（每行一项）
+              - textbox "例如：认真 努力" [ref=f2e445]:
+                - /placeholder: "例如：认真\n努力"
+            - generic [ref=f2e446]:
+              - generic [ref=f2e447]: 题目数量
+              - spinbutton [ref=f2e448]: "10"
+          - button "生成并保存试卷" [ref=f2e449] [cursor=pointer]
+          - button "生成预览" [active] [ref=f2e450] [cursor=pointer]
+          - button "保存为配置模板" [ref=f2e451] [cursor=pointer]
+        - generic [ref=f2e452]:
+          - heading "配置生成预览" [level=2] [ref=f2e453]
+          - paragraph [ref=f2e454]: 调整左侧配置后点击生成预览，预览不会保存试卷。
+          - generic "试卷预览" [ref=f2e460]:
+            - article [ref=f2e461]:
+              - generic [ref=f2e462]:
+                - heading "语文·看拼音写汉字·预览（第 1/2 页）" [level=2] [ref=f2e463]
+                - generic [ref=f2e464]:
+                  - generic [ref=f2e466]:
+                    - generic [ref=f2e467]: "1."
+                    - generic [ref=f2e468]: xù zhì
+                  - generic [ref=f2e477]:
+                    - generic [ref=f2e478]: "2."
+                    - generic [ref=f2e479]: shì ér
+                  - generic [ref=f2e488]:
+                    - generic [ref=f2e489]: "3."
+                    - generic [ref=f2e490]: sì xiān zhuō
+                  - generic [ref=f2e499]:
+                    - generic [ref=f2e500]: "4."
+                    - generic [ref=f2e501]: pǔ tiān xià
+                  - generic [ref=f2e510]:
+                    - generic [ref=f2e511]: "5."
+                    - generic [ref=f2e512]: líng yì
+                  - generic [ref=f2e521]:
+                    - generic [ref=f2e522]: "6."
+                    - generic [ref=f2e523]: gū bèi
+                  - generic [ref=f2e532]:
+                    - generic [ref=f2e533]: "7."
+                    - generic [ref=f2e534]: shàng yú
+            - article [ref=f2e542]:
+              - generic [ref=f2e543]:
+                - heading "语文·看拼音写汉字·预览（第 2/2 页）" [level=2] [ref=f2e544]
+                - generic [ref=f2e545]:
+                  - generic [ref=f2e547]:
+                    - generic [ref=f2e548]: "8."
+                    - generic [ref=f2e549]: xīn xiōng
+                  - generic [ref=f2e558]:
+                    - generic [ref=f2e559]: "9."
+                    - generic [ref=f2e560]: shā dìng
+                  - generic [ref=f2e569]:
+                    - generic [ref=f2e570]: "10."
+                    - generic [ref=f2e571]: shén gōng yì jiàng
+  - status

@@ -1,0 +1,122 @@
+- generic [active] [ref=f1e1]:
+  - generic [ref=f1e2]:
+    - complementary [ref=f1e3]:
+      - generic [ref=f1e8]:
+        - strong [ref=f1e9]: 光之进化
+        - text: 学习能量控制台
+      - navigation "主导航" [ref=f1e10]:
+        - button "⌂ 首页" [ref=f1e11] [cursor=pointer]:
+          - generic [ref=f1e12]: ⌂
+          - text: 首页
+        - button "▤ 试卷目录" [ref=f1e13] [cursor=pointer]:
+          - generic [ref=f1e14]: ▤
+          - text: 试卷目录
+        - button "✦ 生成试卷" [ref=f1e15] [cursor=pointer]:
+          - generic [ref=f1e16]: ✦
+          - text: 生成试卷
+        - button "▥ 阅读资料" [ref=f1e17] [cursor=pointer]:
+          - generic [ref=f1e18]: ▥
+          - text: 阅读资料
+        - button "字 知识库" [ref=f1e19] [cursor=pointer]:
+          - generic [ref=f1e20]: 字
+          - text: 知识库
+        - button "◇ 学习游戏" [ref=f1e21] [cursor=pointer]:
+          - generic [ref=f1e22]: ◇
+          - text: 学习游戏
+        - button "⌘ 配置模板" [ref=f1e23] [cursor=pointer]:
+          - generic [ref=f1e24]: ⌘
+          - text: 配置模板
+      - paragraph [ref=f1e27]:
+        - strong [ref=f1e28]: 本机离线保存
+        - text: 请勿清除 Safari 网站数据
+    - main [ref=f1e29]:
+      - generic [ref=f1e1181]:
+        - generic [ref=f1e1182]: 光之进化 / COMMAND DECK
+        - heading "知识库" [level=1] [ref=f1e1183]
+        - paragraph [ref=f1e1184]: 离线学习成语、汉字、歇后语、词语与古诗
+      - generic [ref=f1e1190]:
+        - generic [ref=f1e1191]:
+          - generic [ref=f1e1192]:
+            - radio "成语库" [ref=f1e1193]
+            - generic [ref=f1e1194]: 成语库
+          - generic [ref=f1e1195]:
+            - radio "汉字库" [ref=f1e1196]
+            - generic [ref=f1e1197]: 汉字库
+          - generic [ref=f1e1198]:
+            - radio "歇后语" [ref=f1e1199]
+            - generic [ref=f1e1200]: 歇后语
+          - generic [ref=f1e1201]:
+            - radio "词语库" [ref=f1e1202]
+            - generic [ref=f1e1203]: 词语库
+          - generic [ref=f1e1204]:
+            - radio "古诗库" [checked] [ref=f1e1205]
+            - generic [ref=f1e1206]: 古诗库
+        - generic [ref=f1e1207]:
+          - textbox "按作者、字、诗名或诗句筛选" [ref=f1e1208]: 床前明月光
+          - combobox [ref=f1e1209]:
+            - option "全部类型" [selected]
+            - option "曹操诗集"
+            - option "楚辞"
+            - option "论语"
+            - option "蒙学"
+            - option "纳兰性德"
+            - option "全唐诗"
+            - option "诗经"
+            - option "水墨唐诗"
+            - option "四书五经"
+            - option "宋词"
+            - option "五代诗词"
+            - option "幽梦影"
+            - option "御定全唐詩"
+            - option "元曲"
+          - combobox "作者，可输入筛选" [ref=f1e1210]
+          - combobox [ref=f1e1211]:
+            - option "全部朝代" [selected]
+            - option "蒙学"
+            - option "清"
+            - option "宋"
+            - option "唐"
+            - option "唐/宋"
+            - option "魏晋"
+            - option "五代"
+            - option "先秦"
+            - option "yuan"
+          - button "查询" [ref=f1e1212] [cursor=pointer]
+      - generic [ref=f1e1213]:
+        - generic [ref=f1e1214]: 随机学习
+        - heading "从古诗库开始" [level=2] [ref=f1e1215]
+        - paragraph [ref=f1e1216]: 已学会的内容不会在本轮重复出现，未掌握内容会进入错题库。
+        - button "开始随机学习" [ref=f1e1217] [cursor=pointer]
+      - generic [ref=f1e1218]:
+        - generic [ref=f1e1219]:
+          - generic [ref=f1e1220]:
+            - heading "古诗库" [level=2] [ref=f1e1221]
+            - paragraph [ref=f1e1222]: 当前筛选 2 条，第 1/1 页
+          - generic [ref=f1e1223]:
+            - button "上一页" [disabled] [ref=f1e1224] [cursor=pointer]
+            - button "下一页" [disabled] [ref=f1e1225] [cursor=pointer]
+        - generic [ref=f1e1226]:
+          - article [ref=f1e1227]:
+            - button [ref=f1e1228] [cursor=pointer]:
+              - heading "千家詩" [level=3] [ref=f1e1229]
+              - paragraph [ref=f1e1230]: 蒙学 · 蒙学 · （唐）李白
+              - paragraph [ref=f1e1231]: 床前明月光，疑是地上霜。 举头望明月，低头思故乡。
+            - generic [ref=f1e1232]:
+              - button "喜欢" [ref=f1e1233] [cursor=pointer]
+              - button "不喜欢" [ref=f1e1234] [cursor=pointer]
+          - article [ref=f1e1235]:
+            - button [ref=f1e1236] [cursor=pointer]:
+              - heading "唐詩三百首" [level=3] [ref=f1e1237]
+              - paragraph [ref=f1e1238]: 蒙学 · 蒙学 · 李白
+              - paragraph [ref=f1e1239]: 床前明月光，疑是地上霜， 举头望明月，低头思故乡。
+            - generic [ref=f1e1240]:
+              - button "喜欢" [ref=f1e1241] [cursor=pointer]
+              - button "不喜欢" [ref=f1e1242] [cursor=pointer]
+      - generic [ref=f1e1244]:
+        - generic [ref=f1e1245]:
+          - heading "错题库" [level=2] [ref=f1e1246]
+          - paragraph [ref=f1e1247]: 暂时没有错题。
+        - generic [ref=f1e1249]:
+          - radio "全部" [checked] [ref=f1e1250]
+          - generic [ref=f1e1251]: 全部
+  - status
