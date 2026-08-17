@@ -23120,21 +23120,24 @@
     const knownHuibenFiles = new Set(keptItems.filter((item) => item.source === "huiben").map((item) => item.fileName));
     const books = await loadReadingBooks();
     const booksByFileName = new Map(books.map((book) => [book.fileName, book]));
-    const migratedItems = keptItems.filter((item) => item.source === "huiben" && booksByFileName.has(item.fileName)).map((item) => {
-      const currentBook = booksByFileName.get(item.fileName);
-      return {
-        ...item,
-        ...currentBook,
-        id: item.id,
-        createdAt: item.createdAt || currentBook.createdAt,
-        updatedAt: currentBook.updatedAt
-      };
-    });
+    const booksById = new Map(books.map((book) => [book.id, book]));
+    const migratedItems = keptItems.filter((item) => item.source === "huiben" && booksByFileName.has(item.fileName)).map((item) => refreshSyncedBookReading(item, booksByFileName.get(item.fileName)));
+    const refreshedCloudBaseItems = keptItems.filter((item) => item.source === "cloudbase" && booksById.has(item.id)).map((item) => refreshSyncedBookReading(item, booksById.get(item.id)));
     if (migratedItems.length) await Promise.all(migratedItems.map((book) => put("readings", book)));
+    if (refreshedCloudBaseItems.length) await Promise.all(refreshedCloudBaseItems.map((book) => put("readings", book)));
     const knownIds = new Set(keptItems.map((item) => item.id));
     const newBooks = books.filter((book) => !knownIds.has(book.id) && !knownHuibenFiles.has(book.fileName));
     if (newBooks.length) await Promise.all(newBooks.map((book) => put("readings", book)));
     return getAll("readings");
+  }
+  function refreshSyncedBookReading(existing, current) {
+    return {
+      ...existing,
+      ...current,
+      id: existing.id,
+      createdAt: existing.createdAt || current.createdAt,
+      updatedAt: current.updatedAt
+    };
   }
   async function loadReadingBooks() {
     const remoteBooks = await loadCloudBaseBooks();

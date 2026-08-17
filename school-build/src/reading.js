@@ -23,23 +23,35 @@ export async function ensureReadingSeeds() {
   const knownHuibenFiles = new Set(keptItems.filter((item) => item.source === 'huiben').map((item) => item.fileName));
   const books = await loadReadingBooks();
   const booksByFileName = new Map(books.map((book) => [book.fileName, book]));
+  const booksById = new Map(books.map((book) => [book.id, book]));
   const migratedItems = keptItems
     .filter((item) => item.source === 'huiben' && booksByFileName.has(item.fileName))
-    .map((item) => {
-      const currentBook = booksByFileName.get(item.fileName);
-      return {
-        ...item,
-        ...currentBook,
-        id: item.id,
-        createdAt: item.createdAt || currentBook.createdAt,
-        updatedAt: currentBook.updatedAt,
-      };
-    });
+    .map((item) => refreshSyncedBookReading(item, booksByFileName.get(item.fileName)));
+  const refreshedCloudBaseItems = keptItems
+    .filter((item) => item.source === 'cloudbase' && booksById.has(item.id))
+    .map((item) => refreshSyncedBookReading(item, booksById.get(item.id)));
   if (migratedItems.length) await Promise.all(migratedItems.map((book) => put('readings', book)));
+  if (refreshedCloudBaseItems.length) await Promise.all(refreshedCloudBaseItems.map((book) => put('readings', book)));
   const knownIds = new Set(keptItems.map((item) => item.id));
   const newBooks = books.filter((book) => !knownIds.has(book.id) && !knownHuibenFiles.has(book.fileName));
   if (newBooks.length) await Promise.all(newBooks.map((book) => put('readings', book)));
   return getAll('readings');
+}
+
+/**
+ * 用最新同步清单刷新本机已保存书籍，避免旧下载地址或元数据继续留在 IndexedDB。
+ * @param {Record<string, unknown>} existing 本机已保存的阅读资料。
+ * @param {Record<string, unknown>} current 最新清单生成的阅读资料。
+ * @returns {Record<string, unknown>} 刷新后的阅读资料。
+ */
+export function refreshSyncedBookReading(existing, current) {
+  return {
+    ...existing,
+    ...current,
+    id: existing.id,
+    createdAt: existing.createdAt || current.createdAt,
+    updatedAt: current.updatedAt,
+  };
 }
 
 /**

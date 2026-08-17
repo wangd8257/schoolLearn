@@ -4,6 +4,7 @@ import {
   addPictureBookTextBox,
   createPictureBookReading,
   createHuibenBookReading,
+  refreshSyncedBookReading,
   movePictureBookPage,
   removePictureBookPage,
   removePictureBookTextBox,
@@ -21,6 +22,33 @@ test('本地内置 huiben 书目不依赖 fetch，并为每本书生成可访问
   assert.equal(book.source, 'huiben');
   assert.equal(book.fileKind, 'pdf');
   assert.equal(book.sourceUrl, entries[0].url);
+});
+
+test('CloudBase 已保存书目会刷新为最新下载入口并保留本机创建时间', () => {
+  const refreshed = refreshSyncedBookReading(
+    {
+      id: 'cloudbase-book-1',
+      source: 'cloudbase',
+      title: '旧标题',
+      sourceUrl: 'https://old.example.invalid/file.pdf',
+      createdAt: 100,
+      updatedAt: 100,
+    },
+    {
+      id: 'cloudbase-book-1',
+      source: 'cloudbase',
+      title: '新标题',
+      sourceUrl: 'https://learn.example.com/api/reading/file?id=cloudbase-book-1',
+      createdAt: 200,
+      updatedAt: 300,
+    },
+  );
+
+  assert.equal(refreshed.id, 'cloudbase-book-1');
+  assert.equal(refreshed.title, '新标题');
+  assert.equal(refreshed.sourceUrl, 'https://learn.example.com/api/reading/file?id=cloudbase-book-1');
+  assert.equal(refreshed.createdAt, 100);
+  assert.equal(refreshed.updatedAt, 300);
 });
 
 test('多张上传图片按顺序创建独立绘本页面', () => {
