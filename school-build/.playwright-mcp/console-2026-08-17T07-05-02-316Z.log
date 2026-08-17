@@ -1,0 +1,20 @@
+[    1591ms] [ERROR] Access to fetch at 'https://learn-d0g10smkjc24144a1-1468989884.ap-shanghai.app.tcloudbase.com/api/reading/books' from origin 'http://127.0.0.1:5178' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header has a value 'https://wangd8257.github.io' that is not equal to the supplied origin. Have the server send the header with a valid value. @ http://127.0.0.1:5178/:0
+[    1592ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://learn-d0g10smkjc24144a1-1468989884.ap-shanghai.app.tcloudbase.com/api/reading/books:0
+[    1592ms] [WARNING] CloudBase 阅读资料清单读取失败，将回退本地清单 TypeError: Failed to fetch
+    at loadCloudBaseBooks (http://127.0.0.1:5178/src/reading.js:76:28)
+    at loadReadingBooks (http://127.0.0.1:5178/src/reading.js:62:29)
+    at ensureReadingSeeds (http://127.0.0.1:5178/src/reading.js:24:23)
+    at async renderHome (http://127.0.0.1:5178/src/app.js?v=20260816-1:174:20)
+    at async render (http://127.0.0.1:5178/src/app.js?v=20260816-1:165:5)
+    at async navigate (http://127.0.0.1:5178/src/app.js?v=20260816-1:158:3)
+    at async init (http://127.0.0.1:5178/src/app.js?v=20260816-1:3088:5) @ http://127.0.0.1:5178/src/reading.js:84
+[    1784ms] [ERROR] Access to fetch at 'https://learn-d0g10smkjc24144a1-1468989884.ap-shanghai.app.tcloudbase.com/api/reading/books' from origin 'http://127.0.0.1:5178' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header has a value 'https://wangd8257.github.io' that is not equal to the supplied origin. Have the server send the header with a valid value. @ http://127.0.0.1:5178/:0
+[    1784ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://learn-d0g10smkjc24144a1-1468989884.ap-shanghai.app.tcloudbase.com/api/reading/books:0
+[    1785ms] [WARNING] CloudBase 阅读资料清单读取失败，将回退本地清单 TypeError: Failed to fetch
+    at loadCloudBaseBooks (http://127.0.0.1:5178/src/reading.js:76:28)
+    at loadReadingBooks (http://127.0.0.1:5178/src/reading.js:62:29)
+    at ensureReadingSeeds (http://127.0.0.1:5178/src/reading.js:24:23) @ http://127.0.0.1:5178/src/reading.js:84
+[    2192ms] [ERROR] Access to fetch at 'https://learn-d0g10smkjc24144a1-1468989884.ap-shanghai.app.tcloudbase.com/api/health' from origin 'http://127.0.0.1:5178' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header has a value 'https://wangd8257.github.io' that is not equal to the supplied origin. Have the server send the header with a valid value. @ http://127.0.0.1:5178/:0
+[    2192ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://learn-d0g10smkjc24144a1-1468989884.ap-shanghai.app.tcloudbase.com/api/health:0
+[   77017ms] [ERROR] Access to fetch at 'https://learn-d0g10smkjc24144a1-1468989884.ap-shanghai.app.tcloudbase.com/api/knowledge/random?type=word&count=50' from origin 'http://127.0.0.1:5178' has been blocked by CORS policy: The 'Access-Control-Allow-Origin' header has a value 'https://wangd8257.github.io' that is not equal to the supplied origin. Have the server send the header with a valid value. @ http://127.0.0.1:5178/:0
+[   77018ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://learn-d0g10smkjc24144a1-1468989884.ap-shanghai.app.tcloudbase.com/api/knowledge/random?type=word&count=50:0

@@ -1,0 +1,370 @@
+- generic [ref=e1]:
+  - main [active] [ref=e25]:
+    - generic [ref=e720]:
+      - generic [ref=e721]:
+        - button "退出" [ref=e722] [cursor=pointer]
+        - generic [ref=e723]:
+          - button "缩小试卷" [ref=e724] [cursor=pointer]: −
+          - generic [ref=e725]: 100%
+          - button "放大试卷" [ref=e726] [cursor=pointer]: ＋
+          - button "复位" [ref=e727] [cursor=pointer]
+          - button "移动试卷" [ref=e728] [cursor=pointer]
+        - button "⚫ 黑笔作答" [ref=e729] [cursor=pointer]
+        - button "↑ 上移" [ref=e730] [cursor=pointer]
+        - button "↓ 下移" [ref=e731] [cursor=pointer]
+        - button "⌫ 擦除当前笔迹" [ref=e732] [cursor=pointer]
+        - button "↶ 撤销" [ref=e733] [cursor=pointer]
+      - generic [ref=e735]:
+        - article [ref=e736]:
+          - generic [ref=e737]:
+            - heading "数学·凑十法·30题（第 1/5 页）" [level=2] [ref=e738]
+            - generic [ref=e739]:
+              - generic [ref=e740]:
+                - generic [ref=e741]:
+                  - generic [ref=e742]: "6"
+                  - generic [ref=e743]: +
+                  - generic [ref=e744]: "12"
+                  - generic [ref=e745]: =
+                - generic [ref=e747]:
+                  - generic [ref=e748]: "10"
+                  - generic [ref=e752]:
+                    - generic [ref=e753]: /
+                    - generic [ref=e754]: \
+              - generic [ref=e758]:
+                - generic [ref=e759]:
+                  - generic [ref=e760]: "8"
+                  - generic [ref=e761]: +
+                  - generic [ref=e762]: "11"
+                  - generic [ref=e763]: =
+                - generic [ref=e765]:
+                  - generic [ref=e766]: "10"
+                  - generic [ref=e770]:
+                    - generic [ref=e771]: /
+                    - generic [ref=e772]: \
+              - generic [ref=e776]:
+                - generic [ref=e777]:
+                  - generic [ref=e778]: "7"
+                  - generic [ref=e779]: +
+                  - generic [ref=e780]: "13"
+                  - generic [ref=e781]: =
+                - generic [ref=e783]:
+                  - generic [ref=e784]: "10"
+                  - generic [ref=e788]:
+                    - generic [ref=e789]: /
+                    - generic [ref=e790]: \
+              - generic [ref=e794]:
+                - generic [ref=e795]:
+                  - generic [ref=e796]: "4"
+                  - generic [ref=e797]: +
+                  - generic [ref=e798]: "15"
+                  - generic [ref=e799]: =
+                - generic [ref=e801]:
+                  - generic [ref=e802]: "10"
+                  - generic [ref=e806]:
+                    - generic [ref=e807]: /
+                    - generic [ref=e808]: \
+              - generic [ref=e812]:
+                - generic [ref=e813]:
+                  - generic [ref=e814]: "5"
+                  - generic [ref=e815]: +
+                  - generic [ref=e816]: "14"
+                  - generic [ref=e817]: =
+                - generic [ref=e819]:
+                  - generic [ref=e820]: "10"
+                  - generic [ref=e824]:
+                    - generic [ref=e825]: /
+                    - generic [ref=e826]: \
+              - generic [ref=e830]:
+                - generic [ref=e831]:
+                  - generic [ref=e832]: "6"
+                  - generic [ref=e833]: +
+                  - generic [ref=e834]: "14"
+                  - generic [ref=e835]: =
+                - generic [ref=e837]:
+                  - generic [ref=e838]: "10"
+                  - generic [ref=e842]:
+                    - generic [ref=e843]: /
+                    - generic [ref=e844]: \
+        - article [ref=e848]:
+          - generic [ref=e849]:
+            - heading "数学·凑十法·30题（第 2/5 页）" [level=2] [ref=e850]
+            - generic [ref=e851]:
+              - generic [ref=e852]:
+                - generic [ref=e853]:
+                  - generic [ref=e854]: "8"
+                  - generic [ref=e855]: +
+                  - generic [ref=e856]: "12"
+                  - generic [ref=e857]: =
+                - generic [ref=e859]:
+                  - generic [ref=e860]: "10"
+                  - generic [ref=e864]:
+                    - generic [ref=e865]: /
+                    - generic [ref=e866]: \
+              - generic [ref=e870]:
+                - generic [ref=e871]:
+                  - generic [ref=e872]: "4"
+                  - generic [ref=e873]: +
+                  - generic [ref=e874]: "16"
+                  - generic [ref=e875]: =
+                - generic [ref=e877]:
+                  - generic [ref=e878]: "10"
+                  - generic [ref=e882]:
+                    - generic [ref=e883]: /
+                    - generic [ref=e884]: \
+              - generic [ref=e888]:
+                - generic [ref=e889]:
+                  - generic [ref=e890]: "1"
+                  - generic [ref=e891]: +
+                  - generic [ref=e892]: "11"
+                  - generic [ref=e893]: =
+                - generic [ref=e895]:
+                  - generic [ref=e896]: "10"
+                  - generic [ref=e900]:
+                    - generic [ref=e901]: /
+                    - generic [ref=e902]: \
+              - generic [ref=e906]:
+                - generic [ref=e907]:
+                  - generic [ref=e908]: "1"
+                  - generic [ref=e909]: +
+                  - generic [ref=e910]: "19"
+                  - generic [ref=e911]: =
+                - generic [ref=e913]:
+                  - generic [ref=e914]: "10"
+                  - generic [ref=e918]:
+                    - generic [ref=e919]: /
+                    - generic [ref=e920]: \
+              - generic [ref=e924]:
+                - generic [ref=e925]:
+                  - generic [ref=e926]: "2"
+                  - generic [ref=e927]: +
+                  - generic [ref=e928]: "17"
+                  - generic [ref=e929]: =
+                - generic [ref=e931]:
+                  - generic [ref=e932]: "10"
+                  - generic [ref=e936]:
+                    - generic [ref=e937]: /
+                    - generic [ref=e938]: \
+              - generic [ref=e942]:
+                - generic [ref=e943]:
+                  - generic [ref=e944]: "7"
+                  - generic [ref=e945]: +
+                  - generic [ref=e946]: "11"
+                  - generic [ref=e947]: =
+                - generic [ref=e949]:
+                  - generic [ref=e950]: "10"
+                  - generic [ref=e954]:
+                    - generic [ref=e955]: /
+                    - generic [ref=e956]: \
+        - article [ref=e960]:
+          - generic [ref=e961]:
+            - heading "数学·凑十法·30题（第 3/5 页）" [level=2] [ref=e962]
+            - generic [ref=e963]:
+              - generic [ref=e964]:
+                - generic [ref=e965]:
+                  - generic [ref=e966]: "3"
+                  - generic [ref=e967]: +
+                  - generic [ref=e968]: "16"
+                  - generic [ref=e969]: =
+                - generic [ref=e971]:
+                  - generic [ref=e972]: "10"
+                  - generic [ref=e976]:
+                    - generic [ref=e977]: /
+                    - generic [ref=e978]: \
+              - generic [ref=e982]:
+                - generic [ref=e983]:
+                  - generic [ref=e984]: "3"
+                  - generic [ref=e985]: +
+                  - generic [ref=e986]: "14"
+                  - generic [ref=e987]: =
+                - generic [ref=e989]:
+                  - generic [ref=e990]: "10"
+                  - generic [ref=e994]:
+                    - generic [ref=e995]: /
+                    - generic [ref=e996]: \
+              - generic [ref=e1000]:
+                - generic [ref=e1001]:
+                  - generic [ref=e1002]: "2"
+                  - generic [ref=e1003]: +
+                  - generic [ref=e1004]: "14"
+                  - generic [ref=e1005]: =
+                - generic [ref=e1007]:
+                  - generic [ref=e1008]: "10"
+                  - generic [ref=e1012]:
+                    - generic [ref=e1013]: /
+                    - generic [ref=e1014]: \
+              - generic [ref=e1018]:
+                - generic [ref=e1019]:
+                  - generic [ref=e1020]: "5"
+                  - generic [ref=e1021]: +
+                  - generic [ref=e1022]: "13"
+                  - generic [ref=e1023]: =
+                - generic [ref=e1025]:
+                  - generic [ref=e1026]: "10"
+                  - generic [ref=e1030]:
+                    - generic [ref=e1031]: /
+                    - generic [ref=e1032]: \
+              - generic [ref=e1036]:
+                - generic [ref=e1037]:
+                  - generic [ref=e1038]: "2"
+                  - generic [ref=e1039]: +
+                  - generic [ref=e1040]: "15"
+                  - generic [ref=e1041]: =
+                - generic [ref=e1043]:
+                  - generic [ref=e1044]: "10"
+                  - generic [ref=e1048]:
+                    - generic [ref=e1049]: /
+                    - generic [ref=e1050]: \
+              - generic [ref=e1054]:
+                - generic [ref=e1055]:
+                  - generic [ref=e1056]: "1"
+                  - generic [ref=e1057]: +
+                  - generic [ref=e1058]: "14"
+                  - generic [ref=e1059]: =
+                - generic [ref=e1061]:
+                  - generic [ref=e1062]: "10"
+                  - generic [ref=e1066]:
+                    - generic [ref=e1067]: /
+                    - generic [ref=e1068]: \
+        - article [ref=e1072]:
+          - generic [ref=e1073]:
+            - heading "数学·凑十法·30题（第 4/5 页）" [level=2] [ref=e1074]
+            - generic [ref=e1075]:
+              - generic [ref=e1076]:
+                - generic [ref=e1077]:
+                  - generic [ref=e1078]: "9"
+                  - generic [ref=e1079]: +
+                  - generic [ref=e1080]: "11"
+                  - generic [ref=e1081]: =
+                - generic [ref=e1083]:
+                  - generic [ref=e1084]: "10"
+                  - generic [ref=e1088]:
+                    - generic [ref=e1089]: /
+                    - generic [ref=e1090]: \
+              - generic [ref=e1094]:
+                - generic [ref=e1095]:
+                  - generic [ref=e1096]: "2"
+                  - generic [ref=e1097]: +
+                  - generic [ref=e1098]: "13"
+                  - generic [ref=e1099]: =
+                - generic [ref=e1101]:
+                  - generic [ref=e1102]: "10"
+                  - generic [ref=e1106]:
+                    - generic [ref=e1107]: /
+                    - generic [ref=e1108]: \
+              - generic [ref=e1112]:
+                - generic [ref=e1113]:
+                  - generic [ref=e1114]: "4"
+                  - generic [ref=e1115]: +
+                  - generic [ref=e1116]: "14"
+                  - generic [ref=e1117]: =
+                - generic [ref=e1119]:
+                  - generic [ref=e1120]: "10"
+                  - generic [ref=e1124]:
+                    - generic [ref=e1125]: /
+                    - generic [ref=e1126]: \
+              - generic [ref=e1130]:
+                - generic [ref=e1131]:
+                  - generic [ref=e1132]: "4"
+                  - generic [ref=e1133]: +
+                  - generic [ref=e1134]: "12"
+                  - generic [ref=e1135]: =
+                - generic [ref=e1137]:
+                  - generic [ref=e1138]: "10"
+                  - generic [ref=e1142]:
+                    - generic [ref=e1143]: /
+                    - generic [ref=e1144]: \
+              - generic [ref=e1148]:
+                - generic [ref=e1149]:
+                  - generic [ref=e1150]: "3"
+                  - generic [ref=e1151]: +
+                  - generic [ref=e1152]: "15"
+                  - generic [ref=e1153]: =
+                - generic [ref=e1155]:
+                  - generic [ref=e1156]: "10"
+                  - generic [ref=e1160]:
+                    - generic [ref=e1161]: /
+                    - generic [ref=e1162]: \
+              - generic [ref=e1166]:
+                - generic [ref=e1167]:
+                  - generic [ref=e1168]: "6"
+                  - generic [ref=e1169]: +
+                  - generic [ref=e1170]: "13"
+                  - generic [ref=e1171]: =
+                - generic [ref=e1173]:
+                  - generic [ref=e1174]: "10"
+                  - generic [ref=e1178]:
+                    - generic [ref=e1179]: /
+                    - generic [ref=e1180]: \
+        - article [ref=e1184]:
+          - generic [ref=e1185]:
+            - heading "数学·凑十法·30题（第 5/5 页）" [level=2] [ref=e1186]
+            - generic [ref=e1187]:
+              - generic [ref=e1188]:
+                - generic [ref=e1189]:
+                  - generic [ref=e1190]: "1"
+                  - generic [ref=e1191]: +
+                  - generic [ref=e1192]: "13"
+                  - generic [ref=e1193]: =
+                - generic [ref=e1195]:
+                  - generic [ref=e1196]: "10"
+                  - generic [ref=e1200]:
+                    - generic [ref=e1201]: /
+                    - generic [ref=e1202]: \
+              - generic [ref=e1206]:
+                - generic [ref=e1207]:
+                  - generic [ref=e1208]: "7"
+                  - generic [ref=e1209]: +
+                  - generic [ref=e1210]: "12"
+                  - generic [ref=e1211]: =
+                - generic [ref=e1213]:
+                  - generic [ref=e1214]: "10"
+                  - generic [ref=e1218]:
+                    - generic [ref=e1219]: /
+                    - generic [ref=e1220]: \
+              - generic [ref=e1224]:
+                - generic [ref=e1225]:
+                  - generic [ref=e1226]: "5"
+                  - generic [ref=e1227]: +
+                  - generic [ref=e1228]: "15"
+                  - generic [ref=e1229]: =
+                - generic [ref=e1231]:
+                  - generic [ref=e1232]: "10"
+                  - generic [ref=e1236]:
+                    - generic [ref=e1237]: /
+                    - generic [ref=e1238]: \
+              - generic [ref=e1242]:
+                - generic [ref=e1243]:
+                  - generic [ref=e1244]: "2"
+                  - generic [ref=e1245]: +
+                  - generic [ref=e1246]: "18"
+                  - generic [ref=e1247]: =
+                - generic [ref=e1249]:
+                  - generic [ref=e1250]: "10"
+                  - generic [ref=e1254]:
+                    - generic [ref=e1255]: /
+                    - generic [ref=e1256]: \
+              - generic [ref=e1260]:
+                - generic [ref=e1261]:
+                  - generic [ref=e1262]: "1"
+                  - generic [ref=e1263]: +
+                  - generic [ref=e1264]: "15"
+                  - generic [ref=e1265]: =
+                - generic [ref=e1267]:
+                  - generic [ref=e1268]: "10"
+                  - generic [ref=e1272]:
+                    - generic [ref=e1273]: /
+                    - generic [ref=e1274]: \
+              - generic [ref=e1278]:
+                - generic [ref=e1279]:
+                  - generic [ref=e1280]: "2"
+                  - generic [ref=e1281]: +
+                  - generic [ref=e1282]: "11"
+                  - generic [ref=e1283]: =
+                - generic [ref=e1285]:
+                  - generic [ref=e1286]: "10"
+                  - generic [ref=e1290]:
+                    - generic [ref=e1291]: /
+                    - generic [ref=e1292]: \
+        - generic "黑笔书写层" [ref=e1296]
+        - generic "红笔书写层"
+  - status: 试卷已生成并保存

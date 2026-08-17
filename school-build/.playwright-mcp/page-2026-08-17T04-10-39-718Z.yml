@@ -1,0 +1,76 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e8]:
+        - strong [ref=e9]: 光之进化
+        - text: 学习能量控制台
+      - navigation "主导航" [ref=e10]:
+        - button "⌂ 首页" [ref=e11] [cursor=pointer]:
+          - generic [ref=e12]: ⌂
+          - text: 首页
+        - button "▤ 试卷目录" [ref=e13] [cursor=pointer]:
+          - generic [ref=e14]: ▤
+          - text: 试卷目录
+        - button "✦ 生成试卷" [ref=e15] [cursor=pointer]:
+          - generic [ref=e16]: ✦
+          - text: 生成试卷
+        - button "▥ 阅读资料" [ref=e17] [cursor=pointer]:
+          - generic [ref=e18]: ▥
+          - text: 阅读资料
+        - button "字 知识库" [ref=e19] [cursor=pointer]:
+          - generic [ref=e20]: 字
+          - text: 知识库
+        - button "◇ 学习游戏" [ref=e21] [cursor=pointer]:
+          - generic [ref=e22]: ◇
+          - text: 学习游戏
+        - button "⌘ 配置模板" [ref=e23] [cursor=pointer]:
+          - generic [ref=e24]: ⌘
+          - text: 配置模板
+      - paragraph [ref=e27]:
+        - strong [ref=e28]: 本机离线保存
+        - text: 请勿清除 Safari 网站数据
+    - main [ref=e29]:
+      - generic [ref=e173]:
+        - generic [ref=e174]: 光之进化 / COMMAND DECK
+        - heading "知识库" [level=1] [ref=e175]
+        - paragraph [ref=e176]: 离线学习成语、汉字、歇后语、词语与古诗
+      - generic [ref=e182]:
+        - generic [ref=e183]:
+          - generic [ref=e184]:
+            - radio "成语库" [checked] [ref=e185]
+            - generic [ref=e186]: 成语库
+          - generic [ref=e187]:
+            - radio "汉字库" [ref=e188]
+            - generic [ref=e189]: 汉字库
+          - generic [ref=e190]:
+            - radio "歇后语" [ref=e191]
+            - generic [ref=e192]: 歇后语
+          - generic [ref=e193]:
+            - radio "词语库" [ref=e194]
+            - generic [ref=e195]: 词语库
+          - generic [ref=e196]:
+            - radio "古诗库" [ref=e197]
+            - generic [ref=e198]: 古诗库
+        - generic [ref=e199]:
+          - textbox "按某个或某些字筛选" [ref=e200]
+          - button "查询" [ref=e201] [cursor=pointer]
+      - generic [ref=e202]:
+        - generic [ref=e203]: 随机学习
+        - heading "从成语库开始" [level=2] [ref=e204]
+        - paragraph [ref=e205]: 已学会的内容不会在本轮重复出现，未掌握内容会进入错题库。
+        - button "开始随机学习" [ref=e206] [cursor=pointer]
+      - generic [ref=e208]:
+        - generic [ref=e209]:
+          - heading "成语库" [level=2] [ref=e210]
+          - paragraph [ref=e211]: 当前筛选 0 条，第 1/1 页
+        - generic [ref=e212]:
+          - button "上一页" [disabled] [ref=e213] [cursor=pointer]
+          - button "下一页" [disabled] [ref=e214] [cursor=pointer]
+      - generic [ref=e216]:
+        - generic [ref=e217]:
+          - heading "错题库" [level=2] [ref=e218]
+          - paragraph [ref=e219]: 暂时没有错题。
+        - generic [ref=e221]:
+          - radio "全部" [checked] [ref=e222]
+          - generic [ref=e223]: 全部
+  - status

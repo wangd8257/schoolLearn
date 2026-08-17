@@ -1,0 +1,430 @@
+- generic [ref=f2e1]:
+  - main [active] [ref=f2e29]:
+    - generic [ref=f2e892]:
+      - generic [ref=f2e893]:
+        - button "退出" [ref=f2e894] [cursor=pointer]
+        - generic [ref=f2e895]:
+          - button "缩小试卷" [ref=f2e896] [cursor=pointer]: −
+          - generic [ref=f2e897]: 100%
+          - button "放大试卷" [ref=f2e898] [cursor=pointer]: ＋
+          - button "复位" [ref=f2e899] [cursor=pointer]
+          - button "移动试卷" [ref=f2e900] [cursor=pointer]
+        - button "⚫ 黑笔作答" [ref=f2e901] [cursor=pointer]
+        - button "↑ 上移" [ref=f2e902] [cursor=pointer]
+        - button "↓ 下移" [ref=f2e903] [cursor=pointer]
+        - button "⌫ 擦除当前笔迹" [ref=f2e904] [cursor=pointer]
+        - button "↶ 撤销" [ref=f2e905] [cursor=pointer]
+      - generic [ref=f2e907]:
+        - article [ref=f2e908]:
+          - generic [ref=f2e909]:
+            - heading "数学·破十法·30题（第 1/5 页）" [level=2] [ref=f2e910]
+            - generic [ref=f2e911]:
+              - generic [ref=f2e912]:
+                - generic [ref=f2e913]:
+                  - generic [ref=f2e914]: "15"
+                  - generic [ref=f2e915]: "-"
+                  - generic [ref=f2e916]: "8"
+                  - generic [ref=f2e917]: =
+                - generic [ref=f2e919]:
+                  - generic [ref=f2e921]:
+                    - generic [ref=f2e922]: /
+                    - generic [ref=f2e923]: \
+                  - generic [ref=f2e927]:
+                    - generic [ref=f2e928]: "10"
+                    - generic [ref=f2e929]: −
+              - generic [ref=f2e932]:
+                - generic [ref=f2e933]:
+                  - generic [ref=f2e934]: "14"
+                  - generic [ref=f2e935]: "-"
+                  - generic [ref=f2e936]: "10"
+                  - generic [ref=f2e937]: =
+                - generic [ref=f2e939]:
+                  - generic [ref=f2e941]:
+                    - generic [ref=f2e942]: /
+                    - generic [ref=f2e943]: \
+                  - generic [ref=f2e947]:
+                    - generic [ref=f2e948]: "10"
+                    - generic [ref=f2e949]: −
+              - generic [ref=f2e952]:
+                - generic [ref=f2e953]:
+                  - generic [ref=f2e954]: "11"
+                  - generic [ref=f2e955]: "-"
+                  - generic [ref=f2e956]: "9"
+                  - generic [ref=f2e957]: =
+                - generic [ref=f2e959]:
+                  - generic [ref=f2e961]:
+                    - generic [ref=f2e962]: /
+                    - generic [ref=f2e963]: \
+                  - generic [ref=f2e967]:
+                    - generic [ref=f2e968]: "10"
+                    - generic [ref=f2e969]: −
+              - generic [ref=f2e972]:
+                - generic [ref=f2e973]:
+                  - generic [ref=f2e974]: "11"
+                  - generic [ref=f2e975]: "-"
+                  - generic [ref=f2e976]: "11"
+                  - generic [ref=f2e977]: =
+                - generic [ref=f2e979]:
+                  - generic [ref=f2e981]:
+                    - generic [ref=f2e982]: /
+                    - generic [ref=f2e983]: \
+                  - generic [ref=f2e987]:
+                    - generic [ref=f2e988]: "10"
+                    - generic [ref=f2e989]: −
+              - generic [ref=f2e992]:
+                - generic [ref=f2e993]:
+                  - generic [ref=f2e994]: "15"
+                  - generic [ref=f2e995]: "-"
+                  - generic [ref=f2e996]: "7"
+                  - generic [ref=f2e997]: =
+                - generic [ref=f2e999]:
+                  - generic [ref=f2e1001]:
+                    - generic [ref=f2e1002]: /
+                    - generic [ref=f2e1003]: \
+                  - generic [ref=f2e1007]:
+                    - generic [ref=f2e1008]: "10"
+                    - generic [ref=f2e1009]: −
+              - generic [ref=f2e1012]:
+                - generic [ref=f2e1013]:
+                  - generic [ref=f2e1014]: "16"
+                  - generic [ref=f2e1015]: "-"
+                  - generic [ref=f2e1016]: "8"
+                  - generic [ref=f2e1017]: =
+                - generic [ref=f2e1019]:
+                  - generic [ref=f2e1021]:
+                    - generic [ref=f2e1022]: /
+                    - generic [ref=f2e1023]: \
+                  - generic [ref=f2e1027]:
+                    - generic [ref=f2e1028]: "10"
+                    - generic [ref=f2e1029]: −
+        - article [ref=f2e1032]:
+          - generic [ref=f2e1033]:
+            - heading "数学·破十法·30题（第 2/5 页）" [level=2] [ref=f2e1034]
+            - generic [ref=f2e1035]:
+              - generic [ref=f2e1036]:
+                - generic [ref=f2e1037]:
+                  - generic [ref=f2e1038]: "13"
+                  - generic [ref=f2e1039]: "-"
+                  - generic [ref=f2e1040]: "5"
+                  - generic [ref=f2e1041]: =
+                - generic [ref=f2e1043]:
+                  - generic [ref=f2e1045]:
+                    - generic [ref=f2e1046]: /
+                    - generic [ref=f2e1047]: \
+                  - generic [ref=f2e1051]:
+                    - generic [ref=f2e1052]: "10"
+                    - generic [ref=f2e1053]: −
+              - generic [ref=f2e1056]:
+                - generic [ref=f2e1057]:
+                  - generic [ref=f2e1058]: "15"
+                  - generic [ref=f2e1059]: "-"
+                  - generic [ref=f2e1060]: "11"
+                  - generic [ref=f2e1061]: =
+                - generic [ref=f2e1063]:
+                  - generic [ref=f2e1065]:
+                    - generic [ref=f2e1066]: /
+                    - generic [ref=f2e1067]: \
+                  - generic [ref=f2e1071]:
+                    - generic [ref=f2e1072]: "10"
+                    - generic [ref=f2e1073]: −
+              - generic [ref=f2e1076]:
+                - generic [ref=f2e1077]:
+                  - generic [ref=f2e1078]: "13"
+                  - generic [ref=f2e1079]: "-"
+                  - generic [ref=f2e1080]: "6"
+                  - generic [ref=f2e1081]: =
+                - generic [ref=f2e1083]:
+                  - generic [ref=f2e1085]:
+                    - generic [ref=f2e1086]: /
+                    - generic [ref=f2e1087]: \
+                  - generic [ref=f2e1091]:
+                    - generic [ref=f2e1092]: "10"
+                    - generic [ref=f2e1093]: −
+              - generic [ref=f2e1096]:
+                - generic [ref=f2e1097]:
+                  - generic [ref=f2e1098]: "19"
+                  - generic [ref=f2e1099]: "-"
+                  - generic [ref=f2e1100]: "12"
+                  - generic [ref=f2e1101]: =
+                - generic [ref=f2e1103]:
+                  - generic [ref=f2e1105]:
+                    - generic [ref=f2e1106]: /
+                    - generic [ref=f2e1107]: \
+                  - generic [ref=f2e1111]:
+                    - generic [ref=f2e1112]: "10"
+                    - generic [ref=f2e1113]: −
+              - generic [ref=f2e1116]:
+                - generic [ref=f2e1117]:
+                  - generic [ref=f2e1118]: "18"
+                  - generic [ref=f2e1119]: "-"
+                  - generic [ref=f2e1120]: "14"
+                  - generic [ref=f2e1121]: =
+                - generic [ref=f2e1123]:
+                  - generic [ref=f2e1125]:
+                    - generic [ref=f2e1126]: /
+                    - generic [ref=f2e1127]: \
+                  - generic [ref=f2e1131]:
+                    - generic [ref=f2e1132]: "10"
+                    - generic [ref=f2e1133]: −
+              - generic [ref=f2e1136]:
+                - generic [ref=f2e1137]:
+                  - generic [ref=f2e1138]: "12"
+                  - generic [ref=f2e1139]: "-"
+                  - generic [ref=f2e1140]: "4"
+                  - generic [ref=f2e1141]: =
+                - generic [ref=f2e1143]:
+                  - generic [ref=f2e1145]:
+                    - generic [ref=f2e1146]: /
+                    - generic [ref=f2e1147]: \
+                  - generic [ref=f2e1151]:
+                    - generic [ref=f2e1152]: "10"
+                    - generic [ref=f2e1153]: −
+        - article [ref=f2e1156]:
+          - generic [ref=f2e1157]:
+            - heading "数学·破十法·30题（第 3/5 页）" [level=2] [ref=f2e1158]
+            - generic [ref=f2e1159]:
+              - generic [ref=f2e1160]:
+                - generic [ref=f2e1161]:
+                  - generic [ref=f2e1162]: "17"
+                  - generic [ref=f2e1163]: "-"
+                  - generic [ref=f2e1164]: "8"
+                  - generic [ref=f2e1165]: =
+                - generic [ref=f2e1167]:
+                  - generic [ref=f2e1169]:
+                    - generic [ref=f2e1170]: /
+                    - generic [ref=f2e1171]: \
+                  - generic [ref=f2e1175]:
+                    - generic [ref=f2e1176]: "10"
+                    - generic [ref=f2e1177]: −
+              - generic [ref=f2e1180]:
+                - generic [ref=f2e1181]:
+                  - generic [ref=f2e1182]: "19"
+                  - generic [ref=f2e1183]: "-"
+                  - generic [ref=f2e1184]: "19"
+                  - generic [ref=f2e1185]: =
+                - generic [ref=f2e1187]:
+                  - generic [ref=f2e1189]:
+                    - generic [ref=f2e1190]: /
+                    - generic [ref=f2e1191]: \
+                  - generic [ref=f2e1195]:
+                    - generic [ref=f2e1196]: "10"
+                    - generic [ref=f2e1197]: −
+              - generic [ref=f2e1200]:
+                - generic [ref=f2e1201]:
+                  - generic [ref=f2e1202]: "11"
+                  - generic [ref=f2e1203]: "-"
+                  - generic [ref=f2e1204]: "4"
+                  - generic [ref=f2e1205]: =
+                - generic [ref=f2e1207]:
+                  - generic [ref=f2e1209]:
+                    - generic [ref=f2e1210]: /
+                    - generic [ref=f2e1211]: \
+                  - generic [ref=f2e1215]:
+                    - generic [ref=f2e1216]: "10"
+                    - generic [ref=f2e1217]: −
+              - generic [ref=f2e1220]:
+                - generic [ref=f2e1221]:
+                  - generic [ref=f2e1222]: "17"
+                  - generic [ref=f2e1223]: "-"
+                  - generic [ref=f2e1224]: "17"
+                  - generic [ref=f2e1225]: =
+                - generic [ref=f2e1227]:
+                  - generic [ref=f2e1229]:
+                    - generic [ref=f2e1230]: /
+                    - generic [ref=f2e1231]: \
+                  - generic [ref=f2e1235]:
+                    - generic [ref=f2e1236]: "10"
+                    - generic [ref=f2e1237]: −
+              - generic [ref=f2e1240]:
+                - generic [ref=f2e1241]:
+                  - generic [ref=f2e1242]: "13"
+                  - generic [ref=f2e1243]: "-"
+                  - generic [ref=f2e1244]: "10"
+                  - generic [ref=f2e1245]: =
+                - generic [ref=f2e1247]:
+                  - generic [ref=f2e1249]:
+                    - generic [ref=f2e1250]: /
+                    - generic [ref=f2e1251]: \
+                  - generic [ref=f2e1255]:
+                    - generic [ref=f2e1256]: "10"
+                    - generic [ref=f2e1257]: −
+              - generic [ref=f2e1260]:
+                - generic [ref=f2e1261]:
+                  - generic [ref=f2e1262]: "11"
+                  - generic [ref=f2e1263]: "-"
+                  - generic [ref=f2e1264]: "5"
+                  - generic [ref=f2e1265]: =
+                - generic [ref=f2e1267]:
+                  - generic [ref=f2e1269]:
+                    - generic [ref=f2e1270]: /
+                    - generic [ref=f2e1271]: \
+                  - generic [ref=f2e1275]:
+                    - generic [ref=f2e1276]: "10"
+                    - generic [ref=f2e1277]: −
+        - article [ref=f2e1280]:
+          - generic [ref=f2e1281]:
+            - heading "数学·破十法·30题（第 4/5 页）" [level=2] [ref=f2e1282]
+            - generic [ref=f2e1283]:
+              - generic [ref=f2e1284]:
+                - generic [ref=f2e1285]:
+                  - generic [ref=f2e1286]: "17"
+                  - generic [ref=f2e1287]: "-"
+                  - generic [ref=f2e1288]: "11"
+                  - generic [ref=f2e1289]: =
+                - generic [ref=f2e1291]:
+                  - generic [ref=f2e1293]:
+                    - generic [ref=f2e1294]: /
+                    - generic [ref=f2e1295]: \
+                  - generic [ref=f2e1299]:
+                    - generic [ref=f2e1300]: "10"
+                    - generic [ref=f2e1301]: −
+              - generic [ref=f2e1304]:
+                - generic [ref=f2e1305]:
+                  - generic [ref=f2e1306]: "17"
+                  - generic [ref=f2e1307]: "-"
+                  - generic [ref=f2e1308]: "14"
+                  - generic [ref=f2e1309]: =
+                - generic [ref=f2e1311]:
+                  - generic [ref=f2e1313]:
+                    - generic [ref=f2e1314]: /
+                    - generic [ref=f2e1315]: \
+                  - generic [ref=f2e1319]:
+                    - generic [ref=f2e1320]: "10"
+                    - generic [ref=f2e1321]: −
+              - generic [ref=f2e1324]:
+                - generic [ref=f2e1325]:
+                  - generic [ref=f2e1326]: "18"
+                  - generic [ref=f2e1327]: "-"
+                  - generic [ref=f2e1328]: "16"
+                  - generic [ref=f2e1329]: =
+                - generic [ref=f2e1331]:
+                  - generic [ref=f2e1333]:
+                    - generic [ref=f2e1334]: /
+                    - generic [ref=f2e1335]: \
+                  - generic [ref=f2e1339]:
+                    - generic [ref=f2e1340]: "10"
+                    - generic [ref=f2e1341]: −
+              - generic [ref=f2e1344]:
+                - generic [ref=f2e1345]:
+                  - generic [ref=f2e1346]: "14"
+                  - generic [ref=f2e1347]: "-"
+                  - generic [ref=f2e1348]: "5"
+                  - generic [ref=f2e1349]: =
+                - generic [ref=f2e1351]:
+                  - generic [ref=f2e1353]:
+                    - generic [ref=f2e1354]: /
+                    - generic [ref=f2e1355]: \
+                  - generic [ref=f2e1359]:
+                    - generic [ref=f2e1360]: "10"
+                    - generic [ref=f2e1361]: −
+              - generic [ref=f2e1364]:
+                - generic [ref=f2e1365]:
+                  - generic [ref=f2e1366]: "16"
+                  - generic [ref=f2e1367]: "-"
+                  - generic [ref=f2e1368]: "11"
+                  - generic [ref=f2e1369]: =
+                - generic [ref=f2e1371]:
+                  - generic [ref=f2e1373]:
+                    - generic [ref=f2e1374]: /
+                    - generic [ref=f2e1375]: \
+                  - generic [ref=f2e1379]:
+                    - generic [ref=f2e1380]: "10"
+                    - generic [ref=f2e1381]: −
+              - generic [ref=f2e1384]:
+                - generic [ref=f2e1385]:
+                  - generic [ref=f2e1386]: "18"
+                  - generic [ref=f2e1387]: "-"
+                  - generic [ref=f2e1388]: "11"
+                  - generic [ref=f2e1389]: =
+                - generic [ref=f2e1391]:
+                  - generic [ref=f2e1393]:
+                    - generic [ref=f2e1394]: /
+                    - generic [ref=f2e1395]: \
+                  - generic [ref=f2e1399]:
+                    - generic [ref=f2e1400]: "10"
+                    - generic [ref=f2e1401]: −
+        - article [ref=f2e1404]:
+          - generic [ref=f2e1405]:
+            - heading "数学·破十法·30题（第 5/5 页）" [level=2] [ref=f2e1406]
+            - generic [ref=f2e1407]:
+              - generic [ref=f2e1408]:
+                - generic [ref=f2e1409]:
+                  - generic [ref=f2e1410]: "19"
+                  - generic [ref=f2e1411]: "-"
+                  - generic [ref=f2e1412]: "18"
+                  - generic [ref=f2e1413]: =
+                - generic [ref=f2e1415]:
+                  - generic [ref=f2e1417]:
+                    - generic [ref=f2e1418]: /
+                    - generic [ref=f2e1419]: \
+                  - generic [ref=f2e1423]:
+                    - generic [ref=f2e1424]: "10"
+                    - generic [ref=f2e1425]: −
+              - generic [ref=f2e1428]:
+                - generic [ref=f2e1429]:
+                  - generic [ref=f2e1430]: "16"
+                  - generic [ref=f2e1431]: "-"
+                  - generic [ref=f2e1432]: "14"
+                  - generic [ref=f2e1433]: =
+                - generic [ref=f2e1435]:
+                  - generic [ref=f2e1437]:
+                    - generic [ref=f2e1438]: /
+                    - generic [ref=f2e1439]: \
+                  - generic [ref=f2e1443]:
+                    - generic [ref=f2e1444]: "10"
+                    - generic [ref=f2e1445]: −
+              - generic [ref=f2e1448]:
+                - generic [ref=f2e1449]:
+                  - generic [ref=f2e1450]: "18"
+                  - generic [ref=f2e1451]: "-"
+                  - generic [ref=f2e1452]: "12"
+                  - generic [ref=f2e1453]: =
+                - generic [ref=f2e1455]:
+                  - generic [ref=f2e1457]:
+                    - generic [ref=f2e1458]: /
+                    - generic [ref=f2e1459]: \
+                  - generic [ref=f2e1463]:
+                    - generic [ref=f2e1464]: "10"
+                    - generic [ref=f2e1465]: −
+              - generic [ref=f2e1468]:
+                - generic [ref=f2e1469]:
+                  - generic [ref=f2e1470]: "18"
+                  - generic [ref=f2e1471]: "-"
+                  - generic [ref=f2e1472]: "15"
+                  - generic [ref=f2e1473]: =
+                - generic [ref=f2e1475]:
+                  - generic [ref=f2e1477]:
+                    - generic [ref=f2e1478]: /
+                    - generic [ref=f2e1479]: \
+                  - generic [ref=f2e1483]:
+                    - generic [ref=f2e1484]: "10"
+                    - generic [ref=f2e1485]: −
+              - generic [ref=f2e1488]:
+                - generic [ref=f2e1489]:
+                  - generic [ref=f2e1490]: "13"
+                  - generic [ref=f2e1491]: "-"
+                  - generic [ref=f2e1492]: "7"
+                  - generic [ref=f2e1493]: =
+                - generic [ref=f2e1495]:
+                  - generic [ref=f2e1497]:
+                    - generic [ref=f2e1498]: /
+                    - generic [ref=f2e1499]: \
+                  - generic [ref=f2e1503]:
+                    - generic [ref=f2e1504]: "10"
+                    - generic [ref=f2e1505]: −
+              - generic [ref=f2e1508]:
+                - generic [ref=f2e1509]:
+                  - generic [ref=f2e1510]: "19"
+                  - generic [ref=f2e1511]: "-"
+                  - generic [ref=f2e1512]: "14"
+                  - generic [ref=f2e1513]: =
+                - generic [ref=f2e1515]:
+                  - generic [ref=f2e1517]:
+                    - generic [ref=f2e1518]: /
+                    - generic [ref=f2e1519]: \
+                  - generic [ref=f2e1523]:
+                    - generic [ref=f2e1524]: "10"
+                    - generic [ref=f2e1525]: −
+        - generic "黑笔书写层" [ref=f2e1528]
+        - generic "红笔书写层"
+  - status: 试卷已生成并保存
